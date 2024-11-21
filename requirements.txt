@@ -2,6 +2,6 @@ streamlit
 python-dotenv
 pandas
 python-docx==0.8.11
-xlswriter
+XlsxWriter
 numpy
 datetime
