@@ -1728,9 +1728,7 @@ elif st.session_state.page == "Create Student Schedule":
 	    
 elif st.session_state.page == "Create Student Schedule":
     uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
-    
-    try:
-        # Read the uploaded OPD file into a pandas DataFrame
+# Read the uploaded OPD file into a pandas DataFrame
         df_opd = pd.read_excel(uploaded_opd_file)
         
         # Save the DataFrame back to a local OPD.xlsx file
