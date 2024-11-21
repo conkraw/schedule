@@ -3291,3 +3291,64 @@ elif st.session_state.page == "Create Student_Schedule":
 	extras=pd.DataFrame(columns=extrai.columns)
 	extras=pd.concat([extrai,extraii])
 	extras.to_csv('mhss.csv',index=False)
+	
+	import pandas as pd
+	import csv
+	
+	df1=pd.read_csv('etowns.csv')
+	df2=pd.read_csv('hopes.csv')
+	df3=pd.read_csv('nyess.csv')
+	df4=pd.read_csv('extras.csv')
+	df5=pd.read_csv('mhss.csv')
+	
+	dfx=pd.DataFrame(columns=df1.columns)
+	dfx=pd.concat([dfx,df1,df2,df3,df4,df5])
+	dfx['providers']=dfx['provider'].str.split('~').str[0]
+	dfx['student']=dfx['provider'].str.split('~').str[1]
+	dfx1=dfx[['date','type','providers','student','clinic','provider','class']]
+	
+	dfx1['date'] = pd.to_datetime(dfx1['date'])
+	dfx1['date'] = dfx1['date'].dt.strftime('%m/%d/%Y')
+	
+	mydict = {}
+	with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
+		reader = csv.reader(inp)
+		df1 = {rows[0]:rows[1] for rows in reader} 
+	dfx1['datecode'] = dfx1.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
+	
+	dfx1.to_excel('STUDENTLIST.xlsx',index=False)
+	dfx1.to_csv('STUDENTLIST.csv',index=False)
+	
+	dfx1['type'] = dfx1['type'].str.lstrip()
+	dfx1['type'] = dfx1['type'].str.rstrip()
+	
+	dfx1['providers'] = dfx1['providers'].str.lstrip()
+	dfx1['providers'] = dfx1['providers'].str.rstrip()
+	
+	dfx1['student'] = dfx1['student'].str.lstrip()
+	dfx1['student'] = dfx1['student'].str.rstrip()
+	
+	dfs = [["AM","S1"],["PM","S2"],["AM - ACUTES","S11"],["PM - ACUTES","S12"]]
+	dftype = pd.DataFrame(dfs, columns = ['type', 'datecode2'])
+	dftype.to_csv('dftype.csv',index=False)
+	       
+	mydict = {}
+	with open('dftype.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
+		reader = csv.reader(inp)
+		df1 = {rows[0]:rows[1] for rows in reader} 
+	dfx1['datecode2'] = dfx1.type.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
+	
+	dfx1.to_excel('PALIST.xlsx',index=False)
+	
+	dfx1.to_csv('PALIST.csv',index=False)
+	
+	dfx1 = pd.read_csv('PALIST.csv')
+	
+	new_row = pd.DataFrame({'date':0, 'type':0, 'providers':0,
+	                        'student':0, 'clinic':0, 'provider':0,
+	                        'class':0, 'datecode':0, 'datecode2':0},
+	                                                            index =[0])
+	# simply concatenate both dataframes
+	df = pd.concat([new_row, dfx1]).reset_index(drop = True)
+	
+	df.to_csv('PALIST.csv',index=False)
