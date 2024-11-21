@@ -1716,7 +1716,7 @@ elif st.session_state.page == "Create Student Schedule":
             st.write("File successfully uploaded and loaded.")
             
             # Show the first few rows of the uploaded file for verification
-            st.dataframe(df_opd.head())  # Optionally, display the first few rows
+            #st.dataframe(df_opd.head())  # Optionally, display the first few rows
 
             # Proceed with further logic to generate student schedules
             # Add your logic for creating student schedules using the loaded OPD data
