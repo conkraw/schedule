@@ -13,7 +13,7 @@ x = st.text_input('Start Date')
 
 # Add a button to trigger the date parsing
 if st.button('Submit Date'):
-    if x:
+    if x:  # Check if the input is not empty
         try:
             # Try to parse the date entered by the user
             test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
@@ -26,6 +26,7 @@ if st.button('Submit Date'):
     else:
         # If no date is entered, display an error
         st.error('Please enter a date.')
+
 
 st.write('Upload the following Excel files:')
 uploaded_files = {}
