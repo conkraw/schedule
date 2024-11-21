@@ -4,7 +4,7 @@ import pandas as pd
 
 
 # Create a navigation menu using a selectbox or radio button
-page = st.selectbox("Select Page", ["Create OPD","Create Student Schedule"])
+page_selection = st.selectbox("Select Page", ["Create OPD","Create Student Schedule"])
 
 if 'page' not in st.session_state:
     st.session_state.page = "Create OPD"
@@ -12,7 +12,9 @@ if 'start_date' not in st.session_state:
     st.session_state.start_date = None
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
-	
+
+st.session_state.page = page_selection
+
 # Date input page
 if st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
