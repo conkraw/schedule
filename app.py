@@ -1707,7 +1707,7 @@ if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
 
 # Page navigation logic
-if st.session_state.page == "Create Student Schedule":
+elif st.session_state.page == "Create Student Schedule":
     st.title("File Upload Section")
     
     # Upload the OPD.xlsx file
