@@ -10,6 +10,8 @@ if 'page' not in st.session_state:
     st.session_state.page = "Enter Start Date"
 if 'start_date' not in st.session_state:
     st.session_state.start_date = None
+if 'uploaded_files' not in st.session_state:
+    st.session_state.uploaded_files = {}
 	
 # Date input page
 if st.session_state.page == "Enter Start Date":
@@ -59,6 +61,7 @@ elif st.session_state.page == "Upload Files":
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
+	uploaded_files = st.session_state.uploaded_files
 	
 	# initializing K
 	K = 28
