@@ -1718,15 +1718,14 @@ elif st.session_state.page == "Create Student Schedule":
 
             # Store the uploaded file in session state for use later
             st.session_state.uploaded_files['OPD.xlsx'] = uploaded_opd_file
-            st.session_state.page = "Create Student_Schedule"
-            st.rerun()
+            st.session_state.page = "Create List"
 
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
     else:
 	    st.write("Please upload the OPD.xlsx file to proceed.")
 	    
-elif st.session_state.page == "Create Student_Schedule":
+elif st.session_state.page == "Create List":
     uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
     df_opd = pd.read_excel(uploaded_opd_file)
     df_opd.to_excel('OPD.xlsx', index=False)  # Save without index column
