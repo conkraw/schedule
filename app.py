@@ -1707,7 +1707,7 @@ if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
 
 # Page navigation logic
-elif st.session_state.page == "Create Student Schedule":
+if st.session_state.page == "Create Student Schedule":
     st.title("File Upload Section")
     
     # Upload the OPD.xlsx file
@@ -1725,16 +1725,30 @@ elif st.session_state.page == "Create Student Schedule":
             # Show the button to move to the next page
             if st.button("Go to Create List"):
                 st.session_state.page = "Create List"
+                st.rerun()  # Force rerun to update the page
+                
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
     else:
         st.write("Please upload the OPD.xlsx file to proceed.")
 
 elif st.session_state.page == "Create List":
-    st.write("Create List")
+    st.title("Create List")
+    
+    # Get the uploaded OPD file from session state
     uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
-    df_opd = pd.read_excel(uploaded_opd_file)
-    st.dataframe(df_opd.head())
-    df_opd.to_excel('OPD.xlsx', index=False)  # Save without index column
-    st.write("OPD.xlsx file has been successfully saved.")
+    
+    try:
+        # Read the OPD file into a dataframe
+        df_opd = pd.read_excel(uploaded_opd_file)
+        
+        # Display the first few rows of the OPD data for verification
+        st.dataframe(df_opd.head())
+        
+        # Save the OPD file again without the index column
+        df_opd.to_excel('OPD.xlsx', index=False)
+        st.write("OPD.xlsx file has been successfully saved.")
+    
+    except Exception as e:
+        st.error(f"Error processing the OPD file: {e}")
 
