@@ -4,7 +4,7 @@ import pandas as pd
 
 
 # Create a navigation menu using a selectbox or radio button
-page = st.selectbox("Select Page", ["Create OPD"])
+page = st.selectbox("Select Page", ["Create OPD","Create Student Schedule"])
 
 if 'page' not in st.session_state:
     st.session_state.page = "Create OPD"
@@ -1699,3 +1699,5 @@ elif st.session_state.page == "OPD Creator":
 	        file_name="OPD.xlsx",
 	        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	    )
+elif st.session_state.page == "Create Student Schedule":
+    st.title("File Upload Section")
