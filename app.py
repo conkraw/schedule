@@ -1726,7 +1726,7 @@ elif st.session_state.page == "Create Student Schedule":
     else:
 	    st.write("Please upload the OPD.xlsx file to proceed.")
 	    
-elif st.session_state.page == "Create Student Schedule":
+elif st.session_state.page == "Create Student_Schedule":
     uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
     df_opd = pd.read_excel(uploaded_opd_file)
     df_opd.to_excel('OPD.xlsx', index=False)  # Save without index column
