@@ -11,17 +11,21 @@ st.write('Enter start date in m/d/yyyy format, no zeros in month or date (e.g., 
 # Create a text input field for the date
 x = st.text_input('Start Date')
 
-# Check if the user has entered a date
-if x:
-    try:
-        # Try to parse the date entered by the user
-        test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
-        
-        # Display the converted date
-        st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
-    except ValueError:
-        # Display an error message if the date format is incorrect
-        st.error('Invalid date format. Please enter the date in m/d/yyyy format.')
+# Add a button to trigger the date parsing
+if st.button('Submit Date'):
+    if x:
+        try:
+            # Try to parse the date entered by the user
+            test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
+            
+            # Display the converted date
+            st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
+        except ValueError:
+            # Display an error message if the date format is incorrect
+            st.error('Invalid date format. Please enter the date in m/d/yyyy format.')
+    else:
+        # If no date is entered, display an error
+        st.error('Please enter a date.')
 
 st.write('Upload the following Excel files:')
 uploaded_files = {}
@@ -40,7 +44,7 @@ for day in range(K):
     date = (test_date + datetime.timedelta(days = day)).strftime("%-m/%-d/%Y")
     res.append(date)
      
-res
+#res
 
 dates = pd.DataFrame(res, columns =['dates'])
 
@@ -1374,23 +1378,21 @@ hopeii.to_csv('6.csv', index=False)
 
 
 #############################################################################################################
-MHS = pd.read_csv('MHS.csv')
+#MHS = pd.read_csv('MHS.csv')
+#MHS['H'] = "H"
+#MHSi = MHS[(MHS['type'] == 'AM - Continuity')]
+#MHSi['count'] = MHSi.groupby(['date'])['provider'].cumcount() + 0
+#MHSi['class'] = "H" + MHSi['count'].astype(str)
+#MHSi = MHSi.loc[:, ('date','type','provider','clinic','class')]
+#MHSi.to_csv('10.csv',index=False)
 
-MHS['H'] = "H"
-MHSi = MHS[(MHS['type'] == 'AM - Continuity')]
-MHSi['count'] = MHSi.groupby(['date'])['provider'].cumcount() + 0
-MHSi['class'] = "H" + MHSi['count'].astype(str)
-MHSi = MHSi.loc[:, ('date','type','provider','clinic','class')]
-MHSi.to_csv('10.csv',index=False)
-
-MHS['H'] = "H"
-MHSii = MHS[(MHS['type'] == 'PM - Continuity')]
-MHSii['count'] = MHSii.groupby(['date'])['provider'].cumcount() + 10
-MHSii['class'] = "H" + MHSii['count'].astype(str)
-MHSii = MHSii.loc[:, ('date','type','provider','clinic','class')]
-MHSii.to_csv('11.csv',index=False)
+#MHS['H'] = "H"
+#MHSii = MHS[(MHS['type'] == 'PM - Continuity')]
+#MHSii['count'] = MHSii.groupby(['date'])['provider'].cumcount() + 10
+#MHSii['class'] = "H" + MHSii['count'].astype(str)
+#MHSii = MHSii.loc[:, ('date','type','provider','clinic','class')]
+#MHSii.to_csv('11.csv',index=False)
 #############################################################################################################
-
 
 t1=pd.read_csv('1.csv')
 t2=pd.read_csv('2.csv')
@@ -1401,11 +1403,11 @@ t6=pd.read_csv('6.csv')
 t7=pd.read_csv('7.csv')
 t8=pd.read_csv('8.csv')
 t9=pd.read_csv('9.csv')
-t10=pd.read_csv('10.csv')
-t11=pd.read_csv('11.csv')
+#t10=pd.read_csv('10.csv')
+#t11=pd.read_csv('11.csv')
 
 final2 = pd.DataFrame(columns=t1.columns)
-final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11])
+final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9]) #t10,t11])
 final2.to_csv('final2.csv',index=False)
 
 #final1 = pd.DataFrame(columns=NYEi.columns)
@@ -1640,4 +1642,24 @@ for row in ws.iter_rows():
 # Save updated workbook
 wb1.save('OPD.xlsx')
 ###############################################################################################
+if st.button('Save OPD'):
+    # Create a new workbook for OPD.xlsx
+    wb1 = openpyxl.Workbook()
+    ws1 = wb1.active
+    ws1.title = 'OPD'
 
+    # Add some data to the workbook (this is just an example)
+    ws1.append(['Start Date', test_date.strftime('%m/%d/%Y')])
+
+    # Create an in-memory buffer to save the workbook as a byte stream
+    buffer = BytesIO()
+    wb1.save(buffer)
+    buffer.seek(0)
+
+    # Provide a download button for the generated OPD.xlsx file
+    st.download_button(
+        label="Download OPD.xlsx",
+        data=buffer,
+        file_name="OPD.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
