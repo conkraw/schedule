@@ -1725,7 +1725,6 @@ if st.session_state.page == "Create Student Schedule":
             # Show the button to move to the next page
             if st.button("Go to Create List"):
                 st.session_state.page = "Create List"
-                st.rerun()  # Rerun to change the page
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
     else:
