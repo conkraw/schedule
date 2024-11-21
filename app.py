@@ -1703,31 +1703,38 @@ elif st.session_state.page == "OPD Creator":
 	    )
 		
 
-elif st.session_state.page == "Create Student Schedule":
-    st.title("File Upload Section")
-    uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
+if 'uploaded_files' not in st.session_state:
+    st.session_state.uploaded_files = {}
 
+# Page navigation logic
+if st.session_state.page == "Create Student Schedule":
+    st.title("File Upload Section")
+    
+    # Upload the OPD.xlsx file
+    uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
+    
     if uploaded_opd_file:
         try:
             # Read the uploaded OPD file into a pandas dataframe
             df_opd = pd.read_excel(uploaded_opd_file)
             st.write("File successfully uploaded and loaded.")
-
-            # Optionally display the first few rows
-            st.dataframe(df_opd.head())
-
+            
             # Store the uploaded file in session state for use later
             st.session_state.uploaded_files['OPD.xlsx'] = uploaded_opd_file
-            st.session_state.page = "Create List"
-
+            
+            # Show the button to move to the next page
+            if st.button("Go to Create List"):
+                st.session_state.page = "Create List"
+                st.rerun()  # Rerun to change the page
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
     else:
-	    st.write("Please upload the OPD.xlsx file to proceed.")
-	    
+        st.write("Please upload the OPD.xlsx file to proceed.")
+
 elif st.session_state.page == "Create List":
     uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
     df_opd = pd.read_excel(uploaded_opd_file)
+    st.dataframe(df_opd.head())
     df_opd.to_excel('OPD.xlsx', index=False)  # Save without index column
     st.write("OPD.xlsx file has been successfully saved.")
 
