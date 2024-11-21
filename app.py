@@ -8,6 +8,8 @@ page = st.selectbox("Select Page", ["Enter Start Date", "Upload Files"])
 
 if 'page' not in st.session_state:
     st.session_state.page = "Enter Start Date"
+if 'start_date' not in st.session_state:
+    st.session_state.start_date = None
 	
 # Date input page
 if st.session_state.page == "Enter Start Date":
@@ -25,6 +27,7 @@ if st.session_state.page == "Enter Start Date":
             try:
                 # Try to parse the date entered by the user
                 test_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
+		st.session_state.start_date = test_date 
                 st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
                 # After valid date input, move to the next page (Upload Files)
                 st.session_state.page = "Upload Files"
