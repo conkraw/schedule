@@ -26,9 +26,9 @@ if st.session_state.page == "Enter Start Date":
         if date_input:  # Check if a date was entered
             try:
                 # Try to parse the date entered by the user
-                x = datetime.datetime.strptime(date_input, "%m/%d/%Y")
-                st.session_state.start_date = x  # Save date in session state
-                st.write(f"Valid date entered: {x.strftime('%m/%d/%Y')}")
+                test_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
+                st.session_state.start_date = test_date   # Save date in session state
+                st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
                 # After valid date input, move to the next page (Upload Files)
                 st.session_state.page = "Upload Files"
                 st.rerun()  # Force a rerun to reflect the page change
@@ -57,8 +57,9 @@ elif st.session_state.page == "Upload Files":
         st.write("Please upload all required files.")
 
 elif st.session_state.page == "OPD Creator":
-	test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
-	 
+	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
+	test_date = st.session_state.start_date
+	
 	# initializing K
 	K = 28
 	 
