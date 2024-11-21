@@ -2,21 +2,29 @@ import streamlit as st
 import datetime
 import pandas as pd
 
-
-# Create a navigation menu using a selectbox or radio button
-page_selection = st.selectbox("Select Page", ["Create OPD","Create Student Schedule"])
-
 if 'page' not in st.session_state:
-    st.session_state.page = "Create OPD"
+    st.session_state.page = "Home"  # Starting page
 if 'start_date' not in st.session_state:
     st.session_state.start_date = None
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
 
-st.session_state.page = page_selection
+if st.session_state.page == "Home":
+    st.title("Welcome to OPD Creator")
+    st.write("Please choose what you'd like to do next.")
+    
+    # Button to navigate to 'Create OPD' page
+    if st.button("Go to Create OPD"):
+        st.session_state.page = "Create OPD"  # Set the page to 'Create OPD'
+        st.rerun()  # Force a rerun to update the page
+
+    # Button to navigate to 'Create Student Schedule' page
+    if st.button("Go to Create Student Schedule"):
+        st.session_state.page = "Create Student Schedule"  # Set the page to 'Create Student Schedule'
+        st.rerun()  # Force a rerun to update the page
 
 # Date input page
-if st.session_state.page == "Create OPD":
+elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
 
     # Display instructions to the user
