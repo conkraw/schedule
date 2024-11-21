@@ -1723,12 +1723,6 @@ elif st.session_state.page == "Create Student Schedule":
             
             # Store the uploaded file in session state for use later
             st.session_state.uploaded_files['OPD.xlsx'] = uploaded_opd_file
-            
-            # Show the button to move to the next page
-            if st.button("Go to Create List"):
-                # Update the page state to transition to the next page
-                st.session_state.page = "Create List"
-                st.experimental_rerun()  # Trigger rerun to reflect the page change
                 
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
@@ -1736,7 +1730,7 @@ elif st.session_state.page == "Create Student Schedule":
         st.write("Please upload the OPD.xlsx file to proceed.")
 
     # Button to go to the next page
-    if st.button("Go to Next Page"):
+    if st.button("Create List"):
         st.session_state.page = "Create List"  # Update the session state to go to the next page
         st.rerun()  # Use st.rerun() instead of st.experimental_rerun() to force rerun and update the page
 
