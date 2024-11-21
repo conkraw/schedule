@@ -4,7 +4,7 @@ import pandas as pd
 
 
 # Create a navigation menu using a selectbox or radio button
-page = st.selectbox("Select Page", ["Enter Start Date"])
+page = st.selectbox("Select Page", ["Create OPD"])
 
 if 'page' not in st.session_state:
     st.session_state.page = "Enter Start Date"
@@ -1672,7 +1672,7 @@ elif st.session_state.page == "OPD Creator":
 	wb1.save('OPD.xlsx')
 	###############################################################################################
 	# Button to trigger the download
-	if st.button('Download OPD'):
+	if st.button('Create Loaded OPD'):
 	    # Path to the existing 'OPD.xlsx' workbook
 	    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
 	
