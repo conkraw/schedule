@@ -28,7 +28,7 @@ if st.session_state.page == "Enter Start Date":
                 # Try to parse the date entered by the user
                 x = datetime.datetime.strptime(date_input, "%m/%d/%Y")
                 st.session_state.start_date = x  # Save date in session state
-                st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
+                st.write(f"Valid date entered: {x.strftime('%m/%d/%Y')}")
                 # After valid date input, move to the next page (Upload Files)
                 st.session_state.page = "Upload Files"
                 st.rerun()  # Force a rerun to reflect the page change
