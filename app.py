@@ -70,7 +70,7 @@ if st.session_state['files_uploaded']:
     st.write("Processing your files...")
 
     # URL to your GitHub raw file
-    github_script_url = "https://raw.githubusercontent.com/yourusername/yourrepo/main/opd.py"
+    github_script_url = "https://raw.githubusercontent.com/conkraw/schedule/main/opd.py"
 
     # Download the opd.py script from GitHub
     response = requests.get(github_script_url)
