@@ -4,7 +4,7 @@ st.set_page_config(layout="wide")
 
 # Importing the content of the pages
 from welcome import show_welcome_page
-from opd import show_opd  # Example of another page import
+from opd import show_opd_page  # Example of another page import
 
 # Initialize session state variable to handle page routing
 if "page" not in st.session_state:
@@ -15,4 +15,4 @@ def main():
     if st.session_state.page == "welcome":
         show_welcome_page()
     elif st.session_state.page == "opd":
-        show_opd()
+        show_opd_page()
