@@ -1726,23 +1726,19 @@ elif st.session_state.page == "Create Student Schedule":
     else:
 	    st.write("Please upload the OPD.xlsx file to proceed.")
 	    
-elif st.session_state.page == "Create Student_Schedule":
-	if 'OPD.xlsx' in st.session_state.uploaded_files:
-	    uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
-	    
-	    try:
-	        # Read the uploaded OPD file into a pandas dataframe
-	        df_opd = pd.read_excel(uploaded_opd_file)
-	
-	        # Optionally display the first few rows for verification
-	        st.write("Here is the uploaded OPD data:")
-	        st.dataframe(df_opd.head())
-	
-	        # Save the uploaded file as 'OPD.xlsx' to disk (or to a specific location)
-	        with open('OPD.xlsx', 'wb') as f:
-	            f.write(uploaded_opd_file.getvalue())
+elif st.session_state.page == "Create Student Schedule":
+    uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
+    
+    try:
+        # Read the uploaded OPD file into a pandas DataFrame
+        df_opd = pd.read_excel(uploaded_opd_file)
+        
+        # Save the DataFrame back to a local OPD.xlsx file
+        df_opd.to_excel('OPD.xlsx', index=False)  # Save without index column
+        
+        st.write("OPD.xlsx file has been successfully saved.")
 
-	read_file = pd.read_excel ('OPD.xlsx', sheet_name='HOPE_DRIVE')
+	read_file = pd.read_excel('OPD.xlsx', sheet_name='HOPE_DRIVE')
 	read_file.to_csv ('hopedrive.csv', index = False, header=False)
 	df=pd.read_csv('hopedrive.csv')
 	
@@ -3353,3 +3349,9 @@ elif st.session_state.page == "Create Student_Schedule":
 	df = pd.concat([new_row, dfx1]).reset_index(drop = True)
 	
 	df.to_csv('PALIST.csv',index=False)
+	    
+    except Exception as e:
+        # Handle any errors during file reading/saving
+        st.error(f"Error processing the OPD file: {e}")
+
+
