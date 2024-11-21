@@ -67,6 +67,7 @@ elif st.session_state.page == "Upload Files":
     if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx']):
         st.write("All files uploaded successfully!")
         st.session_state.page = "OPD Creator"  # Move to next page after uploading
+	st.rerun()
     else:
         st.write("Please upload all required files.")
 
