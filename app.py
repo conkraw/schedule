@@ -1702,5 +1702,29 @@ elif st.session_state.page == "OPD Creator":
 	        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	    )
 		
+
 elif st.session_state.page == "Create Student Schedule":
-    st.title("File Upload Section")
+    st.title('Create Student Schedule')
+
+    # Prompt user to upload the OPD.xlsx file
+    uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
+
+    if uploaded_opd_file:
+        # If the file is uploaded, read it into a pandas dataframe
+        try:
+            df_opd = pd.read_excel(uploaded_opd_file)
+            st.write("File successfully uploaded and loaded.")
+            
+            # Show the first few rows of the uploaded file for verification
+            st.dataframe(df_opd.head())  # Optionally, display the first few rows
+
+            # Proceed with further logic to generate student schedules
+            # Add your logic for creating student schedules using the loaded OPD data
+            st.write("Now, you can proceed with logic to create the student schedule.")
+            
+        except Exception as e:
+            st.error(f"Error reading the uploaded file: {e}")
+    
+    else:
+        st.write("Please upload the OPD.xlsx file to proceed.")
+
