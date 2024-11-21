@@ -11,6 +11,9 @@ if "page" not in st.session_state:
 def main():
     # Page routing based on session state
     if st.session_state.page == "welcome":
-        show_welcome_page()
-    #elif st.session_state.page == "opd":
-    #    show_opd_page()
+        show_welcome_page()  # Show the welcome page
+    elif st.session_state.page == "opd":
+        show_opd_page()  # Show the opd page
+
+if __name__ == "__main__":
+    main()
