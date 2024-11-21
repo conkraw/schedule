@@ -63,11 +63,14 @@ elif st.session_state.page == "Upload Files":
         # Store the uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
 
+    # Debugging: Check the content of the uploaded files
+    st.write(f"Uploaded files: {uploaded_files_dict}")
+
     # Check if all files are uploaded
     if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx']):
         st.write("All files uploaded successfully!")
         st.session_state.page = "OPD Creator"  # Move to next page after uploading
-	st.rerun()
+        st.rerun()  # Force a rerun to reflect the page change
     else:
         st.write("Please upload all required files.")
 
