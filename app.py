@@ -1642,24 +1642,20 @@ for row in ws.iter_rows():
 # Save updated workbook
 wb1.save('OPD.xlsx')
 ###############################################################################################
-if st.button('Save OPD'):
-    # Create a new workbook for OPD.xlsx
-    wb1 = openpyxl.Workbook()
-    ws1 = wb1.active
-    ws1.title = 'OPD'
+# Button to trigger the download
+if st.button('Download OPD'):
+    # Path to the existing 'OPD.xlsx' workbook
+    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
 
-    # Add some data to the workbook (this is just an example)
-    ws1.append(['Start Date', test_date.strftime('%m/%d/%Y')])
+    # Read the workbook into memory
+    with open(file_path, 'rb') as file:
+        file_data = file.read()
 
-    # Create an in-memory buffer to save the workbook as a byte stream
-    buffer = BytesIO()
-    wb1.save(buffer)
-    buffer.seek(0)
-
-    # Provide a download button for the generated OPD.xlsx file
+    # Provide a download button for the existing OPD.xlsx file
     st.download_button(
         label="Download OPD.xlsx",
-        data=buffer,
+        data=file_data,
         file_name="OPD.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
