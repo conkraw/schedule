@@ -44,17 +44,29 @@ elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write('Upload the following Excel files:')
     
-    uploaded_files = {}
-    uploaded_files['HOPE_DRIVE.xlsx'] = st.file_uploader('Upload HOPE_DRIVE.xlsx', type='xlsx')
-    uploaded_files['ETOWN.xlsx'] = st.file_uploader('Upload ETOWN.xlsx', type='xlsx')
-    uploaded_files['NYES.xlsx'] = st.file_uploader('Upload NYES.xlsx', type='xlsx')
+    # Allow multiple file uploads at once
+    uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
+    
+    # Initialize the dictionary for storing files in session state
+    uploaded_files_dict = {}
+    
+    if uploaded_files:
+        # Iterate through the uploaded files and assign them based on their names
+        for file in uploaded_files:
+            if 'HOPE_DRIVE.xlsx' in file.name:
+                uploaded_files_dict['HOPE_DRIVE.xlsx'] = file
+            elif 'ETOWN.xlsx' in file.name:
+                uploaded_files_dict['ETOWN.xlsx'] = file
+            elif 'NYES.xlsx' in file.name:
+                uploaded_files_dict['NYES.xlsx'] = file
+        
+        # Store the uploaded files in session state
+        st.session_state.uploaded_files = uploaded_files_dict
 
     # Check if all files are uploaded
-    if all(uploaded_files.values()):
+    if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx']):
         st.write("All files uploaded successfully!")
-        # Move to the next page (OPD Creator)
-        st.session_state.page = "OPD Creator"
-        st.rerun()  # Force a rerun to reflect the page change
+        st.session_state.page = "OPD Creator"  # Move to next page after uploading
     else:
         st.write("Please upload all required files.")
 
