@@ -11,7 +11,7 @@ if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
 
 # Page selection menu in the sidebar
-page_selection = st.sidebar.selectbox("Select Page", ["Home", "Create OPD", "Upload Files"])
+page_selection = st.sidebar.selectbox("Select Page", ["Home", "Create OPD", "Upload Files","OPD Creator"])
 
 # Set the current page based on selection
 st.session_state.page = page_selection
