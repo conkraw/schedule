@@ -7,7 +7,7 @@ import pandas as pd
 page_selection = st.sidebar.selectbox("Select Page", ["Home", "Create OPD"])
 
 if 'page' not in st.session_state:
-    st.session_state.page = "Home"
+    st.session_state.page = "Create OPD"
 if 'start_date' not in st.session_state:
     st.session_state.start_date = None
 if 'uploaded_files' not in st.session_state:
@@ -17,14 +17,14 @@ if 'uploaded_files' not in st.session_state:
 st.session_state.page = page_selection
 
 # Home Page: This is where the user selects where they want to go
-if st.session_state.page == "Home":
-    st.title("Welcome to OPD Creator")
-    st.write("Please select the page you want to visit from the sidebar on the left.")
-    st.write("1. **Create OPD**: Enter a start date for your OPD.")
-    st.write("2. **Upload Files**: Upload the necessary files.")
+#if st.session_state.page == "Home":
+#    st.title("Welcome to OPD Creator")
+#    st.write("Please select the page you want to visit from the sidebar on the left.")
+#    st.write("1. **Create OPD**: Enter a start date for your OPD.")
+#    st.write("2. **Upload Files**: Upload the necessary files.")
 	
 # Date input page
-elif st.session_state.page == "Create OPD":
+if st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
 
     # Display instructions to the user
