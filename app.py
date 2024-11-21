@@ -63,9 +63,6 @@ elif st.session_state.page == "Upload Files":
         # Store the uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
 
-    # Debugging: Check the content of the uploaded files
-    st.write(f"Uploaded files: {uploaded_files_dict}")
-
     # Check if all files are uploaded
     if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx']):
         st.write("All files uploaded successfully!")
