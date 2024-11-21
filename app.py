@@ -1712,16 +1712,54 @@ elif st.session_state.page == "OPD Creator":
 		
 elif st.session_state.page == "Create Student Schedule":
     st.title("Create Student Schedule")
-    st.write("You are now in the 'Create Student Schedule' page.")
+    # Upload the OPD.xlsx file
+    uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
+    
+    if uploaded_opd_file:
+        try:
+            # Read the uploaded OPD file into a pandas dataframe
+            df_opd = pd.read_excel(uploaded_opd_file)
+            st.write("File successfully uploaded and loaded.")
+            
+            # Store the uploaded file in session state for use later
+            st.session_state.uploaded_files['OPD.xlsx'] = uploaded_opd_file
+            
+            # Show the button to move to the next page
+            if st.button("Go to Create List"):
+                # Update the page state to transition to the next page
+                st.session_state.page = "Create List"
+                st.experimental_rerun()  # Trigger rerun to reflect the page change
+                
+        except Exception as e:
+            st.error(f"Error reading the uploaded file: {e}")
+    else:
+        st.write("Please upload the OPD.xlsx file to proceed.")
 
     # Button to go to the next page
     if st.button("Go to Next Page"):
-        st.session_state.page = "Next Page"  # Update the session state to go to the next page
+        st.session_state.page = "Create List"  # Update the session state to go to the next page
         st.rerun()  # Use st.rerun() instead of st.experimental_rerun() to force rerun and update the page
 
 # New page (Next Page) logic
-elif st.session_state.page == "Next Page":
-    st.title("Next Page")
-    st.write("You are now on the Next Page after clicking the button.")
-    # You can add more logic here for whatever happens after the page transition.
-    st.write("This is where the student schedule logic or other actions can happen.")
+elif st.session_state.page == "Create List":
+    st.title("Create List")
+
+    # Ensure the OPD.xlsx file exists in the session state before proceeding
+    if 'OPD.xlsx' in st.session_state.uploaded_files:
+        uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
+        
+        try:
+            # Read the OPD file into a dataframe
+            df_opd = pd.read_excel(uploaded_opd_file)
+            
+            # Display the first few rows of the OPD data for verification
+            st.dataframe(df_opd.head())
+            
+            # Save the OPD file again without the index column
+            df_opd.to_excel('OPD.xlsx', index=False)
+            st.write("OPD.xlsx file has been successfully saved.")
+        
+        except Exception as e:
+            st.error(f"Error processing the OPD file: {e}")
+    else:
+        st.error("No OPD file found in session state.")
