@@ -2,9 +2,13 @@ import streamlit as st
 import datetime
 import pandas as pd
 
+
 # Create a navigation menu using a selectbox or radio button
 page = st.selectbox("Select Page", ["Enter Start Date", "Upload Files"])
 
+if 'page' not in st.session_state:
+    st.session_state.page = "Enter Start Date"
+	
 # Date input page
 if page == "Enter Start Date":
     st.title('Date Input for OPD')
@@ -23,8 +27,7 @@ if page == "Enter Start Date":
                 test_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
                 st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
                 # After valid date input, move to the next page (Upload Files)
-		st.rerun()
-                page = "Upload Files"
+                st.session_state.page = "Upload Files"
             except ValueError:
                 st.error('Invalid date format. Please enter the date in m/d/yyyy format.')
         else:
