@@ -1,10 +1,15 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import requests
+import subprocess
+import os
 
 # Initialize session state variables
 if 'date_submitted' not in st.session_state:
     st.session_state['date_submitted'] = False
+if 'files_uploaded' not in st.session_state:
+    st.session_state['files_uploaded'] = False
 
 # Display the title of the app
 st.title('OPD Page')
@@ -44,7 +49,7 @@ if page_option == 'Create OPD':
             st.error('Please enter a date.')
 
 # If the date is submitted, show the file upload page
-if st.session_state['date_submitted']:
+if st.session_state['date_submitted'] and not st.session_state['files_uploaded']:
     st.write('Upload the following Excel files:')
     
     uploaded_files = {}
@@ -52,6 +57,37 @@ if st.session_state['date_submitted']:
     uploaded_files['ETOWN.xlsx'] = st.file_uploader('Upload ETOWN.xlsx', type='xlsx')
     uploaded_files['NYES.xlsx'] = st.file_uploader('Upload NYES.xlsx', type='xlsx')
     
-    # You can process the uploaded files here
+    # Check if all files are uploaded
     if all(uploaded_files.values()):
+        st.session_state['files_uploaded'] = True
         st.write("All files uploaded successfully!")
+        st.write("You will now be redirected to the next page.")
+        st.experimental_rerun()  # Trigger the rerun to proceed to the next step
+
+# If files are uploaded, execute the next action
+if st.session_state['files_uploaded']:
+    st.write("Processing your files...")
+
+    # URL to your GitHub raw file
+    github_script_url = "https://raw.githubusercontent.com/conkraw/schedule/main/opd.py"
+
+    # Download the opd.py script from GitHub
+    response = requests.get(github_script_url)
+    if response.status_code == 200:
+        # Save the content of the script as a .py file locally
+        script_path = "/tmp/opd.py"
+        with open(script_path, 'wb') as f:
+            f.write(response.content)
+        
+        # Execute the Python script using subprocess
+        try:
+            result = subprocess.run(['python3', script_path], capture_output=True, text=True)
+            st.write("Script executed successfully!")
+            st.text(result.stdout)  # Output from the script
+            if result.stderr:
+                st.error(result.stderr)  # Error messages from the script
+        except Exception as e:
+            st.error(f"Error executing the script: {e}")
+    else:
+        st.error("Failed to download the script from GitHub.")
+
