@@ -35,8 +35,7 @@ def date_input_page():
 	        st.error('Please enter a date.')
 
 def upload_page():
-    	st.title('Upload Files')
-	st.write('Upload the following Excel files:')
+    	st.write('Upload the following Excel files:')
 	uploaded_files = {}
 	uploaded_files['HOPE_DRIVE.xlsx'] = st.file_uploader('Upload HOPE_DRIVE.xlsx', type='xlsx')
 	uploaded_files['ETOWN.xlsx'] = st.file_uploader('Upload ETOWN.xlsx', type='xlsx')
