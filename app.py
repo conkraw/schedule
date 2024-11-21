@@ -62,7 +62,7 @@ if st.session_state['date_submitted'] and not st.session_state['files_uploaded']
         st.session_state['files_uploaded'] = True
         st.write("All files uploaded successfully!")
         st.write("You will now be redirected to the next page.")
-        st.experimental_rerun()  # Trigger the rerun to proceed to the next step
+        st.rerun()  # Trigger the rerun to proceed to the next step
 
 # If files are uploaded, execute the next action
 if st.session_state['files_uploaded']:
