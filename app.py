@@ -49,6 +49,7 @@ elif st.session_state.page == "Upload Files":
         st.write("All files uploaded successfully!")
         # Move to the next page
         st.session_state.page = "OPD Creator"  # Change to OPD Creator page
+	st.rerun()
     else:
         st.write("Please upload all required files.")
 
