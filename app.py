@@ -2,16 +2,16 @@ import streamlit as st
 import datetime
 import pandas as pd
 
-# Initialize session state variables if they don't exist
+
+# Create a navigation menu using a selectbox or radio button
+page_selection = st.sidebar.selectbox("Select Page", ["Home", "Create OPD"])
+
 if 'page' not in st.session_state:
     st.session_state.page = "Home"
 if 'start_date' not in st.session_state:
     st.session_state.start_date = None
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
-
-# Page selection menu in the sidebar
-page_selection = st.sidebar.selectbox("Select Page", ["Home", "Create OPD", "Upload Files","OPD Creator"])
 
 # Set the current page based on selection
 st.session_state.page = page_selection
@@ -42,43 +42,12 @@ elif st.session_state.page == "Create OPD":
                 st.session_state.start_date = test_date   # Save date in session state
                 st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
                 # After valid date input, move to the next page (Upload Files)
-                st.session_state.page = "Upload Files"  # Update page to "Upload Files"
+                st.session_state.page = "Upload Files"
+                st.rerun()  # Force a rerun to reflect the page change
             except ValueError:
                 st.error('Invalid date format. Please enter the date in m/d/yyyy format.')
         else:
             st.error('Please enter a date.')
-
-# File upload page
-elif st.session_state.page == "Upload Files":
-    st.title("File Upload Section")
-    st.write('Upload the following Excel files:')
-    
-    # Allow multiple file uploads at once
-    uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
-    
-    # Initialize the dictionary for storing files in session state
-    uploaded_files_dict = {}
-    
-    if uploaded_files:
-        # Iterate through the uploaded files and assign them based on their names
-        for file in uploaded_files:
-            if 'HOPE_DRIVE.xlsx' in file.name:
-                uploaded_files_dict['HOPE_DRIVE.xlsx'] = file
-            elif 'ETOWN.xlsx' in file.name:
-                uploaded_files_dict['ETOWN.xlsx'] = file
-            elif 'NYES.xlsx' in file.name:
-                uploaded_files_dict['NYES.xlsx'] = file
-        
-        # Store the uploaded files in session state
-        st.session_state.uploaded_files = uploaded_files_dict
-
-    # Check if all files are uploaded
-    if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx']):
-        st.write("All files uploaded successfully!")
-        st.session_state.page = "OPD Creator"  # Move to next page after uploading
-    else:
-        st.write("Please upload all required files.")
-
 
 # File upload page
 elif st.session_state.page == "Upload Files":
