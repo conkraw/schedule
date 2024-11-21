@@ -43,7 +43,7 @@ elif st.session_state.page == "Create OPD":
                 st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
                 # After valid date input, move to the next page (Upload Files)
                 st.session_state.page = "Upload Files"
-                st.rerun()  # Force a rerun to reflect the page change
+                #st.rerun()  # Force a rerun to reflect the page change
             except ValueError:
                 st.error('Invalid date format. Please enter the date in m/d/yyyy format.')
         else:
