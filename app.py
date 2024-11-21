@@ -50,7 +50,8 @@ elif page == "Upload Files":
     else:
         st.write("Please upload all required files.")
 
-	test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
+elif page == "OPD Creator:"
+test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	 
 	# initializing K
 	K = 28
