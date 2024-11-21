@@ -7,6 +7,20 @@ import sys
 import os
 import xlswriter 
 
+def install_xlsxwriter():
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "xlsxwriter"])
+        st.write("xlsxwriter module installed successfully!")
+    except subprocess.CalledProcessError as e:
+        st.error(f"Failed to install xlsxwriter: {e}")
+
+# Check if the module is installed, and install if not
+try:
+    import xlsxwriter
+except ImportError:
+    st.write("xlsxwriter not found, installing...")
+    install_xlsxwriter()
+
 # Initialize session state variables
 if 'date_submitted' not in st.session_state:
     st.session_state['date_submitted'] = False
