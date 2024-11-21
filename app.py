@@ -14,5 +14,5 @@ def main():
     # Page routing based on session state
     if st.session_state.page == "welcome":
         show_welcome_page()
-    elif st.session_state.page == "another_page":
+    elif st.session_state.page == "opd":
         show_opd()
