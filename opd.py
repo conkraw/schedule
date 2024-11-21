@@ -4,6 +4,9 @@ import datetime
 
 
 def show_opd_page():
+	import streamlit as st
+	import pandas as pd
+	import datetime
 	
 	# Display the title of the app
 	st.title('Date Input for OPD')
