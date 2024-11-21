@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import requests
 import subprocess
+import sys
 import os
 
 # Initialize session state variables
@@ -69,7 +70,7 @@ if st.session_state['files_uploaded']:
     st.write("Processing your files...")
 
     # URL to your GitHub raw file
-    github_script_url = "https://raw.githubusercontent.com/conkraw/schedule/main/opd.py"
+    github_script_url = "https://raw.githubusercontent.com/yourusername/yourrepo/main/opd.py"
 
     # Download the opd.py script from GitHub
     response = requests.get(github_script_url)
@@ -78,10 +79,22 @@ if st.session_state['files_uploaded']:
         script_path = "/tmp/opd.py"
         with open(script_path, 'wb') as f:
             f.write(response.content)
-        
+
+        # Ensure missing modules are installed before running the script
+        required_modules = ['xlsxwriter']  # Add other required modules here if needed
+
+        for module in required_modules:
+            try:
+                # Try importing the module
+                __import__(module)
+            except ImportError:
+                # If module is missing, install it
+                st.write(f"Installing missing module: {module}")
+                subprocess.check_call([sys.executable, "-m", "pip", "install", module])
+
         # Execute the Python script using subprocess
         try:
-            result = subprocess.run(['python3', script_path], capture_output=True, text=True)
+            result = subprocess.run([sys.executable, script_path], capture_output=True, text=True)
             st.write("Script executed successfully!")
             st.text(result.stdout)  # Output from the script
             if result.stderr:
