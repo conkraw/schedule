@@ -1732,6 +1732,7 @@ if st.session_state.page == "Create Student Schedule":
         st.write("Please upload the OPD.xlsx file to proceed.")
 
 elif st.session_state.page == "Create List":
+    st.write("Create List")
     uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
     df_opd = pd.read_excel(uploaded_opd_file)
     st.dataframe(df_opd.head())
