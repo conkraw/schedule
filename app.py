@@ -46,11 +46,7 @@ elif page == "Upload Files":
     # Check if all files are uploaded
     if all(uploaded_files.values()):
         st.write("All files uploaded successfully!")
-        # You can display or process the files here
-        for file_name, file in uploaded_files.items():
-            st.write(f"File uploaded: {file_name}")
-            df = pd.read_excel(file)
-            st.write(df.head())  # Displaying the first few rows of the Excel file
+	st.session_state.page = "OPD Creator"
     else:
         st.write("Please upload all required files.")
 
