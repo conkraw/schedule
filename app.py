@@ -10,7 +10,7 @@ if 'page' not in st.session_state:
     st.session_state.page = "Enter Start Date"
 	
 # Date input page
-if page == "Enter Start Date":
+if st.session_state.page == "Enter Start Date":
     st.title('Date Input for OPD')
 
     # Display instructions to the user
@@ -34,7 +34,7 @@ if page == "Enter Start Date":
             st.error('Please enter a date.')
 
 # File upload page
-elif page == "Upload Files":
+elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write('Upload the following Excel files:')
     
@@ -46,11 +46,12 @@ elif page == "Upload Files":
     # Check if all files are uploaded
     if all(uploaded_files.values()):
         st.write("All files uploaded successfully!")
-	st.session_state.page = "OPD Creator"
+        # Move to the next page
+        st.session_state.page = "OPD Creator"  # Change to OPD Creator page
     else:
         st.write("Please upload all required files.")
 
-elif page == "OPD Creator":
+elif st.session_state.page == "OPD Creator":
 	test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	 
 	# initializing K
