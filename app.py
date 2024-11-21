@@ -34,7 +34,7 @@ if page_option == 'Create OPD':
                 # Display the converted date
                 st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
                 st.write("You will now be redirected to the File Upload page.")
-                st.experimental_rerun()  # Trigger the rerun to navigate to file upload
+                st.rerun()  # Trigger the rerun to navigate to file upload
 
             except ValueError:
                 # Display an error message if the date format is incorrect
