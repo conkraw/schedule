@@ -2,14 +2,6 @@ streamlit
 openai==0.28.0
 python-dotenv
 pandas
-globus_sdk 
-firebase-admin
 python-docx==0.8.11
-pdf2image
-Pillow
-PyPDF2==2.0.0
-pdfrw
-Flask
-fitz
-pypdf
 xlswriter
+numpy
