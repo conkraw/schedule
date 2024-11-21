@@ -4,27 +4,17 @@ import pandas as pd
 
 
 # Create a navigation menu using a selectbox or radio button
-page_selection = st.sidebar.selectbox("Select Page", ["Home", "Create OPD"])
+page = st.selectbox("Select Page", ["Create OPD"])
 
 if 'page' not in st.session_state:
-    st.session_state.page = "Home"
+    st.session_state.page = "Create OPD"
 if 'start_date' not in st.session_state:
     st.session_state.start_date = None
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
-
-# Set the current page based on selection
-st.session_state.page = page_selection
-
-# Home Page: This is where the user selects where they want to go
-if st.session_state.page == "Home":
-    st.title("Welcome to OPD Creator")
-    st.write("Please select the page you want to visit from the sidebar on the left.")
-    st.write("1. **Create OPD**: Enter a start date for your OPD.")
-    st.write("2. **Upload Files**: Upload the necessary files.")
 	
 # Date input page
-elif st.session_state.page == "Create OPD":
+if st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
 
     # Display instructions to the user
@@ -54,34 +44,20 @@ elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write('Upload the following Excel files:')
     
-    # Allow multiple file uploads at once
-    uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
-    
-    # Initialize the dictionary for storing files in session state
-    uploaded_files_dict = {}
-    
-    if uploaded_files:
-        # Iterate through the uploaded files and assign them based on their names
-        for file in uploaded_files:
-            if 'HOPE_DRIVE.xlsx' in file.name:
-                uploaded_files_dict['HOPE_DRIVE.xlsx'] = file
-            elif 'ETOWN.xlsx' in file.name:
-                uploaded_files_dict['ETOWN.xlsx'] = file
-            elif 'NYES.xlsx' in file.name:
-                uploaded_files_dict['NYES.xlsx'] = file
-        
-        # Store the uploaded files in session state
-        st.session_state.uploaded_files = uploaded_files_dict
+    uploaded_files = {}
+    uploaded_files['HOPE_DRIVE.xlsx'] = st.file_uploader('Upload HOPE_DRIVE.xlsx', type='xlsx')
+    uploaded_files['ETOWN.xlsx'] = st.file_uploader('Upload ETOWN.xlsx', type='xlsx')
+    uploaded_files['NYES.xlsx'] = st.file_uploader('Upload NYES.xlsx', type='xlsx')
 
     # Check if all files are uploaded
-    if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx']):
+    if all(uploaded_files.values()):
         st.write("All files uploaded successfully!")
         # Move to the next page (OPD Creator)
         st.session_state.page = "OPD Creator"
         st.rerun()  # Force a rerun to reflect the page change
     else:
         st.write("Please upload all required files.")
-	    
+
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
@@ -1695,7 +1671,7 @@ elif st.session_state.page == "OPD Creator":
 	wb1.save('OPD.xlsx')
 	###############################################################################################
 	# Button to trigger the download
-	if st.button('Create Loaded OPD'):
+	if st.button('Create OPD'):
 	    # Path to the existing 'OPD.xlsx' workbook
 	    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
 	
