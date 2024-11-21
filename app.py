@@ -1724,7 +1724,8 @@ elif st.session_state.page == "Create Student Schedule":
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
     else:
-
+	    st.write("Please upload the OPD.xlsx file to proceed.")
+	    
 elif st.session_state.page == "Create Student_Schedule":
 	if 'OPD.xlsx' in st.session_state.uploaded_files:
 	    uploaded_opd_file = st.session_state.uploaded_files['OPD.xlsx']
