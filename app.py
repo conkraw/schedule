@@ -5,7 +5,6 @@ import requests
 import subprocess
 import sys
 import os
-import xlswriter 
 
 def install_xlsxwriter():
     try:
