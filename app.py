@@ -23,6 +23,7 @@ if page == "Enter Start Date":
                 test_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
                 st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
                 # After valid date input, move to the next page (Upload Files)
+		st.rerun()
                 page = "Upload Files"
             except ValueError:
                 st.error('Invalid date format. Please enter the date in m/d/yyyy format.')
