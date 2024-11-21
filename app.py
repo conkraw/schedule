@@ -1721,7 +1721,7 @@ elif st.session_state.page == "Create Student Schedule":
             if st.button("Go to Create List"):
                 # Update the page state to transition to the next page
                 st.session_state.page = "Create List"
-                st.experimental_rerun()  # Trigger rerun to reflect the page change
+                st.rerun()  # Trigger rerun to reflect the page change
                 
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
