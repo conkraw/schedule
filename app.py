@@ -1709,7 +1709,7 @@ elif st.session_state.page == "Create Student Schedule":
     # Button to go to the next page
     if st.button("Go to Next Page"):
         st.session_state.page = "Next Page"  # Update the session state to go to the next page
-        st.rerun()  # Force a rerun to update the page transition
+        st.experimental_rerun()  # Force rerun to update the page transition
 
 # New page (Next Page) logic
 elif st.session_state.page == "Next Page":
