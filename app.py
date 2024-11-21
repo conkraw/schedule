@@ -48,6 +48,7 @@ elif st.session_state.page == "Upload Files":
     uploaded_files['HOPE_DRIVE.xlsx'] = st.file_uploader('Upload HOPE_DRIVE.xlsx', type='xlsx')
     uploaded_files['ETOWN.xlsx'] = st.file_uploader('Upload ETOWN.xlsx', type='xlsx')
     uploaded_files['NYES.xlsx'] = st.file_uploader('Upload NYES.xlsx', type='xlsx')
+    st.session_state.uploaded_files = uploaded_files
 
     # Check if all files are uploaded
     if all(uploaded_files.values()):
