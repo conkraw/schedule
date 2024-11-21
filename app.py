@@ -1,7 +1,5 @@
 import streamlit as st
 
-st.set_page_config(layout="wide")
-
 # Importing the content of the pages
 from welcome import show_welcome_page
 from opd import show_opd_page  # Example of another page import
