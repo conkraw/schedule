@@ -1734,10 +1734,6 @@ elif st.session_state.page == "Create Student Schedule":
         st.session_state.page = "Create List"  # Update the session state to go to the next page
         st.rerun()  # Use st.rerun() instead of st.experimental_rerun() to force rerun and update the page
 
-# New page (Next Page) logic
-import streamlit as st
-import pandas as pd
-
 elif st.session_state.page == "Create List":
     st.title("Create List")
 
