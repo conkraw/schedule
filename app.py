@@ -1762,5 +1762,13 @@ elif st.session_state.page == "Create List":
         read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
         read_file.to_csv ('hopedrive.csv', index = False, header=False)
         df=pd.read_csv('hopedrive.csv')
+        clinictype=df.iloc[3:23, 0:1]
+	a1 = pd.DataFrame(clinictype, columns = ['type'])
+	a2 = pd.DataFrame(clinictype, columns = ['type'])
+	a3 = pd.DataFrame(clinictype, columns = ['type'])
+	a4 = pd.DataFrame(clinictype, columns = ['type'])
+	a5 = pd.DataFrame(clinictype, columns = ['type'])
+	a6 = pd.DataFrame(clinictype, columns = ['type'])
+	a7 = pd.DataFrame(clinictype, columns = ['type'])
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
