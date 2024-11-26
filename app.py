@@ -1761,14 +1761,19 @@ elif st.session_state.page == "Create List":
     try:
         # Read the 'HOPE_DRIVE' sheet
         read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
-        
         # Save the 'HOPE_DRIVE' data to CSV
         read_file.to_csv('hopedrive.csv', index=False, header=False)
         st.write("HOPE_DRIVE data has been saved to 'hopedrive.csv'.")
-        
-        # Display the first few rows of the 'HOPE_DRIVE' data
-        st.dataframe(read_file.head())
-    
+        df=pd.read_csv('hopedrive.csv')
+	clinictype=df.iloc[3:23, 0:1]
+	a1 = pd.DataFrame(clinictype, columns = ['type'])
+	a2 = pd.DataFrame(clinictype, columns = ['type'])
+	a3 = pd.DataFrame(clinictype, columns = ['type'])
+	a4 = pd.DataFrame(clinictype, columns = ['type'])
+	a5 = pd.DataFrame(clinictype, columns = ['type'])
+	a6 = pd.DataFrame(clinictype, columns = ['type'])
+	a7 = pd.DataFrame(clinictype, columns = ['type'])
+    	st.dataframe(a7.head())
     except ValueError:
         st.error("The sheet 'HOPE_DRIVE' was not found in the uploaded OPD file.")
     except Exception as e:
