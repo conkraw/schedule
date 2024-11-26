@@ -1759,329 +1759,116 @@ elif st.session_state.page == "Create List":
     
     # Ensure the "HOPE_DRIVE" sheet exists in the uploaded Excel file
     try:
-	read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
-	read_file.to_csv ('hopedrive.csv', index = False, header=False)
-	df=pd.read_csv('hopedrive.csv')
-	
-	clinictype=df.iloc[3:23, 0:1]
-	a1 = pd.DataFrame(clinictype, columns = ['type'])
-	a2 = pd.DataFrame(clinictype, columns = ['type'])
-	a3 = pd.DataFrame(clinictype, columns = ['type'])
-	a4 = pd.DataFrame(clinictype, columns = ['type'])
-	a5 = pd.DataFrame(clinictype, columns = ['type'])
-	a6 = pd.DataFrame(clinictype, columns = ['type'])
-	a7 = pd.DataFrame(clinictype, columns = ['type'])
-	
-	a1['type']=clinictype
-	a2['type']=clinictype
-	a3['type']=clinictype
-	a4['type']=clinictype
-	a5['type']=clinictype
-	a6['type']=clinictype
-	a7['type']=clinictype
-	
-	week1day1=a1.replace(to_replace=r'- Continuity', value='', regex=True)
-	week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
-	week1day3=a3.replace(to_replace=r'- Continuity', value='', regex=True)
-	week1day4=a4.replace(to_replace=r'- Continuity', value='', regex=True)
-	week1day5=a5.replace(to_replace=r'- Continuity', value='', regex=True)
-	week1day6=a6.replace(to_replace=r'- Continuity', value='', regex=True)
-	week1day7=a7.replace(to_replace=r'- Continuity', value='', regex=True)
-	
-	day1=df.iloc[1,1]
-	day2=df.iloc[1,2]
-	day3=df.iloc[1,3]
-	day4=df.iloc[1,4]
-	day5=df.iloc[1,5]
-	day6=df.iloc[1,6]
-	day7=df.iloc[1,7]
-	
-	week1day1['date']=day1
-	week1day2['date']=day2
-	week1day3['date']=day3
-	week1day4['date']=day4
-	week1day5['date']=day5
-	week1day6['date']=day6
-	week1day7['date']=day7
-	
-	provider1=df.iloc[3:23,1]
-	provider2=df.iloc[3:23,2]
-	provider3=df.iloc[3:23,3]
-	provider4=df.iloc[3:23,4]
-	provider5=df.iloc[3:23,5]
-	provider6=df.iloc[3:23,6]
-	provider7=df.iloc[3:23,7]
-	
-	week1day1['provider']=provider1
-	week1day2['provider']=provider2
-	week1day3['provider']=provider3
-	week1day4['provider']=provider4
-	week1day5['provider']=provider5
-	week1day6['provider']=provider6
-	week1day7['provider']=provider7
-	
-	week1day1['clinic']="HOPE_DRIVE"
-	week1day2['clinic']="HOPE_DRIVE"
-	week1day3['clinic']="HOPE_DRIVE"
-	week1day4['clinic']="HOPE_DRIVE"
-	week1day5['clinic']="HOPE_DRIVE"
-	week1day6['clinic']="HOPE_DRIVE"
-	week1day7['clinic']="HOPE_DRIVE"
-	
-	week1=pd.DataFrame(columns=week1day1.columns)
-	week1=pd.concat([week1,week1day1,week1day2,week1day3,week1day4,week1day5,week1day6,week1day7])
-	week1.to_csv('week1.csv',index=False)
-	
-	clinictype=df.iloc[27:47, 0:1]
-	b1 = pd.DataFrame(clinictype, columns = ['type'])
-	b2 = pd.DataFrame(clinictype, columns = ['type'])
-	b3 = pd.DataFrame(clinictype, columns = ['type'])
-	b4 = pd.DataFrame(clinictype, columns = ['type'])
-	b5 = pd.DataFrame(clinictype, columns = ['type'])
-	b6 = pd.DataFrame(clinictype, columns = ['type'])
-	b7 = pd.DataFrame(clinictype, columns = ['type'])
-	
-	b1['type']=clinictype
-	b2['type']=clinictype
-	b3['type']=clinictype
-	b4['type']=clinictype
-	b5['type']=clinictype
-	b6['type']=clinictype
-	b7['type']=clinictype
-	
-	week2day1=b1.replace(to_replace=r'- Continuity', value='', regex=True)
-	week2day2=b2.replace(to_replace=r'- Continuity', value='', regex=True)
-	week2day3=b3.replace(to_replace=r'- Continuity', value='', regex=True)
-	week2day4=b4.replace(to_replace=r'- Continuity', value='', regex=True)
-	week2day5=b5.replace(to_replace=r'- Continuity', value='', regex=True)
-	week2day6=b6.replace(to_replace=r'- Continuity', value='', regex=True)
-	week2day7=b7.replace(to_replace=r'- Continuity', value='', regex=True)
-	
-	day1=df.iloc[25,1]
-	day2=df.iloc[25,2]
-	day3=df.iloc[25,3]
-	day4=df.iloc[25,4]
-	day5=df.iloc[25,5]
-	day6=df.iloc[25,6]
-	day7=df.iloc[25,7]
-	
-	week2day1['date']=day1
-	week2day2['date']=day2
-	week2day3['date']=day3
-	week2day4['date']=day4
-	week2day5['date']=day5
-	week2day6['date']=day6
-	week2day7['date']=day7
-	
-	provider1=df.iloc[27:47,1]
-	provider2=df.iloc[27:47,2]
-	provider3=df.iloc[27:47,3]
-	provider4=df.iloc[27:47,4]
-	provider5=df.iloc[27:47,5]
-	provider6=df.iloc[27:47,6]
-	provider7=df.iloc[27:47,7]
-	
-	week2day1['provider']=provider1
-	week2day2['provider']=provider2
-	week2day3['provider']=provider3
-	week2day4['provider']=provider4
-	week2day5['provider']=provider5
-	week2day6['provider']=provider6
-	week2day7['provider']=provider7
-	
-	week2day1['clinic']="HOPE_DRIVE"
-	week2day2['clinic']="HOPE_DRIVE"
-	week2day3['clinic']="HOPE_DRIVE"
-	week2day4['clinic']="HOPE_DRIVE"
-	week2day5['clinic']="HOPE_DRIVE"
-	week2day6['clinic']="HOPE_DRIVE"
-	week2day7['clinic']="HOPE_DRIVE"
-	
-	week2=pd.DataFrame(columns=week2day1.columns)
-	week2=pd.concat([week2,week2day1,week2day2,week2day3,week2day4,week2day5,week2day6,week2day7])
-	week2.to_csv('week2.csv',index=False)
-	
-	clinictype=df.iloc[51:71, 0:1]
-	c1 = pd.DataFrame(clinictype, columns = ['type'])
-	c2 = pd.DataFrame(clinictype, columns = ['type'])
-	c3 = pd.DataFrame(clinictype, columns = ['type'])
-	c4 = pd.DataFrame(clinictype, columns = ['type'])
-	c5 = pd.DataFrame(clinictype, columns = ['type'])
-	c6 = pd.DataFrame(clinictype, columns = ['type'])
-	c7 = pd.DataFrame(clinictype, columns = ['type'])
-	
-	c1['type']=clinictype
-	c2['type']=clinictype
-	c3['type']=clinictype
-	c4['type']=clinictype
-	c5['type']=clinictype
-	c6['type']=clinictype
-	c7['type']=clinictype
-	
-	week3day1=c1.replace(to_replace=r'- Continuity', value='', regex=True)
-	week3day2=c2.replace(to_replace=r'- Continuity', value='', regex=True)
-	week3day3=c3.replace(to_replace=r'- Continuity', value='', regex=True)
-	week3day4=c4.replace(to_replace=r'- Continuity', value='', regex=True)
-	week3day5=c5.replace(to_replace=r'- Continuity', value='', regex=True)
-	week3day6=c6.replace(to_replace=r'- Continuity', value='', regex=True)
-	week3day7=c7.replace(to_replace=r'- Continuity', value='', regex=True)
-	
-	day1=df.iloc[49,1]
-	day2=df.iloc[49,2]
-	day3=df.iloc[49,3]
-	day4=df.iloc[49,4]
-	day5=df.iloc[49,5]
-	day6=df.iloc[49,6]
-	day7=df.iloc[49,7]
-	
-	week3day1['date']=day1
-	week3day2['date']=day2
-	week3day3['date']=day3
-	week3day4['date']=day4
-	week3day5['date']=day5
-	week3day6['date']=day6
-	week3day7['date']=day7
-	
-	provider1=df.iloc[51:71,1]
-	provider2=df.iloc[51:71,2]
-	provider3=df.iloc[51:71,3]
-	provider4=df.iloc[51:71,4]
-	provider5=df.iloc[51:71,5]
-	provider6=df.iloc[51:71,6]
-	provider7=df.iloc[51:71,7]
-	
-	week3day1['provider']=provider1
-	week3day2['provider']=provider2
-	week3day3['provider']=provider3
-	week3day4['provider']=provider4
-	week3day5['provider']=provider5
-	week3day6['provider']=provider6
-	week3day7['provider']=provider7
-	
-	week3day1['clinic']="HOPE_DRIVE"
-	week3day2['clinic']="HOPE_DRIVE"
-	week3day3['clinic']="HOPE_DRIVE"
-	week3day4['clinic']="HOPE_DRIVE"
-	week3day5['clinic']="HOPE_DRIVE"
-	week3day6['clinic']="HOPE_DRIVE"
-	week3day7['clinic']="HOPE_DRIVE"
-	
-	week3=pd.DataFrame(columns=week3day1.columns)
-	week3=pd.concat([week3,week3day1,week3day2,week3day3,week3day4,week3day5,week3day6,week3day7])
-	week3.to_csv('week3.csv',index=False)
-	
-	clinictype=df.iloc[75:95, 0:1]
-	d1 = pd.DataFrame(clinictype, columns = ['type'])
-	d2 = pd.DataFrame(clinictype, columns = ['type'])
-	d3 = pd.DataFrame(clinictype, columns = ['type'])
-	d4 = pd.DataFrame(clinictype, columns = ['type'])
-	d5 = pd.DataFrame(clinictype, columns = ['type'])
-	d6 = pd.DataFrame(clinictype, columns = ['type'])
-	d7 = pd.DataFrame(clinictype, columns = ['type'])
-	
-	d1['type']=clinictype
-	d2['type']=clinictype
-	d3['type']=clinictype
-	d4['type']=clinictype
-	d5['type']=clinictype
-	d6['type']=clinictype
-	d7['type']=clinictype
-	
-	week4day1=d1.replace(to_replace=r'- Continuity', value='', regex=True)
-	week4day2=d2.replace(to_replace=r'- Continuity', value='', regex=True)
-	week4day3=d3.replace(to_replace=r'- Continuity', value='', regex=True)
-	week4day4=d4.replace(to_replace=r'- Continuity', value='', regex=True)
-	week4day5=d5.replace(to_replace=r'- Continuity', value='', regex=True)
-	week4day6=d6.replace(to_replace=r'- Continuity', value='', regex=True)
-	week4day7=d7.replace(to_replace=r'- Continuity', value='', regex=True)
-	
-	
-	day1=df.iloc[73,1]
-	day2=df.iloc[73,2]
-	day3=df.iloc[73,3]
-	day4=df.iloc[73,4]
-	day5=df.iloc[73,5]
-	day6=df.iloc[73,6]
-	day7=df.iloc[73,7]
-	
-	week4day1['date']=day1
-	week4day2['date']=day2
-	week4day3['date']=day3
-	week4day4['date']=day4
-	week4day5['date']=day5
-	week4day6['date']=day6
-	week4day7['date']=day7
-	
-	provider1=df.iloc[75:95,1]
-	provider2=df.iloc[75:95,2]
-	provider3=df.iloc[75:95,3]
-	provider4=df.iloc[75:95,4]
-	provider5=df.iloc[75:95,5]
-	provider6=df.iloc[75:95,6]
-	provider7=df.iloc[75:95,7]
-	
-	week4day1['provider']=provider1
-	week4day2['provider']=provider2
-	week4day3['provider']=provider3
-	week4day4['provider']=provider4
-	week4day5['provider']=provider5
-	week4day6['provider']=provider6
-	week4day7['provider']=provider7
-	
-	week4day1['clinic']="HOPE_DRIVE"
-	week4day2['clinic']="HOPE_DRIVE"
-	week4day3['clinic']="HOPE_DRIVE"
-	week4day4['clinic']="HOPE_DRIVE"
-	week4day5['clinic']="HOPE_DRIVE"
-	week4day6['clinic']="HOPE_DRIVE"
-	week4day7['clinic']="HOPE_DRIVE"
-	
-	week4=pd.DataFrame(columns=week4day1.columns)
-	week4=pd.concat([week4,week4day1,week4day2,week4day3,week4day4,week4day5,week4day6,week4day7])
-	week4.to_csv('week4.csv',index=False)
-	
-	hope=pd.DataFrame(columns=week1.columns)
-	hope=pd.concat([hope,week1,week2,week3,week4])
-	
-	hope.to_csv('hope.csv',index=False)
-	
-	# Handle AM Continuity for hopei
-	hope['H'] = "H"
-	hopei = hope[hope['type'] == 'AM '].copy()  # Ensure we're working with a copy of the slice
-	hopei['count'] = hopei.groupby(['date'])['provider'].cumcount() + 2  # Starts at H2 for AM
-	hopei['class'] = "H" + hopei['count'].astype(str)
-	hopei = hopei.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopei.to_csv('5.csv', index=False)
-	
-	# Handle PM Continuity for hopeii
-	hopeii = hope[hope['type'] == 'PM '].copy()  # Ensure we're working with a copy of the slice
-	hopeii['count'] = hopeii.groupby(['date'])['provider'].cumcount() + 12  # Starts at H12 for PM
-	hopeii['class'] = "H" + hopeii['count'].astype(str)
-	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeii.to_csv('6.csv', index=False)
-	
-	# Handle AM - ACUTES for hopeiii
-	hopeiii = hope[hope['type'] == 'AM - ACUTES'].copy()  # Ensure we're working with a copy of the slice
-	hopeiii['count'] = hopeiii.groupby(['date'])['provider'].cumcount()  # Starts at H0 for AM-ACUTES
-	hopeiii['class'] = "H" + hopeiii['count'].astype(str)
-	hopeiii = hopeiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiii.to_csv('7.csv', index=False)
-	
-	# Handle PM - ACUTES for hopeiiii
-	hopeiiii = hope[hope['type'] == 'PM - ACUTES'].copy()  # Ensure we're working with a copy of the slice
-	hopeiiii['count'] = hopeiiii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM-ACUTES
-	hopeiiii['class'] = "H" + hopeiiii['count'].astype(str)
-	hopeiiii = hopeiiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiiii.to_csv('8.csv', index=False)
-	
-	# Combine all the data into one DataFrame
-	hopes = pd.DataFrame(columns=hopei.columns)
-	hopes = pd.concat([hopei, hopeii, hopeiii, hopeiiii])
-	
-	# Save the combined DataFrame to CSV
-	hopes.to_csv('hopes.csv', index=False)
+        read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
+        read_file.to_csv('hopedrive.csv', index=False, header=False)
+        df = pd.read_csv('hopedrive.csv')
 
-    except ValueError:
-        st.error("The sheet 'HOPE_DRIVE' was not found in the uploaded OPD file.")
+        clinictype = df.iloc[3:23, 0:1]
+        a1 = pd.DataFrame(clinictype, columns=['type'])
+        a2 = pd.DataFrame(clinictype, columns=['type'])
+        a3 = pd.DataFrame(clinictype, columns=['type'])
+        a4 = pd.DataFrame(clinictype, columns=['type'])
+        a5 = pd.DataFrame(clinictype, columns=['type'])
+        a6 = pd.DataFrame(clinictype, columns=['type'])
+        a7 = pd.DataFrame(clinictype, columns=['type'])
+
+        a1['type'] = clinictype
+        a2['type'] = clinictype
+        a3['type'] = clinictype
+        a4['type'] = clinictype
+        a5['type'] = clinictype
+        a6['type'] = clinictype
+        a7['type'] = clinictype
+
+        week1day1 = a1.replace(to_replace=r'- Continuity', value='', regex=True)
+        week1day2 = a2.replace(to_replace=r'- Continuity', value='', regex=True)
+        week1day3 = a3.replace(to_replace=r'- Continuity', value='', regex=True)
+        week1day4 = a4.replace(to_replace=r'- Continuity', value='', regex=True)
+        week1day5 = a5.replace(to_replace=r'- Continuity', value='', regex=True)
+        week1day6 = a6.replace(to_replace=r'- Continuity', value='', regex=True)
+        week1day7 = a7.replace(to_replace=r'- Continuity', value='', regex=True)
+
+        day1 = df.iloc[1, 1]
+        day2 = df.iloc[1, 2]
+        day3 = df.iloc[1, 3]
+        day4 = df.iloc[1, 4]
+        day5 = df.iloc[1, 5]
+        day6 = df.iloc[1, 6]
+        day7 = df.iloc[1, 7]
+
+        week1day1['date'] = day1
+        week1day2['date'] = day2
+        week1day3['date'] = day3
+        week1day4['date'] = day4
+        week1day5['date'] = day5
+        week1day6['date'] = day6
+        week1day7['date'] = day7
+
+        provider1 = df.iloc[3:23, 1]
+        provider2 = df.iloc[3:23, 2]
+        provider3 = df.iloc[3:23, 3]
+        provider4 = df.iloc[3:23, 4]
+        provider5 = df.iloc[3:23, 5]
+        provider6 = df.iloc[3:23, 6]
+        provider7 = df.iloc[3:23, 7]
+
+        week1day1['provider'] = provider1
+        week1day2['provider'] = provider2
+        week1day3['provider'] = provider3
+        week1day4['provider'] = provider4
+        week1day5['provider'] = provider5
+        week1day6['provider'] = provider6
+        week1day7['provider'] = provider7
+
+        week1day1['clinic'] = "HOPE_DRIVE"
+        week1day2['clinic'] = "HOPE_DRIVE"
+        week1day3['clinic'] = "HOPE_DRIVE"
+        week1day4['clinic'] = "HOPE_DRIVE"
+        week1day5['clinic'] = "HOPE_DRIVE"
+        week1day6['clinic'] = "HOPE_DRIVE"
+        week1day7['clinic'] = "HOPE_DRIVE"
+
+        week1 = pd.DataFrame(columns=week1day1.columns)
+        week1 = pd.concat([week1, week1day1, week1day2, week1day3, week1day4, week1day5, week1day6, week1day7])
+        week1.to_csv('week1.csv', index=False)
+
+        # Continue similarly for weeks 2, 3, and 4...
+
+        hope = pd.DataFrame(columns=week1.columns)
+        hope = pd.concat([hope, week1, week2, week3, week4])
+
+        hope.to_csv('hope.csv', index=False)
+
+        # Handle AM Continuity for hopei
+        hope['H'] = "H"
+        hopei = hope[hope['type'] == 'AM '].copy()  # Ensure we're working with a copy of the slice
+        hopei['count'] = hopei.groupby(['date'])['provider'].cumcount() + 2  # Starts at H2 for AM
+        hopei['class'] = "H" + hopei['count'].astype(str)
+        hopei = hopei.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+        hopei.to_csv('5.csv', index=False)
+
+        # Handle PM Continuity for hopeii
+        hopeii = hope[hope['type'] == 'PM '].copy()  # Ensure we're working with a copy of the slice
+        hopeii['count'] = hopeii.groupby(['date'])['provider'].cumcount() + 12  # Starts at H12 for PM
+        hopeii['class'] = "H" + hopeii['count'].astype(str)
+        hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+        hopeii.to_csv('6.csv', index=False)
+
+        # Handle AM - ACUTES for hopeiii
+        hopeiii = hope[hope['type'] == 'AM - ACUTES'].copy()  # Ensure we're working with a copy of the slice
+        hopeiii['count'] = hopeiii.groupby(['date'])['provider'].cumcount()  # Starts at H0 for AM-ACUTES
+        hopeiii['class'] = "H" + hopeiii['count'].astype(str)
+        hopeiii = hopeiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+        hopeiii.to_csv('7.csv', index=False)
+
+        # Handle PM - ACUTES for hopeiiii
+        hopeiiii = hope[hope['type'] == 'PM - ACUTES'].copy()  # Ensure we're working with a copy of the slice
+        hopeiiii['count'] = hopeiiii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM-ACUTES
+        hopeiiii['class'] = "H" + hopeiiii['count'].astype(str)
+        hopeiiii = hopeiiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+        hopeiiii.to_csv('8.csv', index=False)
+        
+        st.write("The scheduling files have been successfully generated.")
+    
     except Exception as e:
-        st.error(f"Error reading 'HOPE_DRIVE' sheet: {e}")
+        st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
