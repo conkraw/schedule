@@ -1735,6 +1735,9 @@ elif st.session_state.page == "Create Student Schedule":
         st.rerun()  # Use st.rerun() instead of st.experimental_rerun() to force rerun and update the page
 
 # New page (Next Page) logic
+import streamlit as st
+import pandas as pd
+
 elif st.session_state.page == "Create List":
     st.title("Create List")
 
@@ -1757,7 +1760,20 @@ elif st.session_state.page == "Create List":
             st.error(f"Error processing the OPD file: {e}")
     else:
         st.error("No OPD file found in session state.")
-	    
-    read_file = pd.read_excel(df_opd, sheet_name='HOPE_DRIVE')
-    read_file.to_csv('hopedrive.csv', index = False, header=False)
-    st.dataframe(read_file.head())
+    
+    # Ensure the "HOPE_DRIVE" sheet exists in the uploaded Excel file
+    try:
+        # Read the 'HOPE_DRIVE' sheet
+        read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
+        
+        # Save the 'HOPE_DRIVE' data to CSV
+        read_file.to_csv('hopedrive.csv', index=False, header=False)
+        st.write("HOPE_DRIVE data has been saved to 'hopedrive.csv'.")
+        
+        # Display the first few rows of the 'HOPE_DRIVE' data
+        st.dataframe(read_file.head())
+    
+    except ValueError:
+        st.error("The sheet 'HOPE_DRIVE' was not found in the uploaded OPD file.")
+    except Exception as e:
+        st.error(f"Error reading 'HOPE_DRIVE' sheet: {e}")
