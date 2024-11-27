@@ -1772,7 +1772,7 @@ elif st.session_state.page == "Create List":
         a7 = pd.DataFrame(clinictype, columns = ['type'])
 	    
         week1day1=a1.replace(to_replace=r'- Continuity', value='', regex=True)
-	week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
+        week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day3=a3.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day4=a4.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day5=a5.replace(to_replace=r'- Continuity', value='', regex=True)
