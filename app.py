@@ -1773,6 +1773,27 @@ elif st.session_state.page == "Create List":
             st.error(f"Error processing the OPD file: {e}")
     else:
         st.error("No OPD file found in session state.")
+
+
+    if 'Book4.xlsx' in st.session_state.uploaded_book4_file:
+        uploaded_book4_file = st.session_state.uploaded_book4_file['Book4.xlsx']
+        
+        try:
+            # Read the OPD file into a dataframe
+            book4 = pd.read_excel(uploaded_book4_file)
+            
+            # Display the first few rows of the OPD data for verification
+            st.dataframe(book4.head())
+            
+            # Save the OPD file again without the index column
+            book4.to_excel('Book4.xlsx', index=False)
+            st.write("Book4.xlsx file has been successfully saved.")
+        
+        except Exception as e:
+            st.error(f"Error processing the Book4 file: {e}")
+    else:
+        st.error("No Book4 file found in session state.")
+	    
     
     # Ensure the "HOPE_DRIVE" sheet exists in the uploaded Excel file
     try:
