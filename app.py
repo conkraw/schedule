@@ -1716,6 +1716,7 @@ elif st.session_state.page == "Create Student Schedule":
     st.title("Create Student Schedule")
     # Upload the OPD.xlsx file
     uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
+    uploaded_book4_file = st.file_uploader("Upload Book4.xlsx file", type="xlsx")
     
     if uploaded_opd_file:
         try:
@@ -1730,6 +1731,20 @@ elif st.session_state.page == "Create Student Schedule":
             st.error(f"Error reading the uploaded file: {e}")
     else:
         st.write("Please upload the OPD.xlsx file to proceed.")
+
+    if uploaded_book4_file:
+        try:
+            # Read the uploaded OPD file into a pandas dataframe
+            df_opd = pd.read_excel(uploaded_book4_file)
+            st.write("File successfully uploaded and loaded.")
+            
+            # Store the uploaded file in session state for use later
+            st.session_state.uploaded_files['Book4.xlsx'] = uploaded_book4_file
+                
+        except Exception as e:
+            st.error(f"Error reading the uploaded file: {e}")
+    else:
+        st.write("Please upload the Book4.xlsx file to proceed.")
 
     # Button to go to the next page
     if st.button("Create List"):
