@@ -1771,13 +1771,13 @@ elif st.session_state.page == "Create List":
         a6 = pd.DataFrame(clinictype, columns = ['type'])
         a7 = pd.DataFrame(clinictype, columns = ['type'])
 
-	a1['type']=clinictype
+        a1['type']=clinictype
 	a2['type']=clinictype
 	a3['type']=clinictype
 	a4['type']=clinictype
 	a5['type']=clinictype
 	a6['type']=clinictype
 	a7['type']=clinictype
-	
+		
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
