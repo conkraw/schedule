@@ -3308,5 +3308,7 @@ elif st.session_state.page == "Create List":
         extras=pd.DataFrame(columns=extrai.columns)
         extras=pd.concat([extrai,extraii])
         extras.to_csv('mhss.csv',index=False)
+
+	st.dataframe(extras.head())
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
