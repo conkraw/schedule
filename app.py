@@ -1770,15 +1770,23 @@ elif st.session_state.page == "Create List":
         a5 = pd.DataFrame(clinictype, columns = ['type'])
         a6 = pd.DataFrame(clinictype, columns = ['type'])
         a7 = pd.DataFrame(clinictype, columns = ['type'])
-	    
-        week1day1=a1.replace(to_replace=r'- Continuity', value='', regex=True)
-        week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
+	
+	a1['type']=clinictype
+	a2['type']=clinictype
+	a3['type']=clinictype
+	a4['type']=clinictype
+	a5['type']=clinictype
+	a6['type']=clinictype
+	a7['type']=clinictype
+	
+	week1day1=a1.replace(to_replace=r'- Continuity', value='', regex=True)
+	week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day3=a3.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day4=a4.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day5=a5.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day6=a6.replace(to_replace=r'- Continuity', value='', regex=True)
 	week1day7=a7.replace(to_replace=r'- Continuity', value='', regex=True)
-
+	
 	day1=df.iloc[1,1]
 	day2=df.iloc[1,2]
 	day3=df.iloc[1,3]
@@ -1802,7 +1810,7 @@ elif st.session_state.page == "Create List":
 	provider5=df.iloc[3:23,5]
 	provider6=df.iloc[3:23,6]
 	provider7=df.iloc[3:23,7]
-
+	
 	week1day1['provider']=provider1
 	week1day2['provider']=provider2
 	week1day3['provider']=provider3
@@ -2075,7 +2083,7 @@ elif st.session_state.page == "Create List":
 	
 	####################################NYES#############################################################################
 	import pandas as pd
-	read_file = pd.read_excel (uploaded_opd_file, sheet_name='NYES')
+	read_file = pd.read_excel ('OPD.xlsx', sheet_name='NYES')
 	read_file.to_csv ('nyesroad.csv', index = False, header=False)
 	df=pd.read_csv('nyesroad.csv')
 	
@@ -2383,7 +2391,7 @@ elif st.session_state.page == "Create List":
 	
 	##############################ETOWN##############################################################################################
 	import pandas as pd
-	read_file = pd.read_excel (uploaded_opd_file, sheet_name='ETOWN')
+	read_file = pd.read_excel ('OPD.xlsx', sheet_name='ETOWN')
 	read_file.to_csv ('etownroad.csv', index = False, header=False)
 	df=pd.read_csv('etownroad.csv')
 	
@@ -2691,7 +2699,7 @@ elif st.session_state.page == "Create List":
 	
 	##############################EXTRA##############################################################################################
 	import pandas as pd
-	read_file = pd.read_excel (uploaded_opd_file, sheet_name='EXTRA')
+	read_file = pd.read_excel ('OPD.xlsx', sheet_name='EXTRA')
 	read_file.to_csv ('extra.csv', index = False, header=False)
 	df=pd.read_csv('extra.csv')
 	
@@ -2997,7 +3005,7 @@ elif st.session_state.page == "Create List":
 	extras.to_csv('extras.csv', index=False)
 	##############################MHS##############################################################################################
 	import pandas as pd
-	read_file = pd.read_excel (uploaded_opd_file, sheet_name='MHS')
+	read_file = pd.read_excel ('OPD.xlsx', sheet_name='MHS')
 	read_file.to_csv ('mhss.csv', index = False, header=False)
 	df=pd.read_csv('mhss.csv')
 	
