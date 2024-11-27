@@ -1739,7 +1739,7 @@ elif st.session_state.page == "Create Student Schedule":
             st.write("File successfully uploaded and loaded.")
             
             # Store the uploaded file in session state for use later
-            st.session_state.uploaded_files['Book4.xlsx'] = uploaded_book4_file
+            st.session_state.uploaded_book4_file['Book4.xlsx'] = uploaded_book4_file
                 
         except Exception as e:
             st.error(f"Error reading the uploaded file: {e}")
