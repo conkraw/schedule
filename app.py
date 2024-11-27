@@ -1770,5 +1770,14 @@ elif st.session_state.page == "Create List":
         a5 = pd.DataFrame(clinictype, columns = ['type'])
         a6 = pd.DataFrame(clinictype, columns = ['type'])
         a7 = pd.DataFrame(clinictype, columns = ['type'])
+	    
+        week1day1=a1.replace(to_replace=r'- Continuity', value='', regex=True)
+	week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
+	week1day3=a3.replace(to_replace=r'- Continuity', value='', regex=True)
+	week1day4=a4.replace(to_replace=r'- Continuity', value='', regex=True)
+	week1day5=a5.replace(to_replace=r'- Continuity', value='', regex=True)
+	week1day6=a6.replace(to_replace=r'- Continuity', value='', regex=True)
+	week1day7=a7.replace(to_replace=r'- Continuity', value='', regex=True)
+	
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
