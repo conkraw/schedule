@@ -10,6 +10,8 @@ if 'start_date' not in st.session_state:
     st.session_state.start_date = None
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = {}
+if "uploaded_book4_file" not in st.session_state:
+    st.session_state.uploaded_book4_file = {}
 
 if st.session_state.page == "Home":
     st.title("Welcome to OPD Creator")
