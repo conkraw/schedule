@@ -1769,7 +1769,7 @@ elif st.session_state.page == "Create List":
             df_opd = pd.read_excel(uploaded_opd_file)
             
             # Display the first few rows of the OPD data for verification
-            st.dataframe(df_opd.head())
+            #st.dataframe(df_opd.head())
             
             # Save the OPD file again without the index column
             df_opd.to_excel('OPD.xlsx', index=False)
@@ -3458,7 +3458,7 @@ elif st.session_state.page == "Create List":
 
         df.to_csv('PALIST.csv',index=False)
         
-        st.dataframe(df.head())
+        #st.dataframe(df.head())
         
         df = pd.read_excel('Book4.xlsx')
 
