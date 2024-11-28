@@ -1789,7 +1789,7 @@ elif st.session_state.page == "Create List":
             book4 = pd.read_excel(uploaded_book4_file)
             
             # Display the first few rows of the OPD data for verification
-            st.dataframe(book4.head())
+            #st.dataframe(book4.head())
             
             # Save the OPD file again without the index column
             book4.to_excel('Book4.xlsx', index=False)
