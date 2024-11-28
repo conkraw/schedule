@@ -4185,9 +4185,9 @@ elif st.session_state.page == "Create List":
             # Function to save the workbook to a BytesIO object
         def save_to_bytes(wb):
         	output = BytesIO()
-		wb.save(output)
-		output.seek(0)  # Rewind the file pointer to the start
-		return output
+                wb.save(output)
+                output.seek(0)  # Rewind the file pointer to the start
+                return output
 
             # Prepare the workbook for download
         wb_bytes = save_to_bytes(wb1)
