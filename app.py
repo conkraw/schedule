@@ -1753,7 +1753,7 @@ elif st.session_state.page == "Create Student Schedule":
         st.write("Please upload the Book4.xlsx file to proceed.")
 
     # Button to go to the next page
-    if st.button("Create List"):
+    if st.button("Load Student Schedule"):
         st.session_state.page = "Create List"  # Update the session state to go to the next page
         st.rerun()  # Use st.rerun() instead of st.experimental_rerun() to force rerun and update the page
 
