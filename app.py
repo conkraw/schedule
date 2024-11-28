@@ -3489,7 +3489,7 @@ elif st.session_state.page == "Create List":
             date = (test_date + datetime.timedelta(days = day)).strftime("%-m/%-d/%Y")
             res.append(date)
 
-        res
+        #res
 
         dates = pd.DataFrame(res, columns =['dates'])
 
