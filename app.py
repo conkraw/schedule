@@ -3455,6 +3455,755 @@ elif st.session_state.page == "Create List":
         df.to_csv('PALIST.csv',index=False)
         
         st.dataframe(df.head())
+        
+        df = pd.read_excel('Book4.xlsx')
+
+        # Keep the first NaN in the first row as it is for the first column
+        df.iloc[0, 0] = np.nan  # Ensure the first cell is NaN (or leave it as it is)
+
+        # Initialize a counter for BLANK replacements
+        blank_counter = 1
+
+        # Replace NaN values in the first column with BLANK1, BLANK2, etc. starting from the second row
+        for i in range(1, len(df)):
+            if pd.isna(df.iloc[i, 0]):
+                df.iloc[i, 0] = f'BLANK{blank_counter}'
+                blank_counter += 1
+
+        x = (df.loc[0, 'Week 1'])
+
+        x = x.strftime("%m/%d/%Y")
+
+        test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
+
+        # initializing K
+        K = 28
+
+        res = []
+
+        for day in range(K):
+            date = (test_date + datetime.timedelta(days = day)).strftime("%-m/%-d/%Y")
+            res.append(date)
+
+        res
+
+        dates = pd.DataFrame(res, columns =['dates'])
+
+        dates['x'] = "y"
+
+        dates['i'] = dates.index+1
+
+        dates['i2']= dates.index+0
+
+        dates['T'] = "T" + dates['i2'].astype(str)
+
+        dates['x'] = dates['x'].astype(str)+dates['i'].astype(str)
+
+        dates['x'] = dates['x'].astype(str) + "=" + "'"+dates['dates'].astype(str) + "'"
+
+        dateT = dates[['dates','T']]
+
+        dates = dates[['x']]
+
+        dates.to_csv('dates.csv',index=False)
+
+        dateT.to_csv('datesT.csv',index=False)
+
+        import numpy as np
+
+        datesdf = pd.read_csv('dates.csv')
+
+        dates = datesdf['x'].astype(str)
+
+        numpy_array=dates.to_numpy()
+        np.savetxt("dates.py",numpy_array, fmt="%s")
+
+        exec(open('dates.py').read())
+
+        #################################STUDENT NAME and CLINICAL EXPERIENCES INPUT#################################
+        column = "Student Name:"
+        L=df[(column)].unique().tolist() #Must Use Unique
+        xf200 = pd.DataFrame({'col':L})
+        xf200['i'] = xf200.index
+
+        column = "Week 1"
+        L=df[(column)].tolist() #No Unique Required 
+        xf201 = pd.DataFrame({'col':L})
+        xf201['i'] = xf201.index
+
+        column = "Week 2"
+        L=df[(column)].tolist()
+        xf202 = pd.DataFrame({'col':L})
+        xf202['i'] = xf202.index
+
+        column = "Week 3"
+        L=df[(column)].tolist()
+        xf203 = pd.DataFrame({'col':L})
+        xf203['i'] = xf203.index
+
+        column = "Week 4"
+        L=df[(column)].tolist()
+        xf204 = pd.DataFrame({'col':L})
+        xf204['i'] = xf204.index
+
+        ######################################################################################################################
+        # Create a workbook and add the main worksheet
+        # Create a workbook and add the main worksheet
+        workbook = xlsxwriter.Workbook('Main_Schedule_MS.xlsx')
+
+        # Define the formats
+        format1 = workbook.add_format({
+            'font_size': 14,
+            'bold': 1,
+            'align': 'center',
+            'valign': 'vcenter',
+            'color': 'black',
+            'text_wrap': True,
+            'bg_color': '#FEFFCC',
+            'border': 1
+        })
+
+        format2 = workbook.add_format({
+            'font_size': 10,
+            'bold': 1,
+            'align': 'center',
+            'valign': 'vcenter',
+            'color': 'yellow',
+            'bg_color': 'black',
+            'border': 1,
+            'text_wrap': True
+        })
+
+        format3 = workbook.add_format({
+            'font_size':12,
+            'bold': 1,
+            'align': 'center',
+            'valign': 'vcenter',
+            'color':'black',
+            'bg_color':'#FFC7CE',
+            'border':1
+        })
+
+        format4 = workbook.add_format({'num_format':'mm/dd/yyyy','font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#F4F6F7','border':1})
+        format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#F4F6F7','border':1})
+        format6 = workbook.add_format({'bg_color':'black','border':1})
+        format7 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#90EE90','border':1})
+        format8 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign':'vcenter','color':'black','bg_color':'#89CFF0','border':1})
+        # Initialize a list to store worksheets
+        worksheets = []
+
+        # Add a worksheet for each unique name in the DataFrame
+        for name in xf200['col']:
+            # Ensure that the name is a valid string (i.e., no NaN or floats)
+            if isinstance(name, str):  # Check if it's a string
+                name = name[:31]  # Truncate the name if it's longer than 31 characters
+            else:
+                continue  # Skip invalid entries (like NaN or numbers)
+
+            # Ensure the name is not an empty string
+            if len(name) > 0:
+                worksheet = workbook.add_worksheet(name)
+                worksheets.append(worksheet)  # Store the worksheet in the list
+
+                # Merge range for the student name column
+                worksheet.merge_range('A1:A2', 'Student Name:', format1)
+                worksheet.merge_range('B1:B2', name, format1)
+
+                # Merge range for the note
+                note = '*Note** Asynchronous time is for coursework only. During this time period, we expect students to do coursework, be available for any additional educational activities, and any extra clinical time that may be available. If the student is not available during this time period and has not made an absence request, the student will be cited for unprofessionalism and will risk failing the course.'
+                worksheet.merge_range('C1:H2', note, format2)
+
+                # Set column widths (you can set them all at once or in a loop)
+                worksheet.set_column('A:A', 20)
+                worksheet.set_column('B:B', 47)
+                worksheet.set_column('C:H', 47)
+
+                # Set row height for header row
+                worksheet.set_row(0, 37.25)
+
+                days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+                # Start row positions for each week
+                start_rows = [3, 11, 19, 27]
+
+                # Loop through each week's starting row and write the days
+                for start_row in start_rows:
+                    for col, day in enumerate(days_of_week, start=1):  
+                        worksheet.write(chr(65 + col) + str(start_row), day, format3)
+
+                # List of weeks
+                weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
+
+                for week_index, week in enumerate(weeks):
+                    worksheet.write(f'A{4 + (week_index * 8)}', week, format3)
+
+                for week_index in range(4):  # For each week (4 weeks)
+                    row = 6 + (week_index * 8)  # Calculate row for AM (6, 14, 22, 30)
+                    worksheet.write(f'A{row}', 'AM', format3)
+
+                for week_index in range(4):  # For each week (4 weeks)
+                    row = 7 + (week_index * 8)  # Calculate row for PM (7, 15, 23, 31)
+                    worksheet.write(f'A{row}', 'PM', format3)
+
+                column_idx = 1  # Starting at column B (Excel columns are 1-indexed)
+                date_idx = 0   # Start from the first date in `res`
+
+                # Loop through the weeks and the corresponding dates
+                for week_row in start_rows:
+                    for col in range(7):  # Loop through Monday to Sunday (7 days)
+                        if date_idx < len(res):
+                            date = res[date_idx]
+                            worksheet.write(week_row, column_idx + col, date, format4)
+                            date_idx += 1  # Move to the next date
+
+                worksheet.set_zoom(70)
+                worksheet.merge_range('A10:H10','',format6)
+                worksheet.merge_range('A18:H18','',format6)
+                worksheet.merge_range('A26:H26','',format6)
+                worksheet.merge_range('A34:H34','',format6)
+
+                worksheet.write('A9',' ', format7)
+                worksheet.write('B9',' ', format7)
+                worksheet.write('C9',' ', format7)
+                worksheet.write('D9',' ', format7)
+                worksheet.write('E9',' ', format7)
+                worksheet.write('F9',' ', format7)
+                worksheet.write('G9',' ', format7)
+                worksheet.write('H9',' ', format7)
+
+                worksheet.write('A17',' ', format7)
+                worksheet.write('B17',' ', format7)
+                worksheet.write('C17',' ', format7)
+                worksheet.write('D17',' ', format7)
+                worksheet.write('E17',' ', format7)
+                worksheet.write('F17',' ', format7)
+                worksheet.write('G17',' ', format7)
+                worksheet.write('H17',' ', format7)
+
+                worksheet.write('A25',' ', format7)
+                worksheet.write('B25',' ', format7)
+                worksheet.write('C25',' ', format7)
+                worksheet.write('D25',' ', format7)
+                worksheet.write('E25',' ', format7)
+                worksheet.write('F25',' ', format7)
+                worksheet.write('G25',' ', format7)
+                worksheet.write('H25',' ', format7)
+
+                worksheet.write('A33',' ', format7)
+                worksheet.write('B33',' ', format7)
+                worksheet.write('C33',' ', format7)
+                worksheet.write('D33',' ', format7)
+                worksheet.write('E33',' ', format7)
+                worksheet.write('F33',' ', format7)
+                worksheet.write('G33',' ', format7)
+                worksheet.write('H33',' ', format7)
+
+                # Writing to row 8
+                worksheet.write('A8', 'ASSIGNMENT DUE:', format8)
+                worksheet.write('B8', ' ', format8)
+                worksheet.write('C8', ' ', format8)
+                worksheet.write('D8', 'Quiz 1 Due', format8)
+                worksheet.write('E8', ' ', format8)
+                worksheet.write('F8', 'Ask for Feedback!', format8)
+                worksheet.write('G8', ' ', format8)
+                worksheet.write('H8', 'Quiz 2 Due', format8)
+
+                # Writing to row 16
+                worksheet.write('A16', 'ASSIGNMENT DUE:', format8)
+                worksheet.write('B16', ' ', format8)
+                worksheet.write('C16', ' ', format8)
+                worksheet.write('D16', ' ', format8)
+                worksheet.write('E16', ' ', format8)
+                worksheet.write('F16', 'Ask for Feedback!', format8)
+                worksheet.write('G16', ' ', format8)
+                worksheet.write('H16', 'Quiz 3 Due', format8)
+
+                # Writing to row 24
+                worksheet.write('A24', 'ASSIGNMENT DUE:', format8)
+                worksheet.write('B24', ' ', format8)
+                worksheet.write('C24', ' ', format8)
+                worksheet.write('D24', ' ', format8)
+                worksheet.write('E24', ' ', format8)
+                worksheet.write('F24', 'Ask for Feedback!', format8)
+                worksheet.write('G24', ' ', format8)
+                worksheet.write('H24', 'Quiz 4 Due', format8)
+
+                # Writing to row 32
+                worksheet.write('A32', 'ASSIGNMENT DUE:', format8)
+                worksheet.write('B32', ' ', format8)
+                worksheet.write('C32', ' ', format8)
+                worksheet.write('D32', ' ', format8)
+                worksheet.write('E32', ' ', format8)
+                worksheet.write('F32', 'Write Up, Developmental Assessment of Pediatric Patient, Clinical Encounters are Due!', format8)
+                worksheet.write('G32', ' ', format8)
+                worksheet.write('H32', ' ', format8)
+
+
+
+
+        # Now, we'll write the location data
+        locations = xf201['col'].tolist()[1:]  # Assuming 'col' is a column in xf201 dataframe
+
+        # Ensure locations match the number of worksheets
+        if len(locations) != len(worksheets):
+            raise ValueError(f"Number of locations ({len(locations)}) does not match number of worksheets ({len(worksheets)})")
+
+        # Iterate over the names and locations and write the data
+        for i, (name, location) in enumerate(zip(xf200['col'], locations)):
+            worksheet = worksheets[i]  # Get the corresponding worksheet for this index
+
+            # Write the location data to rows 6 and 7 for each worksheet
+            for row in range(6, 8):  # Rows 6 and 7
+                worksheet.write(f'B{row}', location, format5)
+                worksheet.write(f'C{row}', location, format5)
+                worksheet.write(f'D{row}', location, format5)
+                worksheet.write(f'E{row}', location, format5)
+                worksheet.write(f'F{row}', location, format5)
+                worksheet.write(f'G{row}', "OFF", format5)
+                worksheet.write(f'H{row}', "OFF", format5)
+
+        # Now, we'll write the location data
+        locations = xf202['col'].tolist()[1:]  # Assuming 'col' is a column in xf201 dataframe
+
+        # Ensure locations match the number of worksheets
+        if len(locations) != len(worksheets):
+            raise ValueError(f"Number of locations ({len(locations)}) does not match number of worksheets ({len(worksheets)})")
+
+        # Iterate over the names and locations and write the data
+        for i, (name, location) in enumerate(zip(xf200['col'], locations)):
+            worksheet = worksheets[i]  # Get the corresponding worksheet for this index
+
+            for row in range(14, 16): 
+                worksheet.write(f'B{row}', location, format5)
+                worksheet.write(f'C{row}', location, format5)
+                worksheet.write(f'D{row}', location, format5)
+                worksheet.write(f'E{row}', location, format5)
+                worksheet.write(f'F{row}', location, format5)
+                worksheet.write(f'G{row}', "OFF", format5)
+                worksheet.write(f'H{row}', "OFF", format5)
+
+        # Now, we'll write the location data
+        locations = xf203['col'].tolist()[1:]  # Assuming 'col' is a column in xf201 dataframe
+
+        # Ensure locations match the number of worksheets
+        if len(locations) != len(worksheets):
+            raise ValueError(f"Number of locations ({len(locations)}) does not match number of worksheets ({len(worksheets)})")
+
+        # Iterate over the names and locations and write the data
+        for i, (name, location) in enumerate(zip(xf200['col'], locations)):
+            worksheet = worksheets[i]  # Get the corresponding worksheet for this index
+
+            for row in range(22, 24): 
+                worksheet.write(f'B{row}', location, format5)
+                worksheet.write(f'C{row}', location, format5)
+                worksheet.write(f'D{row}', location, format5)
+                worksheet.write(f'E{row}', location, format5)
+                worksheet.write(f'F{row}', location, format5)
+                worksheet.write(f'G{row}', "OFF", format5)
+                worksheet.write(f'H{row}', "OFF", format5)
+
+        # Now, we'll write the location data
+        locations = xf204['col'].tolist()[1:]  # Assuming 'col' is a column in xf201 dataframe
+
+        # Ensure locations match the number of worksheets
+        if len(locations) != len(worksheets):
+            raise ValueError(f"Number of locations ({len(locations)}) does not match number of worksheets ({len(worksheets)})")
+
+        # Iterate over the names and locations and write the data
+        for i, (name, location) in enumerate(zip(xf200['col'], locations)):
+            worksheet = worksheets[i]  # Get the corresponding worksheet for this index
+
+            for row in range(30, 32): 
+                worksheet.write(f'B{row}', location, format5)
+                worksheet.write(f'C{row}', location, format5)
+                worksheet.write(f'D{row}', location, format5)
+                worksheet.write(f'E{row}', location, format5)
+                worksheet.write(f'F{row}', location, format5)
+                worksheet.write(f'G{row}', "OFF", format5)
+                worksheet.write(f'H{row}', "OFF", format5)
+
+
+        # Close the workbook
+        workbook.close()
+        
+        df = pd.read_csv('datesT.csv')
+        dx = df
+
+        df["dates"] = pd.to_datetime(df["dates"])
+        df['dates'] = df['dates'].dt.strftime('%m/%d/%Y')
+
+        df.to_csv('datesT.csv',index=False)
+
+        df=pd.read_csv('PALIST.csv',dtype=str)
+
+        df['text'] = df['providers'] + " - " + "[" + df['clinic'] + "]"
+        df = df[['datecode','type','student','text','date','clinic']]
+
+
+        mydict = {}
+        with open('datesT.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
+            reader = csv.reader(inp)
+            df1 = {rows[0]:rows[1] for rows in reader} 
+        df['datecode'] = df.date.map(df1)
+
+        df = df[~df['student'].isnull()]
+
+        df = df.loc[df['student'] != "0"]
+
+        df.to_excel('Source1.xlsx', index=False)
+
+        import openpyxl
+        import numpy as np 
+
+        column = "student"
+        L=df[(column)].tolist() #Must Use Unique
+        xf200 = pd.DataFrame({'col':L})
+        xf200['i'] = xf200.index
+        xf200['blank'] = ''
+        
+        wb = openpyxl.load_workbook('Source1.xlsx')
+        ws = wb['Sheet1']
+        wb1 = openpyxl.load_workbook('Main_Schedule_MS.xlsx')
+
+        # Assuming xf200 is a pandas DataFrame loaded from somewhere, for example:
+        # xf200 = pd.read_csv('your_dataframe.csv')  # Or load your DataFrame as needed
+
+        # Iterate over the names in the xf200 DataFrame
+        for name in xf200['col']:  # Assuming 'names' is the column with the names you want to look up
+            # Check if the sheet with the name exists in the workbook
+            if name in wb1.sheetnames:
+                ws1 = wb1[name]  # Access the sheet directly since it exists
+            else:
+                print(f"Sheet for {name} not found, skipping.")
+                continue  # Skip to the next name if the sheet does not exist
+
+            for row in ws.iter_rows():
+                if row[2].value == name:  # Check if the name matches (assuming name is in column 3)
+                    # Handle T0 to T6
+                    if row[0].value == "T0":
+                        if row[1].value == "AM":
+                            ws1.cell(row=6, column=2).value = row[3].value  # AM, T0
+                        elif row[1].value == "PM":
+                            ws1.cell(row=7, column=2).value = row[3].value  # PM, T0
+                    elif row[0].value == "T1":
+                        if row[1].value == "AM":
+                            ws1.cell(row=6, column=3).value = row[3].value  # AM, T1
+                        elif row[1].value == "PM":
+                            ws1.cell(row=7, column=3).value = row[3].value  # PM, T1
+                    elif row[0].value == "T2":
+                        if row[1].value == "AM":
+                            ws1.cell(row=6, column=4).value = row[3].value  # AM, T2
+                        elif row[1].value == "PM":
+                            ws1.cell(row=7, column=4).value = row[3].value  # PM, T2
+                    elif row[0].value == "T3":
+                        if row[1].value == "AM":
+                            ws1.cell(row=6, column=5).value = row[3].value  # AM, T3
+                        elif row[1].value == "PM":
+                            ws1.cell(row=7, column=5).value = row[3].value  # PM, T3
+                    elif row[0].value == "T4":
+                        if row[1].value == "AM":
+                            ws1.cell(row=6, column=6).value = row[3].value  # AM, T4
+                        elif row[1].value == "PM":
+                            ws1.cell(row=7, column=6).value = row[3].value  # PM, T4
+                    elif row[0].value == "T5":
+                        if row[1].value == "AM":
+                            ws1.cell(row=6, column=7).value = row[3].value  # AM, T5
+                        elif row[1].value == "PM":
+                            ws1.cell(row=7, column=7).value = row[3].value  # PM, T5
+                    elif row[0].value == "T6":
+                        if row[1].value == "AM":
+                            ws1.cell(row=6, column=8).value = row[3].value  # AM, T6
+                        elif row[1].value == "PM":
+                            ws1.cell(row=7, column=8).value = row[3].value  # PM, T6
+
+                    # Handle T7 to T13
+                    elif row[0].value == "T7":
+                        if row[1].value == "AM":
+                            ws1.cell(row=14, column=2).value = row[3].value  # AM, T7
+                        elif row[1].value == "PM":
+                            ws1.cell(row=15, column=2).value = row[3].value  # PM, T7
+                    elif row[0].value == "T8":
+                        if row[1].value == "AM":
+                            ws1.cell(row=14, column=3).value = row[3].value  # AM, T8
+                        elif row[1].value == "PM":
+                            ws1.cell(row=15, column=3).value = row[3].value  # PM, T8
+                    elif row[0].value == "T9":
+                        if row[1].value == "AM":
+                            ws1.cell(row=14, column=4).value = row[3].value  # AM, T9
+                        elif row[1].value == "PM":
+                            ws1.cell(row=15, column=4).value = row[3].value  # PM, T9
+                    elif row[0].value == "T10":
+                        if row[1].value == "AM":
+                            ws1.cell(row=14, column=5).value = row[3].value  # AM, T10
+                        elif row[1].value == "PM":
+                            ws1.cell(row=15, column=5).value = row[3].value  # PM, T10
+                    elif row[0].value == "T11":
+                        if row[1].value == "AM":
+                            ws1.cell(row=14, column=6).value = row[3].value  # AM, T11
+                        elif row[1].value == "PM":
+                            ws1.cell(row=15, column=6).value = row[3].value  # PM, T11
+                    elif row[0].value == "T12":
+                        if row[1].value == "AM":
+                            ws1.cell(row=14, column=7).value = row[3].value  # AM, T12
+                        elif row[1].value == "PM":
+                            ws1.cell(row=15, column=7).value = row[3].value  # PM, T12
+                    elif row[0].value == "T13":
+                        if row[1].value == "AM":
+                            ws1.cell(row=14, column=8).value = row[3].value  # AM, T13
+                        elif row[1].value == "PM":
+                            ws1.cell(row=15, column=8).value = row[3].value  # PM, T13
+
+                    # Handle T14 to T20
+                    elif row[0].value == "T14":
+                        if row[1].value == "AM":
+                            ws1.cell(row=22, column=2).value = row[3].value  # AM, T14
+                        elif row[1].value == "PM":
+                            ws1.cell(row=23, column=2).value = row[3].value  # PM, T14
+                    elif row[0].value == "T15":
+                        if row[1].value == "AM":
+                            ws1.cell(row=22, column=3).value = row[3].value  # AM, T15
+                        elif row[1].value == "PM":
+                            ws1.cell(row=23, column=3).value = row[3].value  # PM, T15
+                    elif row[0].value == "T16":
+                        if row[1].value == "AM":
+                            ws1.cell(row=22, column=4).value = row[3].value  # AM, T16
+                        elif row[1].value == "PM":
+                            ws1.cell(row=23, column=4).value = row[3].value  # PM, T16
+                    elif row[0].value == "T17":
+                        if row[1].value == "AM":
+                            ws1.cell(row=22, column=5).value = row[3].value  # AM, T17
+                        elif row[1].value == "PM":
+                            ws1.cell(row=23, column=5).value = row[3].value  # PM, T17
+                    elif row[0].value == "T18":
+                        if row[1].value == "AM":
+                            ws1.cell(row=22, column=6).value = row[3].value  # AM, T18
+                        elif row[1].value == "PM":
+                            ws1.cell(row=23, column=6).value = row[3].value  # PM, T18
+                    elif row[0].value == "T19":
+                        if row[1].value == "AM":
+                            ws1.cell(row=22, column=7).value = row[3].value  # AM, T19
+                        elif row[1].value == "PM":
+                            ws1.cell(row=23, column=7).value = row[3].value  # PM, T19
+                    elif row[0].value == "T20":
+                        if row[1].value == "AM":
+                            ws1.cell(row=22, column=8).value = row[3].value  # AM, T20
+                        elif row[1].value == "PM":
+                            ws1.cell(row=23, column=8).value = row[3].value  # PM, T20
+
+                    # Handle T21 to T27
+                    elif row[0].value == "T21":
+                        if row[1].value == "AM":
+                            ws1.cell(row=30, column=2).value = row[3].value  # AM, T21
+                        elif row[1].value == "PM":
+                            ws1.cell(row=31, column=2).value = row[3].value  # PM, T21
+                    elif row[0].value == "T22":
+                        if row[1].value == "AM":
+                            ws1.cell(row=30, column=3).value = row[3].value  # AM, T22
+                        elif row[1].value == "PM":
+                            ws1.cell(row=31, column=3).value = row[3].value  # PM, T22
+                    elif row[0].value == "T23":
+                        if row[1].value == "AM":
+                            ws1.cell(row=30, column=4).value = row[3].value  # AM, T23
+                        elif row[1].value == "PM":
+                            ws1.cell(row=31, column=4).value = row[3].value  # PM, T23
+                    elif row[0].value == "T24":
+                        if row[1].value == "AM":
+                            ws1.cell(row=30, column=5).value = row[3].value  # AM, T24
+                        elif row[1].value == "PM":
+                            ws1.cell(row=31, column=5).value = row[3].value  # PM, T24
+                    elif row[0].value == "T25":
+                        if row[1].value == "AM":
+                            ws1.cell(row=30, column=6).value = row[3].value  # AM, T25
+                        elif row[1].value == "PM":
+                            ws1.cell(row=31, column=6).value = row[3].value  # PM, T25
+                    elif row[0].value == "T26":
+                        if row[1].value == "AM":
+                            ws1.cell(row=30, column=7).value = row[3].value  # AM, T26
+                        elif row[1].value == "PM":
+                            ws1.cell(row=31, column=7).value = row[3].value  # PM, T26
+                    elif row[0].value == "T27":
+                        if row[1].value == "AM":
+                            ws1.cell(row=30, column=8).value = row[3].value  # AM, T27
+                        elif row[1].value == "PM":
+                            ws1.cell(row=31, column=8).value = row[3].value  # PM, T27
+
+            for row in ws.iter_rows():
+                if row[2].value == name:  # Check if the name matches (assuming name is in column 3)
+
+                    # Handle T0 to T6
+                    if row[0].value == "T0":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=6, column=2).value = row[3].value  # AM - ACUTES, T0
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=7, column=2).value = row[3].value  # PM - ACUTES, T0
+                    elif row[0].value == "T1":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=6, column=3).value = row[3].value  # AM - ACUTES, T1
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=7, column=3).value = row[3].value  # PM - ACUTES, T1
+                    elif row[0].value == "T2":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=6, column=4).value = row[3].value  # AM - ACUTES, T2
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=7, column=4).value = row[3].value  # PM - ACUTES, T2
+                    elif row[0].value == "T3":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=6, column=5).value = row[3].value  # AM - ACUTES, T3
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=7, column=5).value = row[3].value  # PM - ACUTES, T3
+                    elif row[0].value == "T4":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=6, column=6).value = row[3].value  # AM - ACUTES, T4
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=7, column=6).value = row[3].value  # PM - ACUTES, T4
+                    elif row[0].value == "T5":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=6, column=7).value = row[3].value  # AM - ACUTES, T5
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=7, column=7).value = row[3].value  # PM - ACUTES, T5
+                    elif row[0].value == "T6":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=6, column=8).value = row[3].value  # AM - ACUTES, T6
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=7, column=8).value = row[3].value  # PM - ACUTES, T6
+
+                    # Handle T7 to T13
+                    elif row[0].value == "T7":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=14, column=2).value = row[3].value  # AM - ACUTES, T7
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=15, column=2).value = row[3].value  # PM - ACUTES, T7
+                    elif row[0].value == "T8":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=14, column=3).value = row[3].value  # AM - ACUTES, T8
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=15, column=3).value = row[3].value  # PM - ACUTES, T8
+                    elif row[0].value == "T9":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=14, column=4).value = row[3].value  # AM - ACUTES, T9
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=15, column=4).value = row[3].value  # PM - ACUTES, T9
+                    elif row[0].value == "T10":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=14, column=5).value = row[3].value  # AM - ACUTES, T10
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=15, column=5).value = row[3].value  # PM - ACUTES, T10
+                    elif row[0].value == "T11":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=14, column=6).value = row[3].value  # AM - ACUTES, T11
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=15, column=6).value = row[3].value  # PM - ACUTES, T11
+                    elif row[0].value == "T12":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=14, column=7).value = row[3].value  # AM - ACUTES, T12
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=15, column=7).value = row[3].value  # PM - ACUTES, T12
+                    elif row[0].value == "T13":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=14, column=8).value = row[3].value  # AM - ACUTES, T13
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=15, column=8).value = row[3].value  # PM - ACUTES, T13
+
+                    # Handle T14 to T20
+                    elif row[0].value == "T14":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=22, column=2).value = row[3].value  # AM - ACUTES, T14
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=23, column=2).value = row[3].value  # PM - ACUTES, T14
+                    elif row[0].value == "T15":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=22, column=3).value = row[3].value  # AM - ACUTES, T15
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=23, column=3).value = row[3].value  # PM - ACUTES, T15
+                    elif row[0].value == "T16":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=22, column=4).value = row[3].value  # AM - ACUTES, T16
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=23, column=4).value = row[3].value  # PM - ACUTES, T16
+                    elif row[0].value == "T17":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=22, column=5).value = row[3].value  # AM - ACUTES, T17
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=23, column=5).value = row[3].value  # PM - ACUTES, T17
+                    elif row[0].value == "T18":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=22, column=6).value = row[3].value  # AM - ACUTES, T18
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=23, column=6).value = row[3].value  # PM - ACUTES, T18
+                    elif row[0].value == "T19":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=22, column=7).value = row[3].value  # AM - ACUTES, T19
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=23, column=7).value = row[3].value  # PM - ACUTES, T19
+                    elif row[0].value == "T20":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=22, column=8).value = row[3].value  # AM - ACUTES, T20
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=23, column=8).value = row[3].value  # PM - ACUTES, T20
+
+                    # Handle T21 to T27
+                    elif row[0].value == "T21":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=30, column=2).value = row[3].value  # AM - ACUTES, T21
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=31, column=2).value = row[3].value  # PM - ACUTES, T21
+                    elif row[0].value == "T22":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=30, column=3).value = row[3].value  # AM - ACUTES, T22
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=31, column=3).value = row[3].value  # PM - ACUTES, T22
+                    elif row[0].value == "T23":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=30, column=4).value = row[3].value  # AM - ACUTES, T23
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=31, column=4).value = row[3].value  # PM - ACUTES, T23
+                    elif row[0].value == "T24":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=30, column=5).value = row[3].value  # AM - ACUTES, T24
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=31, column=5).value = row[3].value  # PM - ACUTES, T24
+                    elif row[0].value == "T25":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=30, column=6).value = row[3].value  # AM - ACUTES, T25
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=31, column=6).value = row[3].value  # PM - ACUTES, T25
+                    elif row[0].value == "T26":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=30, column=7).value = row[3].value  # AM - ACUTES, T26
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=31, column=7).value = row[3].value  # PM - ACUTES, T26
+                    elif row[0].value == "T27":
+                        if row[1].value == "AM - ACUTES":
+                            ws1.cell(row=30, column=8).value = row[3].value  # AM - ACUTES, T27
+                        elif row[1].value == "PM - ACUTES":
+                            ws1.cell(row=31, column=8).value = row[3].value  # PM - ACUTES, T27
+
+        # Save the modified workbook
+        #wb1.save('Main_Schedule_MS.xlsx')
+        
+        
+        try:
+            # Save the workbook to the file system
+            wb1.save('Main_Schedule_MS.xlsx')
+
+            # Function to save the workbook to a BytesIO object
+            def save_to_bytes(wb):
+                # Create a BytesIO object to hold the Excel file data in memory
+                output = BytesIO()
+                wb.save(output)
+                output.seek(0)  # Rewind the file pointer to the start
+                return output
+
+            # Prepare the workbook for download
+            wb_bytes = save_to_bytes(wb1)
+
+            # Create a download button in Streamlit
+            st.download_button(
+                label="Download Modified Schedule",
+                data=wb_bytes,
+                file_name="Main_Schedule_MS.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
