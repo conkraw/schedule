@@ -1758,7 +1758,7 @@ elif st.session_state.page == "Create Student Schedule":
         st.rerun()  # Use st.rerun() instead of st.experimental_rerun() to force rerun and update the page
 
 elif st.session_state.page == "Create List":
-    st.title("Create List")
+    st.title("Load Student Schedule")
 
     # Ensure the OPD.xlsx file exists in the session state before proceeding
     if 'OPD.xlsx' in st.session_state.uploaded_files:
@@ -4197,7 +4197,7 @@ elif st.session_state.page == "Create List":
         wb_bytes = save_to_bytes(wb1)
 
             # Create a download button in Streamlit
-        st.download_button(label="Download Modified Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
