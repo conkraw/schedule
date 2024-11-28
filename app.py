@@ -4179,31 +4179,25 @@ elif st.session_state.page == "Create List":
                             ws1.cell(row=31, column=8).value = row[3].value  # PM - ACUTES, T27
 
         # Save the modified workbook
-        #wb1.save('Main_Schedule_MS.xlsx')
-        
-        
-        try:
-            # Save the workbook to the file system
-            wb1.save('Main_Schedule_MS.xlsx')
+        wb1.save('Main_Schedule_MS.xlsx')
+
 
             # Function to save the workbook to a BytesIO object
-            def save_to_bytes(wb):
-                # Create a BytesIO object to hold the Excel file data in memory
-                output = BytesIO()
-                wb.save(output)
-                output.seek(0)  # Rewind the file pointer to the start
-                return output
+        def save_to_bytes(wb):
+        	output = BytesIO()
+		wb.save(output)
+		output.seek(0)  # Rewind the file pointer to the start
+		return output
 
             # Prepare the workbook for download
-            wb_bytes = save_to_bytes(wb1)
+        wb_bytes = save_to_bytes(wb1)
 
             # Create a download button in Streamlit
-            st.download_button(
-                label="Download Modified Schedule",
-                data=wb_bytes,
-                file_name="Main_Schedule_MS.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+        st.download_button(
+		label="Download Modified Schedule",
+		data=wb_bytes,
+		file_name="Main_Schedule_MS.xlsx",
+		mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
