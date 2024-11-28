@@ -4,6 +4,7 @@ import datetime
 import pandas as pd
 import numpy as np
 from datetime import timedelta
+import xlsxwriter
 
 if 'page' not in st.session_state:
     st.session_state.page = "Home"  # Starting page
