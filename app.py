@@ -1346,7 +1346,6 @@ elif st.session_state.page == "OPD Creator":
 	NYES.to_csv('nyes.csv',index=False)
 	
 	#############################################################################################################
-	
 	NYES['H'] = "H"
 	NYEi = NYES[(NYES['type'] == 'AM - Continuity ')]
 	NYEi['count'] = NYEi.groupby(['date'])['provider'].cumcount() + 0
