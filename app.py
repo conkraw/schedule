@@ -137,6 +137,7 @@ elif st.session_state.page == "OPD Creator":
 	worksheet3 = workbook.add_worksheet('NYES')
 	worksheet4 = workbook.add_worksheet('EXTRA')
 	worksheet5 = workbook.add_worksheet('MHS')
+	worksheet6 = workbook.add_worksheet('WARD_A')
 	
 	format1 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
 	    
@@ -154,6 +155,9 @@ elif st.session_state.page == "OPD Creator":
 	
 	worksheet5.write(0, 0, 'Site:',format1)
 	worksheet5.write(0, 1, 'MHS',format1)
+
+	worksheet6.write(0, 0, 'Site:',format1)
+	worksheet6.write(0, 1, 'WARD_A',format1)
 	
 	#Color Coding
 	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
@@ -161,6 +165,7 @@ elif st.session_state.page == "OPD Creator":
 	format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
 	format5a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#d0e9ff','border':1})
 	format11 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+	
 	#H codes
 	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
 	
