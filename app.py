@@ -138,7 +138,7 @@ elif st.session_state.page == "OPD Creator":
 	worksheet4 = workbook.add_worksheet('EXTRA')
 	worksheet5 = workbook.add_worksheet('MHS')
 	
-	format1 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#FEFFCC','border':1})
+	format1 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
 	    
 	worksheet.write(0, 0, 'Site:',format1)
 	worksheet.write(0, 1, 'Hope Drive',format1)
