@@ -156,13 +156,13 @@ elif st.session_state.page == "OPD Creator":
 	worksheet5.write(0, 1, 'MHS',format1)
 	
 	#Color Coding
-	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#8ccf6f','border':1})
-	format4a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#9fc5e8','border':1})    
-	format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#FEFFCC','border':1})
-	format5a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#d0e9ff','border':1})
-	format11 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#FEFFCC','border':1})
+	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
+	format4a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#9fc5e8','border':1})    
+	format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+	format5a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#d0e9ff','border':1})
+	format11 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
 	#H codes
-	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','color':'white','border':0})
+	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
 	ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
