@@ -69,13 +69,13 @@ elif st.session_state.page == "Upload Files":
     uploaded_files_dict = {}
     
     if uploaded_files:
-	    for file in uploaded_files:
-	        if 'HOPE_DRIVE' in file.name:
-	            uploaded_files_dict['HOPE_DRIVE.xlsx'] = file
-	        elif 'ETOWN' in file.name:
-	            uploaded_files_dict['ETOWN.xlsx'] = file
-	        elif 'NYES' in file.name:
-	            uploaded_files_dict['NYES.xlsx'] = file
+        for file in uploaded_files:
+            if 'HOPE_DRIVE' in file.name:
+                uploaded_files_dict['HOPE_DRIVE.xlsx'] = file
+            elif 'ETOWN' in file.name:
+                uploaded_files_dict['ETOWN.xlsx'] = file
+            elif 'NYES' in file.name:
+                uploaded_files_dict['NYES.xlsx'] = file
         
         # Store the uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
