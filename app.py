@@ -269,7 +269,7 @@ elif st.session_state.page == "OPD Creator":
 	    # Set Days
 	    format3 = workbook.add_format({
 	        'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'color': 'black', 'bg_color': '#FFC7CE', 'border': 1
+	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 	    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
