@@ -285,7 +285,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	    format_label = workbook.add_format({
 	        'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'color': 'black', 'bg_color': '#FFC7CE', 'border': 1
+	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
 	
 	    # Set Date Formulas
