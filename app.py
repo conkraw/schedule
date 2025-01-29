@@ -327,7 +327,7 @@ elif st.session_state.page == "OPD Creator":
 	    # Merge Format for Text
 	    merge_format = workbook.add_format({
 	        'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,
-	        'color': 'red', 'bg_color': '#FEFFCC', 'border': 1
+	        'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1
 	    })
 	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
 	
