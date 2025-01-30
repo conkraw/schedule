@@ -132,32 +132,32 @@ elif st.session_state.page == "OPD Creator":
 	import xlsxwriter
 	
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
-	worksheet = workbook.add_worksheet('HOPE_DRIVE')
-	worksheet2 = workbook.add_worksheet('ETOWN')
-	worksheet3 = workbook.add_worksheet('NYES')
-	worksheet4 = workbook.add_worksheet('EXTRA')
-	worksheet5 = workbook.add_worksheet('MHS')
-	worksheet6 = workbook.add_worksheet('WARD_A')
+	
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'WARD_A', 'WARD_C','WARD_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR', 'AAC', 'ER_CONSULTS']
+	
+	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
+
 	
 	format1 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
 	    
-	worksheet.write(0, 0, 'Site:',format1)
-	worksheet.write(0, 1, 'Hope Drive',format1)
-	                
-	worksheet2.write(0, 0, 'Site:',format1)
-	worksheet2.write(0, 1, 'Elizabethtown',format1)
-	
-	worksheet3.write(0, 0, 'Site:',format1)
-	worksheet3.write(0, 1, 'Nyes Road',format1)
-	
-	worksheet4.write(0, 0, 'Site:',format1)
-	worksheet4.write(0, 1, 'EXTRA',format1)
-	
-	worksheet5.write(0, 0, 'Site:',format1)
-	worksheet5.write(0, 1, 'MHS',format1)
+	worksheet_sites = {
+		worksheet: 'Hope Drive',
+		worksheet2: 'Elizabethtown',
+		worksheet3: 'Nyes Road',
+		worksheet4: 'WARD_A',
+		worksheet5: 'WARD_C',
+		worksheet6: 'WARD_P'
+		worksheet7: 'PICU'
+		worksheet8: 'PSHCH_NURSERY'
+		worksheet9: 'HAMPDEN_NURSERY'
+		worksheet10: 'SJR_HOSPITALIST'
+		worksheet11: 'AAC'
+		worksheet12: 'ER_CONSULTS'
+	}
 
-	worksheet6.write(0, 0, 'Site:',format1)
-	worksheet6.write(0, 1, 'WARD_A',format1)
+for ws, site in worksheet_sites.items():
+    ws.write(0, 0, 'Site:', format1)
+    ws.write(0, 1, site, format1)
 	
 	#Color Coding
 	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
@@ -228,7 +228,7 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'I{start_row + i}', label, formate)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6]
+	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12]
 	
 	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
@@ -1436,8 +1436,6 @@ elif st.session_state.page == "OPD Creator":
 	hopeii['class'] = "H" + hopeii['count'].astype(str)
 	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	hopeii.to_csv('6.csv', index=False)
-	
-	
 	
 	#############################################################################################################
 	#MHS = pd.read_csv('MHS.csv')
