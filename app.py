@@ -5804,9 +5804,10 @@ elif st.session_state.page == "Create List":
 
                 # Set column widths (you can set them all at once or in a loop)
                 worksheet.set_column('A:A', 20)
-                worksheet.set_column('B:B', 47)
-                worksheet.set_column('C:H', 47)
-
+                worksheet.set_column('B:B', 30)
+                worksheet.set_column('C:G', 30)
+		worksheet.set_column('H:H', 150)
+		    
                 # Set row height for header row
                 worksheet.set_row(0, 37.25)
 
@@ -5905,7 +5906,7 @@ elif st.session_state.page == "Create List":
                 worksheet.write('E16', ' ', format8)
                 worksheet.write('F16', 'Ask for Feedback!', format8)
                 worksheet.write('G16', ' ', format8)
-                worksheet.write('H16', 'Quiz 2 Due, Pediatric Documentation #1', format8)
+                worksheet.write('H16', 'Quiz 2, Pediatric Documentation #1 Due', format8)
 
                 # Writing to row 24
                 worksheet.write('A24', 'ASSIGNMENT DUE:', format8)
