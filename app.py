@@ -5993,6 +5993,7 @@ elif st.session_state.page == "Create List":
         df.to_csv('datesT.csv',index=False)
 
         df=pd.read_csv('PALIST.csv',dtype=str)
+        import io
         output = io.StringIO()
         df.to_csv(output, index=False)
         output.seek(0)
@@ -6004,6 +6005,7 @@ elif st.session_state.page == "Create List":
             file_name="PALIST.csv",
             mime="text/csv"
         )
+ 
 	    
         df['text'] = df['providers'] + " - " + "[" + df['clinic'] + "]"
         df = df[['datecode','type','student','text','date','clinic']]
