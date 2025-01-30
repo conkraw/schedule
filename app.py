@@ -2471,12 +2471,12 @@ elif st.session_state.page == "Create List":
         NYEi = NYEi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
         NYEi.to_csv('1.csv', index=False)
 
-        dfx1 = pd.read_csv('1.csv')
-        df = dfx1
-        import io
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
+        #dfx1 = pd.read_csv('1.csv')
+        #df = dfx1
+        #import io
+        #output = io.StringIO()
+        #df.to_csv(output, index=False)
+        #output.seek(0)
 
         # Streamlit download button
         st.download_button(
@@ -2487,7 +2487,7 @@ elif st.session_state.page == "Create List":
         )
         # Handle PM Continuity for NYE (Second set)
         hope['H'] = "H"
-        NYEii = hope[hope['type'] == 'PM '].copy()  # Ensure we're working with a copy
+        NYEii = hope[hope['type'] == 'PM'].copy()  # Ensure we're working with a copy
         NYEii.loc[:, 'count'] = NYEii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         NYEii.loc[:, 'class'] = "H" + NYEii['count'].astype(str)
         NYEii = NYEii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -2788,7 +2788,7 @@ elif st.session_state.page == "Create List":
 
         # Handle AM Continuity for ETOWN (First set)
         hope['H'] = "H"
-        ETOWNi = hope[hope['type'] == 'AM '].copy()  # Ensure we're working with a copy
+        ETOWNi = hope[hope['type'] == 'AM'].copy()  # Ensure we're working with a copy
         ETOWNi.loc[:, 'count'] = ETOWNi.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         ETOWNi.loc[:, 'class'] = "H" + ETOWNi['count'].astype(str)
         ETOWNi = ETOWNi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -2796,7 +2796,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for ETOWN (Second set)
         hope['H'] = "H"
-        ETOWNii = hope[hope['type'] == 'PM '].copy()  # Ensure we're working with a copy
+        ETOWNii = hope[hope['type'] == 'PM'].copy()  # Ensure we're working with a copy
         ETOWNii.loc[:, 'count'] = ETOWNii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         ETOWNii.loc[:, 'class'] = "H" + ETOWNii['count'].astype(str)
         ETOWNii = ETOWNii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -3095,7 +3095,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -3103,7 +3103,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -3707,7 +3707,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -3715,7 +3715,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4013,7 +4013,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4021,7 +4021,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4319,7 +4319,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4327,7 +4327,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4625,7 +4625,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4633,7 +4633,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4931,7 +4931,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -4939,7 +4939,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -5238,7 +5238,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -5246,7 +5246,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -5544,7 +5544,7 @@ elif st.session_state.page == "Create List":
         hope.to_csv('extra.csv',index=False)
 
         hope['H'] = "H"
-        extrai = hope[hope['type'] == 'AM '].copy()  # Make sure we're working with a copy
+        extrai = hope[hope['type'] == 'AM'].copy()  # Make sure we're working with a copy
         extrai.loc[:, 'count'] = extrai.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         extrai.loc[:, 'class'] = "H" + extrai['count'].astype(str)
         extrai = extrai.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
@@ -5552,7 +5552,7 @@ elif st.session_state.page == "Create List":
 
         # Handle PM Continuity for EXTRAI
         hope['H'] = "H"
-        extraii = hope[hope['type'] == 'PM '].copy()  # Make sure we're working with a copy
+        extraii = hope[hope['type'] == 'PM'].copy()  # Make sure we're working with a copy
         extraii.loc[:, 'count'] = extraii.groupby(['date'])['provider'].cumcount() + 10  # Starts at H10 for PM
         extraii.loc[:, 'class'] = "H" + extraii['count'].astype(str)
         extraii = extraii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
