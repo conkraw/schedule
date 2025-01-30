@@ -5562,7 +5562,6 @@ elif st.session_state.page == "Create List":
         df11=pd.read_csv('extra_sjrhosp.csv')
         df12=pd.read_csv('extra_ercons.csv')
 
-
         dfx=pd.DataFrame(columns=df1.columns)
         dfx=pd.concat([dfx,df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12])
         dfx['providers']=dfx['provider'].str.split('~').str[0]
@@ -5605,7 +5604,21 @@ elif st.session_state.page == "Create List":
         dfx1.to_csv('PALIST.csv',index=False)
 
         dfx1 = pd.read_csv('PALIST.csv')
+	df = dfx1
+        df=pd.read_csv('PALIST.csv',dtype=str)
+        import io
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
 
+        # Streamlit download button
+        st.download_button(
+            label="Download CSV File",
+            data=output.getvalue(),
+            file_name="PALIST.csv",
+            mime="text/csv"
+        )
+ 
         new_row = pd.DataFrame({'date':0, 'type':0, 'providers':0,
                                 'student':0, 'clinic':0, 'provider':0,
                                 'class':0, 'datecode':0, 'datecode2':0},
@@ -5993,18 +6006,18 @@ elif st.session_state.page == "Create List":
         df.to_csv('datesT.csv',index=False)
 
         df=pd.read_csv('PALIST.csv',dtype=str)
-        import io
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
+        #import io
+        #output = io.StringIO()
+        #df.to_csv(output, index=False)
+        #output.seek(0)
 
         # Streamlit download button
-        st.download_button(
-            label="Download CSV File",
-            data=output.getvalue(),
-            file_name="PALIST.csv",
-            mime="text/csv"
-        )
+        #st.download_button(
+        #    label="Download CSV File",
+        #    data=output.getvalue(),
+        #    file_name="PALIST.csv",
+        #    mime="text/csv"
+        #)
  
 	    
         df['text'] = df['providers'] + " - " + "[" + df['clinic'] + "]"
