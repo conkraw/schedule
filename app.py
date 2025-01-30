@@ -143,6 +143,13 @@ elif st.session_state.page == "OPD Creator":
 	# Create worksheets and store them in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
 	
+	# Assign worksheets to separate variables dynamically
+	(
+	    worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, 
+	    worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, 
+	    worksheet11, worksheet12
+	) = worksheets.values()
+	
 	# Define format
 	format1 = workbook.add_format({
 	    'font_size': 18, 'bold': 1, 'align': 'center',
@@ -152,27 +159,25 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Define site names corresponding to worksheet names
 	worksheet_sites = {
-	    'HOPE_DRIVE': 'Hope Drive',
-	    'ETOWN': 'Elizabethtown',
-	    'NYES': 'Nyes Road',
-	    'WARD_A': 'WARD_A',
-	    'WARD_C': 'WARD_C',
-	    'WARD_P': 'WARD_P',
-	    'PICU': 'PICU',
-	    'PSHCH_NURSERY': 'PSHCH_NURSERY',
-	    'HAMPDEN_NURSERY': 'HAMPDEN_NURSERY',
-	    'SJR_HOSPITALIST': 'SJR_HOSPITALIST',
-	    'AAC': 'AAC',
-	    'ER_CONSULTS': 'ER_CONSULTS'
+	    worksheet1: 'Hope Drive',
+	    worksheet2: 'Elizabethtown',
+	    worksheet3: 'Nyes Road',
+	    worksheet4: 'WARD_A',
+	    worksheet5: 'WARD_C',
+	    worksheet6: 'WARD_P',
+	    worksheet7: 'PICU',
+	    worksheet8: 'PSHCH_NURSERY',
+	    worksheet9: 'HAMPDEN_NURSERY',
+	    worksheet10: 'SJR_HOSPITALIST',
+	    worksheet11: 'AAC',
+	    worksheet12: 'ER_CONSULTS'
 	}
 	
 	# Write "Site:" and corresponding site names in each worksheet
-	for name, site in worksheet_sites.items():
-	    worksheet = worksheets[name]  # Access worksheet from dictionary
-	    worksheet.write(0, 0, 'Site:', format1)
-	    worksheet.write(0, 1, site, format1)
-
-	
+	for ws, site in worksheet_sites.items():
+	    ws.write(0, 0, 'Site:', format1)
+	    ws.write(0, 1, site, format1)
+		
 	#Color Coding
 	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
 	format4a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#9fc5e8','border':1})    
