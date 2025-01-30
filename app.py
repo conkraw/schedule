@@ -2181,20 +2181,7 @@ elif st.session_state.page == "Create List":
         read_file = pd.read_excel (uploaded_opd_file, sheet_name='NYES')
         read_file.to_csv ('nyesroad.csv', index = False, header=False)
         df=pd.read_csv('nyesroad.csv')
-        dfx1 = pd.read_csv('nyesroad.csv')
-        df = dfx1
-        import io
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
 
-        # Streamlit download button
-        st.download_button(
-            label="Download CSV File",
-            data=output.getvalue(),
-            file_name="nyesroad.csv",
-            mime="text/csv"
-        )
         clinictype=df.iloc[3:23, 0:1]
         a1 = pd.DataFrame(clinictype, columns = ['type'])
         a2 = pd.DataFrame(clinictype, columns = ['type'])
@@ -2476,6 +2463,21 @@ elif st.session_state.page == "Create List":
         hope=pd.concat([hope,week1,week2,week3,week4])
         hope.to_csv('nyes.csv',index=False)
 
+        dfx1 = pd.read_csv('nyes.csv')
+        df = dfx1
+        import io
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
+
+        # Streamlit download button
+        st.download_button(
+            label="Download CSV File",
+            data=output.getvalue(),
+            file_name="nyes.csv",
+            mime="text/csv"
+        )
+	    
         # Handle AM Continuity for NYE (First set)
         hope['H'] = "H"
         NYEi = hope[hope['type'] == 'AM '].copy()  # Ensure we're working with a copy
