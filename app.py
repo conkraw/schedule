@@ -130,6 +130,7 @@ elif st.session_state.page == "OPD Creator":
 	exec(open('dates.py').read())
 	import xlsxwriter
 
+	# Create workbook
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
 	# Define worksheet names
@@ -167,9 +168,10 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Write "Site:" and corresponding site names in each worksheet
 	for name, site in worksheet_sites.items():
-	    worksheet = worksheets[name]  # Access the worksheet from the dictionary
+	    worksheet = worksheets[name]  # Access worksheet from dictionary
 	    worksheet.write(0, 0, 'Site:', format1)
 	    worksheet.write(0, 1, site, format1)
+
 	
 	#Color Coding
 	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
