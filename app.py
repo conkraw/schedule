@@ -135,9 +135,9 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Define worksheet names
 	worksheet_names = [
-	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'WARD_A', 'WARD_C',
-	    'WARD_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY',
-	    'SJR_HOSPITALIST', 'AAC', 'ER_CONSULTS'
+	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'W_A', 'W_C',
+	    'W_P', 'PICU', 'PSHCH_NURS', 'HAMPDEN_NURS',
+	    'SJR_HOSP', 'AAC', 'ER_CONS'
 	]
 	
 	# Create worksheets and store them in a dictionary
