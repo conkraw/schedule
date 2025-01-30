@@ -133,7 +133,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
-	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'WARD_A', 'WARD_C','WARD_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR', 'AAC', 'ER_CONSULTS']
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'WARD_A', 'WARD_C','WARD_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSPITALIST', 'AAC', 'ER_CONSULTS']
 	
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
 
@@ -146,13 +146,13 @@ elif st.session_state.page == "OPD Creator":
 		worksheet3: 'Nyes Road',
 		worksheet4: 'WARD_A',
 		worksheet5: 'WARD_C',
-		worksheet6: 'WARD_P'
-		worksheet7: 'PICU'
-		worksheet8: 'PSHCH_NURSERY'
-		worksheet9: 'HAMPDEN_NURSERY'
-		worksheet10: 'SJR_HOSPITALIST'
-		worksheet11: 'AAC'
-		worksheet12: 'ER_CONSULTS'
+		worksheet6: 'WARD_P',
+		worksheet7: 'PICU',
+		worksheet8: 'PSHCH_NURSERY',
+		worksheet9: 'HAMPDEN_NURSERY',
+		worksheet10: 'SJR_HOSPITALIST',
+		worksheet11: 'AAC',
+		worksheet12: 'ER_CONSULTS',
 	}
 
 for ws, site in worksheet_sites.items():
