@@ -2175,8 +2175,7 @@ elif st.session_state.page == "Create List":
 
         # Save the combined DataFrame to CSV
         hopes.to_csv('hopes.csv', index=False)
-
-
+	    
         ####################################NYES#############################################################################
         import pandas as pd
         read_file = pd.read_excel (uploaded_opd_file, sheet_name='NYES')
@@ -2484,7 +2483,22 @@ elif st.session_state.page == "Create List":
         nyess = pd.DataFrame(columns=NYEi.columns)
         nyess = pd.concat([NYEi, NYEii])
         nyess.to_csv('nyess.csv', index=False)
+        
+	dfx1 = pd.read_csv('nyess.csv')
+        df = dfx1
+        df=pd.read_csv('nyess.csv',dtype=str)
+        import io
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
 
+        # Streamlit download button
+        st.download_button(
+            label="Download CSV File",
+            data=output.getvalue(),
+            file_name="nyess.csv",
+            mime="text/csv"
+        )
         ##############################ETOWN##############################################################################################
         import pandas as pd
         read_file = pd.read_excel (uploaded_opd_file, sheet_name='ETOWN')
@@ -5604,20 +5618,20 @@ elif st.session_state.page == "Create List":
         dfx1.to_csv('PALIST.csv',index=False)
 
         dfx1 = pd.read_csv('PALIST.csv')
-        df = dfx1
-        df=pd.read_csv('PALIST.csv',dtype=str)
-        import io
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
+        #df = dfx1
+        #df=pd.read_csv('PALIST.csv',dtype=str)
+        #import io
+        #output = io.StringIO()
+        #df.to_csv(output, index=False)
+        #output.seek(0)
 
         # Streamlit download button
-        st.download_button(
-            label="Download CSV File",
-            data=output.getvalue(),
-            file_name="PALIST.csv",
-            mime="text/csv"
-        )
+        #st.download_button(
+        #    label="Download CSV File",
+        #    data=output.getvalue(),
+        #    file_name="PALIST.csv",
+        #    mime="text/csv"
+        #)
  
  
         new_row = pd.DataFrame({'date':0, 'type':0, 'providers':0,
