@@ -5548,15 +5548,14 @@ elif st.session_state.page == "Create List":
         extras = pd.DataFrame(columns=extrai.columns)
         extras = pd.concat([extrai, extraii])
         extras.to_csv('extra_ercons.csv', index=False)
-
-#################################################################################################
-
+	    
         df1=pd.read_csv('etowns.csv')
         df2=pd.read_csv('hopes.csv')
         df3=pd.read_csv('nyess.csv')
         df4=pd.read_csv('extras.csv')
         df5=pd.read_csv('extra_a.csv')
-	df6=pd.read_csv('extra_c.csv')
+	    
+	#df6=pd.read_csv('extra_c.csv')
 	#df6=pd.read_csv('extra_c.csv')
 	#df7=pd.read_csv('extra_p.csv')
 	#df8=pd.read_csv('extra_picu.csv')
