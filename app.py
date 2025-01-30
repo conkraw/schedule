@@ -128,23 +128,46 @@ elif st.session_state.page == "OPD Creator":
 	np.savetxt("dates.py",numpy_array, fmt="%s")
 	
 	exec(open('dates.py').read())
-	
 	import xlsxwriter
-	
+
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
-	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'WARD_A', 'WARD_C','WARD_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSPITALIST', 'AAC', 'ER_CONSULTS']
+	# Define worksheet names
+	worksheet_names = [
+	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'WARD_A', 'WARD_C',
+	    'WARD_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY',
+	    'SJR_HOSPITALIST', 'AAC', 'ER_CONSULTS'
+	]
 	
+	# Create worksheets and store them in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
-
-	format1 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
-	    
-	worksheet_sites = {worksheet: 'Hope Drive',worksheet2: 'Elizabethtown',worksheet3: 'Nyes Road',worksheet4: 'WARD_A',worksheet5: 'WARD_C',worksheet6: 'WARD_P',worksheet7: 'PICU',worksheet8: 'PSHCH_NURSERY',worksheet9: 'HAMPDEN_NURSERY',
-			   worksheet10: 'SJR_HOSPITALIST',worksheet11: 'AAC',worksheet12: 'ER_CONSULTS'}
-
+	
+	# Define format
+	format1 = workbook.add_format({
+	    'font_size': 18, 'bold': 1, 'align': 'center',
+	    'valign': 'vcenter', 'font_color': 'black',
+	    'bg_color': '#FEFFCC', 'border': 1
+	})
+	
+	# Define site names corresponding to worksheet names
+	worksheet_sites = {
+	    'HOPE_DRIVE': 'Hope Drive',
+	    'ETOWN': 'Elizabethtown',
+	    'NYES': 'Nyes Road',
+	    'WARD_A': 'WARD_A',
+	    'WARD_C': 'WARD_C',
+	    'WARD_P': 'WARD_P',
+	    'PICU': 'PICU',
+	    'PSHCH_NURSERY': 'PSHCH_NURSERY',
+	    'HAMPDEN_NURSERY': 'HAMPDEN_NURSERY',
+	    'SJR_HOSPITALIST': 'SJR_HOSPITALIST',
+	    'AAC': 'AAC',
+	    'ER_CONSULTS': 'ER_CONSULTS'
+	}
+	
 	# Write "Site:" and corresponding site names in each worksheet
 	for name, site in worksheet_sites.items():
-	    worksheet = worksheet[name]
+	    worksheet = worksheets[name]  # Access the worksheet from the dictionary
 	    worksheet.write(0, 0, 'Site:', format1)
 	    worksheet.write(0, 1, site, format1)
 	
