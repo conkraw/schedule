@@ -5554,7 +5554,7 @@ elif st.session_state.page == "Create List":
         df3=pd.read_csv('nyess.csv')
         df4=pd.read_csv('extras.csv')
         df5=pd.read_csv('extra_a.csv')
-	    df6=pd.read_csv('extra_c.csv')
+	df6=pd.read_csv('extra_c.csv')
 	#df6=pd.read_csv('extra_c.csv')
 	#df6=pd.read_csv('extra_c.csv')
 	#df7=pd.read_csv('extra_p.csv')
