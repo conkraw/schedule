@@ -5718,7 +5718,7 @@ elif st.session_state.page == "Create List":
             'bold': 1,
             'align': 'center',
             'valign': 'vcenter',
-            'color': 'black',
+            'font_color': 'black',
             'text_wrap': True,
             'bg_color': '#FEFFCC',
             'border': 1
@@ -5729,7 +5729,7 @@ elif st.session_state.page == "Create List":
             'bold': 1,
             'align': 'center',
             'valign': 'vcenter',
-            'color': 'yellow',
+            'font_color': 'yellow',
             'bg_color': 'black',
             'border': 1,
             'text_wrap': True
@@ -5740,16 +5740,16 @@ elif st.session_state.page == "Create List":
             'bold': 1,
             'align': 'center',
             'valign': 'vcenter',
-            'color':'black',
+            'font_color':'black',
             'bg_color':'#FFC7CE',
             'border':1
         })
 
-        format4 = workbook.add_format({'num_format':'mm/dd/yyyy','font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#F4F6F7','border':1})
-        format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#F4F6F7','border':1})
+        format4 = workbook.add_format({'num_format':'mm/dd/yyyy','font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1})
+        format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1})
         format6 = workbook.add_format({'bg_color':'black','border':1})
-        format7 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','color':'black','bg_color':'#90EE90','border':1})
-        format8 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign':'vcenter','color':'black','bg_color':'#89CFF0','border':1})
+        format7 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#90EE90','border':1})
+        format8 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign':'vcenter','font_color':'black','bg_color':'#89CFF0','border':1})
         # Initialize a list to store worksheets
         worksheets = []
 
