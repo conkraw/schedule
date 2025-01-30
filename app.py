@@ -5899,9 +5899,6 @@ elif st.session_state.page == "Create List":
                 worksheet.write('G32', ' ', format8)
                 worksheet.write('H32', ' ', format8)
 
-
-
-
         # Now, we'll write the location data
         locations = xf201['col'].tolist()[1:]  # Assuming 'col' is a column in xf201 dataframe
 
@@ -5996,7 +5993,18 @@ elif st.session_state.page == "Create List":
         df.to_csv('datesT.csv',index=False)
 
         df=pd.read_csv('PALIST.csv',dtype=str)
+	output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
 
+        # Streamlit download button
+        st.download_button(
+            label="Download CSV File",
+            data=output.getvalue(),
+            file_name="PALIST.csv",
+            mime="text/csv"
+        )
+	    
         df['text'] = df['providers'] + " - " + "[" + df['clinic'] + "]"
         df = df[['datecode','type','student','text','date','clinic']]
 
@@ -6012,13 +6020,13 @@ elif st.session_state.page == "Create List":
         df = df.loc[df['student'] != "0"]
 
         df.to_excel('Source1.xlsx', index=False)
-        import io 
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Sheet1')
-            writer.close()
-        output.seek(0)
-        st.download_button(label="Download Excel File", data=output, file_name="Source1.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        #import io 
+        #output = io.BytesIO()
+        #with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        #    df.to_excel(writer, index=False, sheet_name='Sheet1')
+        #    writer.close()
+        #output.seek(0)
+        #st.download_button(label="Download Excel File", data=output, file_name="Source1.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
         import openpyxl
