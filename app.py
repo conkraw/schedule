@@ -5619,6 +5619,7 @@ elif st.session_state.page == "Create List":
             mime="text/csv"
         )
  
+ 
         new_row = pd.DataFrame({'date':0, 'type':0, 'providers':0,
                                 'student':0, 'clinic':0, 'provider':0,
                                 'class':0, 'datecode':0, 'datecode2':0},
