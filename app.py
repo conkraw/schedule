@@ -6015,17 +6015,13 @@ elif st.session_state.page == "Create List":
 
 	output = io.BytesIO()
 	with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-	    df.to_excel(writer, index=False, sheet_name='Sheet1')
-	    writer.close()
+		df.to_excel(writer, index=False, sheet_name='Sheet1')
+		writer.close()
 	output.seek(0)
-	
-	# Download button
-	st.download_button(
-	    label="Download Excel File",
-	    data=output,
-	    file_name="Source1.xlsx",
-	    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+
+    # Download button
+	st.download_button(label="Download Excel File", data=output, file_name="Source1.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
 
         import openpyxl
         import numpy as np 
