@@ -2465,7 +2465,7 @@ elif st.session_state.page == "Create List":
 	    
         # Handle AM Continuity for NYE (First set)
         hope['H'] = "H"
-        NYEi = hope[hope['type'] == 'AM '].copy()  # Ensure we're working with a copy
+        NYEi = hope[hope['type'] == 'AM'].copy()  # Ensure we're working with a copy
         NYEi.loc[:, 'count'] = NYEi.groupby(['date'])['provider'].cumcount() + 0  # Starts at H0 for AM
         NYEi.loc[:, 'class'] = "H" + NYEi['count'].astype(str)
         NYEi = NYEi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
