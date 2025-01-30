@@ -144,7 +144,7 @@ elif st.session_state.page == "OPD Creator":
 
 	# Write "Site:" and corresponding site names in each worksheet
 	for name, site in worksheet_sites.items():
-	    worksheet = worksheets[name]
+	    worksheet = worksheet[name]
 	    worksheet.write(0, 0, 'Site:', format1)
 	    worksheet.write(0, 1, site, format1)
 	
