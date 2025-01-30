@@ -5604,7 +5604,7 @@ elif st.session_state.page == "Create List":
         dfx1.to_csv('PALIST.csv',index=False)
 
         dfx1 = pd.read_csv('PALIST.csv')
-	df = dfx1
+        df = dfx1
         df=pd.read_csv('PALIST.csv',dtype=str)
         import io
         output = io.StringIO()
