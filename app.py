@@ -2479,12 +2479,12 @@ elif st.session_state.page == "Create List":
         #output.seek(0)
 
         # Streamlit download button
-        st.download_button(
-            label="Download CSV File",
-            data=output.getvalue(),
-            file_name="1.csv",
-            mime="text/csv"
-        )
+        #st.download_button(
+        #    label="Download CSV File",
+        #    data=output.getvalue(),
+        #    file_name="1.csv",
+        #    mime="text/csv"
+        #)
         # Handle PM Continuity for NYE (Second set)
         hope['H'] = "H"
         NYEii = hope[hope['type'] == 'PM'].copy()  # Ensure we're working with a copy
