@@ -5806,7 +5806,7 @@ elif st.session_state.page == "Create List":
                 worksheet.set_column('A:A', 20)
                 worksheet.set_column('B:B', 30)
                 worksheet.set_column('C:G', 30)
-                worksheet.set_column('H:H', 150)
+                worksheet.set_column('H:H', 155)
 		    
                 # Set row height for header row
                 worksheet.set_row(0, 37.25)
