@@ -5993,7 +5993,7 @@ elif st.session_state.page == "Create List":
         df.to_csv('datesT.csv',index=False)
 
         df=pd.read_csv('PALIST.csv',dtype=str)
-	output = io.StringIO()
+        output = io.StringIO()
         df.to_csv(output, index=False)
         output.seek(0)
 
