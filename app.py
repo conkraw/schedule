@@ -5881,8 +5881,8 @@ elif st.session_state.page == "Create List":
         df10=pd.read_csv('extra_hnurs.csv')
         df11=pd.read_csv('extra_sjrhosp.csv')
         df12=pd.read_csv('extra_ercons.csv')
-    	df13=pd.read_csv('extra_nf.csv')
-
+        df13=pd.read_csv('extra_nf.csv')
+	    
         dfx=pd.DataFrame(columns=df1.columns)
         dfx=pd.concat([dfx,df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12,df13])
         dfx['providers']=dfx['provider'].str.split('~').str[0]
