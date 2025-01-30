@@ -5549,23 +5549,21 @@ elif st.session_state.page == "Create List":
         extras = pd.concat([extrai, extraii])
         extras.to_csv('extra_ercons.csv', index=False)
 	    
-        df1=pd.read_csv('etowns.csv')
+	df1=pd.read_csv('etowns.csv')
         df2=pd.read_csv('hopes.csv')
         df3=pd.read_csv('nyess.csv')
         df4=pd.read_csv('extras.csv')
         df5=pd.read_csv('extra_a.csv')
-	df6=pd.read_csv('extra_c.csv')
-	#df6=pd.read_csv('extra_c.csv')
-	#df6=pd.read_csv('extra_c.csv')
-	#df7=pd.read_csv('extra_p.csv')
-	#df8=pd.read_csv('extra_picu.csv')
-	#df9=pd.read_csv('extra_nurs.csv')
-	#df10=pd.read_csv('extra_hnurs.csv')
-	#df11=pd.read_csv('extra_sjrhosp.csv')
-	#df12=pd.read_csv('extra_ercons.csv')
+        df6=pd.read_csv('extra_c.csv')
+        df7=pd.read_csv('extra_p.csv')
+        df8=pd.read_csv('extra_picu.csv')
+        df9=pd.read_csv('extra_nurs.csv')
+        df10=pd.read_csv('extra_hnurs.csv')
+        df11=pd.read_csv('extra_sjrhosp.csv')
+        df12=pd.read_csv('extra_ercons.csv')
 
         dfx=pd.DataFrame(columns=df1.columns)
-        dfx=pd.concat([dfx,df1,df2,df3,df4,df5])
+        dfx=pd.concat([dfx,df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12])
         dfx['providers']=dfx['provider'].str.split('~').str[0]
         dfx['student']=dfx['provider'].str.split('~').str[1]
         dfx1=dfx[['date','type','providers','student','clinic','provider','class']]
