@@ -5891,11 +5891,11 @@ elif st.session_state.page == "Create List":
                 worksheet.write('A8', 'ASSIGNMENT DUE:', format8)
                 worksheet.write('B8', ' ', format8)
                 worksheet.write('C8', ' ', format8)
-                worksheet.write('D8', 'Quiz 1 Due', format8)
+                worksheet.write('D8', ' ', format8)
                 worksheet.write('E8', ' ', format8)
                 worksheet.write('F8', 'Ask for Feedback!', format8)
                 worksheet.write('G8', ' ', format8)
-                worksheet.write('H8', 'Quiz 2 Due', format8)
+                worksheet.write('H8', 'Quiz 1 Due', format8)
 
                 # Writing to row 16
                 worksheet.write('A16', 'ASSIGNMENT DUE:', format8)
@@ -5905,7 +5905,7 @@ elif st.session_state.page == "Create List":
                 worksheet.write('E16', ' ', format8)
                 worksheet.write('F16', 'Ask for Feedback!', format8)
                 worksheet.write('G16', ' ', format8)
-                worksheet.write('H16', 'Quiz 3 Due', format8)
+                worksheet.write('H16', 'Quiz 2 Due, Pediatric Documentation #1', format8)
 
                 # Writing to row 24
                 worksheet.write('A24', 'ASSIGNMENT DUE:', format8)
@@ -5915,7 +5915,7 @@ elif st.session_state.page == "Create List":
                 worksheet.write('E24', ' ', format8)
                 worksheet.write('F24', 'Ask for Feedback!', format8)
                 worksheet.write('G24', ' ', format8)
-                worksheet.write('H24', 'Quiz 4 Due', format8)
+                worksheet.write('H24', 'Quiz 3 Due', format8)
 
                 # Writing to row 32
                 worksheet.write('A32', 'ASSIGNMENT DUE:', format8)
@@ -5923,9 +5923,9 @@ elif st.session_state.page == "Create List":
                 worksheet.write('C32', ' ', format8)
                 worksheet.write('D32', ' ', format8)
                 worksheet.write('E32', ' ', format8)
-                worksheet.write('F32', 'Write Up, Developmental Assessment of Pediatric Patient, Clinical Encounters are Due!', format8)
+                worksheet.write('F32', ' ', format8)
                 worksheet.write('G32', ' ', format8)
-                worksheet.write('H32', ' ', format8)
+                worksheet.write('H32', 'Quiz 4, Pediatric Documentation #2, Social Drivers of Health Assessment Form, Developmental Assessment of Pediatric Patient Form, Clinical Encounters are Due!', format8)
 
         # Now, we'll write the location data
         locations = xf201['col'].tolist()[1:]  # Assuming 'col' is a column in xf201 dataframe
