@@ -1791,29 +1791,26 @@ elif st.session_state.page == "OPD Creator":
 	hope['H'] = "H"
 	hopeii = hope[(hope['type'] == 'PM - Continuity ')]
 	
-	# Group by 'date' and count occurrences
 	hopeii['count'] = hopeii.groupby(['date'])['provider'].cumcount() + 12  # Start at H12
 	hopeii['class'] = "H" + hopeii['count'].astype(str)
 	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	hopeii.to_csv('6.csv', index=False)
+	
+	WARDA['H'] = "H"
+	# Process AM - Continuity
+	WARDAi = WARDA[(WARDA['type'] == 'AM - Continuity ')]
+	WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
+	WARDAi['class'] = "H" + WARDAi['count'].astype(str)
+	WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	WARDAi.to_csv('9.csv', index=False)
 
-        WARDA['H'] = "H"
-
-        # Process AM - Continuity
-        WARDAi = WARDA[(WARDA['type'] == 'AM - Continuity ')]
-        WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
-        WARDAi['class'] = "H" + WARDAi['count'].astype(str)
-        WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-        WARDAi.to_csv('9.csv', index=False)
-
-        # Process PM - Continuity
-        WARDA['H'] = "H"
-        WARDAii = WARDA[(WARDA['type'] == 'PM - Continuity ')]
-        WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
-        WARDAii['class'] = "H" + WARDAii['count'].astype(str)
-        WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-        WARDAii.to_csv('10.csv', index=False)
-
+	# Process PM - Continuity
+	WARDA['H'] = "H"
+	WARDAii = WARDA[(WARDA['type'] == 'PM - Continuity ')]
+	WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
+	WARDAii['class'] = "H" + WARDAii['count'].astype(str)
+	WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	WARDAii.to_csv('10.csv', index=False)
 	############################################################################################################################
 	
 	t1=pd.read_csv('1.csv')
