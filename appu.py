@@ -1802,7 +1802,7 @@ elif st.session_state.page == "OPD Creator":
 	WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
 	WARDAi['class'] = "H" + WARDAi['count'].astype(str)
 	WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	WARDAi.to_csv('9.csv', index=False)
+	WARDAi.to_csv('10.csv', index=False)
 
 	# Process PM - Continuity
 	WARDA['H'] = "H"
@@ -1810,7 +1810,7 @@ elif st.session_state.page == "OPD Creator":
 	WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
 	WARDAii['class'] = "H" + WARDAii['count'].astype(str)
 	WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	WARDAii.to_csv('10.csv', index=False)
+	WARDAii.to_csv('11.csv', index=False)
 	############################################################################################################################
 	
 	t1=pd.read_csv('1.csv')
