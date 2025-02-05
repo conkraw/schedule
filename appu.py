@@ -1681,17 +1681,11 @@ elif st.session_state.page == "OPD Creator":
 	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
 	
 	dfx['clinic'] = "WARD_A"
-	
-	dfx.to_csv('warda.csv',index=False)
-	NYES=dfx.replace("Rounder 1 7a-7p", "AM - Continuity", regex=True)
-	NYES=NYES.replace("Rounder 2 7a-7p", "AM - Continuity", regex=True)
-	NYES=NYES.replace("Rounder 3 7a-7p", "AM - Continuity", regex=True)
-	NYES.to_csv('warda.csv',index=False)
 
 	dfx.to_csv('warda.csv', index=False)
 
 	# Replace "Rounder" values with "AM - Continuity"
-	NYES = dfx.replace(
+	WARDA = dfx.replace(
     	{"Rounder 1 7a-7p": "AM - Continuity",
      	"Rounder 2 7a-7p": "AM - Continuity",
      	"Rounder 3 7a-7p": "AM - Continuity"},
@@ -1699,16 +1693,16 @@ elif st.session_state.page == "OPD Creator":
 	)
 
 	# Identify rows with "AM - Continuity"
-	am_continuity_rows = NYES[NYES.eq("AM - Continuity").any(axis=1)].copy()
+	am_continuity_rows = WARDA[WARDA.eq("AM - Continuity").any(axis=1)].copy()
 
 	# Create corresponding "PM - Continuity" rows
 	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
 
 	# Append new rows to the original dataframe
-	NYES = pd.concat([NYES, pm_continuity_rows], ignore_index=True)
+	WARDA = pd.concat([WARDA, pm_continuity_rows], ignore_index=True)
 
 	# Save the updated data
-	NYES.to_csv('warda.csv', index=False)
+	WARDA.to_csv('warda.csv', index=False)
 
 	
 	#############################################################################################################
@@ -1803,6 +1797,23 @@ elif st.session_state.page == "OPD Creator":
 	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	hopeii.to_csv('6.csv', index=False)
 
+        WARDA['H'] = "H"
+
+        # Process AM - Continuity
+        WARDAi = WARDA[(WARDA['type'] == 'AM - Continuity ')]
+        WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
+        WARDAi['class'] = "H" + WARDAi['count'].astype(str)
+        WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+        WARDAi.to_csv('9.csv', index=False)
+
+        # Process PM - Continuity
+        WARDA['H'] = "H"
+        WARDAii = WARDA[(WARDA['type'] == 'PM - Continuity ')]
+        WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
+        WARDAii['class'] = "H" + WARDAii['count'].astype(str)
+        WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+        WARDAii.to_csv('10.csv', index=False)
+
 	############################################################################################################################
 	
 	t1=pd.read_csv('1.csv')
@@ -1814,11 +1825,11 @@ elif st.session_state.page == "OPD Creator":
 	t7=pd.read_csv('7.csv')
 	t8=pd.read_csv('8.csv')
 	t9=pd.read_csv('9.csv')
-	#t10=pd.read_csv('10.csv')
-	#t11=pd.read_csv('11.csv')
+	t10=pd.read_csv('10.csv')
+	t11=pd.read_csv('11.csv')
 	
 	final2 = pd.DataFrame(columns=t1.columns)
-	final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9]) #t10,t11])
+	final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11])
 	final2.to_csv('final2.csv',index=False)
 	
 	#final1 = pd.DataFrame(columns=NYEi.columns)
