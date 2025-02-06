@@ -2023,7 +2023,7 @@ elif st.session_state.page == "OPD Creator":
 	dfx.to_csv('wardpx.csv', index=False)
 	
 	# Replace "Rounder" values with "AM - Continuity"
-	WARDP = dfx.replace({"On-Call": "AM - Continuity","On-Call 8a-8a ": "AM - Continuity"},regex=True)
+	WARDP = dfx.replace({"On-Call 8a-8a": "AM - Continuity","On-Call": "AM - Continuity"},regex=True)
 
 	# Identify rows with "AM - Continuity"
 	am_continuity_rows = WARDP[WARDP.eq("AM - Continuity ").any(axis=1)].copy()
