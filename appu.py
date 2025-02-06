@@ -436,13 +436,16 @@ elif st.session_state.page == "OPD Creator":
 	        # Create corresponding "PM - Continuity" rows
 	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
 	
-	        # Append new rows to the original dataframe
+	        # Append new rows to the original dataframe (first duplication)
 	        df = pd.concat([df, pm_continuity_rows], ignore_index=True)
+	
+	        # Duplicate the AM - Continuity and PM - Continuity rows again
+	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows], ignore_index=True)
 	
 	        # Save the updated data
 	        filename = f"{clinic_name.lower()}.csv"
 	        df.to_csv(filename, index=False)
-	        print(f"{clinic_name} updated with PM - Continuity and saved to {filename}.")
+	        print(f"{clinic_name} updated with two AM - Continuity and two PM - Continuity entries and saved to {filename}.")
 	    
 	    return df
 
