@@ -2446,31 +2446,28 @@ elif st.session_state.page == "OPD Creator":
 	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	hopeii.to_csv('9.csv', index=False)
 
-    	WARDA['H'] = "H"
+	WARDA['H'] = "H"
 
-    	WARDAi = WARDA[(WARDA['type'] == 'AM - Continuity ')]
-    	WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
-    	WARDAi['class'] = "H" + WARDAi['count'].astype(str)
-    	WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-    	WARDAi.to_csv('10.csv', index=False)
-    
-    	# Process PM - Continuity
-    	WARDA['H'] = "H"
-    	WARDAii = WARDA[(WARDA['type'] == 'PM - Continuity ')]
-    	WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
-    	WARDAii['class'] = "H" + WARDAii['count'].astype(str)
-    	WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-    	WARDAii.to_csv('11.csv', index=False)
+	WARDAi = WARDA[(WARDA['type'] == 'AM - Continuity ')]
+	WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
+	WARDAi['class'] = "H" + WARDAi['count'].astype(str)
+	WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	WARDAi.to_csv('10.csv', index=False)
+
+	WARDA['H'] = "H"
+	WARDAii = WARDA[(WARDA['type'] == 'PM - Continuity ')]
+	WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
+	WARDAii['class'] = "H" + WARDAii['count'].astype(str)
+	WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	WARDAii.to_csv('11.csv', index=False)
 
 	WARDP['H'] = "H"
-
 	WARDPi = WARDP[(WARDP['type'] == 'AM - Continuity ')]
 	WARDPi['count'] = WARDPi.groupby(['date'])['provider'].cumcount() + 0
 	WARDPi['class'] = "H" + WARDPi['count'].astype(str)
 	WARDPi = WARDPi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	WARDPi.to_csv('12.csv', index=False)
-	
-	# Process PM - Continuity
+
 	WARDP['H'] = "H"
 	WARDPii = WARDP[(WARDP['type'] == 'PM - Continuity ')]
 	WARDPii['count'] = WARDPii.groupby(['date'])['provider'].cumcount() + 10
@@ -2478,21 +2475,20 @@ elif st.session_state.page == "OPD Creator":
 	WARDPii = WARDPii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	WARDPii.to_csv('13.csv', index=False)
 
-    	COMPLEX['H'] = "H"
+	COMPLEX['H'] = "H"
+	COMPLEXi = COMPLEX[(COMPLEX['type'] == 'AM - Continuity ')]
+	COMPLEXi['count'] = COMPLEXi.groupby(['date'])['provider'].cumcount() + 0
+	COMPLEXi['class'] = "H" + COMPLEXi['count'].astype(str)
+	COMPLEXi = COMPLEXi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	COMPLEXi.to_csv('14.csv', index=False)
 
-    	COMPLEXi = COMPLEX[(COMPLEX['type'] == 'AM - Continuity ')]
-    	COMPLEXi['count'] = COMPLEXi.groupby(['date'])['provider'].cumcount() + 0
-    	COMPLEXi['class'] = "H" + COMPLEXi['count'].astype(str)
-    	COMPLEXi = COMPLEXi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-    	COMPLEXi.to_csv('14.csv', index=False)
-    
-    	# Process PM - Continuity
-    	COMPLEX['H'] = "H"
-    	COMPLEXii = COMPLEX[(COMPLEX['type'] == 'PM - Continuity ')]
-    	COMPLEXii['count'] = COMPLEXii.groupby(['date'])['provider'].cumcount() + 10
-    	COMPLEXii['class'] = "H" + COMPLEXii['count'].astype(str)
-    	COMPLEXii = COMPLEXii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-    	COMPLEXii.to_csv('15.csv', index=False)
+	COMPLEX['H'] = "H"
+	COMPLEXii = COMPLEX[(COMPLEX['type'] == 'PM - Continuity ')]
+	COMPLEXii['count'] = COMPLEXii.groupby(['date'])['provider'].cumcount() + 10
+	COMPLEXii['class'] = "H" + COMPLEXii['count'].astype(str)
+	COMPLEXii = COMPLEXii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	COMPLEXii.to_csv('15.csv', index=False)
+
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 16)}
 	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15 = tables.values()
