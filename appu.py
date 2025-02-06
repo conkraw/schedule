@@ -34,21 +34,61 @@ if st.session_state.page == "Home":
     if st.button("Go to Create Student Schedule"):
         navigate_to("Create Student Schedule")
 
-# Create OPD Page - Date Input
+# Streamlit Page: Create OPD
 elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
     st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
 
+    # User Input for Start Date
     date_input = st.text_input('Start Date')
 
     if st.button('Submit Date') and date_input:
         try:
-            test_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
-            st.session_state.start_date = test_date
-            st.success(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
-            navigate_to("Upload Files")
+            start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
+            st.session_state.start_date = start_date  # Store in session state
+            st.success(f"Valid date entered: {start_date.strftime('%m/%d/%Y')}")
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
+
+    # Ensure the user entered a valid date before proceeding
+    if "start_date" in st.session_state:
+        start_date = st.session_state.start_date
+
+        # Create a new workbook and select the active worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Sheet1"  # Rename sheet if needed
+
+        # Place specific text in designated cells
+        ws["A1"] = "HAMPDEN NURSERY"
+        ws["A2"] = "CUSTOM_PRINT"
+
+        # Days of the week to be placed across the row
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+        # Start row for the first week
+        start_row = 4
+
+        # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
+        for week in range(4):  # 4 weeks
+            current_date = start_date + datetime.timedelta(weeks=week)  # Adjust date for each week
+            for i, day in enumerate(days):
+                col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K)
+                ws[f"{col_letter}{start_row}"] = day  # Place the day name
+                ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
+            start_row += 10  # Skip 10 rows before the next week starts
+
+        # Save the Excel file
+        file_name = "Duplicated_File.xlsx"
+        wb.save(file_name)
+
+        # Provide download link in Streamlit
+        with open(file_name, "rb") as f:
+            st.download_button("Download Sample", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        st.success("Excel file created successfully with specified layout!")
+
+
 
 # Upload Files Page
 elif st.session_state.page == "Upload Files":
