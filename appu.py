@@ -589,9 +589,10 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	
-	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+	#picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+	picu_df = process_picu_exclusions("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+	picu_df = process_file(picu_df)  # Apply the Friday exclusion logic
 	st.dataframe(picu_df)
-	#picu_df = process_picu_exclusions(picu_df)  # Apply the Friday exclusion logic
 	
 	if picu_df is not None:
 	    picu_df.to_csv("picu.csv", index=False)
