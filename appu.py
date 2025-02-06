@@ -78,6 +78,8 @@ elif st.session_state.page == "Upload Files":
                 uploaded_files_dict['NYES.xlsx'] = file
             elif 'WARD_A' in file.name:
                 uploaded_files_dict['WARD_A.xlsx'] = file
+            elif 'WARD_P' in file.name:
+                uploaded_files_dict['WARD_P.xlsx'] = file
 		    
         # Store the uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
@@ -1704,7 +1706,6 @@ elif st.session_state.page == "OPD Creator":
 	# Save the updated data
 	WARDA.to_csv('warda.csv', index=False)
 
-	
 	#############################################################################################################
 	NYES['H'] = "H"
 	NYEi = NYES[(NYES['type'] == 'AM - Continuity ')]
