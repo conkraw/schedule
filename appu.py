@@ -10,7 +10,7 @@ import openpyxl
 from openpyxl import Workbook
 from io import BytesIO
 
-def generate_excel_file(start_date, title, custom_text, file_name):
+def generate_excel_file(start_date, title, custom_text, file_name, names):
     """
     Generates an Excel file with structured weekly formatting.
 
@@ -19,6 +19,7 @@ def generate_excel_file(start_date, title, custom_text, file_name):
         title (str): The text to be placed in cell A1.
         custom_text (str): The text to be placed in cell A2.
         file_name (str): The name of the output file.
+        names (list): A list of up to 10 names to be placed in the file.
 
     Returns:
         str: Path of the saved file.
@@ -38,6 +39,10 @@ def generate_excel_file(start_date, title, custom_text, file_name):
     # Row ranges to repeat the pattern
     row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44)]
 
+    # Ensure names list has at least one name
+    if not names:
+        names = ["Default Name ~"]
+
     # Fill the table with names and "custom_value"
     for start_row, end_row in row_ranges:
         for col in custom_value_columns:
@@ -45,13 +50,13 @@ def generate_excel_file(start_date, title, custom_text, file_name):
                 ws[f"{col}{row}"] = "custom_value"
 
         for col in name_columns:
-            ws[f"{col}{start_row + 1}"] = "Folaranmi, Oluwamayoda ~"  # First row of range
-            ws[f"{col}{start_row + 2}"] = "Alur, Pradeep ~"  # Second row of range
-            for row in range(start_row + 3, end_row + 1):  # Fill remaining with "custom_value"
+            for i, row in enumerate(range(start_row, start_row + len(names))):
+                ws[f"{col}{row}"] = names[i % len(names)]  # Cycle through names
+            for row in range(start_row + len(names), end_row + 1):  # Fill remaining with "custom_value"
                 ws[f"{col}{row}"] = "custom_value"
 
     # Days of the week to be placed across the row
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"]
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     # Start row for the first week
     start_row = 4
@@ -70,6 +75,40 @@ def generate_excel_file(start_date, title, custom_text, file_name):
     wb.save(file_path)
 
     return file_path  # Return file path for later use
+
+# Streamlit Page: Create OPD
+elif st.session_state.page == "Create OPD":
+    st.title('Date Input for OPD')
+    st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
+
+    # User Input for Start Date
+    date_input = st.text_input('Start Date')
+    file_name = st.text_input("Enter file name (e.g., HAMPDEN.xlsx)")
+    names_input = st.text_area("Enter up to 10 names (one per line)")
+
+    if st.button('Submit Date') and date_input and file_name:
+        try:
+            start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
+            st.session_state.start_date = start_date  # Store in session state
+            st.success(f"Valid date entered: {start_date.strftime('%m/%d/%Y')}")
+
+            # Convert names input to a list, remove empty lines
+            names = [name.strip() for name in names_input.split("\n") if name.strip()]
+            names = names[:10]  # Limit to 10 names
+
+            # Generate the Excel file with user-specified file name
+            file_path = generate_excel_file(start_date, "HAMPDEN NURSERY", "CUSTOM_PRINT", file_name, names)
+
+            # Store file path in session state for later downloads
+            st.session_state.generated_file = file_path
+
+            # Move to the next page: Upload Files
+            st.session_state.page = "Upload Files"
+            st.rerun()  # Force rerun to reflect the page change
+
+        except ValueError:
+            st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
+
 
 # Initialize session state variables efficiently
 session_defaults = {
