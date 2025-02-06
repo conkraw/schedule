@@ -551,6 +551,25 @@ elif st.session_state.page == "OPD Creator":
 	        "On-Call": "AM - Continuity"
 	    }
 	}
+
+	import pandas as pd
+
+	def process_picu_exclusions(df):
+	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement."""
+	    if df is not None:
+	        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+	        df['weekday'] = df['date'].dt.weekday  # 0=Monday, ..., 6=Sunday
+	
+	        # Replace "1st PICU Attending 7:30a-5p" with "AM - Continuity" only for non-Friday days
+	        df.loc[df['weekday'] != 4, 'type'] = df['type'].replace(
+	            {"1st PICU Attending 7:30a-5p": "AM - Continuity"}
+	        )
+	
+	        # Drop the temporary 'weekday' column
+	        df = df.drop(columns=['weekday'])
+	
+	    return df
+
 	
 	# Process each file
 
@@ -561,8 +580,14 @@ elif st.session_state.page == "OPD Creator":
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
+	
 	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
-
+	picu_df = process_picu_exclusions(picu_df)  # Apply the Friday exclusion logic
+	
+	if picu_df is not None:
+	    picu_df.to_csv("picu.csv", index=False)
+	    print("PICU updated and saved with Friday exclusions.")
+		
 	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
 	# Apply AM → PM Continuity Transformation for WARDA, WARDP, and PICU
