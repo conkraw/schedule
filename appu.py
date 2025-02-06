@@ -727,6 +727,7 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("WARD_A", "W_A")
 	process_excel_mapping("WARD_P", "W_P")
 	process_excel_mapping("PICU", "PICU")
+	process_excel_mapping("PSHCH_NURS","PSHCH_NURS")
 	###############################################################################################
 
 	# Button to trigger the download
