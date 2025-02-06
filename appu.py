@@ -55,15 +55,14 @@ elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write("Upload the following required Excel files:")
 
-    required_files = {
-        "HOPE_DRIVE": "HOPE_DRIVE.xlsx",
-        "ETOWN": "ETOWN.xlsx",
-        "NYES": "NYES.xlsx",
-        "WARD_A": "WARD_A.xlsx",
-        "WARD_P": "WARD_P.xlsx",
-        "COMPLEX": "COMPLEX.xlsx",
-        "PICU": "PICU.xlsx",
-    }
+    required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx",
+		      "ETOWN": "ETOWN.xlsx",
+		      "NYES": "NYES.xlsx",
+		      "WARD_A": "WARD_A.xlsx",
+		      "WARD_P": "WARD_P.xlsx",
+		      "COMPLEX": "COMPLEX.xlsx",
+		      "PICU": "PICU.xlsx",
+		      "PSHCH_NURS":"NURSERY.xlsx"}
 
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
 
@@ -519,8 +518,7 @@ elif st.session_state.page == "OPD Creator":
 	                print(f"{clinic_name} {type_key} saved to {filename}.")
 
 	# Define replacement rules for each clinic
-	replacement_rules = {
-	    "HOPE_DRIVE.xlsx": {
+	replacement_rules = {"HOPE_DRIVE.xlsx": {
 	        "Hope Drive AM Continuity": "AM - Continuity",
 	        "Hope Drive PM Continuity": "PM - Continuity",
 	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
@@ -554,6 +552,7 @@ elif st.session_state.page == "OPD Creator":
 	        "On-Call 8a-8a": "AM - Continuity",
 	        "On-Call": "AM - Continuity"
 	    }
+		
 	}
 
 
@@ -615,6 +614,7 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
 	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
+	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURS")
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
@@ -623,10 +623,11 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
 	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
 	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
+	process_continuity_classes(pshchnursery_df, "PSHCH_NURS", "18.csv", "19.csv")
 	
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 18)} #Add +1 to 18... so if adding t18, t19... then add 2 to 18... and its 20. Or 1 plus the last t value... t17?... last number in range should be 18
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17 = tables.values()
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 20)}
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19 = tables.values()
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
