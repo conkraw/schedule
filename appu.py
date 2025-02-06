@@ -48,54 +48,54 @@ elif st.session_state.page == "Create OPD":
             start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
             st.session_state.start_date = start_date  # Store in session state
             st.success(f"Valid date entered: {start_date.strftime('%m/%d/%Y')}")
+
+            # Create Excel File
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Sheet1"
+
+            # Place specific text in designated cells
+            ws["A1"] = "HAMPDEN NURSERY"
+            ws["A2"] = "CUSTOM_PRINT"
+
+            # Days of the week to be placed across the row
+            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+            # Start row for the first week
+            start_row = 4
+
+            # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
+            for week in range(4):  # 4 weeks
+                current_date = start_date + datetime.timedelta(weeks=week)
+                for i, day in enumerate(days):
+                    col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K)
+                    ws[f"{col_letter}{start_row}"] = day  # Place the day name
+                    ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
+                start_row += 10  # Skip 10 rows before the next week starts
+
+            # Save the Excel file
+            file_name = "Duplicated_File.xlsx"
+            wb.save(file_name)
+
+            # Store file path in session state for later downloads
+            st.session_state.generated_file = file_name
+
+            # Move to the next page: Upload Files
+            st.session_state.page = "Upload Files"
+            st.rerun()  # Force rerun to reflect the page change
+
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
-
-    # Ensure we have a valid start date before proceeding
-    start_date = st.session_state.get("start_date", None)  # Get stored date or None
-
-    if start_date is None:
-        st.error("Please enter a valid start date before proceeding.")
-    else:
-        # Create a new workbook and select the active worksheet
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Sheet1"  # Rename sheet if needed
-
-        # Place specific text in designated cells
-        ws["A1"] = "HAMPDEN NURSERY"
-        ws["A2"] = "CUSTOM_PRINT"
-
-        # Days of the week to be placed across the row
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-        # Start row for the first week
-        start_row = 4
-
-        # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
-        for week in range(4):  # 4 weeks
-            current_date = start_date + datetime.timedelta(weeks=week)  # Adjust date for each week
-            for i, day in enumerate(days):
-                col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K)
-                ws[f"{col_letter}{start_row}"] = day  # Place the day name
-                ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
-            start_row += 10  # Skip 10 rows before the next week starts
-
-        # Save the Excel file
-        file_name = "Duplicated_File.xlsx"
-        wb.save(file_name)
-
-        # Provide download link in Streamlit
-        with open(file_name, "rb") as f:
-            st.download_button("Download Excel Sample", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-        st.success("Excel file created successfully with specified layout!")
-
 
 # Upload Files Page
 elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write("Upload the following required Excel files:")
+
+    # Display download button for the generated Excel file
+    if "generated_file" in st.session_state:
+        with open(st.session_state.generated_file, "rb") as f:
+            st.download_button("Download Generated Excel File", f, "Duplicated_File.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx",
 		      "ETOWN": "ETOWN.xlsx",
