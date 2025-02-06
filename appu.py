@@ -2195,13 +2195,11 @@ elif st.session_state.page == "OPD Creator":
 	df.to_excel('final.xlsx',index=False)
 
 	df=pd.read_csv('final.csv',dtype=str)
-        import io
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
-
-        # Streamlit download button
-        st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
+	import io
+	output = io.StringIO()
+	df.to_csv(output, index=False)
+	output.seek(0)
+	st.download_button(label="Download CSV file", data=output.getvalue(),file_name="final.csv",mime="text/csv")
 	
 	import openpyxl
 	from openpyxl.styles import Alignment
