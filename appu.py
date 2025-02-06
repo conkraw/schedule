@@ -552,33 +552,33 @@ elif st.session_state.page == "OPD Creator":
 	    }
 	}
 
+
 	def process_picu_exclusions(df):
-	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement by handling different date formats."""
-	    if df is not None:
-	        # Attempt to convert the date column, handling multiple formats
-	        try:
-	            df['date'] = pd.to_datetime(df['date'], format="%B %d, %Y", errors='coerce')  # Format: "February 3, 2025"
-	        except ValueError:
-	            df['date'] = pd.to_datetime(df['date'], errors='coerce')  # Fallback to auto-parsing
+	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement using Streamlit's date format (m/d/yyyy)."""
+	    if df is not None and 'date' in df.columns:
+	        # Convert date using Streamlit's format (m/d/yyyy)
+	        df['date'] = pd.to_datetime(df['date'], format="%m/%d/%Y", errors='coerce')  # Matches user input format
 	
-	        # Check if any dates are still NaT (not recognized) and print a warning
+	        # Check if any dates remain unrecognized
 	        if df['date'].isna().sum() > 0:
 	            print("Warning: Some dates could not be parsed. Check format consistency.")
 	
-	        # Create a weekday column (0=Monday, ..., 6=Sunday)
-	        df['weekday'] = df['date'].dt.weekday  # Extract weekday number
+	        # Extract weekday number (0=Monday, ..., 6=Sunday)
+	        df['weekday'] = df['date'].dt.weekday
 	
-	        # Replace "1st PICU Attending 7:30a-5p" with "AM - Continuity" only for non-Fridays (weekday != 4)
+	        # Replace "1st PICU Attending 7:30a-5p" with "AM - Continuity" only on non-Fridays
 	        df.loc[df['weekday'] != 4, 'type'] = df['type'].replace(
 	            {"1st PICU Attending 7:30a-5p": "AM - Continuity"}
 	        )
 	
-	        # Drop the temporary 'weekday' column
+	        # Convert date back to Streamlit's preferred format (m/d/yyyy) for consistency
+	        df['date'] = df['date'].dt.strftime("%-m/%-d/%Y")
+	
+	        # Drop temporary weekday column
 	        df = df.drop(columns=['weekday'])
 	
 	    return df
 
-	
 	# Process each file
 
 	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
