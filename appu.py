@@ -140,6 +140,8 @@ elif st.session_state.page == "Create OPD":
             for file_name, config in file_configs.items():
                 file_path = generate_excel_file(start_date, config["title"], config["custom_text"], file_name, config["names"])
                 generated_files[file_name] = file_path
+		df_display = pd.read_excel(file_path, dtype=str)
+		st.dataframe(df_display)
 
             # Store file paths in session state for later downloads
             st.session_state.generated_files = generated_files
