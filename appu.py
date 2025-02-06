@@ -2118,30 +2118,30 @@ elif st.session_state.page == "OPD Creator":
 	hopei = hopei.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	hopei.to_csv('5.csv', index=False)
 	
-    ######STARTS AT H12 (PM - Continuity)
-    hope['H'] = "H"
-    hopeii = hope[(hope['type'] == 'PM - Continuity ')]
-    
-    hopeii['count'] = hopeii.groupby(['date'])['provider'].cumcount() + 12  # Start at H12
-    hopeii['class'] = "H" + hopeii['count'].astype(str)
-    hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-    hopeii.to_csv('6.csv', index=False)
+	######STARTS AT H12 (PM - Continuity)
+	hope['H'] = "H"
+	hopeii = hope[(hope['type'] == 'PM - Continuity ')]
 
-    WARDP['H'] = "H"
+	hopeii['count'] = hopeii.groupby(['date'])['provider'].cumcount() + 12  # Start at H12
+	hopeii['class'] = "H" + hopeii['count'].astype(str)
+	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	hopeii.to_csv('6.csv', index=False)
 
-    WARDPi = WARDP[(WARDP['type'] == 'AM - Continuity ')]
-    WARDPi['count'] = WARDPi.groupby(['date'])['provider'].cumcount() + 0
-    WARDPi['class'] = "H" + WARDPi['count'].astype(str)
-    WARDPi = WARDPi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-    WARDPi.to_csv('12.csv', index=False)
+	WARDP['H'] = "H"
 
-    # Process PM - Continuity
-    WARDP['H'] = "H"
-    WARDPii = WARDP[(WARDP['type'] == 'PM - Continuity ')]
-    WARDPii['count'] = WARDPii.groupby(['date'])['provider'].cumcount() + 10
-    WARDPii['class'] = "H" + WARDPii['count'].astype(str)
-    WARDPii = WARDPii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-    WARDPii.to_csv('13.csv', index=False)
+	WARDPi = WARDP[(WARDP['type'] == 'AM - Continuity ')]
+	WARDPi['count'] = WARDPi.groupby(['date'])['provider'].cumcount() + 0
+	WARDPi['class'] = "H" + WARDPi['count'].astype(str)
+	WARDPi = WARDPi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	WARDPi.to_csv('12.csv', index=False)
+	
+	# Process PM - Continuity
+	WARDP['H'] = "H"
+	WARDPii = WARDP[(WARDP['type'] == 'PM - Continuity ')]
+	WARDPii['count'] = WARDPii.groupby(['date'])['provider'].cumcount() + 10
+	WARDPii['class'] = "H" + WARDPii['count'].astype(str)
+	WARDPii = WARDPii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+	WARDPii.to_csv('13.csv', index=False)
 
 
 
