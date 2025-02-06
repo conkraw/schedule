@@ -7,6 +7,7 @@ from datetime import timedelta
 import xlsxwriter
 import openpyxl
 from io import BytesIO
+import io
 
 # Initialize session state variables efficiently
 session_defaults = {
