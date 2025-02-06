@@ -37,6 +37,12 @@ if st.session_state.page == "Home":
         navigate_to("Create Student Schedule")
 
 # Streamlit Page: Create OPD
+import pandas as pd
+from openpyxl import Workbook
+import datetime
+import streamlit as st
+
+# Streamlit Page: Create OPD
 elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
     st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
@@ -52,10 +58,12 @@ elif st.session_state.page == "Create OPD":
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
-    # Ensure the user entered a valid date before proceeding
-    if "start_date" in st.session_state:
-        start_date = st.session_state.start_date
+    # Ensure we have a valid start date before proceeding
+    start_date = st.session_state.get("start_date", None)  # Get stored date or None
 
+    if start_date is None:
+        st.error("Please enter a valid start date before proceeding.")
+    else:
         # Create a new workbook and select the active worksheet
         wb = Workbook()
         ws = wb.active
@@ -86,10 +94,9 @@ elif st.session_state.page == "Create OPD":
 
         # Provide download link in Streamlit
         with open(file_name, "rb") as f:
-            st.download_button("Download Sample", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            st.download_button("Download Excel Sample", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
         st.success("Excel file created successfully with specified layout!")
-
 
 
 # Upload Files Page
