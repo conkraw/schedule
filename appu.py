@@ -453,8 +453,6 @@ elif st.session_state.page == "OPD Creator":
 	        # AM - Continuity Processing
 	        df[df['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(am_csv, index=False)
 	        df[df['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(pm_csv, index=False)
-		df[df['type'] == 'AM - Continuity'].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(am_csv, index=False)
-	        df[df['type'] == 'PM - Continuity'].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(pm_csv, index=False)
 		    
 	def process_hope_classes(df, clinic_name):
 	    """
@@ -671,6 +669,7 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("PICU", "PICU")
 
 	df=pd.read_csv('final.csv',dtype=str)
+	df = warda_df
 	import io
 	output = io.StringIO()
 	df.to_csv(output,index=False)
