@@ -728,42 +728,32 @@ elif st.session_state.page == "OPD Creator":
 
 	# Define the column pairs and corresponding days
 	column_pairs = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)]
-	days = [day0, day1, day2, day3, day4, day5, day6,
-	        day7, day8, day9, day10, day11, day12, day13,
-	        day14, day15, day16, day17, day18, day19, day20,
-	        day21, day22, day23, day24, day25, day26, day27]
+	days = [day0, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25, day26, day27, day28, day29, day30, day31, day32, day33, day34]
 	
-	# Store extracted data in a dictionary
+	# Dictionary to store extracted data
 	D_dict = {}
 	
-	# Loop through and process data
-	for i in range(len(days) - 1):  # Iterate through each day's data
-	    col_idx = column_pairs[i % len(column_pairs)]  # Cycle through column pairs
-	    
+	# Loop to process all 28 datasets
+	for i in range(28):
+	    col_idx = column_pairs[i % len(column_pairs)]  # Cycles through column pairs
+	    start_day = days[i]
+	    end_day = days[i + 7]  # Each segment spans 7 days ahead
+	
 	    # Get start and end indices safely
-	    start_idx_series = df.loc[df[str(col_idx[0])] == days[i]].index
-	    end_idx_series = df.loc[df[str(col_idx[0])] == days[i - 1]].index
-	    
-	    # Check if indices are found before proceeding
-	    if not start_idx_series.empty and not end_idx_series.empty:
-	        start_idx = start_idx_series[0]
-	        end_idx = end_idx_series[0]
+	    start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
+	    end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
 	
-	        # Extract relevant data
-	        extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
-	        extracted_data.columns = ['type', 'provider']
-	        extracted_data.insert(0, 'date', days[i])  # Add 'date' column
+	    # Extract relevant data
+	    extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
+	    extracted_data.columns = ['type', 'provider']
+	    extracted_data.insert(0, 'date', start_day)  # Add 'date' column
 	
-	        # Remove the last row safely
-	        if not extracted_data.empty:
-	            extracted_data = extracted_data[:-1]
+	    # Remove the last row safely
+	    extracted_data = extracted_data[:-1]
 	
-	        # Store in dictionary with dynamic key
-	        D_dict[f"D{i}"] = extracted_data
-	    else:
-	        print(f"Warning: Missing index for day {days[i]} or {days[i + 1]}")
-
-	
+	    # Store in dictionary with dynamic key
+	    D_dict[f"D{i}"] = extracted_data
+		
 	# Unpack dictionary to individual variables if needed
 	D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27 = D_dict.values()
 
