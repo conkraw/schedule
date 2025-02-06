@@ -658,16 +658,12 @@ elif st.session_state.page == "OPD Creator":
 
 	# Process HOPE_DRIVE
 	process_excel_mapping("HOPE_DRIVE", "HOPE_DRIVE")
-	
-	# Process ETOWN
-	#process_excel_mapping("ETOWN", "ETOWN")
-	
-	# Process other locations as needed
-	#process_excel_mapping("NYES", "NYES")
-	#process_excel_mapping("COMPLEX", "COMPLEX")
-	#process_excel_mapping("WARD_A", "WARD_A")
-	#process_excel_mapping("WARD_P", "WARD_P")
-	#process_excel_mapping("PICU", "PICU")
+	process_excel_mapping("ETOWN", "ETOWN")
+	process_excel_mapping("NYES", "NYES")
+	process_excel_mapping("COMPLEX", "COMPLEX")
+	process_excel_mapping("WARD_A", "WARD_A")
+	process_excel_mapping("WARD_P", "WARD_P")
+	process_excel_mapping("PICU", "PICU")
 	###############################################################################################
 
 	# Button to trigger the download
