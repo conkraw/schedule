@@ -19,22 +19,9 @@ def format_date_with_suffix(date):
     return date.strftime(f"%B {day}{suffix}, %Y")
 	
 file_configs = {
-    "HAMPDEN_NURSERY.xlsx": {
-        "title": "HAMPDEN NURSERY",
-        "custom_text": "CUSTOM_PRINT",
-        "names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep"]
-    },
-    "SJR.xlsx": {
-        "title": "SJR NURSERY",
-        "custom_text": "CUSTOM_PRINT",
-        "names": ["Spangola, John", "Garfield, Andrew"]
-    },
-    "GENERAL.xlsx": {
-        "title": "GENERAL CLINIC",
-        "custom_text": "CUSTOM_PRINT",
-        "names": ["Smith, Jane", "Doe, John", "Miller, Sarah"]
-    }
-    # Add more files if needed
+    "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep"]},
+    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Garfield, Andrew"]}, #FIND ALL THE HOSPITALIST NAMES 
+    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Smith, Jane", "Doe, John", "Miller, Sarah"]} #LIST ALL NAMES
 }
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
@@ -669,39 +656,18 @@ elif st.session_state.page == "OPD Creator":
 	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
 	        "Hope Drive Weekend Acute 2": "AM - ACUTES"
 	    },
-	    "PICU.xlsx": {
-	        "2nd PICU Attending 7:45a-4p": "AM - Continuity",
-	        "1st PICU Attending 7:30a-5p": "AM - Continuity"
-	    },
-	    "ETOWN.xlsx": {
-	        "Etown AM Continuity": "AM - Continuity",
-	        "Etown PM Continuity": "PM - Continuity"
-	    },
-	    "NYES.xlsx": {
-	        "Nyes Rd AM Continuity": "AM - Continuity",
-	        "Nyes Rd PM Continuity": "PM - Continuity"
-	    },
-	    "COMPLEX.xlsx": {
-	        "Hope Drive Clinic AM": "AM - Continuity",
-	        "Hope Drive Clinic PM": "PM - Continuity"
-	    },
-	    "WARD_A.xlsx": {
-	        "Rounder 1 7a-7p": "AM - Continuity",
-	        "Rounder 2 7a-7p": "AM - Continuity",
-	        "Rounder 3 7a-7p": "AM - Continuity"
-	    },
-	    "WARD_P.xlsx": {
-	        "On-Call 8a-8a": "AM - Continuity",
-	        "On-Call": "AM - Continuity"
-	    },
-	    "PSHCH_NURSERY.xlsx": {  # Nursery replacements
-	        "Nursery Weekday 8a-6p": "AM - Continuity",
-	        "Nursery Weekend": "AM - Continuity"
-	    },
-	    "HAMPDEN_NURSERY.xlsx": {  # Replace "CUSTOM_PRINT" with "AM - Continuity" #############MUST ADD SPACE! 
-	        "custom_value": "AM - Continuity "
-	    }
+	    "PICU.xlsx": {"2nd PICU Attending 7:45a-4p": "AM - Continuity", "1st PICU Attending 7:30a-5p": "AM - Continuity"},
+	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
+	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
+	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
+	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity"},
+	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
+	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
+	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
+	    "SJR_HOSP.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
+	    "AAC.xlsx": {"custom_value": "AM - Continuity "}  # Same format as HAMPDEN_NURSERY.xlsx
 	}
+
 
 
 	def process_picu_exclusions(df):
@@ -741,6 +707,8 @@ elif st.session_state.page == "OPD Creator":
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
+	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
+	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
@@ -766,6 +734,8 @@ elif st.session_state.page == "OPD Creator":
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY")
+	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
+	aac_df = duplicate_am_continuity(aac_df, "AAC")
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
@@ -776,10 +746,12 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
 	process_continuity_classes(pshchnursery_df, "PSHCH_NURSERY", "18.csv", "19.csv")
 	process_continuity_classes(hampdennursery_df, "HAMPDEN_NURSERY", "20.csv", "21.csv")
+	process_continuity_classes(sjrhosp_df, "SJR_HOSP", "22.csv", "23.csv")
+	process_continuity_classes(aac_df, "AAC", "24.csv", "25.csv")
 
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 22)}
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21 = tables.values()
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 26)}
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25 = tables.values()
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
@@ -812,7 +784,7 @@ elif st.session_state.page == "OPD Creator":
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False)
-	st.dataframe(df)
+	#st.dataframe(df)
 	df.to_excel('final.xlsx',index=False)
 
 	########################################################################################################################################################################
