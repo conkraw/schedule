@@ -78,14 +78,14 @@ elif st.session_state.page == "Upload Files":
                 uploaded_files_dict['NYES.xlsx'] = file
             elif 'WARD_A' in file.name:
                 uploaded_files_dict['WARD_A.xlsx'] = file
-            elif 'WARD_P' in file.name:
-                uploaded_files_dict['WARD_P.xlsx'] = file
+            elif 'COMPLEX' in file.name:
+                uploaded_files_dict['COMPLEX.xlsx'] = file
 		    
         # Store the uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
 
     # Check if all files are uploaded
-    if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx', 'WARD_A.xlsx', 'WARD_P.xlsx']):
+    if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx', 'WARD_A.xlsx', 'WARD_P.xlsx', 'COMPLEX.xlsx']):
         st.write("All files uploaded successfully!")
         st.session_state.page = "OPD Creator"  # Move to next page after uploading
         st.rerun()  # Force a rerun to reflect the page change
@@ -139,7 +139,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Define worksheet names
 	worksheet_names = [
-	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'W_A', 'W_C',
+	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C',
 	    'W_P', 'PICU', 'PSHCH_NURS', 'HAMPDEN_NURS',
 	    'SJR_HOSP', 'AAC', 'ER_CONS','NF'
 	]
@@ -151,7 +151,7 @@ elif st.session_state.page == "OPD Creator":
 	(
 	    worksheet, worksheet2, worksheet3, worksheet4, worksheet5, 
 	    worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, 
-	    worksheet11, worksheet12, worksheet13
+	    worksheet11, worksheet12, worksheet13, worksheet14
 	) = worksheets.values()
 	
 	# Define format
@@ -166,15 +166,15 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet: 'Hope Drive',
 	    worksheet2: 'Elizabethtown',
 	    worksheet3: 'Nyes Road',
-	    worksheet4: 'WARD_A',
-	    worksheet5: 'WARD_C',
-	    worksheet6: 'WARD_P',
-	    worksheet7: 'PICU',
-	    worksheet8: 'PSHCH_NURSERY',
-	    worksheet9: 'HAMPDEN_NURSERY',
-	    worksheet10: 'SJR_HOSPITALIST',
-	    worksheet11: 'AAC',
-	    worksheet12: 'ER_CONSULTS', worksheet13: 'NIGHT_FLOAT',
+	    worksheet4: 'Complex Care',
+	    worksheet5: 'WARD A',
+	    worksheet6: 'WARD C',
+	    worksheet7: 'WARD P',
+	    worksheet8: 'PICU',
+	    worksheet9: 'PSHCH NURSERY',
+	    worksheet10: 'HAMPDEN NURSERY',
+	    worksheet11: 'SJR HOSPITALIST',
+	    worksheet12: 'AAC', worksheet13: 'ER CONSULTS', worksheet14: 'NIGHT FLOAT'
 	}
 	
 	# Write "Site:" and corresponding site names in each worksheet
@@ -251,7 +251,7 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'I{start_row + i}', label, formate)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13]
+	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14]
 	
 	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
@@ -1368,6 +1368,324 @@ elif st.session_state.page == "OPD Creator":
 	NYES=NYES.replace("Nyes Rd PM Continuity", "PM - Continuity", regex=True)
 	NYES.to_csv('nyes.csv',index=False)
 
+	#############################################################COMPLEX################################################
+	if uploaded_files['COMPLEX.xlsx']:
+	    df = pd.read_excel(uploaded_files['COMPLEX.xlsx'], dtype=str)
+
+	df.rename(columns={ df.columns[0]: "0" }, inplace = True)
+	df.rename(columns={ df.columns[1]: "1" }, inplace = True)
+	df.rename(columns={ df.columns[2]: "2" }, inplace = True)
+	df.rename(columns={ df.columns[3]: "3" }, inplace = True)
+	df.rename(columns={ df.columns[4]: "4" }, inplace = True)
+	df.rename(columns={ df.columns[5]: "5" }, inplace = True)
+	df.rename(columns={ df.columns[6]: "6" }, inplace = True)
+	df.rename(columns={ df.columns[7]: "7" }, inplace = True)
+	df.rename(columns={ df.columns[8]: "8" }, inplace = True)
+	df.rename(columns={ df.columns[9]: "9" }, inplace = True)
+	df.rename(columns={ df.columns[10]: "10" }, inplace = True)
+	df.rename(columns={ df.columns[11]: "11" }, inplace = True)
+	df.rename(columns={ df.columns[12]: "12" }, inplace = True)
+	df.rename(columns={ df.columns[13]: "13" }, inplace = True)
+	
+	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
+	
+	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
+	
+	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
+	
+	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
+	
+	a = df.loc[df['0'] == day0].index[0]
+	b = df.loc[df['0'] == day7].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z0=c.loc[:, ('0','1')]
+	z0['date']=day0
+	z0.rename(columns={ df.columns[0]:"type"}, inplace = True)
+	z0.rename(columns={ df.columns[1]:"provider"}, inplace = True)
+	D0=z0[['date','type','provider']]
+	D0=D0[:-1]
+	
+	a = df.loc[df['2'] == day1].index[0]
+	b = df.loc[df['2'] == day8].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z1=c.loc[:, ('2','3')]
+	z1['date']=day1
+	z1.rename(columns={ df.columns[2]:"type"}, inplace = True)
+	z1.rename(columns={ df.columns[3]:"provider"}, inplace = True)
+	D1=z1[['date','type','provider']]
+	D1=D1[:-1]
+	
+	a = df.loc[df['4'] == day2].index[0]
+	b = df.loc[df['4'] == day9].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z2=c.loc[:, ('4','5')]
+	z2['date']=day2
+	z2.rename(columns={ df.columns[4]:"type"}, inplace = True)
+	z2.rename(columns={ df.columns[5]:"provider"}, inplace = True)
+	D2=z2[['date','type','provider']]
+	D2=D2[:-1]
+	
+	a = df.loc[df['6'] == day3].index[0]
+	b = df.loc[df['6'] == day10].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z3=c.loc[:, ('6','7')]
+	z3['date']=day3
+	z3.rename(columns={ df.columns[6]:"type"}, inplace = True)
+	z3.rename(columns={ df.columns[7]:"provider"}, inplace = True)
+	D3=z3[['date','type','provider']]
+	D3=D3[:-1]
+	
+	a = df.loc[df['8'] == day4].index[0]
+	b = df.loc[df['8'] == day11].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z4=c.loc[:, ('8','9')]
+	z4['date']=day4
+	z4.rename(columns={ df.columns[8]:"type"}, inplace = True)
+	z4.rename(columns={ df.columns[9]:"provider"}, inplace = True)
+	D4=z4[['date','type','provider']]
+	D4=D4[:-1]
+	
+	a = df.loc[df['10'] == day5].index[0]
+	b = df.loc[df['10'] == day12].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z5=c.loc[:, ('10','11')]
+	z5['date']=day5
+	z5.rename(columns={ df.columns[10]:"type"}, inplace = True)
+	z5.rename(columns={ df.columns[11]:"provider"}, inplace = True)
+	D5=z5[['date','type','provider']]
+	D5=D5[:-1]
+	
+	a = df.loc[df['12'] == day6].index[0]
+	b = df.loc[df['12'] == day13].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z6=c.loc[:, ('12','13')]
+	z6['date']=day6
+	z6.rename(columns={ df.columns[12]:"type"}, inplace = True)
+	z6.rename(columns={ df.columns[13]:"provider"}, inplace = True)
+	D6=z6[['date','type','provider']]
+	D6=D6[:-1]
+	
+	a = df.loc[df['0'] == day7].index[0]
+	b = df.loc[df['0'] == day14].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z7=c.loc[:, ('0','1')]
+	z7['date']=day7
+	z7.rename(columns={ df.columns[0]:"type"}, inplace = True)
+	z7.rename(columns={ df.columns[1]:"provider"}, inplace = True)
+	D7=z7[['date','type','provider']]
+	D7=D7[:-1]
+	
+	a = df.loc[df['2'] == day8].index[0]
+	b = df.loc[df['2'] == day15].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z8=c.loc[:, ('2','3')]
+	z8['date']=day8
+	z8.rename(columns={ df.columns[2]:"type"}, inplace = True)
+	z8.rename(columns={ df.columns[3]:"provider"}, inplace = True)
+	D8=z8[['date','type','provider']]
+	D8=D8[:-1]
+	
+	a = df.loc[df['4'] == day9].index[0]
+	b = df.loc[df['4'] == day16].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z9=c.loc[:, ('4','5')]
+	z9['date']=day9
+	z9.rename(columns={ df.columns[4]:"type"}, inplace = True)
+	z9.rename(columns={ df.columns[5]:"provider"}, inplace = True)
+	D9=z9[['date','type','provider']]
+	D9=D9[:-1]
+	
+	a = df.loc[df['6'] == day10].index[0]
+	b = df.loc[df['6'] == day17].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z10=c.loc[:, ('6','7')]
+	z10['date']=day10
+	z10.rename(columns={ df.columns[6]:"type"}, inplace = True)
+	z10.rename(columns={ df.columns[7]:"provider"}, inplace = True)
+	D10=z10[['date','type','provider']]
+	D10=D10[:-1]
+	
+	a = df.loc[df['8'] == day11].index[0]
+	b = df.loc[df['8'] == day18].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z11=c.loc[:, ('8','9')]
+	z11['date']=day11
+	z11.rename(columns={ df.columns[8]:"type"}, inplace = True)
+	z11.rename(columns={ df.columns[9]:"provider"}, inplace = True)
+	D11=z11[['date','type','provider']]
+	D11=D11[:-1]
+	
+	a = df.loc[df['10'] == day12].index[0]
+	b = df.loc[df['10'] == day19].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z12=c.loc[:, ('10','11')]
+	z12['date']=day12
+	z12.rename(columns={ df.columns[10]:"type"}, inplace = True)
+	z12.rename(columns={ df.columns[11]:"provider"}, inplace = True)
+	D12=z12[['date','type','provider']]
+	D12=D12[:-1]
+	
+	a = df.loc[df['12'] == day13].index[0]
+	b = df.loc[df['12'] == day20].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z13=c.loc[:, ('12','13')]
+	z13['date']=day13
+	z13.rename(columns={ df.columns[12]:"type"}, inplace = True)
+	z13.rename(columns={ df.columns[13]:"provider"}, inplace = True)
+	D13=z13[['date','type','provider']]
+	D13=D13[:-1]
+	
+	a = df.loc[df['0'] == day14].index[0]
+	b = df.loc[df['0'] == day21].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z14=c.loc[:, ('0','1')]
+	z14['date']=day14
+	z14.rename(columns={ df.columns[0]:"type"}, inplace = True)
+	z14.rename(columns={ df.columns[1]:"provider"}, inplace = True)
+	D14=z14[['date','type','provider']]
+	D14=D14[:-1]
+	
+	a = df.loc[df['2'] == day15].index[0]
+	b = df.loc[df['2'] == day22].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z15=c.loc[:, ('2','3')]
+	z15['date']=day15
+	z15.rename(columns={ df.columns[2]:"type"}, inplace = True)
+	z15.rename(columns={ df.columns[3]:"provider"}, inplace = True)
+	D15=z15[['date','type','provider']]
+	D15=D15[:-1]
+	
+	a = df.loc[df['4'] == day16].index[0]
+	b = df.loc[df['4'] == day23].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z16=c.loc[:, ('4','5')]
+	z16['date']=day16
+	z16.rename(columns={ df.columns[4]:"type"}, inplace = True)
+	z16.rename(columns={ df.columns[5]:"provider"}, inplace = True)
+	D16=z16[['date','type','provider']]
+	D16=D16[:-1]
+	
+	a = df.loc[df['6'] == day17].index[0]
+	b = df.loc[df['6'] == day24].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z17=c.loc[:, ('6','7')]
+	z17['date']=day17
+	z17.rename(columns={ df.columns[6]:"type"}, inplace = True)
+	z17.rename(columns={ df.columns[7]:"provider"}, inplace = True)
+	D17=z17[['date','type','provider']]
+	D17=D17[:-1]
+	
+	a = df.loc[df['8'] == day18].index[0]
+	b = df.loc[df['8'] == day25].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z18=c.loc[:, ('8','9')]
+	z18['date']=day18
+	z18.rename(columns={ df.columns[8]:"type"}, inplace = True)
+	z18.rename(columns={ df.columns[9]:"provider"}, inplace = True)
+	D18=z18[['date','type','provider']]
+	D18=D18[:-1]
+	
+	a = df.loc[df['10'] == day19].index[0]
+	b = df.loc[df['10'] == day26].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z19=c.loc[:, ('10','11')]
+	z19['date']=day19
+	z19.rename(columns={ df.columns[10]:"type"}, inplace = True)
+	z19.rename(columns={ df.columns[11]:"provider"}, inplace = True)
+	D19=z19[['date','type','provider']]
+	D19=D19[:-1]
+	
+	a = df.loc[df['12'] == day20].index[0]
+	b = df.loc[df['12'] == day27].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z20=c.loc[:, ('12','13')]
+	z20['date']=day20
+	z20.rename(columns={ df.columns[12]:"type"}, inplace = True)
+	z20.rename(columns={ df.columns[13]:"provider"}, inplace = True)
+	D20=z20[['date','type','provider']]
+	D20=D20[:-1]
+	
+	a = df.loc[df['0'] == day21].index[0]
+	b = df.loc[df['0'] == day28].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z21=c.loc[:, ('0','1')]
+	z21['date']=day21
+	z21.rename(columns={ df.columns[0]:"type"}, inplace = True)
+	z21.rename(columns={ df.columns[1]:"provider"}, inplace = True)
+	D21=z21[['date','type','provider']]
+	D21=D21[:-1]
+	
+	a = df.loc[df['2'] == day22].index[0]
+	b = df.loc[df['2'] == day29].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z22=c.loc[:, ('2','3')]
+	z22['date']=day22
+	z22.rename(columns={ df.columns[2]:"type"}, inplace = True)
+	z22.rename(columns={ df.columns[3]:"provider"}, inplace = True)
+	D22=z22[['date','type','provider']]
+	D22=D22[:-1]
+	
+	a = df.loc[df['4'] == day23].index[0]
+	b = df.loc[df['4'] == day30].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z23=c.loc[:, ('4','5')]
+	z23['date']=day23
+	z23.rename(columns={ df.columns[4]:"type"}, inplace = True)
+	z23.rename(columns={ df.columns[5]:"provider"}, inplace = True)
+	D23=z23[['date','type','provider']]
+	D23=D23[:-1]
+	
+	a = df.loc[df['6'] == day24].index[0]
+	b = df.loc[df['6'] == day31].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z24=c.loc[:, ('6','7')]
+	z24['date']=day24
+	z24.rename(columns={ df.columns[6]:"type"}, inplace = True)
+	z24.rename(columns={ df.columns[7]:"provider"}, inplace = True)
+	D24=z24[['date','type','provider']]
+	D24=D24[:-1]
+	
+	a = df.loc[df['8'] == day25].index[0]
+	b = df.loc[df['8'] == day32].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z25=c.loc[:, ('8','9')]
+	z25['date']=day25
+	z25.rename(columns={ df.columns[8]:"type"}, inplace = True)
+	z25.rename(columns={ df.columns[9]:"provider"}, inplace = True)
+	D25=z25[['date','type','provider']]
+	D25=D25[:-1]
+	
+	a = df.loc[df['10'] == day26].index[0]
+	b = df.loc[df['10'] == day33].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z26=c.loc[:, ('10','11')]
+	z26['date']=day26
+	z26.rename(columns={ df.columns[10]:"type"}, inplace = True)
+	z26.rename(columns={ df.columns[11]:"provider"}, inplace = True)
+	D26=z26[['date','type','provider']]
+	D26=D26[:-1]
+	
+	a = df.loc[df['12'] == day27].index[0]
+	b = df.loc[df['12'] == day34].index[0]
+	c = df.iloc[int(a)+1:int(b)]
+	z27=c.loc[:, ('12','13')]
+	z27['date']=day27
+	z27.rename(columns={ df.columns[12]:"type"}, inplace = True)
+	z27.rename(columns={ df.columns[13]:"provider"}, inplace = True)
+	D27=z27[['date','type','provider']]
+	D27=D27[:-1]
+	
+	dfx=pd.DataFrame(columns=D0.columns)
+	
+	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
+	
+	dfx['clinic'] = "COMPLEX"
+	
+	dfx.to_csv('nyes.csv',index=False)
+	NYES=dfx.replace("Hope Drive Clinic AM", "AM - Continuity", regex=True)
+	NYES=NYES.replace("Hope Drive Clinic PM", "PM - Continuity", regex=True)
+	NYES.to_csv('complex.csv',index=False)
+	
 	#############################################################WARD_A################################################
 	if uploaded_files['WARD_A.xlsx']:
 	    df = pd.read_excel(uploaded_files['WARD_A.xlsx'], dtype=str)
@@ -2078,7 +2396,7 @@ elif st.session_state.page == "OPD Creator":
 	)
 	
 	hopeiii = hopeiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiii.to_csv('7.csv', index=False)
+	hopeiii.to_csv('5.csv', index=False)
 	
 	hope['class'] = "H"  # Top of Column
 	hopeiii = hope[(hope['type'] == 'AM - ACUTES ')]
@@ -2092,7 +2410,7 @@ elif st.session_state.page == "OPD Creator":
 	)
 	
 	hopeiii = hopeiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiii.to_csv('8.csv', index=False)
+	hopeiii.to_csv('6.csv', index=False)
 	
 	######STARTS AT H10 (PM - ACUTES)
 	hope['class'] = "H"  # Top of Next Column in Hope Drive
@@ -2107,7 +2425,7 @@ elif st.session_state.page == "OPD Creator":
 	)
 	
 	hopeiiiii = hopeiiiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiiiii.to_csv('9.csv', index=False)
+	hopeiiiii.to_csv('7.csv', index=False)
 	
 	######STARTS AT H2 (AM - Continuity)
 	hope['H'] = "H"
@@ -2117,7 +2435,7 @@ elif st.session_state.page == "OPD Creator":
 	hopei['count'] = hopei.groupby(['date'])['provider'].cumcount() + 2  # Start at H2
 	hopei['class'] = "H" + hopei['count'].astype(str)
 	hopei = hopei.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopei.to_csv('5.csv', index=False)
+	hopei.to_csv('8.csv', index=False)
 	
 	######STARTS AT H12 (PM - Continuity)
 	hope['H'] = "H"
@@ -2126,7 +2444,23 @@ elif st.session_state.page == "OPD Creator":
 	hopeii['count'] = hopeii.groupby(['date'])['provider'].cumcount() + 12  # Start at H12
 	hopeii['class'] = "H" + hopeii['count'].astype(str)
 	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeii.to_csv('6.csv', index=False)
+	hopeii.to_csv('9.csv', index=False)
+
+    	WARDA['H'] = "H"
+
+    	WARDAi = WARDA[(WARDA['type'] == 'AM - Continuity ')]
+    	WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
+    	WARDAi['class'] = "H" + WARDAi['count'].astype(str)
+    	WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+    	WARDAi.to_csv('10.csv', index=False)
+    
+    	# Process PM - Continuity
+    	WARDA['H'] = "H"
+    	WARDAii = WARDA[(WARDA['type'] == 'PM - Continuity ')]
+    	WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
+    	WARDAii['class'] = "H" + WARDAii['count'].astype(str)
+    	WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+    	WARDAii.to_csv('11.csv', index=False)
 
 	WARDP['H'] = "H"
 
@@ -2144,26 +2478,43 @@ elif st.session_state.page == "OPD Creator":
 	WARDPii = WARDPii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	WARDPii.to_csv('13.csv', index=False)
 
+    	COMPLEX['H'] = "H"
 
-
+    	COMPLEXi = COMPLEX[(COMPLEX['type'] == 'AM - Continuity ')]
+    	COMPLEXi['count'] = COMPLEXi.groupby(['date'])['provider'].cumcount() + 0
+    	COMPLEXi['class'] = "H" + COMPLEXi['count'].astype(str)
+    	COMPLEXi = COMPLEXi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+    	COMPLEXi.to_csv('14.csv', index=False)
+    
+    	# Process PM - Continuity
+    	COMPLEX['H'] = "H"
+    	COMPLEXii = COMPLEX[(COMPLEX['type'] == 'PM - Continuity ')]
+    	COMPLEXii['count'] = COMPLEXii.groupby(['date'])['provider'].cumcount() + 10
+    	COMPLEXii['class'] = "H" + COMPLEXii['count'].astype(str)
+    	COMPLEXii = COMPLEXii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+    	COMPLEXii.to_csv('15.csv', index=False)
 	############################################################################################################################
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 16)}
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15 = tables.values()
 	
-	t1=pd.read_csv('1.csv')
-	t2=pd.read_csv('2.csv')
-	t3=pd.read_csv('3.csv')
-	t4=pd.read_csv('4.csv')
-	t5=pd.read_csv('5.csv')
-	t6=pd.read_csv('6.csv')
-	t7=pd.read_csv('7.csv')
-	t8=pd.read_csv('8.csv')
-	t9=pd.read_csv('9.csv')
-	t10=pd.read_csv('10.csv')
-	t11=pd.read_csv('11.csv')
-	t12=pd.read_csv('12.csv')
-	t13=pd.read_csv('13.csv')
+	#t1=pd.read_csv('1.csv')
+	#t2=pd.read_csv('2.csv')
+	#t3=pd.read_csv('3.csv')
+	#t4=pd.read_csv('4.csv')
+	#t5=pd.read_csv('5.csv')
+	#t6=pd.read_csv('6.csv')
+	#t7=pd.read_csv('7.csv')
+	#t8=pd.read_csv('8.csv')
+	#t9=pd.read_csv('9.csv')
+	#t10=pd.read_csv('10.csv')
+	#t11=pd.read_csv('11.csv')
+	#t12=pd.read_csv('12.csv')
+	#t13=pd.read_csv('13.csv')
+	#t14=pd.read_csv('14.csv')
 	
 	final2 = pd.DataFrame(columns=t1.columns)
-	final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13])
+	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
+	#final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15])
 	final2.to_csv('final2.csv',index=False)
 	
 	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
@@ -2195,12 +2546,12 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv',index=False)
 	df.to_excel('final.xlsx',index=False)
 
-	df=pd.read_csv('wardpx.csv',dtype=str)
-	import io
-	output = io.StringIO()
-	df.to_csv(output, index=False)
-	output.seek(0)
-	st.download_button(label="Download CSV file", data=output.getvalue(),file_name="warpx.csv",mime="text/csv")
+	#df=pd.read_csv('wardpx.csv',dtype=str)
+	#import io
+	#output = io.StringIO()
+	#df.to_csv(output, index=False)
+	#output.seek(0)
+	#st.download_button(label="Download CSV file", data=output.getvalue(),file_name="warpx.csv",mime="text/csv")
 	
 	import openpyxl
 	from openpyxl.styles import Alignment
@@ -2398,7 +2749,79 @@ elif st.session_state.page == "OPD Creator":
 	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
 	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
 	wb1.save('OPD.xlsx')
+	###############################################################################################
+	#df=pd.read_csv('final.csv',dtype=str)
+	#import io
+	#output = io.StringIO()
+	#df.to_csv(output, index=False)
+	#output.seek(0)
+	#st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
 
+	import openpyxl
+	from openpyxl.styles import Alignment
+	
+	# Load workbooks and worksheets
+	wb = openpyxl.load_workbook('final.xlsx')
+	ws = wb['Sheet1']
+	
+	wb1 = openpyxl.load_workbook('OPD.xlsx')
+	ws1 = wb1['COMPLEX']
+	
+	def generate_mapping(start_value):
+	    # Create a dictionary with H0 to H19 keys, with values starting from `start_value`
+	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
+	    
+	    return mapping
+	
+	# Generate the mappings starting from 6 for the first group
+	common_mapping_1 = generate_mapping(6)
+	# Construct the t_mapping dictionary with the common structure for T0 to T6
+	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
+	
+	# Generate the mappings starting from 30 for the second group
+	common_mapping_2 = generate_mapping(30)
+	# Construct the t_mapping dictionary with the common structure for T7 to T13
+	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
+	
+	# Generate the mappings starting from 54 for the third group
+	common_mapping_3 = generate_mapping(54)
+	# Construct the t_mapping dictionary with the common structure for T14 to T20
+	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
+	
+	# Generate the mappings starting from 78 for the fourth group
+	common_mapping_4 = generate_mapping(78)
+	# Construct the t_mapping dictionary with the common structure for T21 to T28
+	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
+	
+	# Combine both mappings
+	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
+	
+	# Now the `combined_t_mapping` will have the correct structure
+	#print(combined_t_mapping)
+	
+	
+	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
+	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
+	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
+	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
+	                 }
+	
+	# Iterate through rows in the worksheet
+	for row in ws.iter_rows():
+	    t_value = row[7].value  # Value in column H (index 7)
+	    h_value = row[6].value  # Value in column G (index 6)
+	    location = row[4].value  # Value in column E (index 4)
+	
+	    # Check conditions and apply mapping
+	    if location == "WARD_A" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
+	        target_row = combined_t_mapping[t_value][h_value]
+	        target_column = column_mapping[t_value]
+	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
+	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
+	
+	# Save updated workbook
+	wb1.save('OPD.xlsx')
+	###############################################################################################
 	#df=pd.read_csv('final.csv',dtype=str)
 	#import io
 	#output = io.StringIO()
