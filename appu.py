@@ -58,7 +58,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     name_columns = ["B", "D", "F", "H", "J", "L", "N"]
 
     # Row ranges to repeat the pattern
-    row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44)]
+    row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44), (45, 54]
 
     # Ensure names list has at least one name
     if not names:
@@ -87,8 +87,8 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
         current_date = start_date + datetime.timedelta(weeks=week)
         for i, day in enumerate(days):
             col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K, M)
-            ws[f"{col_letter}{start_row}"] = day  # Place the day name
-            ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
+            ws[f"{col_letter}{start_row + 1}"] = day  # Place the day name
+            ws[f"{col_letter}{start_row + 2}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
         start_row += 10  # Skip 10 rows before the next week starts
 
     # Save the Excel file with the specified name
@@ -98,13 +98,13 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # ✅ **Display & Download Immediately**
     st.success(f"✅ File '{file_name}' has been successfully created!")
 
-    df_display = pd.read_excel(file_path, dtype=str)
-    st.dataframe(df_display)  # Display file in Streamlit
+    #df_display = pd.read_excel(file_path, dtype=str)
+    #st.dataframe(df_display)  # Display file in Streamlit
 
-    with open(file_path, "rb") as f:
+    #with open(file_path, "rb") as f:
         st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    time.sleep(10)  
+    #time.sleep(10)  
 
     return file_path  # Return file path for later use
 	
