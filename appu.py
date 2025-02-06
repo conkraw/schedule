@@ -96,15 +96,15 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     wb.save(file_path)
 
     # ✅ **Display & Download Immediately**
-    #st.success(f"✅ File '{file_name}' has been successfully created!")
+    st.success(f"✅ File '{file_name}' has been successfully created!")
 
-    #df_display = pd.read_excel(file_path, dtype=str)
-    #st.dataframe(df_display)  # Display file in Streamlit
+    df_display = pd.read_excel(file_path, dtype=str)
+    st.dataframe(df_display)  # Display file in Streamlit
 
-    #with open(file_path, "rb") as f:
-        #st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    with open(file_path, "rb") as f:
+        st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    #time.sleep(10)  
+    time.sleep(10)  
 
     return file_path  # Return file path for later use
 	
