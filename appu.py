@@ -518,7 +518,8 @@ elif st.session_state.page == "OPD Creator":
 	                print(f"{clinic_name} {type_key} saved to {filename}.")
 
 	# Define replacement rules for each clinic
-	replacement_rules = {"HOPE_DRIVE.xlsx": {
+	replacement_rules = {
+	    "HOPE_DRIVE.xlsx": {
 	        "Hope Drive AM Continuity": "AM - Continuity",
 	        "Hope Drive PM Continuity": "PM - Continuity",
 	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
@@ -551,8 +552,11 @@ elif st.session_state.page == "OPD Creator":
 	    "WARD_P.xlsx": {
 	        "On-Call 8a-8a": "AM - Continuity",
 	        "On-Call": "AM - Continuity"
+	    },
+	    "NURSERY.xlsx": {  # Added Nursery replacements
+	        "Nursery Weekday 8a-6p": "AM - Continuity",
+	        "Nursery Weekend": "AM - Continuity"
 	    }
-		
 	}
 
 
