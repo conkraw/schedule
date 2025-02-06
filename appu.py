@@ -8,63 +8,53 @@ import xlsxwriter
 import openpyxl
 from io import BytesIO
 
-if 'page' not in st.session_state:
-    st.session_state.page = "Home"  # Starting page
-if 'start_date' not in st.session_state:
-    st.session_state.start_date = None
-if 'uploaded_files' not in st.session_state:
-    st.session_state.uploaded_files = {}
-if "uploaded_book4_file" not in st.session_state:
-    st.session_state.uploaded_book4_file = {}
+# Initialize session state variables efficiently
+session_defaults = {
+    "page": "Home",
+    "start_date": None,
+    "uploaded_files": {},
+    "uploaded_book4_file": {},
+}
+for key, value in session_defaults.items():
+    st.session_state.setdefault(key, value)
 
+# Function to change page and trigger rerun
+def navigate_to(page):
+    st.session_state.page = page
+    st.rerun()
+
+# Home Page
 if st.session_state.page == "Home":
     st.title("Welcome to OPD Creator")
     st.write("Please choose what you'd like to do next.")
-    
-    # Button to navigate to 'Create OPD' page
+
     if st.button("Go to Create OPD"):
-        st.session_state.page = "Create OPD"  # Set the page to 'Create OPD'
-        st.rerun()  # Force a rerun to update the page
+        navigate_to("Create OPD")
 
-    # Button to navigate to 'Create Student Schedule' page
     if st.button("Go to Create Student Schedule"):
-        st.session_state.page = "Create Student Schedule"  # Set the page to 'Create Student Schedule'
-        st.rerun()  # Force a rerun to update the page
+        navigate_to("Create Student Schedule")
 
-# Date input page
+# Create OPD Page - Date Input
 elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
+    st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
 
-    # Display instructions to the user
-    st.write('Enter start date in m/d/yyyy format, no zeros in month or date (e.g., 7/6/2021):')
-
-    # Create a text input field for the date
     date_input = st.text_input('Start Date')
 
-    # Add a button to trigger the date parsing
-    if st.button('Submit Date'):
-        if date_input:  # Check if a date was entered
-            try:
-                # Try to parse the date entered by the user
-                test_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
-                st.session_state.start_date = test_date   # Save date in session state
-                st.write(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
-                # After valid date input, move to the next page (Upload Files)
-                st.session_state.page = "Upload Files"
-                st.rerun()  # Force a rerun to reflect the page change
-            except ValueError:
-                st.error('Invalid date format. Please enter the date in m/d/yyyy format.')
-        else:
-            st.error('Please enter a date.')
+    if st.button('Submit Date') and date_input:
+        try:
+            test_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
+            st.session_state.start_date = test_date
+            st.success(f"Valid date entered: {test_date.strftime('%m/%d/%Y')}")
+            navigate_to("Upload Files")
+        except ValueError:
+            st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
-import streamlit as st
-
-# File upload page
+# Upload Files Page
 elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
-    st.write("Upload the following Excel files:")
+    st.write("Upload the following required Excel files:")
 
-    # Expected filenames mapping
     required_files = {
         "HOPE_DRIVE": "HOPE_DRIVE.xlsx",
         "ETOWN": "ETOWN.xlsx",
@@ -72,35 +62,23 @@ elif st.session_state.page == "Upload Files":
         "WARD_A": "WARD_A.xlsx",
         "WARD_P": "WARD_P.xlsx",
         "COMPLEX": "COMPLEX.xlsx",
-	"PICU": "PICU.xlsx",
+        "PICU": "PICU.xlsx",
     }
 
-    # Allow multiple file uploads at once
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
 
-    # Initialize the dictionary for storing files in session state
-    uploaded_files_dict = {}
-
     if uploaded_files:
-        for file in uploaded_files:
-            for key, filename in required_files.items():
-                if key in file.name:
-                    uploaded_files_dict[filename] = file
-                    break  # Stop checking once a match is found
+        uploaded_files_dict = {fname: file for file in uploaded_files for key, fname in required_files.items() if key in file.name}
 
-        # Store uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
 
-        # Check if all required files are uploaded
         missing_files = [fname for fname in required_files.values() if fname not in uploaded_files_dict]
 
         if not missing_files:
-            st.success("All files uploaded successfully!")
-            st.session_state.page = "OPD Creator"  # Move to the next page
-            st.rerun()  # Force a rerun to reflect the page change
+            st.success("All required files uploaded successfully!")
+            navigate_to("OPD Creator")
         else:
             st.error(f"Missing files: {', '.join(missing_files)}. Please upload all required files.")
-
 
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
