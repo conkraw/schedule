@@ -10,6 +10,25 @@ import openpyxl
 from openpyxl import Workbook
 from io import BytesIO
 
+file_configs = {
+    "HAMPDEN_NURSERY.xlsx": {
+        "title": "HAMPDEN NURSERY",
+        "custom_text": "CUSTOM_PRINT",
+        "names": ["Folaranmi, Oluwamayoda ~", "Alur, Pradeep ~"]
+    },
+    "SJR.xlsx": {
+        "title": "SJR NURSERY",
+        "custom_text": "CUSTOM_PRINT",
+        "names": ["Spangola, John ~", "Garfield, Andrew ~"]
+    },
+    "GENERAL.xlsx": {
+        "title": "GENERAL CLINIC",
+        "custom_text": "CUSTOM_PRINT",
+        "names": ["Smith, Jane ~", "Doe, John ~", "Miller, Sarah ~"]
+    }
+    # Add more files if needed
+}
+
 def generate_excel_file(start_date, title, custom_text, file_name, names):
     """
     Generates an Excel file with structured weekly formatting.
@@ -102,31 +121,27 @@ if st.session_state.page == "Home":
     if st.button("Go to Create Student Schedule"):
         navigate_to("Create Student Schedule")
 
-# Streamlit Page: Create OPD
 elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
     st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
 
     # User Input for Start Date
     date_input = st.text_input('Start Date')
-    file_name = st.text_input("Enter file name (e.g., HAMPDEN.xlsx)")
-    names_input = st.text_area("Enter up to 10 names (one per line)")
 
-    if st.button('Submit Date') and date_input and file_name:
+    if st.button('Submit Date') and date_input:
         try:
             start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
             st.session_state.start_date = start_date  # Store in session state
             st.success(f"Valid date entered: {start_date.strftime('%m/%d/%Y')}")
 
-            # Convert names input to a list, remove empty lines
-            names = [name.strip() for name in names_input.split("\n") if name.strip()]
-            names = names[:10]  # Limit to 10 names
+            # Generate all predefined Excel files
+            generated_files = {}
+            for file_name, config in file_configs.items():
+                file_path = generate_excel_file(start_date, config["title"], config["custom_text"], file_name, config["names"])
+                generated_files[file_name] = file_path
 
-            # Generate the Excel file with user-specified file name
-            file_path = generate_excel_file(start_date, "HAMPDEN NURSERY", "CUSTOM_PRINT", file_name, names)
-
-            # Store file path in session state for later downloads
-            st.session_state.generated_file = file_path
+            # Store file paths in session state for later downloads
+            st.session_state.generated_files = generated_files
 
             # Move to the next page: Upload Files
             st.session_state.page = "Upload Files"
@@ -141,9 +156,9 @@ elif st.session_state.page == "Upload Files":
     st.write("Upload the following required Excel files:")
 
     # Display download button for the generated Excel file
-    if "generated_file" in st.session_state:
-        with open(st.session_state.generated_file, "rb") as f:
-            st.download_button("Download Generated Excel File", f, "Duplicated_File.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    #if "generated_file" in st.session_state:
+    #    with open(st.session_state.generated_file, "rb") as f:
+    #        st.download_button("Download Generated Excel File", f, "Duplicated_File.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx",
 		      "ETOWN": "ETOWN.xlsx",
@@ -608,46 +623,49 @@ elif st.session_state.page == "OPD Creator":
 	                print(f"{clinic_name} {type_key} saved to {filename}.")
 
 	# Define replacement rules for each clinic
-	replacement_rules = {
-	    "HOPE_DRIVE.xlsx": {
-	        "Hope Drive AM Continuity": "AM - Continuity",
-	        "Hope Drive PM Continuity": "PM - Continuity",
-	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
-	        "Hope Drive PM Acute Precept": "PM - ACUTES",
-	        "Hope Drive Weekend Continuity": "AM - Continuity",
-	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
-	        "Hope Drive Weekend Acute 2": "AM - ACUTES"
-	    },
-	    "PICU.xlsx": {
-	        "2nd PICU Attending 7:45a-4p": "AM - Continuity",
-	        "1st PICU Attending 7:30a-5p": "AM - Continuity"
-	    },
-	    "ETOWN.xlsx": {
-	        "Etown AM Continuity": "AM - Continuity",
-	        "Etown PM Continuity": "PM - Continuity"
-	    },
-	    "NYES.xlsx": {
-	        "Nyes Rd AM Continuity": "AM - Continuity",
-	        "Nyes Rd PM Continuity": "PM - Continuity"
-	    },
-	    "COMPLEX.xlsx": {
-	        "Hope Drive Clinic AM": "AM - Continuity",
-	        "Hope Drive Clinic PM": "PM - Continuity"
-	    },
-	    "WARD_A.xlsx": {
-	        "Rounder 1 7a-7p": "AM - Continuity",
-	        "Rounder 2 7a-7p": "AM - Continuity",
-	        "Rounder 3 7a-7p": "AM - Continuity"
-	    },
-	    "WARD_P.xlsx": {
-	        "On-Call 8a-8a": "AM - Continuity",
-	        "On-Call": "AM - Continuity"
-	    },
-	    "PSHCH_NURSERY.xlsx": {  # Added Nursery replacements
-	        "Nursery Weekday 8a-6p": "AM - Continuity",
-	        "Nursery Weekend": "AM - Continuity"
-	    }
-	}
+replacement_rules = {
+    "HOPE_DRIVE.xlsx": {
+        "Hope Drive AM Continuity": "AM - Continuity",
+        "Hope Drive PM Continuity": "PM - Continuity",
+        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
+        "Hope Drive PM Acute Precept": "PM - ACUTES",
+        "Hope Drive Weekend Continuity": "AM - Continuity",
+        "Hope Drive Weekend Acute 1": "AM - ACUTES",
+        "Hope Drive Weekend Acute 2": "AM - ACUTES"
+    },
+    "PICU.xlsx": {
+        "2nd PICU Attending 7:45a-4p": "AM - Continuity",
+        "1st PICU Attending 7:30a-5p": "AM - Continuity"
+    },
+    "ETOWN.xlsx": {
+        "Etown AM Continuity": "AM - Continuity",
+        "Etown PM Continuity": "PM - Continuity"
+    },
+    "NYES.xlsx": {
+        "Nyes Rd AM Continuity": "AM - Continuity",
+        "Nyes Rd PM Continuity": "PM - Continuity"
+    },
+    "COMPLEX.xlsx": {
+        "Hope Drive Clinic AM": "AM - Continuity",
+        "Hope Drive Clinic PM": "PM - Continuity"
+    },
+    "WARD_A.xlsx": {
+        "Rounder 1 7a-7p": "AM - Continuity",
+        "Rounder 2 7a-7p": "AM - Continuity",
+        "Rounder 3 7a-7p": "AM - Continuity"
+    },
+    "WARD_P.xlsx": {
+        "On-Call 8a-8a": "AM - Continuity",
+        "On-Call": "AM - Continuity"
+    },
+    "PSHCH_NURSERY.xlsx": {  # Nursery replacements
+        "Nursery Weekday 8a-6p": "AM - Continuity",
+        "Nursery Weekend": "AM - Continuity"
+    },
+    "HAMPDEN_NURSERY.xlsx": {  # Replace "CUSTOM_PRINT" with "AM - Continuity"
+        "custom_print": "AM - Continuity"
+    }
+}
 
 
 	def process_picu_exclusions(df):
@@ -686,6 +704,7 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
+	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
 
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
@@ -710,6 +729,7 @@ elif st.session_state.page == "OPD Creator":
 	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
+	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY")
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
@@ -719,10 +739,11 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
 	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
 	process_continuity_classes(pshchnursery_df, "PSHCH_NURSERY", "18.csv", "19.csv")
-	
+	process_continuity_classes(hampdennursery_df, "HAMPDEN_NURSERY", "20.csv", "21.csv")
+
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 20)}
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19 = tables.values()
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 22)}
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21 = tables.values()
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
@@ -823,6 +844,8 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("WARD_P", "W_P")
 	process_excel_mapping("PICU", "PICU")
 	process_excel_mapping("PSHCH_NURSERY","PSHCH_NURSERY")
+	process_excel_mapping("HAMPDEN_NURSERY","HAMPDEN_NURSERY")
+
 	###############################################################################################
 
 	# Button to trigger the download
