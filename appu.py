@@ -78,8 +78,11 @@ elif st.session_state.page == "Upload Files":
                 uploaded_files_dict['NYES.xlsx'] = file
             elif 'WARD_A' in file.name:
                 uploaded_files_dict['WARD_A.xlsx'] = file
+            elif 'WARD_P' in file.name:
+                uploaded_files_dict['WARD_P.xlsx'] = file
             elif 'COMPLEX' in file.name:
                 uploaded_files_dict['COMPLEX.xlsx'] = file
+
 		    
         # Store the uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
