@@ -76,7 +76,6 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
 
     return file_path  # Return file path for later use
 
-# Streamlit Page: Create OPD
 elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
     st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
