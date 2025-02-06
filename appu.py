@@ -2126,10 +2126,11 @@ elif st.session_state.page == "OPD Creator":
 	hopeii['class'] = "H" + hopeii['count'].astype(str)
 	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	hopeii.to_csv('6.csv', index=False)
-	
+
+
         WARDP['H'] = "H"
 
-        # Process AM - Continuity
+
         WARDPi = WARDP[(WARDP['type'] == 'AM - Continuity ')]
         WARDPi['count'] = WARDPi.groupby(['date'])['provider'].cumcount() + 0
         WARDPi['class'] = "H" + WARDPi['count'].astype(str)
@@ -2143,6 +2144,8 @@ elif st.session_state.page == "OPD Creator":
         WARDPii['class'] = "H" + WARDPii['count'].astype(str)
         WARDPii = WARDPii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
         WARDPii.to_csv('13.csv', index=False)
+
+
 
 	############################################################################################################################
 	
