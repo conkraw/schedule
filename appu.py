@@ -94,7 +94,17 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     file_path = f"{file_name}"
     wb.save(file_path)
 
+    # ✅ **Display & Download Immediately**
+    st.success(f"✅ File '{file_name}' has been successfully created!")
+
+    df_display = pd.read_excel(file_path, dtype=str)
+    st.dataframe(df_display)  # Display file in Streamlit
+
+    with open(file_path, "rb") as f:
+        st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
     return file_path  # Return file path for later use
+
 
 # Initialize session state variables efficiently
 session_defaults = {
@@ -148,9 +158,6 @@ elif st.session_state.page == "Create OPD":
             st.session_state.page = "Upload Files"
             st.rerun()  # Force rerun to reflect the page change
     
-            df_display = pd.read_excel(file_path)
-        
-            st.dataframe(df_display)
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
