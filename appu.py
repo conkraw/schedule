@@ -2812,7 +2812,7 @@ elif st.session_state.page == "OPD Creator":
 	    location = row[4].value  # Value in column E (index 4)
 	
 	    # Check conditions and apply mapping
-	    if location == "WARD_A" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
+	    if location == "COMPLEX" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
 	        target_row = combined_t_mapping[t_value][h_value]
 	        target_column = column_mapping[t_value]
 	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
