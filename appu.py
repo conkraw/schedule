@@ -442,7 +442,7 @@ elif st.session_state.page == "OPD Creator":
 	        # Save the updated data
 	        filename = f"{clinic_name.lower()}.csv"
 	        df.to_csv(filename, index=False)
-	        st.dataframe(df)
+	        #st.dataframe(df)
 	    
 	    return df
 
@@ -451,7 +451,8 @@ elif st.session_state.page == "OPD Creator":
 	        # AM - Continuity Processing
 	        df[df['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(am_csv, index=False)
 	        df[df['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(pm_csv, index=False)
-
+		st.dataframe(df)
+		
 	def process_hope_classes(df, clinic_name):
 	    """
 	    Processes Hope Drive's different continuity and acute types by assigning a count and class.
