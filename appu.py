@@ -444,9 +444,11 @@ elif st.session_state.page == "OPD Creator":
 	        filename = f"{clinic_name.lower()}.csv"
 	        df.to_csv(filename, index=False)
 	        print(f"{clinic_name} updated with two AM - Continuity and two PM - Continuity entries and saved to {filename}.")
-	    
-	    return df
 
+		st.dataframe(df)
+		    
+	    return df
+		
 
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
 	    if df is not None:
