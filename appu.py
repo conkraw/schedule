@@ -110,6 +110,7 @@ elif st.session_state.page == "Create OPD":
     # User Input for Start Date
     date_input = st.text_input('Start Date')
     file_name = st.text_input("Enter file name (e.g., HAMPDEN.xlsx)")
+    names_input = st.text_area("Enter up to 10 names (one per line)")
 
     if st.button('Submit Date') and date_input and file_name:
         try:
@@ -117,8 +118,12 @@ elif st.session_state.page == "Create OPD":
             st.session_state.start_date = start_date  # Store in session state
             st.success(f"Valid date entered: {start_date.strftime('%m/%d/%Y')}")
 
+            # Convert names input to a list, remove empty lines
+            names = [name.strip() for name in names_input.split("\n") if name.strip()]
+            names = names[:10]  # Limit to 10 names
+
             # Generate the Excel file with user-specified file name
-            file_path = generate_excel_file(start_date, "HAMPDEN NURSERY", "CUSTOM_PRINT", file_name)
+            file_path = generate_excel_file(start_date, "HAMPDEN NURSERY", "CUSTOM_PRINT", file_name, names)
 
             # Store file path in session state for later downloads
             st.session_state.generated_file = file_path
