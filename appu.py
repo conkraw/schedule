@@ -51,7 +51,7 @@ def generate_excel_file(start_date, title, custom_text, file_name):
                 ws[f"{col}{row}"] = "custom_value"
 
     # Days of the week to be placed across the row
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"]
 
     # Start row for the first week
     start_row = 4
