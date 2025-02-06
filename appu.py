@@ -71,9 +71,9 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
                 ws[f"{col}{row}"] = "custom_value"
 
         for col in name_columns:
-            for i, row in enumerate(range(start_row, start_row + len(names))):
+            for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
                 ws[f"{col}{row}"] = names[i % len(names)]  # Cycle through names
-            for row in range(start_row + len(names), end_row + 1):  # Fill remaining with "custom_value"
+            for row in range(start_row + 1 + len(names), end_row + 1):  # Fill remaining with "custom_value"
                 ws[f"{col}{row}"] = "custom_value"
 
     # Days of the week to be placed across the row
@@ -87,8 +87,8 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
         current_date = start_date + datetime.timedelta(weeks=week)
         for i, day in enumerate(days):
             col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K, M)
-            ws[f"{col_letter}{start_row + 1}"] = day  # Place the day name
-            ws[f"{col_letter}{start_row + 2}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
+            ws[f"{col_letter}{start_row}"] = day  # Place the day name
+            ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
         start_row += 10  # Skip 10 rows before the next week starts
 
     # Save the Excel file with the specified name
