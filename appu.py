@@ -2165,10 +2165,6 @@ elif st.session_state.page == "OPD Creator":
 	final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13])
 	final2.to_csv('final2.csv',index=False)
 	
-	#final1 = pd.DataFrame(columns=NYEi.columns)
-	#final1 = pd.concat([final1,hopei,hopeii,hopeiii,hopeiiii,ETOWNi,ETOWNii,NYEi,NYEii])
-	#final1.to_csv('final1.csv',index=True)
-	
 	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
 	
 	df['date'] = pd.to_datetime(df['date'])
@@ -2197,6 +2193,15 @@ elif st.session_state.page == "OPD Creator":
 	
 	df.to_csv('final.csv',index=False)
 	df.to_excel('final.xlsx',index=False)
+
+	df=pd.read_csv('final.csv',dtype=str)
+        import io
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
+
+        # Streamlit download button
+        st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
 	
 	import openpyxl
 	from openpyxl.styles import Alignment
