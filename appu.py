@@ -450,29 +450,21 @@ elif st.session_state.page == "OPD Creator":
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
 	    if df is not None:
 	        # Process AM - Continuity
-	        am_df = df[df['type'] == 'AM - Continuity '].assign(
-	            count=lambda x: x.groupby(['date'])['provider'].cumcount()
-	        ).assign(
-	            **{"class": lambda x: "H" + x['count'].astype(str)}
-	        )[['date', 'type', 'provider', 'clinic', 'class']]
+	        am_df = df[df['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount()).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']]
 	        
 	        # Process PM - Continuity
-	        pm_df = df[df['type'] == 'PM - Continuity '].assign(
-	            count=lambda x: x.groupby(['date'])['provider'].cumcount()
-	        ).assign(
-	            **{"class": lambda x: "H" + x['count'].astype(str)}
-	        )[['date', 'type', 'provider', 'clinic', 'class']]
+	        pm_df = df[df['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount()+10).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']]
 	        
 	        # Save to CSV
 	        am_df.to_csv(am_csv, index=False)
 	        pm_df.to_csv(pm_csv, index=False)
 	
 	        # Display in Streamlit
-	        st.write(f"### {clinic_name} - AM Continuity Assignments")
-	        st.dataframe(am_df)  # Display AM - Continuity table
+	        #st.write(f"### {clinic_name} - AM Continuity Assignments")
+	        #st.dataframe(am_df)  # Display AM - Continuity table
 	
-	        st.write(f"### {clinic_name} - PM Continuity Assignments")
-	        st.dataframe(pm_df)  # Display PM - Continuity table
+	        #st.write(f"### {clinic_name} - PM Continuity Assignments")
+	        #st.dataframe(pm_df)  # Display PM - Continuity table
 	
 	        return am_df, pm_df  # Return processed DataFrames for further use if needed
 		    
