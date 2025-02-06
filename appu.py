@@ -384,192 +384,93 @@ elif st.session_state.page == "OPD Creator":
 	for i in range(35):
 	    exec(f"day{i} = xf201['convert'][{i}]")
 
-	####################################################HOPE#################################################
-	if uploaded_files['HOPE_DRIVE.xlsx']:
-	    df = pd.read_excel(uploaded_files['HOPE_DRIVE.xlsx'], dtype=str)
-	
-	df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
-
-	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
-	
-	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
-	
-	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
-	
-	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
-
-	# Define the column pairs and corresponding days
 	column_pairs = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)]
-	days = [day0, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25, day26, day27, day28, day29, day30, day31, day32, day33, day34]
 	
-	# Dictionary to store extracted data
-	D_dict = {}
+	days = [day0, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13,
+	        day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25, day26, day27,
+	        day28, day29, day30, day31, day32, day33, day34]
 	
-	# Loop to process all 28 datasets
-	for i in range(28):
-	    col_idx = column_pairs[i % len(column_pairs)]  # Cycles through column pairs
-	    start_day = days[i]
-	    end_day = days[i + 7]  # Each segment spans 7 days ahead
+	# Function to process each file
+	def process_file(file_key, clinic_name, replacements=None):
+	    """Process an uploaded file and generate cleaned CSV data."""
+	    
+	    # Check if file exists
+	    if file_key in uploaded_files:
+	        df = pd.read_excel(uploaded_files[file_key], dtype=str)
 	
-	    # Get start and end indices safely
-	    start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
-	    end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
+	        # Rename columns numerically as strings
+	        df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
 	
-	    # Extract relevant data
-	    extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
-	    extracted_data.columns = ['type', 'provider']
-	    extracted_data.insert(0, 'date', start_day)  # Add 'date' column
+	        # Dictionary to store extracted data
+	        D_dict = {}
 	
-	    # Remove the last row safely
-	    extracted_data = extracted_data[:-1]
+	        # Loop to process all 28 datasets
+	        for i in range(28):
+	            col_idx = column_pairs[i % len(column_pairs)]  # Cycles through column pairs
+	            start_day = days[i]
+	            end_day = days[i + 7]  # Each segment spans 7 days ahead
 	
-	    # Store in dictionary with dynamic key
-	    D_dict[f"D{i}"] = extracted_data
-		
-	# Unpack dictionary to individual variables if needed
-	D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27 = D_dict.values()
+	            # Get start and end indices safely
+	            start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
+	            end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
+	
+	            # Extract relevant data
+	            extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
+	            extracted_data.columns = ['type', 'provider']
+	            extracted_data.insert(0, 'date', start_day)  # Add 'date' column
+	
+	            # Remove the last row safely
+	            extracted_data = extracted_data[:-1]
+	
+	            # Store in dictionary with dynamic key
+	            D_dict[f"D{i}"] = extracted_data
+	
+	        # Combine all extracted DataFrames
+	        dfx = pd.concat(D_dict.values(), ignore_index=True)
+	
+	        # Add clinic name
+	        dfx['clinic'] = clinic_name
+	
+	        # Save initial CSV
+	        filename = f"{clinic_name.lower()}.csv"
+	        dfx.to_csv(filename, index=False)
+	
+	        # Apply replacements if needed
+	        if replacements:
+	            dfx = dfx.replace(replacements, regex=True)
+	
+	        # Save final cleaned CSV
+	        dfx.to_csv(filename, index=False)
+	
+	        print(f"Processed {clinic_name} and saved to {filename}")
+	
+	# Define replacement rules for each clinic
+	replacement_rules = {
+	    "HOPE_DRIVE.xlsx": {
+	        "Hope Drive AM Continuity": "AM - Continuity",
+	        "Hope Drive PM Continuity": "PM - Continuity",
+	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Non-breaking space (\xa0)
+	        "Hope Drive PM Acute Precept": "PM - ACUTES",
+	        "Hope Drive Weekend Continuity": "AM - Continuity",
+	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
+	        "Hope Drive Weekend Acute 2": "AM - ACUTES"
+	    },
+	    "PICU.xlsx": {
+	        "2nd PICU Attending 7:45a-4p": "AM - Continuity",
+	        "1st PICU Attending 7:30a-5p": "AM - Continuity"
+	    },
+	    "ETOWN.xlsx": {
+	        "Etown AM Continuity": "AM - Continuity",
+	        "Etown PM Continuity": "PM - Continuity"
+	    }
+	}
 
-	dfx=pd.DataFrame(columns=D0.columns)
 	
-	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
-	
-	dfx['clinic'] = "HOPE_DRIVE"
-	
-	dfx.to_csv('hope.csv',index=False)
-	hope=dfx.replace("Hope Drive AM Continuity", "AM - Continuity", regex=True)
-	hope=hope.replace("Hope Drive PM Continuity", "PM - Continuity", regex=True)
-	hope=hope.replace("Hope Drive\xa0AM Acute Precept ", "AM - ACUTES", regex=True)
-	hope=hope.replace("Hope Drive PM Acute Precept", "PM - ACUTES", regex=True)
-	hope=hope.replace("Hope Drive Weekend Continuity", "AM - Continuity", regex=True)
-	hope=hope.replace("Hope Drive Weekend Acute 1", "AM - ACUTES", regex=True)
-	hope=hope.replace("Hope Drive Weekend Acute 2", "AM - ACUTES", regex=True)
-	
-	hope.to_csv('hope.csv',index=False)
-	####################################################PICU#################################################
-	if uploaded_files['PICU.xlsx']:
-	    df = pd.read_excel(uploaded_files['PICU.xlsx'], dtype=str)
-	
-	df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
+	# Process each file
 
-	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
-	
-	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
-	
-	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
-	
-	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
-
-	# Define the column pairs and corresponding days
-	column_pairs = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)]
-	days = [day0, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25, day26, day27, day28, day29, day30, day31, day32, day33, day34]
-	
-	# Dictionary to store extracted data
-	D_dict = {}
-	
-	# Loop to process all 28 datasets
-	for i in range(28):
-	    col_idx = column_pairs[i % len(column_pairs)]  # Cycles through column pairs
-	    start_day = days[i]
-	    end_day = days[i + 7]  # Each segment spans 7 days ahead
-	
-	    # Get start and end indices safely
-	    start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
-	    end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
-	
-	    # Extract relevant data
-	    extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
-	    extracted_data.columns = ['type', 'provider']
-	    extracted_data.insert(0, 'date', start_day)  # Add 'date' column
-	
-	    # Remove the last row safely
-	    extracted_data = extracted_data[:-1]
-	
-	    # Store in dictionary with dynamic key
-	    D_dict[f"D{i}"] = extracted_data
-		
-	# Unpack dictionary to individual variables if needed
-	D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27 = D_dict.values()
-
-	dfx=pd.DataFrame(columns=D0.columns)
-	
-	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
-	
-	dfx['clinic'] = "PICU"
-
-	dfx.to_csv('picu.csv',index=False)
-
-	# Replace "Rounder" values with "AM - Continuity"
-	PICU = dfx.replace(
-    	{"2nd PICU Attending 7:45a-4p": "AM - Continuity",
-     	"1st PICU Attending 7:30a-5p": "AM - Continuity"},
-    	regex=True
-	)
-
-	# Identify rows with "AM - Continuity"
-	am_continuity_rows = PICU[PICU.eq("AM - Continuity ").any(axis=1)].copy()
-
-	# Create corresponding "PM - Continuity" rows
-	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
-
-	# Append new rows to the original dataframe
-	PICU = pd.concat([PICU, pm_continuity_rows], ignore_index=True)
-
-	# Save the updated data
-	PICU.to_csv('picu.csv', index=False)
-	####################################################ETOWN#################################################
-	if uploaded_files['ETOWN.xlsx']:
-	    df = pd.read_excel(uploaded_files['ETOWN.xlsx'], dtype=str)
-
-	df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
-
-	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
-	
-	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
-	
-	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
-	
-	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
-
-	# Define the column pairs and corresponding days
-	column_pairs = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)]
-	days = [day0, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25, day26, day27, day28, day29, day30, day31, day32, day33, day34]
-	
-	# Dictionary to store extracted data
-	D_dict = {}
-	
-	# Loop to process all 28 datasets
-	for i in range(28):
-	    col_idx = column_pairs[i % len(column_pairs)]  # Cycles through column pairs
-	    start_day = days[i]
-	    end_day = days[i + 7]  # Each segment spans 7 days ahead
-	
-	    # Get start and end indices safely
-	    start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
-	    end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
-	
-	    # Extract relevant data
-	    extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
-	    extracted_data.columns = ['type', 'provider']
-	    extracted_data.insert(0, 'date', start_day)  # Add 'date' column
-	
-	    # Remove the last row safely
-	    extracted_data = extracted_data[:-1]
-	
-	    # Store in dictionary with dynamic key
-	    D_dict[f"D{i}"] = extracted_data
-		
-	# Unpack dictionary to individual variables if needed
-	D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27 = D_dict.values()
-
-	dfx=pd.DataFrame(columns=D0.columns)
-	
-	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
-	
-	dfx['clinic'] = "ETOWN"
-	dfx.to_csv('etown.csv',index=False)
-	ETOWN=dfx.replace("Etown AM Continuity", "AM - Continuity", regex=True)
-	ETOWN=ETOWN.replace("Etown PM Continuity", "PM - Continuity", regex=True)
-	ETOWN.to_csv('etown.csv',index=False)
+	process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules)
+	process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
+	process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
 	
 	#############################################################NYES################################################
 	if uploaded_files['NYES.xlsx']:
