@@ -733,14 +733,82 @@ elif st.session_state.page == "OPD Creator":
 	hope=hope.replace("Hope Drive Weekend Acute 2", "AM - ACUTES", regex=True)
 	
 	hope.to_csv('hope.csv',index=False)
+
+	####################################################PICU#################################################
+	if uploaded_files['PICU.xlsx']:
+	    df = pd.read_excel(uploaded_files['PICU.xlsx'], dtype=str)
+	
+	df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
+
+	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
+	
+	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
+	
+	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
+	
+	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
+
+	# Define the column pairs and corresponding days
+	column_pairs = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)]
+	days = [day0, day1, day2, day3, day4, day5, day6,
+	        day7, day8, day9, day10, day11, day12, day13,
+	        day14, day15, day16, day17, day18, day19, day20,
+	        day21, day22, day23, day24, day25, day26, day27]
+	
+	# Store extracted data in a dictionary
+	D_dict = {}
+	
+	# Loop through and process data
+	for i in range(len(days) - 1):  # Iterate through each day's data
+	    col_idx = column_pairs[i % len(column_pairs)]  # Cycle through column pairs
+	    start_idx = df.loc[df[str(col_idx[0])] == days[i]].index[0]
+	    end_idx = df.loc[df[str(col_idx[0])] == days[i + 1]].index[0]
+	    
+	    # Extract relevant data
+	    extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
+	    extracted_data.columns = ['type', 'provider']
+	    extracted_data.insert(0, 'date', days[i])  # Add 'date' column
+	    
+	    # Remove the last row
+	    extracted_data = extracted_data[:-1]
+	    
+	    # Store in dictionary with dynamic key
+	    D_dict[f"D{i}"] = extracted_data
+	
+	# Unpack dictionary to individual variables if needed
+	D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27 = D_dict.values()
+
+	dfx=pd.DataFrame(columns=D0.columns)
+	
+	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
+	
+	dfx['clinic'] = "PICU"
+
+	dfx.to_csv('picu.csv',index=False)
+
+	# Replace "Rounder" values with "AM - Continuity"
+	PICU = dfx.replace(
+    	{"2nd PICU Attending 7:45a-4p": "AM - Continuity",
+     	"1st PICU Attending 7:30a-5p": "AM - Continuity"},
+    	regex=True
+	)
+
+	# Identify rows with "AM - Continuity"
+	am_continuity_rows = PICU[PICU.eq("AM - Continuity ").any(axis=1)].copy()
+
+	# Create corresponding "PM - Continuity" rows
+	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
+
+	# Append new rows to the original dataframe
+	PICU = pd.concat([PICU, pm_continuity_rows], ignore_index=True)
+
+	# Save the updated data
+	PICU.to_csv('picu.csv', index=False)
 	
 	####################################################ETOWN#################################################
 	if uploaded_files['ETOWN.xlsx']:
 	    df = pd.read_excel(uploaded_files['ETOWN.xlsx'], dtype=str)
-	    #st.write("ETOWN Data:")
-	    #st.dataframe(df_etown)  # Show the dataframe
-	  
-	#df=pd.read_excel('ETOWN.xlsx',dtype=str)
+		
 	df.rename(columns={ df.columns[0]: "0" }, inplace = True)
 	df.rename(columns={ df.columns[1]: "1" }, inplace = True)
 	df.rename(columns={ df.columns[2]: "2" }, inplace = True)
@@ -2499,28 +2567,15 @@ elif st.session_state.page == "OPD Creator":
 	COMPLEXii = COMPLEXii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	COMPLEXii.to_csv('15.csv', index=False)
 
+	PICU[(PICU['type'] == 'AM - Continuity ')].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),class=lambda x: "H" + x['count'].astype(str))[['date', 'type', 'provider', 'clinic', 'class']].to_csv('16.csv', index=False)
+	PICU[(PICU['type'] == 'PM - Continuity ')].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),class=lambda x: "H" + x['count'].astype(str))[['date', 'type', 'provider', 'clinic', 'class']].to_csv('17.csv', index=False)
+
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 16)}
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15 = tables.values()
-	
-	#t1=pd.read_csv('1.csv')
-	#t2=pd.read_csv('2.csv')
-	#t3=pd.read_csv('3.csv')
-	#t4=pd.read_csv('4.csv')
-	#t5=pd.read_csv('5.csv')
-	#t6=pd.read_csv('6.csv')
-	#t7=pd.read_csv('7.csv')
-	#t8=pd.read_csv('8.csv')
-	#t9=pd.read_csv('9.csv')
-	#t10=pd.read_csv('10.csv')
-	#t11=pd.read_csv('11.csv')
-	#t12=pd.read_csv('12.csv')
-	#t13=pd.read_csv('13.csv')
-	#t14=pd.read_csv('14.csv')
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 18)} #Add +1 to 18... so if adding t18, t19... then add 2 to 18... and its 20. Or 1 plus the last t value... t17?... last number in range should be 18
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17 = tables.values()
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
-	#final2 = pd.concat([final2,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15])
 	final2.to_csv('final2.csv',index=False)
 	
 	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
