@@ -854,6 +854,8 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("PICU", "PICU")
 	process_excel_mapping("PSHCH_NURSERY","PSHCH_NURSERY")
 	process_excel_mapping("HAMPDEN_NURSERY","HAMPDEN_NURSERY")
+	process_excel_mapping("SJR_HOSP","SJR_HOSP")
+	process_excel_mapping("AAC","AAC")
 
 	###############################################################################################
 
