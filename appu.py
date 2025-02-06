@@ -591,6 +591,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
+	pshchnursery_df = process_file("NURSERY.xlsx", "PSHCH_NURS", replacement_rules.get("PSHCH_NURS.xlsx"))
 
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
