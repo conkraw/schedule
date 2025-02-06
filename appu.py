@@ -458,21 +458,6 @@ elif st.session_state.page == "OPD Creator":
 	    
 	    return df
 
-# Example usage in Streamlit
-st.title("Duplicate AM & PM Continuity Schedule")
-
-# Simulate loading a DataFrame (replace this with actual file upload or database retrieval)
-df_example = pd.DataFrame({
-    "date": ["2/3/2025", "2/3/2025", "2/3/2025"],
-    "type": ["AM - Continuity", "AM - Continuity", "AM - Continuity"],
-    "provider": ["Irvin, Christine", "Petersen, Taylor", "Clarke, Sheila"],
-    "clinic": ["WARD_A", "WARD_A", "WARD_A"]
-})
-
-# Process and display results
-warda_df = duplicate_am_continuity(df_example, "WARD_A")
-
-			
 
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
 	    if df is not None:
