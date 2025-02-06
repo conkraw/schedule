@@ -546,6 +546,8 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+
+	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
 	# Apply AM → PM Continuity Transformation for WARDA, WARDP, and PICU
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
@@ -555,6 +557,7 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
 	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
+	
 	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
 	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
 	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
