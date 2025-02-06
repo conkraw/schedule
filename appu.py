@@ -392,64 +392,118 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Function to process each file
 	def process_file(file_key, clinic_name, replacements=None):
-	    """Process an uploaded file and generate cleaned CSV data."""
+	    """Process an uploaded file and return cleaned DataFrame."""
 	    
-	    # Check if file exists
 	    if file_key in uploaded_files:
 	        df = pd.read_excel(uploaded_files[file_key], dtype=str)
-	
-	        # Rename columns numerically as strings
 	        df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
 	
-	        # Dictionary to store extracted data
 	        D_dict = {}
-	
-	        # Loop to process all 28 datasets
 	        for i in range(28):
-	            col_idx = column_pairs[i % len(column_pairs)]  # Cycles through column pairs
+	            col_idx = column_pairs[i % len(column_pairs)]
 	            start_day = days[i]
-	            end_day = days[i + 7]  # Each segment spans 7 days ahead
+	            end_day = days[i + 7]
 	
-	            # Get start and end indices safely
 	            start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
 	            end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
 	
-	            # Extract relevant data
 	            extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
 	            extracted_data.columns = ['type', 'provider']
-	            extracted_data.insert(0, 'date', start_day)  # Add 'date' column
-	
-	            # Remove the last row safely
+	            extracted_data.insert(0, 'date', start_day)
 	            extracted_data = extracted_data[:-1]
 	
-	            # Store in dictionary with dynamic key
 	            D_dict[f"D{i}"] = extracted_data
 	
-	        # Combine all extracted DataFrames
 	        dfx = pd.concat(D_dict.values(), ignore_index=True)
-	
-	        # Add clinic name
 	        dfx['clinic'] = clinic_name
 	
-	        # Save initial CSV
-	        filename = f"{clinic_name.lower()}.csv"
-	        dfx.to_csv(filename, index=False)
-	
-	        # Apply replacements if needed
 	        if replacements:
 	            dfx = dfx.replace(replacements, regex=True)
 	
-	        # Save final cleaned CSV
+	        filename = f"{clinic_name.lower()}.csv"
 	        dfx.to_csv(filename, index=False)
 	
 	        print(f"Processed {clinic_name} and saved to {filename}")
+	        return dfx  # Return DataFrame for further processing
+	    else:
+	        return None  # Handle missing file case
+
+	def duplicate_am_continuity(df, clinic_name):
+	    if df is not None:
+	        # Identify rows containing "AM - Continuity"
+	        am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
 	
+	        # Create corresponding "PM - Continuity" rows
+	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	
+	        # Append new rows to the original dataframe
+	        df = pd.concat([df, pm_continuity_rows], ignore_index=True)
+	
+	        # Save the updated data
+	        filename = f"{clinic_name.lower()}.csv"
+	        df.to_csv(filename, index=False)
+	        print(f"{clinic_name} updated with PM - Continuity and saved to {filename}.")
+	    
+	    return df
+
+	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
+	    if df is not None:
+	        # AM - Continuity Processing
+	        df[df['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(am_csv, index=False)
+	        df[df['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(pm_csv, index=False)
+
+	def process_hope_classes(df, clinic_name):
+	    """
+	    Processes Hope Drive's different continuity and acute types by assigning a count and class.
+	    Saves the resulting DataFrame to separate CSV files based on type.
+	    """
+	    if df is not None:
+	        hope_files = {
+	            "AM - ACUTES": "5.csv",
+	            "AM - ACUTES ": "6.csv",  # Handles potential trailing space issue
+	            "PM - ACUTES ": "7.csv",
+	            "AM - Continuity ": "8.csv",
+	            "PM - Continuity ": "9.csv"
+	        }
+	
+	        for type_key, filename in hope_files.items():
+	            if type_key in df['type'].values:
+	                subset_df = df[df['type'] == type_key].copy()
+	
+	                # Assign custom count logic based on type
+	                if "AM - ACUTES" in type_key:
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
+	                    subset_df['class'] = subset_df['count'].apply(
+	                        lambda count: "H0" if count == 0 else ("H1" if count == 1 else "H" + str(count + 2))
+	                    )
+	                
+	                elif "PM - ACUTES" in type_key:
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
+	                    subset_df['class'] = subset_df['count'].apply(
+	                        lambda count: "H10" if count == 0 else ("H11" if count == 1 else "H" + str(count + 12))
+	                    )
+	
+	                elif "AM - Continuity" in type_key:
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 2
+	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
+	
+	                elif "PM - Continuity" in type_key:
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 12
+	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
+	
+	                # Keep only relevant columns
+	                subset_df = subset_df[['date', 'type', 'provider', 'clinic', 'class']]
+	
+	                # Save to CSV
+	                subset_df.to_csv(filename, index=False)
+	                print(f"{clinic_name} {type_key} saved to {filename}.")
+
 	# Define replacement rules for each clinic
 	replacement_rules = {
 	    "HOPE_DRIVE.xlsx": {
 	        "Hope Drive AM Continuity": "AM - Continuity",
 	        "Hope Drive PM Continuity": "PM - Continuity",
-	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Non-breaking space (\xa0)
+	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
 	        "Hope Drive PM Acute Precept": "PM - ACUTES",
 	        "Hope Drive Weekend Continuity": "AM - Continuity",
 	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
@@ -462,1461 +516,49 @@ elif st.session_state.page == "OPD Creator":
 	    "ETOWN.xlsx": {
 	        "Etown AM Continuity": "AM - Continuity",
 	        "Etown PM Continuity": "PM - Continuity"
+	    },
+	    "NYES.xlsx": {
+	        "Nyes Rd AM Continuity": "AM - Continuity",
+	        "Nyes Rd PM Continuity": "PM - Continuity"
+	    },
+	    "COMPLEX.xlsx": {
+	        "Hope Drive Clinic AM": "AM - Continuity",
+	        "Hope Drive Clinic PM": "PM - Continuity"
+	    },
+	    "WARD_A.xlsx": {
+	        "Rounder 1 7a-7p": "AM - Continuity",
+	        "Rounder 2 7a-7p": "AM - Continuity",
+	        "Rounder 3 7a-7p": "AM - Continuity"
+	    },
+	    "WARD_P.xlsx": {
+	        "On-Call 8a-8a": "AM - Continuity",
+	        "On-Call": "AM - Continuity"
 	    }
 	}
-
 	
 	# Process each file
 
-	process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules)
-	process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
-	process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
+	etown_df = process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
+	nyes_df = process_file("NYES.xlsx", "NYES", replacement_rules.get("NYES.xlsx"))
+	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
-	#############################################################NYES################################################
-	if uploaded_files['NYES.xlsx']:
-	    df = pd.read_excel(uploaded_files['NYES.xlsx'], dtype=str)
-	    #st.write("NYES Data:")
-	    #st.dataframe(df_nyes)
-	#df=pd.read_excel('NYES.xlsx',dtype=str)
+	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
+	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
+	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
 	
-	df.rename(columns={ df.columns[0]: "0" }, inplace = True)
-	df.rename(columns={ df.columns[1]: "1" }, inplace = True)
-	df.rename(columns={ df.columns[2]: "2" }, inplace = True)
-	df.rename(columns={ df.columns[3]: "3" }, inplace = True)
-	df.rename(columns={ df.columns[4]: "4" }, inplace = True)
-	df.rename(columns={ df.columns[5]: "5" }, inplace = True)
-	df.rename(columns={ df.columns[6]: "6" }, inplace = True)
-	df.rename(columns={ df.columns[7]: "7" }, inplace = True)
-	df.rename(columns={ df.columns[8]: "8" }, inplace = True)
-	df.rename(columns={ df.columns[9]: "9" }, inplace = True)
-	df.rename(columns={ df.columns[10]: "10" }, inplace = True)
-	df.rename(columns={ df.columns[11]: "11" }, inplace = True)
-	df.rename(columns={ df.columns[12]: "12" }, inplace = True)
-	df.rename(columns={ df.columns[13]: "13" }, inplace = True)
-	
-	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
-	
-	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
-	
-	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
-	
-	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
-	
-	a = df.loc[df['0'] == day0].index[0]
-	b = df.loc[df['0'] == day7].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z0=c.loc[:, ('0','1')]
-	z0['date']=day0
-	z0.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z0.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D0=z0[['date','type','provider']]
-	D0=D0[:-1]
-	
-	a = df.loc[df['2'] == day1].index[0]
-	b = df.loc[df['2'] == day8].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z1=c.loc[:, ('2','3')]
-	z1['date']=day1
-	z1.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z1.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D1=z1[['date','type','provider']]
-	D1=D1[:-1]
-	
-	a = df.loc[df['4'] == day2].index[0]
-	b = df.loc[df['4'] == day9].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z2=c.loc[:, ('4','5')]
-	z2['date']=day2
-	z2.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z2.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D2=z2[['date','type','provider']]
-	D2=D2[:-1]
-	
-	a = df.loc[df['6'] == day3].index[0]
-	b = df.loc[df['6'] == day10].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z3=c.loc[:, ('6','7')]
-	z3['date']=day3
-	z3.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z3.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D3=z3[['date','type','provider']]
-	D3=D3[:-1]
-	
-	a = df.loc[df['8'] == day4].index[0]
-	b = df.loc[df['8'] == day11].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z4=c.loc[:, ('8','9')]
-	z4['date']=day4
-	z4.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z4.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D4=z4[['date','type','provider']]
-	D4=D4[:-1]
-	
-	a = df.loc[df['10'] == day5].index[0]
-	b = df.loc[df['10'] == day12].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z5=c.loc[:, ('10','11')]
-	z5['date']=day5
-	z5.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z5.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D5=z5[['date','type','provider']]
-	D5=D5[:-1]
-	
-	a = df.loc[df['12'] == day6].index[0]
-	b = df.loc[df['12'] == day13].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z6=c.loc[:, ('12','13')]
-	z6['date']=day6
-	z6.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z6.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D6=z6[['date','type','provider']]
-	D6=D6[:-1]
-	
-	a = df.loc[df['0'] == day7].index[0]
-	b = df.loc[df['0'] == day14].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z7=c.loc[:, ('0','1')]
-	z7['date']=day7
-	z7.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z7.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D7=z7[['date','type','provider']]
-	D7=D7[:-1]
-	
-	a = df.loc[df['2'] == day8].index[0]
-	b = df.loc[df['2'] == day15].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z8=c.loc[:, ('2','3')]
-	z8['date']=day8
-	z8.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z8.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D8=z8[['date','type','provider']]
-	D8=D8[:-1]
-	
-	a = df.loc[df['4'] == day9].index[0]
-	b = df.loc[df['4'] == day16].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z9=c.loc[:, ('4','5')]
-	z9['date']=day9
-	z9.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z9.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D9=z9[['date','type','provider']]
-	D9=D9[:-1]
-	
-	a = df.loc[df['6'] == day10].index[0]
-	b = df.loc[df['6'] == day17].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z10=c.loc[:, ('6','7')]
-	z10['date']=day10
-	z10.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z10.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D10=z10[['date','type','provider']]
-	D10=D10[:-1]
-	
-	a = df.loc[df['8'] == day11].index[0]
-	b = df.loc[df['8'] == day18].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z11=c.loc[:, ('8','9')]
-	z11['date']=day11
-	z11.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z11.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D11=z11[['date','type','provider']]
-	D11=D11[:-1]
-	
-	a = df.loc[df['10'] == day12].index[0]
-	b = df.loc[df['10'] == day19].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z12=c.loc[:, ('10','11')]
-	z12['date']=day12
-	z12.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z12.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D12=z12[['date','type','provider']]
-	D12=D12[:-1]
-	
-	a = df.loc[df['12'] == day13].index[0]
-	b = df.loc[df['12'] == day20].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z13=c.loc[:, ('12','13')]
-	z13['date']=day13
-	z13.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z13.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D13=z13[['date','type','provider']]
-	D13=D13[:-1]
-	
-	a = df.loc[df['0'] == day14].index[0]
-	b = df.loc[df['0'] == day21].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z14=c.loc[:, ('0','1')]
-	z14['date']=day14
-	z14.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z14.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D14=z14[['date','type','provider']]
-	D14=D14[:-1]
-	
-	a = df.loc[df['2'] == day15].index[0]
-	b = df.loc[df['2'] == day22].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z15=c.loc[:, ('2','3')]
-	z15['date']=day15
-	z15.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z15.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D15=z15[['date','type','provider']]
-	D15=D15[:-1]
-	
-	a = df.loc[df['4'] == day16].index[0]
-	b = df.loc[df['4'] == day23].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z16=c.loc[:, ('4','5')]
-	z16['date']=day16
-	z16.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z16.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D16=z16[['date','type','provider']]
-	D16=D16[:-1]
-	
-	a = df.loc[df['6'] == day17].index[0]
-	b = df.loc[df['6'] == day24].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z17=c.loc[:, ('6','7')]
-	z17['date']=day17
-	z17.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z17.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D17=z17[['date','type','provider']]
-	D17=D17[:-1]
-	
-	a = df.loc[df['8'] == day18].index[0]
-	b = df.loc[df['8'] == day25].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z18=c.loc[:, ('8','9')]
-	z18['date']=day18
-	z18.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z18.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D18=z18[['date','type','provider']]
-	D18=D18[:-1]
-	
-	a = df.loc[df['10'] == day19].index[0]
-	b = df.loc[df['10'] == day26].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z19=c.loc[:, ('10','11')]
-	z19['date']=day19
-	z19.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z19.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D19=z19[['date','type','provider']]
-	D19=D19[:-1]
-	
-	a = df.loc[df['12'] == day20].index[0]
-	b = df.loc[df['12'] == day27].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z20=c.loc[:, ('12','13')]
-	z20['date']=day20
-	z20.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z20.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D20=z20[['date','type','provider']]
-	D20=D20[:-1]
-	
-	a = df.loc[df['0'] == day21].index[0]
-	b = df.loc[df['0'] == day28].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z21=c.loc[:, ('0','1')]
-	z21['date']=day21
-	z21.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z21.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D21=z21[['date','type','provider']]
-	D21=D21[:-1]
-	
-	a = df.loc[df['2'] == day22].index[0]
-	b = df.loc[df['2'] == day29].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z22=c.loc[:, ('2','3')]
-	z22['date']=day22
-	z22.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z22.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D22=z22[['date','type','provider']]
-	D22=D22[:-1]
-	
-	a = df.loc[df['4'] == day23].index[0]
-	b = df.loc[df['4'] == day30].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z23=c.loc[:, ('4','5')]
-	z23['date']=day23
-	z23.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z23.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D23=z23[['date','type','provider']]
-	D23=D23[:-1]
-	
-	a = df.loc[df['6'] == day24].index[0]
-	b = df.loc[df['6'] == day31].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z24=c.loc[:, ('6','7')]
-	z24['date']=day24
-	z24.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z24.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D24=z24[['date','type','provider']]
-	D24=D24[:-1]
-	
-	a = df.loc[df['8'] == day25].index[0]
-	b = df.loc[df['8'] == day32].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z25=c.loc[:, ('8','9')]
-	z25['date']=day25
-	z25.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z25.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D25=z25[['date','type','provider']]
-	D25=D25[:-1]
-	
-	a = df.loc[df['10'] == day26].index[0]
-	b = df.loc[df['10'] == day33].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z26=c.loc[:, ('10','11')]
-	z26['date']=day26
-	z26.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z26.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D26=z26[['date','type','provider']]
-	D26=D26[:-1]
-	
-	a = df.loc[df['12'] == day27].index[0]
-	b = df.loc[df['12'] == day34].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z27=c.loc[:, ('12','13')]
-	z27['date']=day27
-	z27.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z27.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D27=z27[['date','type','provider']]
-	D27=D27[:-1]
-	
-	dfx=pd.DataFrame(columns=D0.columns)
-	
-	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
-	
-	dfx['clinic'] = "NYES"
-	
-	dfx.to_csv('nyes.csv',index=False)
-	NYES=dfx.replace("Nyes Rd AM Continuity", "AM - Continuity", regex=True)
-	NYES=NYES.replace("Nyes Rd PM Continuity", "PM - Continuity", regex=True)
-	NYES.to_csv('nyes.csv',index=False)
+	# Apply AM → PM Continuity Transformation for WARDA, WARDP, and PICU
+	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
+	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
+	picu_df = duplicate_am_continuity(picu_df, "PICU")
 
-	#############################################################COMPLEX################################################
-	if uploaded_files['COMPLEX.xlsx']:
-	    df = pd.read_excel(uploaded_files['COMPLEX.xlsx'], dtype=str)
-
-	df.rename(columns={ df.columns[0]: "0" }, inplace = True)
-	df.rename(columns={ df.columns[1]: "1" }, inplace = True)
-	df.rename(columns={ df.columns[2]: "2" }, inplace = True)
-	df.rename(columns={ df.columns[3]: "3" }, inplace = True)
-	df.rename(columns={ df.columns[4]: "4" }, inplace = True)
-	df.rename(columns={ df.columns[5]: "5" }, inplace = True)
-	df.rename(columns={ df.columns[6]: "6" }, inplace = True)
-	df.rename(columns={ df.columns[7]: "7" }, inplace = True)
-	df.rename(columns={ df.columns[8]: "8" }, inplace = True)
-	df.rename(columns={ df.columns[9]: "9" }, inplace = True)
-	df.rename(columns={ df.columns[10]: "10" }, inplace = True)
-	df.rename(columns={ df.columns[11]: "11" }, inplace = True)
-	df.rename(columns={ df.columns[12]: "12" }, inplace = True)
-	df.rename(columns={ df.columns[13]: "13" }, inplace = True)
+	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
+	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
+	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
+	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
+	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
+	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
 	
-	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
-	
-	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
-	
-	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
-	
-	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
-	
-	a = df.loc[df['0'] == day0].index[0]
-	b = df.loc[df['0'] == day7].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z0=c.loc[:, ('0','1')]
-	z0['date']=day0
-	z0.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z0.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D0=z0[['date','type','provider']]
-	D0=D0[:-1]
-	
-	a = df.loc[df['2'] == day1].index[0]
-	b = df.loc[df['2'] == day8].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z1=c.loc[:, ('2','3')]
-	z1['date']=day1
-	z1.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z1.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D1=z1[['date','type','provider']]
-	D1=D1[:-1]
-	
-	a = df.loc[df['4'] == day2].index[0]
-	b = df.loc[df['4'] == day9].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z2=c.loc[:, ('4','5')]
-	z2['date']=day2
-	z2.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z2.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D2=z2[['date','type','provider']]
-	D2=D2[:-1]
-	
-	a = df.loc[df['6'] == day3].index[0]
-	b = df.loc[df['6'] == day10].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z3=c.loc[:, ('6','7')]
-	z3['date']=day3
-	z3.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z3.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D3=z3[['date','type','provider']]
-	D3=D3[:-1]
-	
-	a = df.loc[df['8'] == day4].index[0]
-	b = df.loc[df['8'] == day11].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z4=c.loc[:, ('8','9')]
-	z4['date']=day4
-	z4.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z4.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D4=z4[['date','type','provider']]
-	D4=D4[:-1]
-	
-	a = df.loc[df['10'] == day5].index[0]
-	b = df.loc[df['10'] == day12].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z5=c.loc[:, ('10','11')]
-	z5['date']=day5
-	z5.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z5.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D5=z5[['date','type','provider']]
-	D5=D5[:-1]
-	
-	a = df.loc[df['12'] == day6].index[0]
-	b = df.loc[df['12'] == day13].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z6=c.loc[:, ('12','13')]
-	z6['date']=day6
-	z6.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z6.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D6=z6[['date','type','provider']]
-	D6=D6[:-1]
-	
-	a = df.loc[df['0'] == day7].index[0]
-	b = df.loc[df['0'] == day14].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z7=c.loc[:, ('0','1')]
-	z7['date']=day7
-	z7.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z7.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D7=z7[['date','type','provider']]
-	D7=D7[:-1]
-	
-	a = df.loc[df['2'] == day8].index[0]
-	b = df.loc[df['2'] == day15].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z8=c.loc[:, ('2','3')]
-	z8['date']=day8
-	z8.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z8.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D8=z8[['date','type','provider']]
-	D8=D8[:-1]
-	
-	a = df.loc[df['4'] == day9].index[0]
-	b = df.loc[df['4'] == day16].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z9=c.loc[:, ('4','5')]
-	z9['date']=day9
-	z9.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z9.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D9=z9[['date','type','provider']]
-	D9=D9[:-1]
-	
-	a = df.loc[df['6'] == day10].index[0]
-	b = df.loc[df['6'] == day17].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z10=c.loc[:, ('6','7')]
-	z10['date']=day10
-	z10.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z10.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D10=z10[['date','type','provider']]
-	D10=D10[:-1]
-	
-	a = df.loc[df['8'] == day11].index[0]
-	b = df.loc[df['8'] == day18].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z11=c.loc[:, ('8','9')]
-	z11['date']=day11
-	z11.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z11.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D11=z11[['date','type','provider']]
-	D11=D11[:-1]
-	
-	a = df.loc[df['10'] == day12].index[0]
-	b = df.loc[df['10'] == day19].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z12=c.loc[:, ('10','11')]
-	z12['date']=day12
-	z12.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z12.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D12=z12[['date','type','provider']]
-	D12=D12[:-1]
-	
-	a = df.loc[df['12'] == day13].index[0]
-	b = df.loc[df['12'] == day20].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z13=c.loc[:, ('12','13')]
-	z13['date']=day13
-	z13.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z13.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D13=z13[['date','type','provider']]
-	D13=D13[:-1]
-	
-	a = df.loc[df['0'] == day14].index[0]
-	b = df.loc[df['0'] == day21].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z14=c.loc[:, ('0','1')]
-	z14['date']=day14
-	z14.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z14.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D14=z14[['date','type','provider']]
-	D14=D14[:-1]
-	
-	a = df.loc[df['2'] == day15].index[0]
-	b = df.loc[df['2'] == day22].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z15=c.loc[:, ('2','3')]
-	z15['date']=day15
-	z15.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z15.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D15=z15[['date','type','provider']]
-	D15=D15[:-1]
-	
-	a = df.loc[df['4'] == day16].index[0]
-	b = df.loc[df['4'] == day23].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z16=c.loc[:, ('4','5')]
-	z16['date']=day16
-	z16.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z16.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D16=z16[['date','type','provider']]
-	D16=D16[:-1]
-	
-	a = df.loc[df['6'] == day17].index[0]
-	b = df.loc[df['6'] == day24].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z17=c.loc[:, ('6','7')]
-	z17['date']=day17
-	z17.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z17.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D17=z17[['date','type','provider']]
-	D17=D17[:-1]
-	
-	a = df.loc[df['8'] == day18].index[0]
-	b = df.loc[df['8'] == day25].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z18=c.loc[:, ('8','9')]
-	z18['date']=day18
-	z18.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z18.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D18=z18[['date','type','provider']]
-	D18=D18[:-1]
-	
-	a = df.loc[df['10'] == day19].index[0]
-	b = df.loc[df['10'] == day26].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z19=c.loc[:, ('10','11')]
-	z19['date']=day19
-	z19.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z19.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D19=z19[['date','type','provider']]
-	D19=D19[:-1]
-	
-	a = df.loc[df['12'] == day20].index[0]
-	b = df.loc[df['12'] == day27].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z20=c.loc[:, ('12','13')]
-	z20['date']=day20
-	z20.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z20.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D20=z20[['date','type','provider']]
-	D20=D20[:-1]
-	
-	a = df.loc[df['0'] == day21].index[0]
-	b = df.loc[df['0'] == day28].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z21=c.loc[:, ('0','1')]
-	z21['date']=day21
-	z21.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z21.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D21=z21[['date','type','provider']]
-	D21=D21[:-1]
-	
-	a = df.loc[df['2'] == day22].index[0]
-	b = df.loc[df['2'] == day29].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z22=c.loc[:, ('2','3')]
-	z22['date']=day22
-	z22.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z22.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D22=z22[['date','type','provider']]
-	D22=D22[:-1]
-	
-	a = df.loc[df['4'] == day23].index[0]
-	b = df.loc[df['4'] == day30].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z23=c.loc[:, ('4','5')]
-	z23['date']=day23
-	z23.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z23.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D23=z23[['date','type','provider']]
-	D23=D23[:-1]
-	
-	a = df.loc[df['6'] == day24].index[0]
-	b = df.loc[df['6'] == day31].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z24=c.loc[:, ('6','7')]
-	z24['date']=day24
-	z24.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z24.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D24=z24[['date','type','provider']]
-	D24=D24[:-1]
-	
-	a = df.loc[df['8'] == day25].index[0]
-	b = df.loc[df['8'] == day32].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z25=c.loc[:, ('8','9')]
-	z25['date']=day25
-	z25.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z25.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D25=z25[['date','type','provider']]
-	D25=D25[:-1]
-	
-	a = df.loc[df['10'] == day26].index[0]
-	b = df.loc[df['10'] == day33].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z26=c.loc[:, ('10','11')]
-	z26['date']=day26
-	z26.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z26.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D26=z26[['date','type','provider']]
-	D26=D26[:-1]
-	
-	a = df.loc[df['12'] == day27].index[0]
-	b = df.loc[df['12'] == day34].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z27=c.loc[:, ('12','13')]
-	z27['date']=day27
-	z27.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z27.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D27=z27[['date','type','provider']]
-	D27=D27[:-1]
-	
-	dfx=pd.DataFrame(columns=D0.columns)
-	
-	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
-	
-	dfx['clinic'] = "COMPLEX"
-	
-	dfx.to_csv('complex.csv',index=False)
-	COMPLEX=dfx.replace("Hope Drive Clinic AM", "AM - Continuity", regex=True)
-	COMPLEX=COMPLEX.replace("Hope Drive Clinic PM", "PM - Continuity", regex=True)
-	COMPLEX.to_csv('complex.csv',index=False)
-	
-	#############################################################WARD_A################################################
-	if uploaded_files['WARD_A.xlsx']:
-	    df = pd.read_excel(uploaded_files['WARD_A.xlsx'], dtype=str)
-	    #st.write("NYES Data:")
-	    #st.dataframe(df_nyes)
-	#df=pd.read_excel('NYES.xlsx',dtype=str)
-	
-	df.rename(columns={ df.columns[0]: "0" }, inplace = True)
-	df.rename(columns={ df.columns[1]: "1" }, inplace = True)
-	df.rename(columns={ df.columns[2]: "2" }, inplace = True)
-	df.rename(columns={ df.columns[3]: "3" }, inplace = True)
-	df.rename(columns={ df.columns[4]: "4" }, inplace = True)
-	df.rename(columns={ df.columns[5]: "5" }, inplace = True)
-	df.rename(columns={ df.columns[6]: "6" }, inplace = True)
-	df.rename(columns={ df.columns[7]: "7" }, inplace = True)
-	df.rename(columns={ df.columns[8]: "8" }, inplace = True)
-	df.rename(columns={ df.columns[9]: "9" }, inplace = True)
-	df.rename(columns={ df.columns[10]: "10" }, inplace = True)
-	df.rename(columns={ df.columns[11]: "11" }, inplace = True)
-	df.rename(columns={ df.columns[12]: "12" }, inplace = True)
-	df.rename(columns={ df.columns[13]: "13" }, inplace = True)
-	
-	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
-	
-	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
-	
-	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
-	
-	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
-	
-	a = df.loc[df['0'] == day0].index[0]
-	b = df.loc[df['0'] == day7].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z0=c.loc[:, ('0','1')]
-	z0['date']=day0
-	z0.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z0.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D0=z0[['date','type','provider']]
-	D0=D0[:-1]
-	
-	a = df.loc[df['2'] == day1].index[0]
-	b = df.loc[df['2'] == day8].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z1=c.loc[:, ('2','3')]
-	z1['date']=day1
-	z1.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z1.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D1=z1[['date','type','provider']]
-	D1=D1[:-1]
-	
-	a = df.loc[df['4'] == day2].index[0]
-	b = df.loc[df['4'] == day9].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z2=c.loc[:, ('4','5')]
-	z2['date']=day2
-	z2.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z2.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D2=z2[['date','type','provider']]
-	D2=D2[:-1]
-	
-	a = df.loc[df['6'] == day3].index[0]
-	b = df.loc[df['6'] == day10].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z3=c.loc[:, ('6','7')]
-	z3['date']=day3
-	z3.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z3.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D3=z3[['date','type','provider']]
-	D3=D3[:-1]
-	
-	a = df.loc[df['8'] == day4].index[0]
-	b = df.loc[df['8'] == day11].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z4=c.loc[:, ('8','9')]
-	z4['date']=day4
-	z4.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z4.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D4=z4[['date','type','provider']]
-	D4=D4[:-1]
-	
-	a = df.loc[df['10'] == day5].index[0]
-	b = df.loc[df['10'] == day12].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z5=c.loc[:, ('10','11')]
-	z5['date']=day5
-	z5.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z5.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D5=z5[['date','type','provider']]
-	D5=D5[:-1]
-	
-	a = df.loc[df['12'] == day6].index[0]
-	b = df.loc[df['12'] == day13].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z6=c.loc[:, ('12','13')]
-	z6['date']=day6
-	z6.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z6.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D6=z6[['date','type','provider']]
-	D6=D6[:-1]
-	
-	a = df.loc[df['0'] == day7].index[0]
-	b = df.loc[df['0'] == day14].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z7=c.loc[:, ('0','1')]
-	z7['date']=day7
-	z7.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z7.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D7=z7[['date','type','provider']]
-	D7=D7[:-1]
-	
-	a = df.loc[df['2'] == day8].index[0]
-	b = df.loc[df['2'] == day15].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z8=c.loc[:, ('2','3')]
-	z8['date']=day8
-	z8.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z8.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D8=z8[['date','type','provider']]
-	D8=D8[:-1]
-	
-	a = df.loc[df['4'] == day9].index[0]
-	b = df.loc[df['4'] == day16].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z9=c.loc[:, ('4','5')]
-	z9['date']=day9
-	z9.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z9.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D9=z9[['date','type','provider']]
-	D9=D9[:-1]
-	
-	a = df.loc[df['6'] == day10].index[0]
-	b = df.loc[df['6'] == day17].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z10=c.loc[:, ('6','7')]
-	z10['date']=day10
-	z10.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z10.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D10=z10[['date','type','provider']]
-	D10=D10[:-1]
-	
-	a = df.loc[df['8'] == day11].index[0]
-	b = df.loc[df['8'] == day18].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z11=c.loc[:, ('8','9')]
-	z11['date']=day11
-	z11.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z11.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D11=z11[['date','type','provider']]
-	D11=D11[:-1]
-	
-	a = df.loc[df['10'] == day12].index[0]
-	b = df.loc[df['10'] == day19].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z12=c.loc[:, ('10','11')]
-	z12['date']=day12
-	z12.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z12.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D12=z12[['date','type','provider']]
-	D12=D12[:-1]
-	
-	a = df.loc[df['12'] == day13].index[0]
-	b = df.loc[df['12'] == day20].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z13=c.loc[:, ('12','13')]
-	z13['date']=day13
-	z13.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z13.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D13=z13[['date','type','provider']]
-	D13=D13[:-1]
-	
-	a = df.loc[df['0'] == day14].index[0]
-	b = df.loc[df['0'] == day21].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z14=c.loc[:, ('0','1')]
-	z14['date']=day14
-	z14.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z14.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D14=z14[['date','type','provider']]
-	D14=D14[:-1]
-	
-	a = df.loc[df['2'] == day15].index[0]
-	b = df.loc[df['2'] == day22].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z15=c.loc[:, ('2','3')]
-	z15['date']=day15
-	z15.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z15.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D15=z15[['date','type','provider']]
-	D15=D15[:-1]
-	
-	a = df.loc[df['4'] == day16].index[0]
-	b = df.loc[df['4'] == day23].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z16=c.loc[:, ('4','5')]
-	z16['date']=day16
-	z16.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z16.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D16=z16[['date','type','provider']]
-	D16=D16[:-1]
-	
-	a = df.loc[df['6'] == day17].index[0]
-	b = df.loc[df['6'] == day24].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z17=c.loc[:, ('6','7')]
-	z17['date']=day17
-	z17.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z17.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D17=z17[['date','type','provider']]
-	D17=D17[:-1]
-	
-	a = df.loc[df['8'] == day18].index[0]
-	b = df.loc[df['8'] == day25].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z18=c.loc[:, ('8','9')]
-	z18['date']=day18
-	z18.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z18.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D18=z18[['date','type','provider']]
-	D18=D18[:-1]
-	
-	a = df.loc[df['10'] == day19].index[0]
-	b = df.loc[df['10'] == day26].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z19=c.loc[:, ('10','11')]
-	z19['date']=day19
-	z19.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z19.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D19=z19[['date','type','provider']]
-	D19=D19[:-1]
-	
-	a = df.loc[df['12'] == day20].index[0]
-	b = df.loc[df['12'] == day27].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z20=c.loc[:, ('12','13')]
-	z20['date']=day20
-	z20.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z20.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D20=z20[['date','type','provider']]
-	D20=D20[:-1]
-	
-	a = df.loc[df['0'] == day21].index[0]
-	b = df.loc[df['0'] == day28].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z21=c.loc[:, ('0','1')]
-	z21['date']=day21
-	z21.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z21.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D21=z21[['date','type','provider']]
-	D21=D21[:-1]
-	
-	a = df.loc[df['2'] == day22].index[0]
-	b = df.loc[df['2'] == day29].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z22=c.loc[:, ('2','3')]
-	z22['date']=day22
-	z22.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z22.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D22=z22[['date','type','provider']]
-	D22=D22[:-1]
-	
-	a = df.loc[df['4'] == day23].index[0]
-	b = df.loc[df['4'] == day30].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z23=c.loc[:, ('4','5')]
-	z23['date']=day23
-	z23.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z23.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D23=z23[['date','type','provider']]
-	D23=D23[:-1]
-	
-	a = df.loc[df['6'] == day24].index[0]
-	b = df.loc[df['6'] == day31].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z24=c.loc[:, ('6','7')]
-	z24['date']=day24
-	z24.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z24.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D24=z24[['date','type','provider']]
-	D24=D24[:-1]
-	
-	a = df.loc[df['8'] == day25].index[0]
-	b = df.loc[df['8'] == day32].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z25=c.loc[:, ('8','9')]
-	z25['date']=day25
-	z25.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z25.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D25=z25[['date','type','provider']]
-	D25=D25[:-1]
-	
-	a = df.loc[df['10'] == day26].index[0]
-	b = df.loc[df['10'] == day33].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z26=c.loc[:, ('10','11')]
-	z26['date']=day26
-	z26.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z26.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D26=z26[['date','type','provider']]
-	D26=D26[:-1]
-	
-	a = df.loc[df['12'] == day27].index[0]
-	b = df.loc[df['12'] == day34].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z27=c.loc[:, ('12','13')]
-	z27['date']=day27
-	z27.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z27.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D27=z27[['date','type','provider']]
-	D27=D27[:-1]
-	
-	dfx=pd.DataFrame(columns=D0.columns)
-	
-	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
-	
-	dfx['clinic'] = "WARD_A"
-
-	dfx.to_csv('warda.csv', index=False)
-
-	# Replace "Rounder" values with "AM - Continuity"
-	WARDA = dfx.replace(
-    	{"Rounder 1 7a-7p": "AM - Continuity",
-     	"Rounder 2 7a-7p": "AM - Continuity",
-     	"Rounder 3 7a-7p": "AM - Continuity"},
-    	regex=True
-	)
-
-	# Identify rows with "AM - Continuity"
-	am_continuity_rows = WARDA[WARDA.eq("AM - Continuity ").any(axis=1)].copy()
-
-	# Create corresponding "PM - Continuity" rows
-	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
-
-	# Append new rows to the original dataframe
-	WARDA = pd.concat([WARDA, pm_continuity_rows], ignore_index=True)
-
-	# Save the updated data
-	WARDA.to_csv('warda.csv', index=False)
-
-	#############################################################WARD_P################################################
-	if uploaded_files['WARD_P.xlsx']:
-	    df = pd.read_excel(uploaded_files['WARD_P.xlsx'], dtype=str)
-	
-	df.rename(columns={ df.columns[0]: "0" }, inplace = True)
-	df.rename(columns={ df.columns[1]: "1" }, inplace = True)
-	df.rename(columns={ df.columns[2]: "2" }, inplace = True)
-	df.rename(columns={ df.columns[3]: "3" }, inplace = True)
-	df.rename(columns={ df.columns[4]: "4" }, inplace = True)
-	df.rename(columns={ df.columns[5]: "5" }, inplace = True)
-	df.rename(columns={ df.columns[6]: "6" }, inplace = True)
-	df.rename(columns={ df.columns[7]: "7" }, inplace = True)
-	df.rename(columns={ df.columns[8]: "8" }, inplace = True)
-	df.rename(columns={ df.columns[9]: "9" }, inplace = True)
-	df.rename(columns={ df.columns[10]: "10" }, inplace = True)
-	df.rename(columns={ df.columns[11]: "11" }, inplace = True)
-	df.rename(columns={ df.columns[12]: "12" }, inplace = True)
-	df.rename(columns={ df.columns[13]: "13" }, inplace = True)
-	
-	xf300 = pd.DataFrame({'no':['0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12','0','2','4','6','8','10','12']})
-	
-	xf300['no1'] = ['1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13','1','3','5','7','9','11','13']
-	
-	xf300['start']=['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27']
-	
-	xf300['end'] = ['7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34']
-	
-	a = df.loc[df['0'] == day0].index[0]
-	b = df.loc[df['0'] == day7].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z0=c.loc[:, ('0','1')]
-	z0['date']=day0
-	z0.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z0.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D0=z0[['date','type','provider']]
-	D0=D0[:-1]
-	
-	a = df.loc[df['2'] == day1].index[0]
-	b = df.loc[df['2'] == day8].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z1=c.loc[:, ('2','3')]
-	z1['date']=day1
-	z1.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z1.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D1=z1[['date','type','provider']]
-	D1=D1[:-1]
-	
-	a = df.loc[df['4'] == day2].index[0]
-	b = df.loc[df['4'] == day9].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z2=c.loc[:, ('4','5')]
-	z2['date']=day2
-	z2.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z2.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D2=z2[['date','type','provider']]
-	D2=D2[:-1]
-	
-	a = df.loc[df['6'] == day3].index[0]
-	b = df.loc[df['6'] == day10].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z3=c.loc[:, ('6','7')]
-	z3['date']=day3
-	z3.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z3.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D3=z3[['date','type','provider']]
-	D3=D3[:-1]
-	
-	a = df.loc[df['8'] == day4].index[0]
-	b = df.loc[df['8'] == day11].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z4=c.loc[:, ('8','9')]
-	z4['date']=day4
-	z4.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z4.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D4=z4[['date','type','provider']]
-	D4=D4[:-1]
-	
-	a = df.loc[df['10'] == day5].index[0]
-	b = df.loc[df['10'] == day12].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z5=c.loc[:, ('10','11')]
-	z5['date']=day5
-	z5.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z5.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D5=z5[['date','type','provider']]
-	D5=D5[:-1]
-	
-	a = df.loc[df['12'] == day6].index[0]
-	b = df.loc[df['12'] == day13].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z6=c.loc[:, ('12','13')]
-	z6['date']=day6
-	z6.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z6.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D6=z6[['date','type','provider']]
-	D6=D6[:-1]
-	
-	a = df.loc[df['0'] == day7].index[0]
-	b = df.loc[df['0'] == day14].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z7=c.loc[:, ('0','1')]
-	z7['date']=day7
-	z7.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z7.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D7=z7[['date','type','provider']]
-	D7=D7[:-1]
-	
-	a = df.loc[df['2'] == day8].index[0]
-	b = df.loc[df['2'] == day15].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z8=c.loc[:, ('2','3')]
-	z8['date']=day8
-	z8.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z8.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D8=z8[['date','type','provider']]
-	D8=D8[:-1]
-	
-	a = df.loc[df['4'] == day9].index[0]
-	b = df.loc[df['4'] == day16].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z9=c.loc[:, ('4','5')]
-	z9['date']=day9
-	z9.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z9.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D9=z9[['date','type','provider']]
-	D9=D9[:-1]
-	
-	a = df.loc[df['6'] == day10].index[0]
-	b = df.loc[df['6'] == day17].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z10=c.loc[:, ('6','7')]
-	z10['date']=day10
-	z10.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z10.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D10=z10[['date','type','provider']]
-	D10=D10[:-1]
-	
-	a = df.loc[df['8'] == day11].index[0]
-	b = df.loc[df['8'] == day18].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z11=c.loc[:, ('8','9')]
-	z11['date']=day11
-	z11.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z11.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D11=z11[['date','type','provider']]
-	D11=D11[:-1]
-	
-	a = df.loc[df['10'] == day12].index[0]
-	b = df.loc[df['10'] == day19].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z12=c.loc[:, ('10','11')]
-	z12['date']=day12
-	z12.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z12.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D12=z12[['date','type','provider']]
-	D12=D12[:-1]
-	
-	a = df.loc[df['12'] == day13].index[0]
-	b = df.loc[df['12'] == day20].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z13=c.loc[:, ('12','13')]
-	z13['date']=day13
-	z13.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z13.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D13=z13[['date','type','provider']]
-	D13=D13[:-1]
-	
-	a = df.loc[df['0'] == day14].index[0]
-	b = df.loc[df['0'] == day21].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z14=c.loc[:, ('0','1')]
-	z14['date']=day14
-	z14.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z14.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D14=z14[['date','type','provider']]
-	D14=D14[:-1]
-	
-	a = df.loc[df['2'] == day15].index[0]
-	b = df.loc[df['2'] == day22].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z15=c.loc[:, ('2','3')]
-	z15['date']=day15
-	z15.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z15.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D15=z15[['date','type','provider']]
-	D15=D15[:-1]
-	
-	a = df.loc[df['4'] == day16].index[0]
-	b = df.loc[df['4'] == day23].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z16=c.loc[:, ('4','5')]
-	z16['date']=day16
-	z16.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z16.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D16=z16[['date','type','provider']]
-	D16=D16[:-1]
-	
-	a = df.loc[df['6'] == day17].index[0]
-	b = df.loc[df['6'] == day24].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z17=c.loc[:, ('6','7')]
-	z17['date']=day17
-	z17.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z17.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D17=z17[['date','type','provider']]
-	D17=D17[:-1]
-	
-	a = df.loc[df['8'] == day18].index[0]
-	b = df.loc[df['8'] == day25].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z18=c.loc[:, ('8','9')]
-	z18['date']=day18
-	z18.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z18.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D18=z18[['date','type','provider']]
-	D18=D18[:-1]
-	
-	a = df.loc[df['10'] == day19].index[0]
-	b = df.loc[df['10'] == day26].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z19=c.loc[:, ('10','11')]
-	z19['date']=day19
-	z19.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z19.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D19=z19[['date','type','provider']]
-	D19=D19[:-1]
-	
-	a = df.loc[df['12'] == day20].index[0]
-	b = df.loc[df['12'] == day27].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z20=c.loc[:, ('12','13')]
-	z20['date']=day20
-	z20.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z20.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D20=z20[['date','type','provider']]
-	D20=D20[:-1]
-	
-	a = df.loc[df['0'] == day21].index[0]
-	b = df.loc[df['0'] == day28].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z21=c.loc[:, ('0','1')]
-	z21['date']=day21
-	z21.rename(columns={ df.columns[0]:"type"}, inplace = True)
-	z21.rename(columns={ df.columns[1]:"provider"}, inplace = True)
-	D21=z21[['date','type','provider']]
-	D21=D21[:-1]
-	
-	a = df.loc[df['2'] == day22].index[0]
-	b = df.loc[df['2'] == day29].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z22=c.loc[:, ('2','3')]
-	z22['date']=day22
-	z22.rename(columns={ df.columns[2]:"type"}, inplace = True)
-	z22.rename(columns={ df.columns[3]:"provider"}, inplace = True)
-	D22=z22[['date','type','provider']]
-	D22=D22[:-1]
-	
-	a = df.loc[df['4'] == day23].index[0]
-	b = df.loc[df['4'] == day30].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z23=c.loc[:, ('4','5')]
-	z23['date']=day23
-	z23.rename(columns={ df.columns[4]:"type"}, inplace = True)
-	z23.rename(columns={ df.columns[5]:"provider"}, inplace = True)
-	D23=z23[['date','type','provider']]
-	D23=D23[:-1]
-	
-	a = df.loc[df['6'] == day24].index[0]
-	b = df.loc[df['6'] == day31].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z24=c.loc[:, ('6','7')]
-	z24['date']=day24
-	z24.rename(columns={ df.columns[6]:"type"}, inplace = True)
-	z24.rename(columns={ df.columns[7]:"provider"}, inplace = True)
-	D24=z24[['date','type','provider']]
-	D24=D24[:-1]
-	
-	a = df.loc[df['8'] == day25].index[0]
-	b = df.loc[df['8'] == day32].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z25=c.loc[:, ('8','9')]
-	z25['date']=day25
-	z25.rename(columns={ df.columns[8]:"type"}, inplace = True)
-	z25.rename(columns={ df.columns[9]:"provider"}, inplace = True)
-	D25=z25[['date','type','provider']]
-	D25=D25[:-1]
-	
-	a = df.loc[df['10'] == day26].index[0]
-	b = df.loc[df['10'] == day33].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z26=c.loc[:, ('10','11')]
-	z26['date']=day26
-	z26.rename(columns={ df.columns[10]:"type"}, inplace = True)
-	z26.rename(columns={ df.columns[11]:"provider"}, inplace = True)
-	D26=z26[['date','type','provider']]
-	D26=D26[:-1]
-	
-	a = df.loc[df['12'] == day27].index[0]
-	b = df.loc[df['12'] == day34].index[0]
-	c = df.iloc[int(a)+1:int(b)]
-	z27=c.loc[:, ('12','13')]
-	z27['date']=day27
-	z27.rename(columns={ df.columns[12]:"type"}, inplace = True)
-	z27.rename(columns={ df.columns[13]:"provider"}, inplace = True)
-	D27=z27[['date','type','provider']]
-	D27=D27[:-1]
-	
-	dfx=pd.DataFrame(columns=D0.columns)
-	
-	dfx=pd.concat([dfx,D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D22, D23, D24, D25, D26, D27])
-	
-	dfx['clinic'] = "WARD_P"
-
-	dfx.to_csv('wardp.csv', index=False)
-	dfx.to_csv('wardpx.csv', index=False)
-	
-	# Replace "Rounder" values with "AM - Continuity"
-	WARDP = dfx.replace({"On-Call 8a-8a": "AM - Continuity","On-Call": "AM - Continuity"},regex=True)
-
-	# Identify rows with "AM - Continuity"
-	am_continuity_rows = WARDP[WARDP.eq("AM - Continuity ").any(axis=1)].copy()
-
-	# Create corresponding "PM - Continuity" rows
-	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
-
-	# Append new rows to the original dataframe
-	WARDP = pd.concat([WARDP, pm_continuity_rows], ignore_index=True)
-
-	# Save the updated data
-	WARDP.to_csv('wardp.csv', index=False)
-	
-	#############################################################################################################
-	NYES['H'] = "H"
-	NYEi = NYES[(NYES['type'] == 'AM - Continuity ')]
-	NYEi['count'] = NYEi.groupby(['date'])['provider'].cumcount() + 0
-	NYEi['class'] = "H" + NYEi['count'].astype(str)
-	NYEi = NYEi.loc[:, ('date','type','provider','clinic','class')]
-	NYEi.to_csv('1.csv',index=False)
-	
-	NYES['H'] = "H"
-	NYEii = NYES[(NYES['type'] == 'PM - Continuity ')]
-	NYEii['count'] = NYEii.groupby(['date'])['provider'].cumcount() + 10
-	NYEii['class'] = "H" + NYEii['count'].astype(str)
-	NYEii = NYEii.loc[:, ('date','type','provider','clinic','class')]
-	NYEii.to_csv('2.csv',index=False)
-	
-	ETOWN['H'] = "H"
-	ETOWNi = ETOWN[(ETOWN['type'] == 'AM - Continuity ')]
-	ETOWNi['count'] = ETOWNi.groupby(['date'])['provider'].cumcount() + 0
-	ETOWNi['class'] = "H" + ETOWNi['count'].astype(str)
-	ETOWNi = ETOWNi.loc[:, ('date','type','provider','clinic','class')]
-	ETOWNi.to_csv('3.csv',index=False)
-	
-	ETOWN['H'] = "H"
-	ETOWNii = ETOWN[(ETOWN['type'] == 'PM - Continuity ')]
-	ETOWNii['count'] = ETOWNii.groupby(['date'])['provider'].cumcount() + 10
-	ETOWNii['class'] = "H" + ETOWNii['count'].astype(str)
-	ETOWNii = ETOWNii.loc[:, ('date','type','provider','clinic','class')]
-	ETOWNii.to_csv('4.csv',index=False)
-	
-	hope['class'] = "H"  # Top of Column
-	hopeiii = hope[(hope['type'] == 'AM - ACUTES')]
-	
-	# Group by 'date' and count occurrences
-	hopeiii['count'] = hopeiii.groupby(['date'])['provider'].cumcount()
-	
-	# Reserve H0 and H1 for the first two occurrences, subsequent start from H2
-	hopeiii['class'] = hopeiii['count'].apply(
-	    lambda count: "H0" if count == 0 else ("H1" if count == 1 else "H" + str(count + 2))
-	)
-	
-	hopeiii = hopeiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiii.to_csv('5.csv', index=False)
-	
-	hope['class'] = "H"  # Top of Column
-	hopeiii = hope[(hope['type'] == 'AM - ACUTES ')]
-	
-	# Group by 'date' and count occurrences
-	hopeiii['count'] = hopeiii.groupby(['date'])['provider'].cumcount()
-	
-	# Reserve H0 and H1 for the first two occurrences, subsequent start from H2
-	hopeiii['class'] = hopeiii['count'].apply(
-	    lambda count: "H0" if count == 0 else ("H1" if count == 1 else "H" + str(count + 2))
-	)
-	
-	hopeiii = hopeiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiii.to_csv('6.csv', index=False)
-	
-	######STARTS AT H10 (PM - ACUTES)
-	hope['class'] = "H"  # Top of Next Column in Hope Drive
-	hopeiiiii = hope[(hope['type'] == 'PM - ACUTES ')]
-	
-	# Group by 'date' and count occurrences
-	hopeiiiii['count'] = hopeiiiii.groupby(['date'])['provider'].cumcount()
-	
-	# Reserve H10 and H11 for the first two occurrences, subsequent start from H12
-	hopeiiiii['class'] = hopeiiiii['count'].apply(
-	    lambda count: "H10" if count == 0 else ("H11" if count == 1 else "H" + str(count + 12))
-	)
-	
-	hopeiiiii = hopeiiiii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeiiiii.to_csv('7.csv', index=False)
-	
-	######STARTS AT H2 (AM - Continuity)
-	hope['H'] = "H"
-	hopei = hope[(hope['type'] == 'AM - Continuity ')]
-	
-	# Group by 'date' and count occurrences
-	hopei['count'] = hopei.groupby(['date'])['provider'].cumcount() + 2  # Start at H2
-	hopei['class'] = "H" + hopei['count'].astype(str)
-	hopei = hopei.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopei.to_csv('8.csv', index=False)
-	
-	######STARTS AT H12 (PM - Continuity)
-	hope['H'] = "H"
-	hopeii = hope[(hope['type'] == 'PM - Continuity ')]
-
-	hopeii['count'] = hopeii.groupby(['date'])['provider'].cumcount() + 12  # Start at H12
-	hopeii['class'] = "H" + hopeii['count'].astype(str)
-	hopeii = hopeii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	hopeii.to_csv('9.csv', index=False)
-
-	WARDA['H'] = "H"
-
-	WARDAi = WARDA[(WARDA['type'] == 'AM - Continuity ')]
-	WARDAi['count'] = WARDAi.groupby(['date'])['provider'].cumcount() + 0
-	WARDAi['class'] = "H" + WARDAi['count'].astype(str)
-	WARDAi = WARDAi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	WARDAi.to_csv('10.csv', index=False)
-
-	WARDA['H'] = "H"
-	WARDAii = WARDA[(WARDA['type'] == 'PM - Continuity ')]
-	WARDAii['count'] = WARDAii.groupby(['date'])['provider'].cumcount() + 10
-	WARDAii['class'] = "H" + WARDAii['count'].astype(str)
-	WARDAii = WARDAii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	WARDAii.to_csv('11.csv', index=False)
-
-	WARDP['H'] = "H"
-	WARDPi = WARDP[(WARDP['type'] == 'AM - Continuity ')]
-	WARDPi['count'] = WARDPi.groupby(['date'])['provider'].cumcount() + 0
-	WARDPi['class'] = "H" + WARDPi['count'].astype(str)
-	WARDPi = WARDPi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	WARDPi.to_csv('12.csv', index=False)
-
-	WARDP['H'] = "H"
-	WARDPii = WARDP[(WARDP['type'] == 'PM - Continuity ')]
-	WARDPii['count'] = WARDPii.groupby(['date'])['provider'].cumcount() + 10
-	WARDPii['class'] = "H" + WARDPii['count'].astype(str)
-	WARDPii = WARDPii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	WARDPii.to_csv('13.csv', index=False)
-
-	COMPLEX['H'] = "H"
-	COMPLEXi = COMPLEX[(COMPLEX['type'] == 'AM - Continuity ')]
-	COMPLEXi['count'] = COMPLEXi.groupby(['date'])['provider'].cumcount() + 0
-	COMPLEXi['class'] = "H" + COMPLEXi['count'].astype(str)
-	COMPLEXi = COMPLEXi.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	COMPLEXi.to_csv('14.csv', index=False)
-
-	COMPLEX['H'] = "H"
-	COMPLEXii = COMPLEX[(COMPLEX['type'] == 'PM - Continuity ')]
-	COMPLEXii['count'] = COMPLEXii.groupby(['date'])['provider'].cumcount() + 10
-	COMPLEXii['class'] = "H" + COMPLEXii['count'].astype(str)
-	COMPLEXii = COMPLEXii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
-	COMPLEXii.to_csv('15.csv', index=False)
-
-	PICU[PICU['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv('16.csv', index=False)
-	PICU[PICU['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv('17.csv', index=False)
-
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 18)} #Add +1 to 18... so if adding t18, t19... then add 2 to 18... and its 20. Or 1 plus the last t value... t17?... last number in range should be 18
 	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17 = tables.values()
