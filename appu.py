@@ -431,16 +431,14 @@ elif st.session_state.page == "OPD Creator":
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
 	        # Identify rows containing "AM - Continuity"
-	        am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
+	        am_continuity_rows = df[df["type"] == "AM - Continuity"].copy()
 	
 	        # Create corresponding "PM - Continuity" rows
-	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	        pm_continuity_rows = am_continuity_rows.copy()
+	        pm_continuity_rows["type"] = "PM - Continuity"
 	
-	        # Append new rows to the original dataframe (first duplication)
-	        df = pd.concat([df, pm_continuity_rows], ignore_index=True)
-	
-	        # Duplicate the AM - Continuity and PM - Continuity rows again
-	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows], ignore_index=True)
+	        # Duplicate both AM and PM Continuity rows to ensure each appears twice
+	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows, am_continuity_rows, pm_continuity_rows], ignore_index=True)
 	
 	        # Save the updated data
 	        filename = f"{clinic_name.lower()}.csv"
@@ -448,6 +446,7 @@ elif st.session_state.page == "OPD Creator":
 	        print(f"{clinic_name} updated with two AM - Continuity and two PM - Continuity entries and saved to {filename}.")
 	    
 	    return df
+
 
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
 	    if df is not None:
