@@ -36,6 +36,12 @@ if st.session_state.page == "Home":
     if st.button("Go to Create Student Schedule"):
         navigate_to("Create Student Schedule")
 
+import pandas as pd
+from openpyxl import Workbook
+import datetime
+import streamlit as st
+
+# Streamlit Page: Create OPD
 elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
     st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
@@ -58,13 +64,18 @@ elif st.session_state.page == "Create OPD":
             ws["A1"] = "HAMPDEN NURSERY"
             ws["A2"] = "CUSTOM_PRINT"
 
-            # Fill A5 to A13 with "custom_value"
-            for row in range(5, 14):
-                ws[f"A{row}"] = "custom_value"
-		
-            for row in range(5, 14):
-                ws[f"C{row}"] = "custom_value"
-		    
+            # Columns where "custom_value" should be placed
+            columns = ["A", "C", "E", "G", "I", "K"]
+
+            # Row ranges to repeat the pattern
+            row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44)]
+
+            # Fill the table with "custom_value"
+            for start_row, end_row in row_ranges:
+                for col in columns:
+                    for row in range(start_row, end_row + 1):
+                        ws[f"{col}{row}"] = "custom_value"
+
             # Days of the week to be placed across the row
             days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
@@ -72,7 +83,7 @@ elif st.session_state.page == "Create OPD":
             start_row = 4
 
             # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
-            for week in range(5):  # 4 weeks
+            for week in range(4):  # 4 weeks
                 current_date = start_date + datetime.timedelta(weeks=week)
                 for i, day in enumerate(days):
                     col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K)
