@@ -391,42 +391,46 @@ elif st.session_state.page == "OPD Creator":
 	        day28, day29, day30, day31, day32, day33, day34]
 	
 	# Function to process each file
-	def process_file(file_key, clinic_name, replacements=None):
-	    """Process an uploaded file and return cleaned DataFrame."""
+	def process_file(file_key, clinic_name, replacements=None, df=None):
+	    """Process an uploaded file and return a cleaned DataFrame."""
 	    
-	    if file_key in uploaded_files:
-	        df = pd.read_excel(uploaded_files[file_key], dtype=str)
-	        df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
+	    # If a DataFrame is passed, use it. Otherwise, read from the uploaded file.
+	    if df is None:
+	        if file_key in uploaded_files:
+	            df = pd.read_excel(uploaded_files[file_key], dtype=str)
+	        else:
+	            return None  # Handle missing file case
 	
-	        D_dict = {}
-	        for i in range(28):
-	            col_idx = column_pairs[i % len(column_pairs)]
-	            start_day = days[i]
-	            end_day = days[i + 7]
+	    df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
 	
-	            start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
-	            end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
+	    D_dict = {}
+	    for i in range(28):
+	        col_idx = column_pairs[i % len(column_pairs)]
+	        start_day = days[i]
+	        end_day = days[i + 7]
 	
-	            extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
-	            extracted_data.columns = ['type', 'provider']
-	            extracted_data.insert(0, 'date', start_day)
-	            extracted_data = extracted_data[:-1]
+	        start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
+	        end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
 	
-	            D_dict[f"D{i}"] = extracted_data
+	        extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
+	        extracted_data.columns = ['type', 'provider']
+	        extracted_data.insert(0, 'date', start_day)
+	        extracted_data = extracted_data[:-1]
 	
-	        dfx = pd.concat(D_dict.values(), ignore_index=True)
-	        dfx['clinic'] = clinic_name
+	        D_dict[f"D{i}"] = extracted_data
 	
-	        if replacements:
-	            dfx = dfx.replace(replacements, regex=True)
+	    dfx = pd.concat(D_dict.values(), ignore_index=True)
+	    dfx['clinic'] = clinic_name
 	
-	        filename = f"{clinic_name.lower()}.csv"
-	        dfx.to_csv(filename, index=False)
+	    if replacements:
+	        dfx = dfx.replace(replacements, regex=True)
 	
-	        print(f"Processed {clinic_name} and saved to {filename}")
-	        return dfx  # Return DataFrame for further processing
-	    else:
-	        return None  # Handle missing file case
+	    filename = f"{clinic_name.lower()}.csv"
+	    dfx.to_csv(filename, index=False)
+	
+	    print(f"Processed {clinic_name} and saved to {filename}")
+	    return dfx  # Return DataFrame for further processing
+
 
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
@@ -596,7 +600,7 @@ elif st.session_state.page == "OPD Creator":
 	cleaned_picu_df = process_picu_exclusions(raw_picu_df)
 	
 	# Step 3: Process the cleaned PICU data as usual
-	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"), df = cleaned_picu_df)
 	
 	# Save the updated PICU file
 	if picu_df is not None:
