@@ -437,7 +437,7 @@ elif st.session_state.page == "OPD Creator":
 	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 	
 	        # Append new rows to the original dataframe
-	        df = pd.concat([df, df, pm_continuity_rows, pm_continuity], ignore_index=True).sort_values(by=["date","provider"]).reset_index(drop=True)
+	        df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).sort_values(by=["date","provider"]).reset_index(drop=True)
 	
 	        # Save the updated data
 	        filename = f"{clinic_name.lower()}.csv"
