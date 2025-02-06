@@ -427,7 +427,7 @@ elif st.session_state.page == "OPD Creator":
 	        return dfx  # Return DataFrame for further processing
 	    else:
 	        return None  # Handle missing file case
-	
+
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
 	        # Identify rows containing "AM - Continuity"
@@ -444,6 +444,19 @@ elif st.session_state.page == "OPD Creator":
 	        st.write(f"### {clinic_name} - Updated Continuity Schedule")
 	        st.dataframe(df)
 	
+	        # Convert DataFrame to CSV format in memory for download
+	        output = io.StringIO()
+	        df.to_csv(output, index=False)
+	        output.seek(0)
+	
+	        # Create a download button for the updated CSV file
+	        st.download_button(
+	            label=f"Download {clinic_name} CSV",
+	            data=output.getvalue(),
+	            file_name=f"{clinic_name.lower()}.csv",
+	            mime="text/csv"
+	        )
+	    
 	    return df
 			
 
