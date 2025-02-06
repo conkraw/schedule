@@ -432,10 +432,10 @@ elif st.session_state.page == "OPD Creator":
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
 	        # Identify rows containing "AM - Continuity"
-	        am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
+	        am_continuity_rows = df[df.eq("AM - Continuity ").any(axis=1)].copy()
 	
 	        # Create corresponding "PM - Continuity" rows
-	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 	
 	        # Append new rows to the original dataframe
 	        df = pd.concat([df, pm_continuity_rows], ignore_index=True)
