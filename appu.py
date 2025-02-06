@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 import xlsxwriter
-import openpyxl
+import openpyxl import Workbook
 from io import BytesIO
 
 # Initialize session state variables efficiently
