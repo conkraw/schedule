@@ -427,7 +427,7 @@ elif st.session_state.page == "OPD Creator":
 	        return dfx  # Return DataFrame for further processing
 	    else:
 	        return None  # Handle missing file case
-
+	
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
 	        # Identify rows containing "AM - Continuity"
@@ -440,15 +440,12 @@ elif st.session_state.page == "OPD Creator":
 	        # Duplicate both AM and PM Continuity rows to ensure each appears twice
 	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows, am_continuity_rows, pm_continuity_rows], ignore_index=True)
 	
-	        # Save the updated data
-	        filename = f"{clinic_name.lower()}.csv"
-	        df.to_csv(filename, index=False)
-	        print(f"{clinic_name} updated with two AM - Continuity and two PM - Continuity entries and saved to {filename}.")
-
-		st.dataframe(df)
-		
+	        # Display the updated DataFrame in Streamlit
+	        st.write(f"### {clinic_name} - Updated Continuity Schedule")
+	        st.dataframe(df)
+	
 	    return df
-		
+			
 
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
 	    if df is not None:
