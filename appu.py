@@ -2022,19 +2022,19 @@ elif st.session_state.page == "OPD Creator":
 	dfx.to_csv('wardp.csv', index=False)
 
 	# Replace "Rounder" values with "AM - Continuity"
-	WARDA = dfx.replace({"On-Call": "AM - Continuity","On-Call 8a-8a": "AM - Continuity"},regex=True)
+	WARDP = dfx.replace({"On-Call": "AM - Continuity","On-Call 8a-8a": "AM - Continuity"},regex=True)
 
 	# Identify rows with "AM - Continuity"
-	am_continuity_rows = WARDA[WARDA.eq("AM - Continuity ").any(axis=1)].copy()
+	am_continuity_rows = WARDP[WARDP.eq("AM - Continuity ").any(axis=1)].copy()
 
 	# Create corresponding "PM - Continuity" rows
 	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 
 	# Append new rows to the original dataframe
-	WARDA = pd.concat([WARDA, pm_continuity_rows], ignore_index=True)
+	WARDP = pd.concat([WARDP, pm_continuity_rows], ignore_index=True)
 
 	# Save the updated data
-	WARDA.to_csv('wardp.csv', index=False)
+	WARDP.to_csv('wardp.csv', index=False)
 	
 	#############################################################################################################
 	NYES['H'] = "H"
