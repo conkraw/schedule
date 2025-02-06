@@ -57,43 +57,50 @@ elif st.session_state.page == "Create OPD":
         else:
             st.error('Please enter a date.')
 
+import streamlit as st
+
 # File upload page
 elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
-    st.write('Upload the following Excel files:')
-    
+    st.write("Upload the following Excel files:")
+
+    # Expected filenames mapping
+    required_files = {
+        "HOPE_DRIVE": "HOPE_DRIVE.xlsx",
+        "ETOWN": "ETOWN.xlsx",
+        "NYES": "NYES.xlsx",
+        "WARD_A": "WARD_A.xlsx",
+        "WARD_P": "WARD_P.xlsx",
+        "COMPLEX": "COMPLEX.xlsx",
+	"PICU": "PICU.xlsx",
+    }
+
     # Allow multiple file uploads at once
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
-    
+
     # Initialize the dictionary for storing files in session state
     uploaded_files_dict = {}
-    
+
     if uploaded_files:
         for file in uploaded_files:
-            if 'HOPE_DRIVE' in file.name:
-                uploaded_files_dict['HOPE_DRIVE.xlsx'] = file
-            elif 'ETOWN' in file.name:
-                uploaded_files_dict['ETOWN.xlsx'] = file
-            elif 'NYES' in file.name:
-                uploaded_files_dict['NYES.xlsx'] = file
-            elif 'WARD_A' in file.name:
-                uploaded_files_dict['WARD_A.xlsx'] = file
-            elif 'WARD_P' in file.name:
-                uploaded_files_dict['WARD_P.xlsx'] = file
-            elif 'COMPLEX' in file.name:
-                uploaded_files_dict['COMPLEX.xlsx'] = file
+            for key, filename in required_files.items():
+                if key in file.name:
+                    uploaded_files_dict[filename] = file
+                    break  # Stop checking once a match is found
 
-		    
-        # Store the uploaded files in session state
+        # Store uploaded files in session state
         st.session_state.uploaded_files = uploaded_files_dict
 
-    # Check if all files are uploaded
-    if all(key in uploaded_files_dict for key in ['HOPE_DRIVE.xlsx', 'ETOWN.xlsx', 'NYES.xlsx', 'WARD_A.xlsx', 'WARD_P.xlsx', 'COMPLEX.xlsx']):
-        st.write("All files uploaded successfully!")
-        st.session_state.page = "OPD Creator"  # Move to next page after uploading
-        st.rerun()  # Force a rerun to reflect the page change
-    else:
-        st.write("Please upload all required files.")
+        # Check if all required files are uploaded
+        missing_files = [fname for fname in required_files.values() if fname not in uploaded_files_dict]
+
+        if not missing_files:
+            st.success("All files uploaded successfully!")
+            st.session_state.page = "OPD Creator"  # Move to the next page
+            st.rerun()  # Force a rerun to reflect the page change
+        else:
+            st.error(f"Missing files: {', '.join(missing_files)}. Please upload all required files.")
+
 
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
