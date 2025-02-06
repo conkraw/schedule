@@ -12,6 +12,12 @@ from io import BytesIO
 import os
 import time 
 
+def format_date_with_suffix(date):
+    """Formats a date as 'Month Day[st/nd/rd/th], Year' (e.g., 'February 3rd, 2025')."""
+    day = date.day
+    suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    return date.strftime(f"%B {day}{suffix}, %Y")
+	
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {
         "title": "HAMPDEN NURSERY",
@@ -82,13 +88,13 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Start row for the first week
     start_row = 4
 
-    # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
     for week in range(5):  # 4 weeks
         current_date = start_date + datetime.timedelta(weeks=week)
         for i, day in enumerate(days):
             col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K, M)
             ws[f"{col_letter}{start_row}"] = day  # Place the day name
-            ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
+            formatted_date = format_date_with_suffix(current_date + datetime.timedelta(days=i))  # Format the date
+            ws[f"{col_letter}{start_row + 1}"] = formatted_date
         start_row += 10  # Skip 10 rows before the next week starts
 
     # Save the Excel file with the specified name
