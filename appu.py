@@ -713,8 +713,8 @@ elif st.session_state.page == "OPD Creator":
 	hope.to_csv('hope.csv',index=False)
 
 	####################################################PICU#################################################
-	if uploaded_files['PICU.xlsx']:
-	    df = pd.read_excel(uploaded_files['PICU.xlsx'], dtype=str)
+	if uploaded_files['HOPE_DRIVE.xlsx']:
+	    df = pd.read_excel(uploaded_files['HOPE_DRIVE.xlsx'], dtype=str)
 	
 	df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
 
