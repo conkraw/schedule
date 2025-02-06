@@ -590,7 +590,7 @@ elif st.session_state.page == "OPD Creator":
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 
 	# Step 1: Read and preprocess PICU file first
-	raw_picu_df = pd.read_excel("PICU.xlsx", dtype=str)  # Read raw data
+	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
 	
 	# Step 2: Apply Friday exclusions before normal processing
 	cleaned_picu_df = process_picu_exclusions(raw_picu_df)
