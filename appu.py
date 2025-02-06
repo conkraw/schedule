@@ -564,7 +564,8 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
 	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
 	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
-	
+
+
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 18)} #Add +1 to 18... so if adding t18, t19... then add 2 to 18... and its 20. Or 1 plus the last t value... t17?... last number in range should be 18
 	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17 = tables.values()
@@ -667,6 +668,20 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("WARD_A", "W_A")
 	process_excel_mapping("WARD_P", "W_P")
 	process_excel_mapping("PICU", "PICU")
+
+	df=pd.read_csv('final.csv',dtype=str)
+        import io
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
+
+        # Streamlit download button
+        st.download_button(
+            label="Download CSV File",
+            data=output.getvalue(),
+            file_name="final.csv",
+            mime="text/csv"
+        )
 	###############################################################################################
 
 	# Button to trigger the download
