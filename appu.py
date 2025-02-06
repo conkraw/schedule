@@ -2545,8 +2545,8 @@ elif st.session_state.page == "OPD Creator":
 	COMPLEXii = COMPLEXii.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
 	COMPLEXii.to_csv('15.csv', index=False)
 
-	PICU[(PICU['type'] == 'AM - Continuity ')].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),class=lambda x: "H" + x['count'].astype(str))[['date', 'type', 'provider', 'clinic', 'class']].to_csv('16.csv', index=False)
-	PICU[(PICU['type'] == 'PM - Continuity ')].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),class=lambda x: "H" + x['count'].astype(str))[['date', 'type', 'provider', 'clinic', 'class']].to_csv('17.csv', index=False)
+	PICU[PICU['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv('16.csv', index=False)
+	PICU[PICU['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv('17.csv', index=False)
 
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 18)} #Add +1 to 18... so if adding t18, t19... then add 2 to 18... and its 20. Or 1 plus the last t value... t17?... last number in range should be 18
