@@ -588,9 +588,6 @@ elif st.session_state.page == "OPD Creator":
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
-	
-import pandas as pd
-
 
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel("PICU.xlsx", dtype=str)  # Read raw data
