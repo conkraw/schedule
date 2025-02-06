@@ -623,49 +623,49 @@ elif st.session_state.page == "OPD Creator":
 	                print(f"{clinic_name} {type_key} saved to {filename}.")
 
 	# Define replacement rules for each clinic
-replacement_rules = {
-    "HOPE_DRIVE.xlsx": {
-        "Hope Drive AM Continuity": "AM - Continuity",
-        "Hope Drive PM Continuity": "PM - Continuity",
-        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
-        "Hope Drive PM Acute Precept": "PM - ACUTES",
-        "Hope Drive Weekend Continuity": "AM - Continuity",
-        "Hope Drive Weekend Acute 1": "AM - ACUTES",
-        "Hope Drive Weekend Acute 2": "AM - ACUTES"
-    },
-    "PICU.xlsx": {
-        "2nd PICU Attending 7:45a-4p": "AM - Continuity",
-        "1st PICU Attending 7:30a-5p": "AM - Continuity"
-    },
-    "ETOWN.xlsx": {
-        "Etown AM Continuity": "AM - Continuity",
-        "Etown PM Continuity": "PM - Continuity"
-    },
-    "NYES.xlsx": {
-        "Nyes Rd AM Continuity": "AM - Continuity",
-        "Nyes Rd PM Continuity": "PM - Continuity"
-    },
-    "COMPLEX.xlsx": {
-        "Hope Drive Clinic AM": "AM - Continuity",
-        "Hope Drive Clinic PM": "PM - Continuity"
-    },
-    "WARD_A.xlsx": {
-        "Rounder 1 7a-7p": "AM - Continuity",
-        "Rounder 2 7a-7p": "AM - Continuity",
-        "Rounder 3 7a-7p": "AM - Continuity"
-    },
-    "WARD_P.xlsx": {
-        "On-Call 8a-8a": "AM - Continuity",
-        "On-Call": "AM - Continuity"
-    },
-    "PSHCH_NURSERY.xlsx": {  # Nursery replacements
-        "Nursery Weekday 8a-6p": "AM - Continuity",
-        "Nursery Weekend": "AM - Continuity"
-    },
-    "HAMPDEN_NURSERY.xlsx": {  # Replace "CUSTOM_PRINT" with "AM - Continuity"
-        "custom_print": "AM - Continuity"
-    }
-}
+	replacement_rules = {
+	    "HOPE_DRIVE.xlsx": {
+	        "Hope Drive AM Continuity": "AM - Continuity",
+	        "Hope Drive PM Continuity": "PM - Continuity",
+	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
+	        "Hope Drive PM Acute Precept": "PM - ACUTES",
+	        "Hope Drive Weekend Continuity": "AM - Continuity",
+	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
+	        "Hope Drive Weekend Acute 2": "AM - ACUTES"
+	    },
+	    "PICU.xlsx": {
+	        "2nd PICU Attending 7:45a-4p": "AM - Continuity",
+	        "1st PICU Attending 7:30a-5p": "AM - Continuity"
+	    },
+	    "ETOWN.xlsx": {
+	        "Etown AM Continuity": "AM - Continuity",
+	        "Etown PM Continuity": "PM - Continuity"
+	    },
+	    "NYES.xlsx": {
+	        "Nyes Rd AM Continuity": "AM - Continuity",
+	        "Nyes Rd PM Continuity": "PM - Continuity"
+	    },
+	    "COMPLEX.xlsx": {
+	        "Hope Drive Clinic AM": "AM - Continuity",
+	        "Hope Drive Clinic PM": "PM - Continuity"
+	    },
+	    "WARD_A.xlsx": {
+	        "Rounder 1 7a-7p": "AM - Continuity",
+	        "Rounder 2 7a-7p": "AM - Continuity",
+	        "Rounder 3 7a-7p": "AM - Continuity"
+	    },
+	    "WARD_P.xlsx": {
+	        "On-Call 8a-8a": "AM - Continuity",
+	        "On-Call": "AM - Continuity"
+	    },
+	    "PSHCH_NURSERY.xlsx": {  # Nursery replacements
+	        "Nursery Weekday 8a-6p": "AM - Continuity",
+	        "Nursery Weekend": "AM - Continuity"
+	    },
+	    "HAMPDEN_NURSERY.xlsx": {  # Replace "CUSTOM_PRINT" with "AM - Continuity"
+	        "custom_print": "AM - Continuity"
+	    }
+	}
 
 
 	def process_picu_exclusions(df):
