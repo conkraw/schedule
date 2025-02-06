@@ -2057,9 +2057,7 @@ elif st.session_state.page == "OPD Creator":
 	        target_column = column_mapping[t_value]
 	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
 	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-    	# Save updated workbook
-        wb1.save('OPD.xlsx')
+	wb1.save('OPD.xlsx')
     
         df=pd.read_csv('final.csv',dtype=str)
         import io
