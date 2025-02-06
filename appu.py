@@ -81,7 +81,7 @@ elif st.session_state.page == "Create OPD":
                 start_row += 10  # Skip 10 rows before the next week starts
 
             # Save the Excel file
-            file_name = "/mnt/data/Duplicated_File.xlsx"
+            file_name = "Duplicated_File.xlsx"
             wb.save(file_name)
 
             # Store file path in session state for later downloads
