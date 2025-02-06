@@ -36,13 +36,6 @@ if st.session_state.page == "Home":
     if st.button("Go to Create Student Schedule"):
         navigate_to("Create Student Schedule")
 
-# Streamlit Page: Create OPD
-import pandas as pd
-from openpyxl import Workbook
-import datetime
-import streamlit as st
-
-# Streamlit Page: Create OPD
 elif st.session_state.page == "Create OPD":
     st.title('Date Input for OPD')
     st.write('Enter start date in **m/d/yyyy format**, no leading zeros (e.g., 7/6/2021):')
