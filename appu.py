@@ -589,14 +589,24 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	
-	#picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
-	picu_df = process_picu_exclusions("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
-	picu_df = process_file(picu_df)  # Apply the Friday exclusion logic
-	st.dataframe(picu_df)
+import pandas as pd
+
+
+	# Step 1: Read and preprocess PICU file first
+	raw_picu_df = pd.read_excel("PICU.xlsx", dtype=str)  # Read raw data
 	
+	# Step 2: Apply Friday exclusions before normal processing
+	cleaned_picu_df = process_picu_exclusions(raw_picu_df)
+	
+	# Step 3: Process the cleaned PICU data as usual
+	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+	
+	# Save the updated PICU file
 	if picu_df is not None:
 	    picu_df.to_csv("picu.csv", index=False)
 	    print("PICU updated and saved with Friday exclusions.")
+	else:
+	    print("Error: PICU.xlsx could not be processed. Check if the file exists or is uploaded correctly.")
 		
 	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
