@@ -673,7 +673,7 @@ elif st.session_state.page == "OPD Creator":
 	import io
 	output = io.StringIO()
 	df.to_csv(output,index=False)
-        output.seek(0)
+	output.seek(0)
 	st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
 	
 	###############################################################################################
