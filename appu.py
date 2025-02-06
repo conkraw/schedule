@@ -1684,10 +1684,10 @@ elif st.session_state.page == "OPD Creator":
 	
 	dfx['clinic'] = "COMPLEX"
 	
-	dfx.to_csv('nyes.csv',index=False)
-	NYES=dfx.replace("Hope Drive Clinic AM", "AM - Continuity", regex=True)
-	NYES=NYES.replace("Hope Drive Clinic PM", "PM - Continuity", regex=True)
-	NYES.to_csv('complex.csv',index=False)
+	dfx.to_csv('complex.csv',index=False)
+	COMPLEX=dfx.replace("Hope Drive Clinic AM", "AM - Continuity", regex=True)
+	COMPLEX=COMPLEX.replace("Hope Drive Clinic PM", "PM - Continuity", regex=True)
+	COMPLEX.to_csv('complex.csv',index=False)
 	
 	#############################################################WARD_A################################################
 	if uploaded_files['WARD_A.xlsx']:
