@@ -599,485 +599,75 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv',index=False)
 	df.to_excel('final.xlsx',index=False)
 
-	#df=pd.read_csv('wardpx.csv',dtype=str)
-	#import io
-	#output = io.StringIO()
-	#df.to_csv(output, index=False)
-	#output.seek(0)
-	#st.download_button(label="Download CSV file", data=output.getvalue(),file_name="warpx.csv",mime="text/csv")
-	
+	########################################################################################################################################################################
 	import openpyxl
 	from openpyxl.styles import Alignment
 	
-	# Load workbooks and worksheets
-	wb = openpyxl.load_workbook('final.xlsx')
-	ws = wb['Sheet1']
-	
-	wb1 = openpyxl.load_workbook('OPD.xlsx')
-	ws1 = wb1['HOPE_DRIVE']
-	
 	def generate_mapping(start_value):
-	    # Start with the special mappings
-	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
+	    """
+	    Generates a mapping dictionary for H0 to H19 starting at a given start_value.
+	    """
+	    return {f"H{i}": start_value + i for i in range(20)}
+	
+	def create_t_mapping():
+	    """
+	    Creates the combined mapping for T0 to T27.
+	    """
+	    t_mappings = [
+	        (0, 6),  # T0 to T6 starts at 6
+	        (7, 30),  # T7 to T13 starts at 30
+	        (14, 54),  # T14 to T20 starts at 54
+	        (21, 78)   # T21 to T27 starts at 78
+	    ]
+	
+	    combined_mapping = {}
+	    for start_t, start_value in t_mappings:
+	        common_mapping = generate_mapping(start_value)
+	        combined_mapping.update({f"T{i}": common_mapping for i in range(start_t, start_t + 7)})
+	
+	    return combined_mapping
+	
+	def process_excel_mapping(location, sheet_name):
+	    """
+	    Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
+	    """
+	    wb = openpyxl.load_workbook('final.xlsx')
+	    ws = wb['Sheet1']
 	    
-	    return mapping
+	    wb1 = openpyxl.load_workbook('OPD.xlsx')
+	    ws1 = wb1[sheet_name]
 	
-	# Generate the mappings starting from 6 for the first group
-	common_mapping_1 = generate_mapping(6)
-	# Construct the t_mapping dictionary with the common structure for T0 to T6
-	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
+	    combined_t_mapping = create_t_mapping()
 	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_2 = generate_mapping(30)
-	# Construct the t_mapping dictionary with the common structure for T7 to T13
-	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
+	    column_mapping = {f"T{i}": (i % 7) + 2 for i in range(28)}
 	
-	# Generate the mappings starting from 54 for the second group
-	common_mapping_3 = generate_mapping(54)
-	# Construct the t_mapping dictionary with the common structure for T14 to T20
-	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
+	    for row in ws.iter_rows():
+	        t_value = row[7].value  # Column H (index 7)
+	        h_value = row[6].value  # Column G (index 6)
+	        row_location = row[4].value  # Column E (index 4)
 	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_4 = generate_mapping(78)
-	# Construct the t_mapping dictionary with the common structure for T21 to T28
-	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
+	        if row_location == location and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
+	            target_row = combined_t_mapping[t_value][h_value]
+	            target_column = column_mapping[t_value]
 	
-	# Combine both mappings
-	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
+	            ws1.cell(row=target_row, column=target_column).value = row[5].value  # Column F (index 5)
+	            ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
 	
-	# Now the `combined_t_mapping` will have the correct structure
-	#print(combined_t_mapping)
-	
-	
-	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
-	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
-	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
-	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
-	                 }
-	
-	# Iterate through rows in the worksheet
-	for row in ws.iter_rows():
-	    t_value = row[7].value  # Value in column H (index 7)
-	    h_value = row[6].value  # Value in column G (index 6)
-	    location = row[4].value  # Value in column E (index 4)
-	
-	    # Check conditions and apply mapping
-	    if location == "HOPE_DRIVE" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	        target_row = combined_t_mapping[t_value][h_value]
-	        target_column = column_mapping[t_value]
-	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
-	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-	# Save updated workbook
-	wb1.save('OPD.xlsx')
-	
-	###############################################################################################
-	
-	import openpyxl
-	from openpyxl.styles import Alignment
-	
-	# Load workbooks and worksheets
-	wb = openpyxl.load_workbook('final.xlsx')
-	ws = wb['Sheet1']
-	
-	wb1 = openpyxl.load_workbook('OPD.xlsx')
-	ws1 = wb1['ETOWN']
-	
-	def generate_mapping(start_value):
-	    # Create a dictionary with H0 to H19 keys, with values starting from `start_value`
-	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
-	    
-	    return mapping
-	
-	# Generate the mappings starting from 6 for the first group
-	common_mapping_1 = generate_mapping(6)
-	# Construct the t_mapping dictionary with the common structure for T0 to T6
-	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
-	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_2 = generate_mapping(30)
-	# Construct the t_mapping dictionary with the common structure for T7 to T13
-	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
-	
-	# Generate the mappings starting from 54 for the third group
-	common_mapping_3 = generate_mapping(54)
-	# Construct the t_mapping dictionary with the common structure for T14 to T20
-	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
-	
-	# Generate the mappings starting from 78 for the fourth group
-	common_mapping_4 = generate_mapping(78)
-	# Construct the t_mapping dictionary with the common structure for T21 to T28
-	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
-	
-	# Combine both mappings
-	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
-	
-	# Now the `combined_t_mapping` will have the correct structure
-	#print(combined_t_mapping)
-	
-	
-	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
-	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
-	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
-	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
-	                 }
-	
-	# Iterate through rows in the worksheet
-	for row in ws.iter_rows():
-	    t_value = row[7].value  # Value in column H (index 7)
-	    h_value = row[6].value  # Value in column G (index 6)
-	    location = row[4].value  # Value in column E (index 4)
-	
-	    # Check conditions and apply mapping
-	    if location == "ETOWN" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	        target_row = combined_t_mapping[t_value][h_value]
-	        target_column = column_mapping[t_value]
-	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
-	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-	# Save updated workbook
-	wb1.save('OPD.xlsx')
-	
-	###############################################################################################
-	
-	import openpyxl
-	from openpyxl.styles import Alignment
-	
-	# Load workbooks and worksheets
-	wb = openpyxl.load_workbook('final.xlsx')
-	ws = wb['Sheet1']
-	
-	wb1 = openpyxl.load_workbook('OPD.xlsx')
-	ws1 = wb1['NYES']
-	
-	def generate_mapping(start_value):
-	    # Create a dictionary with H0 to H19 keys, with values starting from `start_value`
-	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
-	    
-	    return mapping
-	
-	# Generate the mappings starting from 6 for the first group
-	common_mapping_1 = generate_mapping(6)
-	# Construct the t_mapping dictionary with the common structure for T0 to T6
-	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
-	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_2 = generate_mapping(30)
-	# Construct the t_mapping dictionary with the common structure for T7 to T13
-	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
-	
-	# Generate the mappings starting from 54 for the third group
-	common_mapping_3 = generate_mapping(54)
-	# Construct the t_mapping dictionary with the common structure for T14 to T20
-	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
-	
-	# Generate the mappings starting from 78 for the fourth group
-	common_mapping_4 = generate_mapping(78)
-	# Construct the t_mapping dictionary with the common structure for T21 to T28
-	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
-	
-	# Combine both mappings
-	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
-	
-	# Now the `combined_t_mapping` will have the correct structure
-	#print(combined_t_mapping)
-	
-	
-	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
-	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
-	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
-	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
-	                 }
-	
-	# Iterate through rows in the worksheet
-	for row in ws.iter_rows():
-	    t_value = row[7].value  # Value in column H (index 7)
-	    h_value = row[6].value  # Value in column G (index 6)
-	    location = row[4].value  # Value in column E (index 4)
-	
-	    # Check conditions and apply mapping
-	    if location == "NYES" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	        target_row = combined_t_mapping[t_value][h_value]
-	        target_column = column_mapping[t_value]
-	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
-	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	wb1.save('OPD.xlsx')
-	###############################################################################################
-	#df=pd.read_csv('final.csv',dtype=str)
-	#import io
-	#output = io.StringIO()
-	#df.to_csv(output, index=False)
-	#output.seek(0)
-	#st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
+	    wb1.save('OPD.xlsx')
+	    print(f"Processed mapping for {location} in {sheet_name}.")
 
-	import openpyxl
-	from openpyxl.styles import Alignment
+	# Process HOPE_DRIVE
+	process_excel_mapping("HOPE_DRIVE", "HOPE_DRIVE")
 	
-	# Load workbooks and worksheets
-	wb = openpyxl.load_workbook('final.xlsx')
-	ws = wb['Sheet1']
+	# Process ETOWN
+	#process_excel_mapping("ETOWN", "ETOWN")
 	
-	wb1 = openpyxl.load_workbook('OPD.xlsx')
-	ws1 = wb1['COMPLEX']
-	
-	def generate_mapping(start_value):
-	    # Create a dictionary with H0 to H19 keys, with values starting from `start_value`
-	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
-	    
-	    return mapping
-	
-	# Generate the mappings starting from 6 for the first group
-	common_mapping_1 = generate_mapping(6)
-	# Construct the t_mapping dictionary with the common structure for T0 to T6
-	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
-	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_2 = generate_mapping(30)
-	# Construct the t_mapping dictionary with the common structure for T7 to T13
-	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
-	
-	# Generate the mappings starting from 54 for the third group
-	common_mapping_3 = generate_mapping(54)
-	# Construct the t_mapping dictionary with the common structure for T14 to T20
-	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
-	
-	# Generate the mappings starting from 78 for the fourth group
-	common_mapping_4 = generate_mapping(78)
-	# Construct the t_mapping dictionary with the common structure for T21 to T28
-	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
-	
-	# Combine both mappings
-	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
-	
-	# Now the `combined_t_mapping` will have the correct structure
-	#print(combined_t_mapping)
-	
-	
-	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
-	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
-	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
-	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
-	                 }
-	
-	# Iterate through rows in the worksheet
-	for row in ws.iter_rows():
-	    t_value = row[7].value  # Value in column H (index 7)
-	    h_value = row[6].value  # Value in column G (index 6)
-	    location = row[4].value  # Value in column E (index 4)
-	
-	    # Check conditions and apply mapping
-	    if location == "COMPLEX" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	        target_row = combined_t_mapping[t_value][h_value]
-	        target_column = column_mapping[t_value]
-	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
-	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-	# Save updated workbook
-	wb1.save('OPD.xlsx')
-	###############################################################################################
-	#df=pd.read_csv('final.csv',dtype=str)
-	#import io
-	#output = io.StringIO()
-	#df.to_csv(output, index=False)
-	#output.seek(0)
-	#st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
-
-	import openpyxl
-	from openpyxl.styles import Alignment
-	
-	# Load workbooks and worksheets
-	wb = openpyxl.load_workbook('final.xlsx')
-	ws = wb['Sheet1']
-	
-	wb1 = openpyxl.load_workbook('OPD.xlsx')
-	ws1 = wb1['W_A']
-	
-	def generate_mapping(start_value):
-	    # Create a dictionary with H0 to H19 keys, with values starting from `start_value`
-	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
-	    
-	    return mapping
-	
-	# Generate the mappings starting from 6 for the first group
-	common_mapping_1 = generate_mapping(6)
-	# Construct the t_mapping dictionary with the common structure for T0 to T6
-	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
-	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_2 = generate_mapping(30)
-	# Construct the t_mapping dictionary with the common structure for T7 to T13
-	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
-	
-	# Generate the mappings starting from 54 for the third group
-	common_mapping_3 = generate_mapping(54)
-	# Construct the t_mapping dictionary with the common structure for T14 to T20
-	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
-	
-	# Generate the mappings starting from 78 for the fourth group
-	common_mapping_4 = generate_mapping(78)
-	# Construct the t_mapping dictionary with the common structure for T21 to T28
-	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
-	
-	# Combine both mappings
-	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
-	
-	# Now the `combined_t_mapping` will have the correct structure
-	#print(combined_t_mapping)
-	
-	
-	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
-	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
-	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
-	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
-	                 }
-	
-	# Iterate through rows in the worksheet
-	for row in ws.iter_rows():
-	    t_value = row[7].value  # Value in column H (index 7)
-	    h_value = row[6].value  # Value in column G (index 6)
-	    location = row[4].value  # Value in column E (index 4)
-	
-	    # Check conditions and apply mapping
-	    if location == "WARD_A" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	        target_row = combined_t_mapping[t_value][h_value]
-	        target_column = column_mapping[t_value]
-	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
-	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-	# Save updated workbook
-	wb1.save('OPD.xlsx')
-	###############################################################################################
-	import openpyxl
-	from openpyxl.styles import Alignment
-	
-	# Load workbooks and worksheets
-	wb = openpyxl.load_workbook('final.xlsx')
-	ws = wb['Sheet1']
-	
-	wb1 = openpyxl.load_workbook('OPD.xlsx')
-	ws1 = wb1['W_P']
-	
-	def generate_mapping(start_value):
-	    # Create a dictionary with H0 to H19 keys, with values starting from `start_value`
-	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
-	    
-	    return mapping
-	
-	# Generate the mappings starting from 6 for the first group
-	common_mapping_1 = generate_mapping(6)
-	# Construct the t_mapping dictionary with the common structure for T0 to T6
-	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
-	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_2 = generate_mapping(30)
-	# Construct the t_mapping dictionary with the common structure for T7 to T13
-	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
-	
-	# Generate the mappings starting from 54 for the third group
-	common_mapping_3 = generate_mapping(54)
-	# Construct the t_mapping dictionary with the common structure for T14 to T20
-	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
-	
-	# Generate the mappings starting from 78 for the fourth group
-	common_mapping_4 = generate_mapping(78)
-	# Construct the t_mapping dictionary with the common structure for T21 to T28
-	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
-	
-	# Combine both mappings
-	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
-	
-	# Now the `combined_t_mapping` will have the correct structure
-	#print(combined_t_mapping)
-	
-	
-	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
-	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
-	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
-	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
-	                 }
-	
-	# Iterate through rows in the worksheet
-	for row in ws.iter_rows():
-	    t_value = row[7].value  # Value in column H (index 7)
-	    h_value = row[6].value  # Value in column G (index 6)
-	    location = row[4].value  # Value in column E (index 4)
-	
-	    # Check conditions and apply mapping
-	    if location == "WARD_P" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	        target_row = combined_t_mapping[t_value][h_value]
-	        target_column = column_mapping[t_value]
-	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
-	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-	# Save updated workbook
-	wb1.save('OPD.xlsx')
-
-	###############################################################################################
-	import openpyxl
-	from openpyxl.styles import Alignment
-	
-	# Load workbooks and worksheets
-	wb = openpyxl.load_workbook('final.xlsx')
-	ws = wb['Sheet1']
-	
-	wb1 = openpyxl.load_workbook('OPD.xlsx')
-	ws1 = wb1['PICU']
-	
-	def generate_mapping(start_value):
-	    # Create a dictionary with H0 to H19 keys, with values starting from `start_value`
-	    mapping = {f"H{i}": start_value + i for i in range(0, 20)}
-	    
-	    return mapping
-	
-	# Generate the mappings starting from 6 for the first group
-	common_mapping_1 = generate_mapping(6)
-	# Construct the t_mapping dictionary with the common structure for T0 to T6
-	t_mapping_1 = {f"T{i}": common_mapping_1 for i in range(7)}
-	
-	# Generate the mappings starting from 30 for the second group
-	common_mapping_2 = generate_mapping(30)
-	# Construct the t_mapping dictionary with the common structure for T7 to T13
-	t_mapping_2 = {f"T{i}": common_mapping_2 for i in range(7, 14)}
-	
-	# Generate the mappings starting from 54 for the third group
-	common_mapping_3 = generate_mapping(54)
-	# Construct the t_mapping dictionary with the common structure for T14 to T20
-	t_mapping_3 = {f"T{i}": common_mapping_3 for i in range(14, 21)}
-	
-	# Generate the mappings starting from 78 for the fourth group
-	common_mapping_4 = generate_mapping(78)
-	# Construct the t_mapping dictionary with the common structure for T21 to T28
-	t_mapping_4 = {f"T{i}": common_mapping_4 for i in range(21, 28)}
-	
-	# Combine both mappings
-	combined_t_mapping = {**t_mapping_1, **t_mapping_2, **t_mapping_3, **t_mapping_4}
-	
-	# Now the `combined_t_mapping` will have the correct structure
-	#print(combined_t_mapping)
-	
-	
-	column_mapping = {"T0": 2, "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7, "T6": 8,
-	                  "T7": 2, "T8": 3, "T9": 4, "T10":5, "T11":6, "T12":7, "T13":8,
-	                  "T14":2, "T15":3, "T16":4, "T17":5, "T18":6, "T19":7, "T20":8,
-	                  "T21":2, "T22":3, "T23":4, "T24":5, "T25":6, "T26":7, "T27":8, 
-	                 }
-	
-	# Iterate through rows in the worksheet
-	for row in ws.iter_rows():
-	    t_value = row[7].value  # Value in column H (index 7)
-	    h_value = row[6].value  # Value in column G (index 6)
-	    location = row[4].value  # Value in column E (index 4)
-	
-	    # Check conditions and apply mapping
-	    if location == "PICU" and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	        target_row = combined_t_mapping[t_value][h_value]
-	        target_column = column_mapping[t_value]
-	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
-	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-	# Save updated workbook
-	wb1.save('OPD.xlsx')
-
+	# Process other locations as needed
+	#process_excel_mapping("NYES", "NYES")
+	#process_excel_mapping("COMPLEX", "COMPLEX")
+	#process_excel_mapping("WARD_A", "WARD_A")
+	#process_excel_mapping("WARD_P", "WARD_P")
+	#process_excel_mapping("PICU", "PICU")
 	###############################################################################################
 
 	# Button to trigger the download
