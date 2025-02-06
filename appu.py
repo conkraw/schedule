@@ -58,6 +58,10 @@ elif st.session_state.page == "Create OPD":
             ws["A1"] = "HAMPDEN NURSERY"
             ws["A2"] = "CUSTOM_PRINT"
 
+            for row in range(5,14):
+		ws[f"A{row}"] = "custom_value" 
+
+		
             # Days of the week to be placed across the row
             days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
