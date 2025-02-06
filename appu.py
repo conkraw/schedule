@@ -2058,14 +2058,13 @@ elif st.session_state.page == "OPD Creator":
 	        ws1.cell(row=target_row, column=target_column).value = row[5].value  # Value in column F (index 5)
 	        ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
 	wb1.save('OPD.xlsx')
-    
-        df=pd.read_csv('final.csv',dtype=str)
-        import io
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
-    
-        st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
+
+	df=pd.read_csv('final.csv',dtype=str)
+	import io
+	output = io.StringIO()
+	df.to_csv(output, index=False)
+	output.seek(0)
+	st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
 
 	import openpyxl
 	from openpyxl.styles import Alignment
