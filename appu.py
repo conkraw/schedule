@@ -784,7 +784,7 @@ elif st.session_state.page == "OPD Creator":
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False)
-	#st.dataframe(df)
+	st.dataframe(df)
 	df.to_excel('final.xlsx',index=False)
 
 	########################################################################################################################################################################
