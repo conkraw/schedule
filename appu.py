@@ -80,7 +80,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
             for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
                 ws[f"{col}{row}"] = names[i % len(names)]  # Cycle through names
             for row in range(start_row + 1 + len(names), end_row + 1):  # Fill remaining with "custom_value"
-                ws[f"{col}{row}"] = "custom_value"
+                ws[f"{col}{row}"] = ""
 
     # Days of the week to be placed across the row
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -698,7 +698,7 @@ elif st.session_state.page == "OPD Creator":
 	        "Nursery Weekday 8a-6p": "AM - Continuity",
 	        "Nursery Weekend": "AM - Continuity"
 	    },
-	    "HAMPDEN_NURSERY.xlsx": {  # Replace "CUSTOM_PRINT" with "AM - Continuity"
+	    "HAMPDEN_NURSERY.xlsx": {  # Replace "CUSTOM_PRINT" with "AM - Continuity" #############MUST ADD SPACE! 
 	        "custom_value": "AM - Continuity "
 	    }
 	}
