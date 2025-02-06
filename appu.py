@@ -22,17 +22,17 @@ file_configs = {
     "HAMPDEN_NURSERY.xlsx": {
         "title": "HAMPDEN NURSERY",
         "custom_text": "CUSTOM_PRINT",
-        "names": ["Folaranmi, Oluwamayoda ~", "Alur, Pradeep ~"]
+        "names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep"]
     },
     "SJR.xlsx": {
         "title": "SJR NURSERY",
         "custom_text": "CUSTOM_PRINT",
-        "names": ["Spangola, John ~", "Garfield, Andrew ~"]
+        "names": ["Spangola, John", "Garfield, Andrew"]
     },
     "GENERAL.xlsx": {
         "title": "GENERAL CLINIC",
         "custom_text": "CUSTOM_PRINT",
-        "names": ["Smith, Jane ~", "Doe, John ~", "Miller, Sarah ~"]
+        "names": ["Smith, Jane", "Doe, John", "Miller, Sarah"]
     }
     # Add more files if needed
 }
