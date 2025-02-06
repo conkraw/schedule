@@ -428,13 +428,9 @@ elif st.session_state.page == "OPD Creator":
 	        return dfx  # Return DataFrame for further processing
 	    else:
 	        return None  # Handle missing file case
-		    
 
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
-	        # Ensure sorting before duplication to maintain proper order
-	        df = df.sort_values(by=["provider"]).reset_index(drop=True)
-	
 	        # Identify rows containing "AM - Continuity"
 	        am_continuity_rows = df[df["type"] == "AM - Continuity "].copy()
 	
@@ -442,15 +438,14 @@ elif st.session_state.page == "OPD Creator":
 	        pm_continuity_rows = am_continuity_rows.copy()
 	        pm_continuity_rows["type"] = "PM - Continuity "
 	
-	        # Ensure correct duplication by stacking the sorted rows
-	        df = pd.concat([
-	            df,  # Original sorted DataFrame
-	            am_continuity_rows, pm_continuity_rows,  # First duplication
-	            am_continuity_rows, pm_continuity_rows   # Second duplication
-	        ], ignore_index=True)
+	        # Duplicate both AM and PM Continuity rows to ensure each appears twice
+	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows, am_continuity_rows, pm_continuity_rows], ignore_index=True)
+	
+	        # Sort DataFrame alphabetically by 'provider'
+	        df = df.sort_values(by=["provider"]).reset_index(drop=True)
 	
 	        # Display the updated DataFrame in Streamlit
-	        st.write(f"### {clinic_name} - Updated Continuity Schedule (Alphabetized & Ordered)")
+	        st.write(f"### {clinic_name} - Updated Continuity Schedule (Alphabetized)")
 	        st.dataframe(df)
 	
 	        # Convert DataFrame to CSV format in memory for download
@@ -459,13 +454,8 @@ elif st.session_state.page == "OPD Creator":
 	        output.seek(0)
 	
 	        # Create a download button for the updated CSV file
-	        st.download_button(
-	            label=f"Download {clinic_name} CSV",
-	            data=output.getvalue(),
-	            file_name=f"{clinic_name.lower()}.csv",
-	            mime="text/csv"
-	        )
-	
+	        st.download_button(label=f"Download {clinic_name} CSV",data=output.getvalue(),file_name=f"{clinic_name.lower()}.csv",mime="text/csv")
+	    
 	    return df
 
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
