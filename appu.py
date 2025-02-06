@@ -10,6 +10,67 @@ import openpyxl
 from openpyxl import Workbook
 from io import BytesIO
 
+def generate_excel_file(start_date, title, custom_text, file_name):
+    """
+    Generates an Excel file with structured weekly formatting.
+
+    Args:
+        start_date (datetime): The starting date provided by the user.
+        title (str): The text to be placed in cell A1.
+        custom_text (str): The text to be placed in cell A2.
+        file_name (str): The name of the output file.
+
+    Returns:
+        str: Path of the saved file.
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+
+    # Place specific text in designated cells
+    ws["A1"] = title
+    ws["A2"] = custom_text
+
+    # Columns where "custom_value" should be placed
+    custom_value_columns = ["A", "C", "E", "G", "I", "K", "M"]
+    name_columns = ["B", "D", "F", "H", "J", "L", "N"]
+
+    # Row ranges to repeat the pattern
+    row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44)]
+
+    # Fill the table with names and "custom_value"
+    for start_row, end_row in row_ranges:
+        for col in custom_value_columns:
+            for row in range(start_row, end_row + 1):
+                ws[f"{col}{row}"] = "custom_value"
+
+        for col in name_columns:
+            ws[f"{col}{start_row}"] = "Folaranmi, Oluwamayoda ~"  # First row of range
+            ws[f"{col}{start_row + 1}"] = "Alur, Pradeep ~"  # Second row of range
+            for row in range(start_row + 2, end_row + 1):  # Fill remaining with "custom_value"
+                ws[f"{col}{row}"] = "custom_value"
+
+    # Days of the week to be placed across the row
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    # Start row for the first week
+    start_row = 4
+
+    # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
+    for week in range(4):  # 4 weeks
+        current_date = start_date + datetime.timedelta(weeks=week)
+        for i, day in enumerate(days):
+            col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K, M)
+            ws[f"{col_letter}{start_row}"] = day  # Place the day name
+            ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
+        start_row += 10  # Skip 10 rows before the next week starts
+
+    # Save the Excel file with the specified name
+    file_path = f"{file_name}"
+    wb.save(file_path)
+
+    return file_path  # Return file path for later use
+
 # Initialize session state variables efficiently
 session_defaults = {
     "page": "Home",
@@ -43,55 +104,19 @@ elif st.session_state.page == "Create OPD":
 
     # User Input for Start Date
     date_input = st.text_input('Start Date')
+    file_name = st.text_input("Enter file name (e.g., HAMPDEN.xlsx)")
 
-    if st.button('Submit Date') and date_input:
+    if st.button('Submit Date') and date_input and file_name:
         try:
             start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
             st.session_state.start_date = start_date  # Store in session state
             st.success(f"Valid date entered: {start_date.strftime('%m/%d/%Y')}")
 
-            # Create Excel File
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "Sheet1"
-
-            # Place specific text in designated cells
-            ws["A1"] = "HAMPDEN NURSERY"
-            ws["A2"] = "CUSTOM_PRINT"
-
-            # Columns where "custom_value" should be placed
-            columns = ["A", "C", "E", "G", "I", "K"]
-
-            # Row ranges to repeat the pattern
-            row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44)]
-
-            # Fill the table with "custom_value"
-            for start_row, end_row in row_ranges:
-                for col in columns:
-                    for row in range(start_row, end_row + 1):
-                        ws[f"{col}{row}"] = "custom_value"
-
-            # Days of the week to be placed across the row
-            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-            # Start row for the first week
-            start_row = 4
-
-            # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
-            for week in range(4):  # 4 weeks
-                current_date = start_date + datetime.timedelta(weeks=week)
-                for i, day in enumerate(days):
-                    col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K)
-                    ws[f"{col_letter}{start_row}"] = day  # Place the day name
-                    ws[f"{col_letter}{start_row + 1}"] = (current_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y")  # Date below day
-                start_row += 10  # Skip 10 rows before the next week starts
-
-            # Save the Excel file
-            file_name = "Duplicated_File.xlsx"
-            wb.save(file_name)
+            # Generate the Excel file with user-specified file name
+            file_path = generate_excel_file(start_date, "HAMPDEN NURSERY", "CUSTOM_PRINT", file_name)
 
             # Store file path in session state for later downloads
-            st.session_state.generated_file = file_name
+            st.session_state.generated_file = file_path
 
             # Move to the next page: Upload Files
             st.session_state.page = "Upload Files"
