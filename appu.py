@@ -442,8 +442,7 @@ elif st.session_state.page == "OPD Creator":
 	        # Save the updated data
 	        filename = f"{clinic_name.lower()}.csv"
 	        df.to_csv(filename, index=False)
-	        print(f"{clinic_name} updated with PM - Continuity and saved to {filename}.")
-		st.dataframe(df)
+	        st.dataframe(df)
 	    
 	    return df
 
