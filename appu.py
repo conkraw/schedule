@@ -699,7 +699,7 @@ elif st.session_state.page == "OPD Creator":
 	        "Nursery Weekend": "AM - Continuity"
 	    },
 	    "HAMPDEN_NURSERY.xlsx": {  # Replace "CUSTOM_PRINT" with "AM - Continuity"
-	        "custom_value": "AM - Continuity"
+	        "custom_value": "AM - Continuity "
 	    }
 	}
 
