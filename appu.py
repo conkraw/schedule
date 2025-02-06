@@ -742,7 +742,7 @@ elif st.session_state.page == "OPD Creator":
 	    
 	    # Get start and end indices safely
 	    start_idx_series = df.loc[df[str(col_idx[0])] == days[i]].index
-	    end_idx_series = df.loc[df[str(col_idx[0])] == days[i + 1]].index
+	    end_idx_series = df.loc[df[str(col_idx[0])] == days[i - 1]].index
 	    
 	    # Check if indices are found before proceeding
 	    if not start_idx_series.empty and not end_idx_series.empty:
