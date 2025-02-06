@@ -2195,7 +2195,7 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv',index=False)
 	df.to_excel('final.xlsx',index=False)
 
-	df=pd.read_csv('warpx.csv',dtype=str)
+	df=pd.read_csv('wardpx.csv',dtype=str)
 	import io
 	output = io.StringIO()
 	df.to_csv(output, index=False)
