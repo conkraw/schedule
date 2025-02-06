@@ -495,16 +495,31 @@ elif st.session_state.page == "OPD Creator":
 	        day28, day29, day30, day31, day32, day33, day34]
 	
 	# Function to process each file
+
 	def process_file(file_key, clinic_name, replacements=None, df=None):
-	    """Process an uploaded file and return a cleaned DataFrame."""
+	    """Process a file (either uploaded or generated) and return a cleaned DataFrame."""
 	    
-	    # If a DataFrame is passed, use it. Otherwise, read from the uploaded file.
-	    if df is None:
-	        if file_key in uploaded_files:
+	    # 1️⃣ **Use the provided DataFrame if already passed**
+	    if df is not None:
+	        print(f"Processing provided DataFrame for {clinic_name}...")
+	    
+	    else:
+	        # 2️⃣ **Check if the locally generated file exists**
+	        local_file_path = f"{file_key}"
+	        if os.path.exists(local_file_path):
+	            print(f"Found locally generated file: {local_file_path}. Using it for {clinic_name}...")
+	            df = pd.read_excel(local_file_path, dtype=str)
+	        
+	        # 3️⃣ **Otherwise, fall back to uploaded file**
+	        elif file_key in uploaded_files:
+	            print(f"Using uploaded file for {clinic_name}...")
 	            df = pd.read_excel(uploaded_files[file_key], dtype=str)
+	        
 	        else:
+	            print(f"❌ ERROR: No file found for {clinic_name} ({file_key}). Skipping...")
 	            return None  # Handle missing file case
-	
+	    
+	    # ✅ **Continue normal processing**
 	    df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
 	
 	    D_dict = {}
@@ -526,15 +541,16 @@ elif st.session_state.page == "OPD Creator":
 	    dfx = pd.concat(D_dict.values(), ignore_index=True)
 	    dfx['clinic'] = clinic_name
 	
+	    # ✅ **Apply replacements if provided**
 	    if replacements:
 	        dfx = dfx.replace(replacements, regex=True)
 	
+	    # ✅ **Save the cleaned file**
 	    filename = f"{clinic_name.lower()}.csv"
 	    dfx.to_csv(filename, index=False)
 	
-	    print(f"Processed {clinic_name} and saved to {filename}")
+	    print(f"✅ Processed {clinic_name} and saved to {filename}")
 	    return dfx  # Return DataFrame for further processing
-
 
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
