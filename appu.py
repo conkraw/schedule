@@ -1693,10 +1693,10 @@ elif st.session_state.page == "OPD Creator":
 	)
 
 	# Identify rows with "AM - Continuity"
-	am_continuity_rows = WARDA[WARDA.eq("AM - Continuity").any(axis=1)].copy()
+	am_continuity_rows = WARDA[WARDA.eq("AM - Continuity ").any(axis=1)].copy()
 
 	# Create corresponding "PM - Continuity" rows
-	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 
 	# Append new rows to the original dataframe
 	WARDA = pd.concat([WARDA, pm_continuity_rows], ignore_index=True)
