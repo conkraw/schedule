@@ -432,29 +432,18 @@ elif st.session_state.page == "OPD Creator":
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
 	        # Identify rows containing "AM - Continuity"
-	        am_continuity_rows = df[df["type"] == "AM - Continuity "].copy()
+	        am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
 	
 	        # Create corresponding "PM - Continuity" rows
-	        pm_continuity_rows = am_continuity_rows.copy()
-	        pm_continuity_rows["type"] = "PM - Continuity "
+	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
 	
-	        # Duplicate both AM and PM Continuity rows to ensure each appears twice
-	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows, am_continuity_rows, pm_continuity_rows], ignore_index=True)
+	        # Append new rows to the original dataframe
+	        df = pd.concat([df, pm_continuity_rows], ignore_index=True)
 	
-	        # Sort DataFrame alphabetically by 'provider'
-	        df = df.sort_values(by=["provider"]).reset_index(drop=True)
-	
-	        # Display the updated DataFrame in Streamlit
-	        st.write(f"### {clinic_name} - Updated Continuity Schedule (Alphabetized)")
-	        st.dataframe(df)
-	
-	        # Convert DataFrame to CSV format in memory for download
-	        output = io.StringIO()
-	        df.to_csv(output, index=False)
-	        output.seek(0)
-	
-	        # Create a download button for the updated CSV file
-	        st.download_button(label=f"Download {clinic_name} CSV",data=output.getvalue(),file_name=f"{clinic_name.lower()}.csv",mime="text/csv")
+	        # Save the updated data
+	        filename = f"{clinic_name.lower()}.csv"
+	        df.to_csv(filename, index=False)
+	        print(f"{clinic_name} updated with PM - Continuity and saved to {filename}.")
 	    
 	    return df
 
