@@ -10,6 +10,7 @@ import openpyxl
 from openpyxl import Workbook
 from io import BytesIO
 import os
+import time 
 
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {
@@ -103,8 +104,10 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     with open(file_path, "rb") as f:
         st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    return file_path  # Return file path for later use
+    time.sleep(10)  
 
+    return file_path  # Return file path for later use
+	
 
 # Initialize session state variables efficiently
 session_defaults = {
