@@ -428,21 +428,24 @@ elif st.session_state.page == "OPD Creator":
 	        return dfx  # Return DataFrame for further processing
 	    else:
 	        return None  # Handle missing file case
-
+		    
 	def duplicate_am_continuity(df, clinic_name):
 	    if df is not None:
 	        # Identify rows containing "AM - Continuity"
-	        am_continuity_rows = df[df["type"] == "AM - Continuity "].copy()
+	        am_continuity_rows = df[df["type"] == "AM - Continuity"].copy()
 	
 	        # Create corresponding "PM - Continuity" rows
 	        pm_continuity_rows = am_continuity_rows.copy()
-	        pm_continuity_rows["type"] = "PM - Continuity "
+	        pm_continuity_rows["type"] = "PM - Continuity"
 	
 	        # Duplicate both AM and PM Continuity rows to ensure each appears twice
 	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows, am_continuity_rows, pm_continuity_rows], ignore_index=True)
 	
+	        # Sort DataFrame alphabetically by 'provider'
+	        df = df.sort_values(by=["provider"]).reset_index(drop=True)
+	
 	        # Display the updated DataFrame in Streamlit
-	        #st.write(f"### {clinic_name} - Updated Continuity Schedule")
+	        #st.write(f"### {clinic_name} - Updated Continuity Schedule (Alphabetized)")
 	        #st.dataframe(df)
 	
 	        # Convert DataFrame to CSV format in memory for download
@@ -454,6 +457,21 @@ elif st.session_state.page == "OPD Creator":
 	        #st.download_button(label=f"Download {clinic_name} CSV",data=output.getvalue(),file_name=f"{clinic_name.lower()}.csv",mime="text/csv")
 	    
 	    return df
+
+# Example usage in Streamlit
+st.title("Duplicate AM & PM Continuity Schedule")
+
+# Simulate loading a DataFrame (replace this with actual file upload or database retrieval)
+df_example = pd.DataFrame({
+    "date": ["2/3/2025", "2/3/2025", "2/3/2025"],
+    "type": ["AM - Continuity", "AM - Continuity", "AM - Continuity"],
+    "provider": ["Irvin, Christine", "Petersen, Taylor", "Clarke, Sheila"],
+    "clinic": ["WARD_A", "WARD_A", "WARD_A"]
+})
+
+# Process and display results
+warda_df = duplicate_am_continuity(df_example, "WARD_A")
+
 			
 
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
