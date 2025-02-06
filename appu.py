@@ -82,7 +82,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     start_row = 4
 
     # Fill in the days of the week and corresponding dates, skipping 10 rows after each set
-    for week in range(4):  # 4 weeks
+    for week in range(5):  # 4 weeks
         current_date = start_date + datetime.timedelta(weeks=week)
         for i, day in enumerate(days):
             col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K, M)
