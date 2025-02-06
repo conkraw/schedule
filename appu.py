@@ -2020,7 +2020,8 @@ elif st.session_state.page == "OPD Creator":
 	dfx['clinic'] = "WARD_P"
 
 	dfx.to_csv('wardp.csv', index=False)
-
+	dfx.to_csv('wardpx.csv', index=False)
+	
 	# Replace "Rounder" values with "AM - Continuity"
 	WARDP = dfx.replace({"On-Call": "AM - Continuity","On-Call 8a-8a ": "AM - Continuity"},regex=True)
 
@@ -2194,12 +2195,12 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv',index=False)
 	df.to_excel('final.xlsx',index=False)
 
-	df=pd.read_csv('final.csv',dtype=str)
+	df=pd.read_csv('warpx.csv',dtype=str)
 	import io
 	output = io.StringIO()
 	df.to_csv(output, index=False)
 	output.seek(0)
-	st.download_button(label="Download CSV file", data=output.getvalue(),file_name="final.csv",mime="text/csv")
+	st.download_button(label="Download CSV file", data=output.getvalue(),file_name="warpx.csv",mime="text/csv")
 	
 	import openpyxl
 	from openpyxl.styles import Alignment
