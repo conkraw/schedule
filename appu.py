@@ -58,10 +58,13 @@ elif st.session_state.page == "Create OPD":
             ws["A1"] = "HAMPDEN NURSERY"
             ws["A2"] = "CUSTOM_PRINT"
 
-            for row in range(5,14):
-		ws[f"A{row}"] = "custom_value" 
-
+            # Fill A5 to A13 with "custom_value"
+            for row in range(5, 14):
+                ws[f"A{row}"] = "custom_value"
 		
+            for row in range(5, 14):
+                ws[f"C{row}"] = "custom_value"
+		    
             # Days of the week to be placed across the row
             days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
@@ -78,7 +81,7 @@ elif st.session_state.page == "Create OPD":
                 start_row += 10  # Skip 10 rows before the next week starts
 
             # Save the Excel file
-            file_name = "Duplicated_File.xlsx"
+            file_name = "/mnt/data/Duplicated_File.xlsx"
             wb.save(file_name)
 
             # Store file path in session state for later downloads
