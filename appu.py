@@ -147,11 +147,10 @@ elif st.session_state.page == "Create OPD":
             # Move to the next page: Upload Files
             st.session_state.page = "Upload Files"
             st.rerun()  # Force rerun to reflect the page change
-
-	    df_display = pd.read_excel(file_path)
-
-	    st.dataframe(df_display)
-
+    
+            df_display = pd.read_excel(file_path)
+        
+            st.dataframe(df_display)
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
