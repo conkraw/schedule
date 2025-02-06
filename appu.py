@@ -45,9 +45,9 @@ def generate_excel_file(start_date, title, custom_text, file_name):
                 ws[f"{col}{row}"] = "custom_value"
 
         for col in name_columns:
-            ws[f"{col}{start_row}"] = "Folaranmi, Oluwamayoda ~"  # First row of range
-            ws[f"{col}{start_row + 1}"] = "Alur, Pradeep ~"  # Second row of range
-            for row in range(start_row + 2, end_row + 1):  # Fill remaining with "custom_value"
+            ws[f"{col}{start_row + 1}"] = "Folaranmi, Oluwamayoda ~"  # First row of range
+            ws[f"{col}{start_row + 2}"] = "Alur, Pradeep ~"  # Second row of range
+            for row in range(start_row + 3, end_row + 1):  # Fill remaining with "custom_value"
                 ws[f"{col}{row}"] = "custom_value"
 
     # Days of the week to be placed across the row
