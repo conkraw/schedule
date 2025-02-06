@@ -442,8 +442,8 @@ elif st.session_state.page == "OPD Creator":
 	        df = pd.concat([df, am_continuity_rows, pm_continuity_rows, am_continuity_rows, pm_continuity_rows], ignore_index=True)
 	
 	        # Display the updated DataFrame in Streamlit
-	        st.write(f"### {clinic_name} - Updated Continuity Schedule")
-	        st.dataframe(df)
+	        #st.write(f"### {clinic_name} - Updated Continuity Schedule")
+	        #st.dataframe(df)
 	
 	        # Convert DataFrame to CSV format in memory for download
 	        output = io.StringIO()
@@ -451,12 +451,7 @@ elif st.session_state.page == "OPD Creator":
 	        output.seek(0)
 	
 	        # Create a download button for the updated CSV file
-	        st.download_button(
-	            label=f"Download {clinic_name} CSV",
-	            data=output.getvalue(),
-	            file_name=f"{clinic_name.lower()}.csv",
-	            mime="text/csv"
-	        )
+	        #st.download_button(label=f"Download {clinic_name} CSV",data=output.getvalue(),file_name=f"{clinic_name.lower()}.csv",mime="text/csv")
 	    
 	    return df
 			
