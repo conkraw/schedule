@@ -62,7 +62,7 @@ elif st.session_state.page == "Upload Files":
 		      "WARD_P": "WARD_P.xlsx",
 		      "COMPLEX": "COMPLEX.xlsx",
 		      "PICU": "PICU.xlsx",
-		      "PSHCH_NURS":"NURSERY.xlsx"}
+		      "PSHCH_NURSERY":"PSHCH_NURSERY.xlsx"}
 
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
 
@@ -127,7 +127,7 @@ elif st.session_state.page == "OPD Creator":
 	# Define worksheet names
 	worksheet_names = [
 	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C',
-	    'W_P', 'PICU', 'PSHCH_NURS', 'HAMPDEN_NURS',
+	    'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY',
 	    'SJR_HOSP', 'AAC', 'ER_CONS','NF'
 	]
 	
@@ -553,7 +553,7 @@ elif st.session_state.page == "OPD Creator":
 	        "On-Call 8a-8a": "AM - Continuity",
 	        "On-Call": "AM - Continuity"
 	    },
-	    "NURSERY.xlsx": {  # Added Nursery replacements
+	    "PSHCH_NURSERY.xlsx": {  # Added Nursery replacements
 	        "Nursery Weekday 8a-6p": "AM - Continuity",
 	        "Nursery Weekend": "AM - Continuity"
 	    }
@@ -595,7 +595,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
-	pshchnursery_df = process_file("NURSERY.xlsx", "PSHCH_NURS", replacement_rules.get("PSHCH_NURS.xlsx"))
+	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
 
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
@@ -619,7 +619,7 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
 	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
-	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURS")
+	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
@@ -628,7 +628,7 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
 	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
 	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
-	process_continuity_classes(pshchnursery_df, "PSHCH_NURS", "18.csv", "19.csv")
+	process_continuity_classes(pshchnursery_df, "PSHCH_NURSERY", "18.csv", "19.csv")
 	
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 20)}
