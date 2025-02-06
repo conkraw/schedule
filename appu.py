@@ -446,13 +446,36 @@ elif st.session_state.page == "OPD Creator":
 	    
 	    return df
 
+
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
 	    if df is not None:
-	        # AM - Continuity Processing
-	        df[df['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(am_csv, index=False)
-	        df[df['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount(),).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']].to_csv(pm_csv, index=False)
-
-		st.dataframe(df)
+	        # Process AM - Continuity
+	        am_df = df[df['type'] == 'AM - Continuity '].assign(
+	            count=lambda x: x.groupby(['date'])['provider'].cumcount()
+	        ).assign(
+	            **{"class": lambda x: "H" + x['count'].astype(str)}
+	        )[['date', 'type', 'provider', 'clinic', 'class']]
+	        
+	        # Process PM - Continuity
+	        pm_df = df[df['type'] == 'PM - Continuity '].assign(
+	            count=lambda x: x.groupby(['date'])['provider'].cumcount()
+	        ).assign(
+	            **{"class": lambda x: "H" + x['count'].astype(str)}
+	        )[['date', 'type', 'provider', 'clinic', 'class']]
+	        
+	        # Save to CSV
+	        am_df.to_csv(am_csv, index=False)
+	        pm_df.to_csv(pm_csv, index=False)
+	
+	        # Display in Streamlit
+	        st.write(f"### {clinic_name} - AM Continuity Assignments")
+	        st.dataframe(am_df)  # Display AM - Continuity table
+	
+	        st.write(f"### {clinic_name} - PM Continuity Assignments")
+	        st.dataframe(pm_df)  # Display PM - Continuity table
+	
+	        return am_df, pm_df  # Return processed DataFrames for further use if needed
+		    
 	def process_hope_classes(df, clinic_name):
 	    """
 	    Processes Hope Drive's different continuity and acute types by assigning a count and class.
