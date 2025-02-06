@@ -670,18 +670,12 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("PICU", "PICU")
 
 	df=pd.read_csv('final.csv',dtype=str)
-        import io
-        output = io.StringIO()
-        df.to_csv(output, index=False)
+	import io
+	output = io.StringIO()
+	df.to_csv(output,index=False)
         output.seek(0)
-
-        # Streamlit download button
-        st.download_button(
-            label="Download CSV File",
-            data=output.getvalue(),
-            file_name="final.csv",
-            mime="text/csv"
-        )
+	st.download_button(label="Download CSV File",data=output.getvalue(),file_name="final.csv",mime="text/csv")
+	
 	###############################################################################################
 
 	# Button to trigger the download
