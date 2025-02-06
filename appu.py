@@ -552,15 +552,23 @@ elif st.session_state.page == "OPD Creator":
 	    }
 	}
 
-	import pandas as pd
-
 	def process_picu_exclusions(df):
-	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement."""
+	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement by handling different date formats."""
 	    if df is not None:
-	        df['date'] = pd.to_datetime(df['date'], errors='coerce')
-	        df['weekday'] = df['date'].dt.weekday  # 0=Monday, ..., 6=Sunday
+	        # Attempt to convert the date column, handling multiple formats
+	        try:
+	            df['date'] = pd.to_datetime(df['date'], format="%B %d, %Y", errors='coerce')  # Format: "February 3, 2025"
+	        except ValueError:
+	            df['date'] = pd.to_datetime(df['date'], errors='coerce')  # Fallback to auto-parsing
 	
-	        # Replace "1st PICU Attending 7:30a-5p" with "AM - Continuity" only for non-Friday days
+	        # Check if any dates are still NaT (not recognized) and print a warning
+	        if df['date'].isna().sum() > 0:
+	            print("Warning: Some dates could not be parsed. Check format consistency.")
+	
+	        # Create a weekday column (0=Monday, ..., 6=Sunday)
+	        df['weekday'] = df['date'].dt.weekday  # Extract weekday number
+	
+	        # Replace "1st PICU Attending 7:30a-5p" with "AM - Continuity" only for non-Fridays (weekday != 4)
 	        df.loc[df['weekday'] != 4, 'type'] = df['type'].replace(
 	            {"1st PICU Attending 7:30a-5p": "AM - Continuity"}
 	        )
