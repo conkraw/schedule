@@ -661,8 +661,8 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("ETOWN", "ETOWN")
 	process_excel_mapping("NYES", "NYES")
 	process_excel_mapping("COMPLEX", "COMPLEX")
-	process_excel_mapping("WARD_A", "WARD_A")
-	process_excel_mapping("WARD_P", "WARD_P")
+	process_excel_mapping("WARD_A", "W_A")
+	process_excel_mapping("WARD_P", "W_P")
 	process_excel_mapping("PICU", "PICU")
 	###############################################################################################
 
