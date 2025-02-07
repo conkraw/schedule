@@ -1030,17 +1030,16 @@ elif st.session_state.page == "Create List":
         # Display the processed date range
         st.write("✅ Generated Date Range:", xf201)
 
-    except Exception as e:
-        st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
-
-    # ✅ Move dateMAP creation OUTSIDE the try-except block so it always runs
-    if 'xf201' in locals():
-        dateMAP = xf201[['date', 'T']].copy()  # Use .copy() to avoid the SettingWithCopyWarning
+        # ✅ Move dateMAP creation INSIDE try block
+        dateMAP = xf201[['date', 'T']].copy()  # Use .copy() to avoid SettingWithCopyWarning
         dateMAP['date'] = pd.to_datetime(dateMAP['date'])
         dateMAP['date'] = dateMAP['date'].dt.strftime('%m/%d/%Y')
 
         # Display the final formatted date map
         st.write("✅ Final Date Map:", dateMAP)
+
+    except Exception as e:
+        st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
 
         # Convert 'date' column to datetime and then format it
         dateMAP['date'] = pd.to_datetime(dateMAP['date'])
