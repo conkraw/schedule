@@ -705,7 +705,7 @@ elif st.session_state.page == "OPD Creator":
 	for keyword, df_name in filters.items():
 	    filtered_dfs[df_name] = (outpatient_df[outpatient_df.iloc[:, 0].str.contains(keyword, na=False)].replace(outpatient_replacements))
 
-	st.dataframe(filtered_dfs["hope_drive_df"])
+	st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
 	
 	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
