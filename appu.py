@@ -645,19 +645,19 @@ elif st.session_state.page == "OPD Creator":
 	# Define replacement rules for each clinic
 	replacement_rules = {
 	    "OUTPATIENT.xlsx": {
-	        "Hope Drive AM Continuity": "AM - Continuity_H",
-	        "Hope Drive PM Continuity": "PM - Continuity_H",
-	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES_H",  # Handles non-breaking space (\xa0)
-	        "Hope Drive PM Acute Precept": "PM - ACUTES_H",
-	        "Hope Drive Weekend Continuity": "AM - Continuity_H",
-	        "Hope Drive Weekend Acute 1": "AM - ACUTES_H",
-	        "Hope Drive Weekend Acute 2": "AM - ACUTES_H",
-	        "Etown AM Continuity": "AM - Continuity_E",
-	        "Etown PM Continuity": "PM - Continuity_E",
-		"Nyes Rd AM Continuity": "AM - Continuity_N",
-	        "Nyes Rd PM Continuity": "PM - Continuity_N",
-		"Nursery Weekday 8a-6p": "AM - Continuity_Nurs",
-	        "Nursery Weekend": "AM - Continuity_Nurs"
+	        "Hope Drive AM Continuity": "AM - Continuity",
+	        "Hope Drive PM Continuity": "PM - Continuity",
+	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
+	        "Hope Drive PM Acute Precept": "PM - ACUTES",
+	        "Hope Drive Weekend Continuity": "AM - Continuity",
+	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
+	        "Hope Drive Weekend Acute 2": "AM - ACUTES",
+	        "Etown AM Continuity": "AM - Continuity",
+	        "Etown PM Continuity": "PM - Continuity",
+		"Nyes Rd AM Continuity": "AM - Continuity",
+	        "Nyes Rd PM Continuity": "PM - Continuity",
+		"Nursery Weekday 8a-6p": "AM - Continuity",
+	        "Nursery Weekend": "AM - Continuity"
 	    },
 	    "PICU.xlsx": {"2nd PICU Attending 7:45a-4p": "AM - Continuity", "1st PICU Attending 7:30a-5p": "AM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
@@ -698,24 +698,51 @@ elif st.session_state.page == "OPD Creator":
 	
 	    return df
 
-	#Break up the Outpatient. 
-	outpatient_df = process_file("OUTPATIENT.xlsx", "OUTPATIENT", replacement_rules.get("OUTPATIENT.xlsx")); st.dataframe(outpatient_df)
 	
-	# Define filters based on exact suffix match
-	filters = {"Continuity_H": "hope_drive_df","ACUTES_H": "hope_drive_df","Continuity_E": "etown_df","Continuity_N": "nyes_df","Continuity_Nurs": "pshchnursery_df"}
+	# Step 1️⃣: Process OUTPATIENT.xlsx **without replacements**
+	outpatient_df = process_file("OUTPATIENT.xlsx", "OUTPATIENT", replacements=None)
+	st.dataframe(outpatient_df)  # Display original DataFrame
 	
-	# Create a dictionary to store the filtered DataFrames
+	# Step 2️⃣: Define exact filters based on original values
+	filters = {"Hope Drive": "hope_drive_df","Etown": "etown_df","Nyes Rd": "nyes_df","Nursery": "pshchnursery_df"}
+	
+	# Step 3️⃣: Filter rows **before replacing** values
 	filtered_dfs = {}
+	for key, df_name in filters.items():
+	    filtered_dfs[df_name] = outpatient_df[outpatient_df.apply(lambda row: row.astype(str).str.contains(key, na=False).any(), axis=1)]
 	
-	# Apply filtering based on the updated replacement suffixes
-	for suffix, df_name in filters.items():
-		filtered_dfs[df_name] = outpatient_df[outpatient_df.apply(lambda row: row.astype(str).str.contains(suffix, na=False).any(), axis=1)]
-
-	# Assign to individual variables
-	hope_drive_df = filtered_dfs["hope_drive_df"]; st.dataframe(hope_drive_df)
-	etown_df = filtered_dfs["etown_df"]; st.dataframe(etown_df)
-	nyes_df = filtered_dfs["nyes_df"]; st.dataframe(nyes_df)
-	pshchnursery_df = filtered_dfs["pshchnursery_df"]; st.dataframe(pshchnursery_df)
+	# Step 4️⃣: Define **replacement rules** (applied only after filtering)
+	replacement_rules_filtered = {
+	    "Hope Drive AM Continuity": "AM - Continuity",
+	    "Hope Drive PM Continuity": "PM - Continuity",
+	    "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
+	    "Hope Drive PM Acute Precept": "PM - ACUTES",
+	    "Hope Drive Weekend Continuity": "AM - Continuity",
+	    "Hope Drive Weekend Acute 1": "AM - ACUTES",
+	    "Hope Drive Weekend Acute 2": "AM - ACUTES",
+	    "Etown AM Continuity": "AM - Continuity",
+	    "Etown PM Continuity": "PM - Continuity",
+	    "Nyes Rd AM Continuity": "AM - Continuity",
+	    "Nyes Rd PM Continuity": "PM - Continuity",
+	    "Nursery Weekday 8a-6p": "AM - Continuity",
+	    "Nursery Weekend": "AM - Continuity"
+	}
+	
+	# Step 5️⃣: Apply replacements only **after filtering**
+	for df_name in filtered_dfs:
+	    filtered_dfs[df_name] = filtered_dfs[df_name].replace(replacement_rules_filtered, regex=False)
+	
+	# Step 6️⃣: Assign to individual variables
+	hope_drive_df = filtered_dfs.get("hope_drive_df", pd.DataFrame())
+	etown_df = filtered_dfs.get("etown_df", pd.DataFrame())
+	nyes_df = filtered_dfs.get("nyes_df", pd.DataFrame())
+	pshchnursery_df = filtered_dfs.get("pshchnursery_df", pd.DataFrame())
+	
+	# Step 7️⃣: Display filtered & replaced DataFrames in Streamlit
+	st.dataframe(hope_drive_df)
+	st.dataframe(etown_df)
+	st.dataframe(nyes_df)
+	st.dataframe(pshchnursery_df)
 
 	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
