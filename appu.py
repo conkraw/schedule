@@ -1199,7 +1199,7 @@ elif st.session_state.page == "Create List":
         # simply concatenate both dataframes
         df = pd.concat([new_row, dfx1]).reset_index(drop = True)
 
-        df.to_csv('PALIST.csv',index=False); st.dataframe(df)
+        df['clinic'] = df['clinic'].replace({"ETOWN": "ETOWN", "NYES": "NYES", "COMPLEX": "COMPLEX", "W_A": "WARD A", "W_C": "WARD C", "W_P": "WARD P", "PICU": "PICU", "PSHCH_NURSERY": "PSHCH NURSERY", "HAMPDEN_NURSERY": "HAMPDEN NURSERY", "SJR_HOSP": "SJR HOSP", "AAC": "AAC", "ER_CONS": "ER CONSULTS", "NF": "NIGHT FLOAT", "ADOLMED": "ADOLMED", "HOPE DRIVE": "HOPE_DRIVE"}); df.to_csv('PALIST.csv',index=False)
 
         df = pd.read_excel('Book4.xlsx')
 
