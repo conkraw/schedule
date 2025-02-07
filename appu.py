@@ -705,10 +705,6 @@ elif st.session_state.page == "OPD Creator":
 	for keyword, df_name in filters.items():
 	    filtered_dfs[df_name] = (outpatient_df[outpatient_df.iloc[:, 0].str.contains(keyword, na=False)].replace(outpatient_replacements))
 	
-	import ace_tools as tools
-	for df_name, df in filtered_dfs.items():
-	    tools.display_dataframe_to_user(name=df_name.replace("_df", "").title(), dataframe=df)
-		
 	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
