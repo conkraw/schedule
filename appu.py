@@ -751,7 +751,6 @@ elif st.session_state.page == "OPD Creator":
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
-	consults_df = duplicate_am_continuity(consults_df, "ER_CONS")
 	
 	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C") 
 
