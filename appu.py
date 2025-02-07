@@ -1001,7 +1001,7 @@ elif st.session_state.page == "Create List":
             print("Invalid date format in the cell.")
         else:
             # Format the date to mm-dd-yyyy
-            formatted_date = test_date.strftime('%m-%d-%Y')
+            formatted_date = test_date.strftime('%m/%d/%Y') 
 
             # Calculate the start date (use test_date directly as it's already a datetime object)
             start_date = test_date
