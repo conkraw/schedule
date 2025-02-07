@@ -740,6 +740,8 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 
+	st.dataframe(nf_df)
+
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
 	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
