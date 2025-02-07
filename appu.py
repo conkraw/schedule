@@ -560,7 +560,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # ✅ **Apply replacements if provided**
 	    if replacements:
-	        dfx = dfx.replace(replacements, regex=False)
+	        dfx = dfx.replace(replacements, regex=True)
 	
 	    # ✅ **Save the cleaned file**
 	    filename = f"{clinic_name.lower()}.csv"
