@@ -314,17 +314,17 @@ elif st.session_state.page == "OPD Creator":
 	
 	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
 	acute_format_ranges = [
-	    (6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), 
-	    (30, 31, 'AM - ACUTES', format4), (40, 41, 'PM - ACUTES', format4a),
-	    (54, 55, 'AM - ACUTES', format4), (64, 65, 'PM - ACUTES', format4a),
-	    (78, 79, 'AM - ACUTES', format4), (88, 89, 'PM - ACUTES', format4a)
+	    (6, 7, 'AM - Act', format4), (16, 17, 'PM - Act', format4a), 
+	    (30, 31, 'AM - Act', format4), (40, 41, 'PM - Act', format4a),
+	    (54, 55, 'AM - Act', format4), (64, 65, 'PM - Act', format4a),
+	    (78, 79, 'AM - Act', format4), (88, 89, 'PM - Act', format4a)
 	]
 	
 	continuity_format_ranges = [
-	    (8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a),
-	    (32, 39, 'AM - Continuity', format5a), (42, 49, 'PM - Continuity', format5a),
-	    (56, 63, 'AM - Continuity', format5a), (66, 73, 'PM - Continuity', format5a),
-	    (80, 87, 'AM - Continuity', format5a), (90, 97, 'PM - Continuity', format5a)
+	    (8, 15, 'AM - Con', format5a), (18, 25, 'PM - Con', format5a),
+	    (32, 39, 'AM - Con', format5a), (42, 49, 'PM - Con', format5a),
+	    (56, 63, 'AM - Con', format5a), (66, 73, 'PM - Con', format5a),
+	    (80, 87, 'AM - Con', format5a), (90, 97, 'PM - Con', format5a)
 	]
 	
 	# Write Acute Labels
@@ -449,8 +449,8 @@ elif st.session_state.page == "OPD Creator":
 	            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
 	
 	    # Set Column Widths
-	    worksheet.set_column('A:A', 7)
-	    worksheet.set_column('B:H', 60)
+	    worksheet.set_column('A:A', 10)
+	    worksheet.set_column('B:H', 65)
 	    worksheet.set_row(0, 37.25)
 	
 	    # Merge Format for Text
