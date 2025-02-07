@@ -660,7 +660,7 @@ elif st.session_state.page == "OPD Creator":
 	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
 	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
-	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "Day Admitting 7a-5p": "consultsa", "Short Call 4p-9p":"consultsp", "Evening Flex 12p-9p":"consultsp"}, #Assume Day Admitting is Consults
+	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "AM Pager 7a-12p": "consultsa", "PM Pager 12p-4p":"consultsa", "Evening Pager 4p-9p":"consultsp", "Overnight Pager 9p-7a":"consultsp"}, #Assume Day Admitting is Consults
 	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
@@ -1333,7 +1333,7 @@ elif st.session_state.page == "Create List":
                 # Set column widths (you can set them all at once or in a loop)
                 worksheet.set_column('A:A', 20)
                 worksheet.set_column('B:B', 30)
-                worksheet.set_column('C:G', 30)
+                worksheet.set_column('C:G', 40)
                 worksheet.set_column('H:H', 155)
 		    
                 # Set row height for header row
@@ -1434,7 +1434,7 @@ elif st.session_state.page == "Create List":
                 worksheet.write('E16', ' ', format8)
                 worksheet.write('F16', 'Ask for Feedback!', format8)
                 worksheet.write('G16', ' ', format8)
-                worksheet.write('H16', 'Quiz 2, Pediatric Documentation #1 Due', format8)
+                worksheet.write('H16', 'Quiz 2, Pediatric Documentation #1, 1 Clinical Encounter Log Due', format8)
 
                 # Writing to row 24
                 worksheet.write('A24', 'ASSIGNMENT DUE:', format8)
@@ -1454,7 +1454,7 @@ elif st.session_state.page == "Create List":
                 worksheet.write('E32', ' ', format8)
                 worksheet.write('F32', ' ', format8)
                 worksheet.write('G32', ' ', format8)
-                worksheet.write('H32', 'Quiz 4, Pediatric Documentation #2, Social Drivers of Health Assessment Form, Developmental Assessment of Pediatric Patient Form, Clinical Encounters are Due!', format8)
+                worksheet.write('H32', 'Quiz 4, Pediatric Documentation #2, Social Drivers of Health Assessment Form, Developmental Assessment of Pediatric Patient Form, All Clinical Encounter Logs are Due!', format8)
 
         # Now, we'll write the location data
         locations = xf201['col'].tolist()[1:]  # Assuming 'col' is a column in xf201 dataframe
