@@ -1037,7 +1037,7 @@ elif st.session_state.page == "Create List":
         read_file.to_csv ('hopedrive.csv', index = False, header=False)
         df=pd.read_csv('hopedrive.csv')
         
-	clinictype = df.iloc[3:23, [0]]; days, providers = df.iloc[1, 1:8].values, [df.iloc[3:23, i] for i in range(1, 8)]
+        clinictype = df.iloc[3:23, [0]]; days, providers = df.iloc[1, 1:8].values, [df.iloc[3:23, i] for i in range(1, 8)]
         week1 = pd.concat([clinictype.assign(type=clinictype.iloc[:, 0].str.replace(r'- Continuity', '', regex=True), date=days[i], provider=providers[i], clinic="HOPE_DRIVE") for i in range(7)]); week1.to_csv('week1.csv', index=False); st.dataframe(week1)
 
         clinictype=df.iloc[27:47, 0:1]
