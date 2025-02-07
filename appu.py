@@ -3518,7 +3518,7 @@ elif st.session_state.page == "Create List":
         extras.to_csv('extra_picu.csv', index=False)
 	#############################PSHCH_NURS##############################################################################################
         import pandas as pd
-        read_file = pd.read_excel (uploaded_opd_file, sheet_name='PSHCH_NURS')
+        read_file = pd.read_excel (uploaded_opd_file, sheet_name='PSHCH_NURSERY')
         read_file.to_csv ('extra.csv', index = False, header=False)
         df=pd.read_csv('extra.csv')
 
@@ -3824,7 +3824,7 @@ elif st.session_state.page == "Create List":
         extras.to_csv('extra_nurs.csv', index=False)
 	#############################HAMPDEN_NURS##############################################################################################
         import pandas as pd
-        read_file = pd.read_excel (uploaded_opd_file, sheet_name='HAMPDEN_NURS')
+        read_file = pd.read_excel (uploaded_opd_file, sheet_name='HAMPDEN_NURSERY')
         read_file.to_csv ('extra.csv', index = False, header=False)
         df=pd.read_csv('extra.csv')
 
