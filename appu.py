@@ -1000,40 +1000,47 @@ elif st.session_state.page == "Create List":
         if not isinstance(test_date, pd.Timestamp):  
             test_date = pd.to_datetime(test_date, errors='coerce')  # Convert only if needed
 
-        # Check if test_date is valid
+        # If test_date is invalid, assign a default fallback value
         if pd.isna(test_date):
-            st.error("❌ Invalid date format detected in the cell.")
-        else:
-            # Format the date to MM-DD-YYYY (without unnecessary conversions)
-            formatted_date = test_date.strftime('%m-%d-%Y')
-            st.write("✅ Successfully extracted and formatted date:", formatted_date)
+            st.error("❌ Invalid date format detected in the cell. Using fallback date.")
+            test_date = pd.Timestamp.today()  # Assign today's date as fallback
 
-            # Define the start and end dates for the date range
-            start_date = test_date
-            end_date = start_date + timedelta(days=34)
+        # Format the date to MM-DD-YYYY
+        formatted_date = test_date.strftime('%m-%d-%Y')
+        st.write("✅ Successfully extracted and formatted date:", formatted_date)
 
-            # Generate the date range
-            date_range = pd.date_range(start=start_date, end=end_date)
+        # Define the start and end dates for the date range
+        start_date = test_date
+        end_date = start_date + timedelta(days=34)
 
-            # Create a DataFrame with formatted dates
-            xf201 = pd.DataFrame({'date': date_range})
+        # Generate the date range
+        date_range = pd.date_range(start=start_date, end=end_date)
 
-            # Convert the date to the desired format (e.g., "November 25, 2024")
-            xf201['convert'] = xf201['date'].dt.strftime('%B %-d, %Y')
+        # Create a DataFrame with formatted dates
+        xf201 = pd.DataFrame({'date': date_range})
 
-            # Add additional columns
-            xf201['t'] = "T"
-            xf201['c'] = xf201.index  # Simple index-based column
-            xf201['T'] = xf201['t'].astype(str) + xf201['c'].astype(str)
+        # Convert the date to the desired format (e.g., "November 25, 2024")
+        xf201['convert'] = xf201['date'].dt.strftime('%B %-d, %Y')
 
-            # Display the processed date range
-            st.write("✅ Generated Date Range:", xf201)
+        # Add additional columns
+        xf201['t'] = "T"
+        xf201['c'] = xf201.index  # Simple index-based column
+        xf201['T'] = xf201['t'].astype(str) + xf201['c'].astype(str)
+
+        # Display the processed date range
+        st.write("✅ Generated Date Range:", xf201)
 
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
 
-        # Creating the dateMAP DataFrame
+    # ✅ Move dateMAP creation OUTSIDE the try-except block so it always runs
+    if 'xf201' in locals():
         dateMAP = xf201[['date', 'T']].copy()  # Use .copy() to avoid the SettingWithCopyWarning
+        dateMAP['date'] = pd.to_datetime(dateMAP['date'])
+        dateMAP['date'] = dateMAP['date'].dt.strftime('%m/%d/%Y')
+
+        # Display the final formatted date map
+        st.write("✅ Final Date Map:", dateMAP)
 
         # Convert 'date' column to datetime and then format it
         dateMAP['date'] = pd.to_datetime(dateMAP['date'])
