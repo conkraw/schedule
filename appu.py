@@ -1022,7 +1022,7 @@ elif st.session_state.page == "Create List":
         nyess.to_csv(f'{file_prefix}_summary.csv', index=False)
 
         # Display in Streamlit
-        st.dataframe(nyess); st.write(f"Processed file: {file_prefix}_summary.csv")
+        #st.dataframe(nyess); st.write(f"Processed file: {file_prefix}_summary.csv")
         return nyess
 	    
     st.title("Load Student Schedule")
@@ -1142,7 +1142,7 @@ elif st.session_state.page == "Create List":
         hopes = pd.concat([hopei, hopeii, hopeiii, hopeiiii])
 
         # Save the combined DataFrame to CSV
-        hopes.to_csv('hopes.csv', index=False); st.dataframe(hopes)
+        hopes.to_csv('hopes.csv', index=False); #st.dataframe(hopes)
         #################################################################################################################
         # List of sheet names to process
         sheet_names = ['ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C', 'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSP', 'AAC', 'ER_CONS', 'NF', 'ADOLMED']  # Add more as needed
@@ -1152,7 +1152,7 @@ elif st.session_state.page == "Create List":
             process_clinic_schedule(sheet, sheet.lower(), uploaded_opd_file)	
 	############################################################################
         summary_files = [f"{sheet.lower()}_summary.csv" for sheet in sheet_names]
-        dfx = pd.concat([pd.read_csv(file) for file in summary_files], ignore_index=True)
+        dfx = pd.concat([pd.read_csv(file) for file in summary_files] + [pd.read_csv('hopes.csv')], ignore_index=True)
 
         dfx['providers'] = dfx['provider'].str.split('~').str[0]
         dfx['student'] = dfx['provider'].str.split('~').str[1]
