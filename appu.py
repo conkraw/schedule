@@ -1036,7 +1036,7 @@ elif st.session_state.page == "Create List":
 
         read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
         read_file.to_csv ('hopedrive.csv', index = False, header=False)
-        df=pd.read_csv('hopedrive.csv'); st.dataframe(df)
+        df=pd.read_csv('hopedrive.csv')
         clinictype=df.iloc[3:23, 0:1]
         a1 = pd.DataFrame(clinictype, columns = ['type'])
         a2 = pd.DataFrame(clinictype, columns = ['type'])
@@ -1104,7 +1104,7 @@ elif st.session_state.page == "Create List":
 
         week1=pd.DataFrame(columns=week1day1.columns)
         week1=pd.concat([week1,week1day1,week1day2,week1day3,week1day4,week1day5,week1day6,week1day7])
-        week1.to_csv('week1.csv',index=False)
+        week1.to_csv('week1.csv',index=False) ; st.dataframe(week1)
 
         clinictype=df.iloc[27:47, 0:1]
         b1 = pd.DataFrame(clinictype, columns = ['type'])
