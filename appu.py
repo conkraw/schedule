@@ -985,43 +985,52 @@ elif st.session_state.page == "Create List":
         st.error("No Book4 file found in session state.")
 	    
     
-    # Ensure the "HOPE_DRIVE" sheet exists in the uploaded Excel file
     try:
+        # Read Excel file, skipping the first 2 rows
         df = pd.read_excel(uploaded_opd_file, skiprows=2, header=None)
+
+        # Display the dataframe in Streamlit for debugging
         st.dataframe(df)
-        test_date = df.iloc[1, 1]; st.write("Extracted test_date:", test_date)
 
-        # Ensure that test_date is a valid datetime object
-        # If it's a string, convert it into a datetime object using pd.to_datetime
-        if isinstance(test_date, str):
-            test_date = pd.to_datetime(test_date, errors='coerce')  # Handle invalid date gracefully
+        # Extract test_date (Check if it is already in datetime format)
+        test_date = df.iloc[1, 1]
+        st.write("Extracted test_date:", test_date)
 
-        # Check if the date is valid (not NaT)
+        # Check if test_date is already a datetime object before conversion
+        if not isinstance(test_date, pd.Timestamp):  
+            test_date = pd.to_datetime(test_date, errors='coerce')  # Convert only if needed
+
+        # Check if test_date is valid
         if pd.isna(test_date):
-            print("Invalid date format in the cell.")
+            st.error("❌ Invalid date format detected in the cell.")
         else:
-            # Format the date to mm-dd-yyyy
+            # Format the date to MM-DD-YYYY (without unnecessary conversions)
             formatted_date = test_date.strftime('%m-%d-%Y')
+            st.write("✅ Successfully extracted and formatted date:", formatted_date)
 
-            # Calculate the start date (use test_date directly as it's already a datetime object)
+            # Define the start and end dates for the date range
             start_date = test_date
-
-            # Calculate the end date (34 days from the start date)
             end_date = start_date + timedelta(days=34)
 
             # Generate the date range
             date_range = pd.date_range(start=start_date, end=end_date)
 
-            # Create a DataFrame with the formatted dates
+            # Create a DataFrame with formatted dates
             xf201 = pd.DataFrame({'date': date_range})
 
             # Convert the date to the desired format (e.g., "November 25, 2024")
-            xf201['convert'] = xf201['date'].dt.strftime('%B %-d, %Y')  # This works in Unix-like systems
+            xf201['convert'] = xf201['date'].dt.strftime('%B %-d, %Y')
 
             # Add additional columns
             xf201['t'] = "T"
-            xf201['c'] = xf201.index + 0  # Simple index-based column
+            xf201['c'] = xf201.index  # Simple index-based column
             xf201['T'] = xf201['t'].astype(str) + xf201['c'].astype(str)
+
+            # Display the processed date range
+            st.write("✅ Generated Date Range:", xf201)
+
+    except Exception as e:
+        st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
 
         # Creating the dateMAP DataFrame
         dateMAP = xf201[['date', 'T']].copy()  # Use .copy() to avoid the SettingWithCopyWarning
