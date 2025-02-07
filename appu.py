@@ -665,8 +665,8 @@ elif st.session_state.page == "OPD Creator":
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
 	    "SJR_HOSP.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
 	    "AAC.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
-	    "WARD_CARDIOLOGY.xlsx": {"Wards 8a-5p": "AM - Continuity"},  
-	    "WARD_GI.xlsx": {"GI Daytime Service 7:30a-5p": "AM - Continuity"},  
+	    "WARD_CARDIOLOGY.xlsx": {"Wards 8a-5p": "AM - Continuity", "Wards 8a-8a": "AM - Continuity"},  
+	    "WARD_GI.xlsx": {"GI Daytime Service 7:30a-5p": "AM - Continuity", "GI Daytime Service 7:30a-3p": "AM - Continuity", "GI Weekend Call 7:30a-7:30a": "AM - Continuity"},  
 	    "WARD_NEPHRO.xlsx": {"Neph On Call 8a-8a": "AM - Continuity"},  
 	}
 	
@@ -753,7 +753,7 @@ elif st.session_state.page == "OPD Creator":
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	consults_df = duplicate_am_continuity(consults_df, "ER_CONS")
 	
-	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C")
+	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C") 
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
