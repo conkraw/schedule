@@ -750,7 +750,7 @@ elif st.session_state.page == "OPD Creator":
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
-	consults_df = duplicate_am_continuity(nf_df, "ER_CONS")
+	consults_df = duplicate_am_continuity(consults_df, "ER_CONS")
 
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
@@ -765,7 +765,7 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(sjrhosp_df, "SJR_HOSP", "22.csv", "23.csv")
 	process_continuity_classes(aac_df, "AAC", "24.csv", "25.csv")
 	process_continuity_classes(nf_df, "NF", "26.csv", "27.csv")
-	process_continuity_classes(nf_df, "ER_CONS", "28.csv", "29.csv")
+	process_continuity_classes(consults_df, "ER_CONS", "28.csv", "29.csv")
 
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 30)}
