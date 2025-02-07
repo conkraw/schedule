@@ -754,7 +754,7 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	consults_df = duplicate_am_continuity(consults_df, "ER_CONS")
-	adolmed_df = duplicate_am_continuity(adolmed_df, "ADOLMED")
+	#adolmed_df = duplicate_am_continuity(adolmed_df, "ADOLMED") #Don't need to duplicate Adolescent Medicine
 
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
