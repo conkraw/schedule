@@ -1195,17 +1195,12 @@ elif st.session_state.page == "Create List":
 
         dfx1 = pd.read_csv('PALIST.csv')
 
-        new_row = pd.DataFrame({'date':0, 'type':0, 'providers':0,
-                                'student':0, 'clinic':0, 'provider':0,
-                                'class':0, 'datecode':0, 'datecode2':0},
-                                                                    index =[0])
+        new_row = pd.DataFrame({'date':0, 'type':0, 'providers':0,'student':0, 'clinic':0, 'provider':0,'class':0, 'datecode':0, 'datecode2':0}, index =[0])
         # simply concatenate both dataframes
         df = pd.concat([new_row, dfx1]).reset_index(drop = True)
 
-        df.to_csv('PALIST.csv',index=False)
-        
-        #st.dataframe(df.head())
-        
+        df.to_csv('PALIST.csv',index=False); st.dataframe(df)
+
         df = pd.read_excel('Book4.xlsx')
 
         # Keep the first NaN in the first row as it is for the first column
@@ -1302,43 +1297,15 @@ elif st.session_state.page == "Create List":
         workbook = xlsxwriter.Workbook('Main_Schedule_MS.xlsx')
 
         # Define the formats
-        format1 = workbook.add_format({
-            'font_size': 14,
-            'bold': 1,
-            'align': 'center',
-            'valign': 'vcenter',
-            'font_color': 'black',
-            'text_wrap': True,
-            'bg_color': '#FEFFCC',
-            'border': 1
-        })
-
-        format2 = workbook.add_format({
-            'font_size': 10,
-            'bold': 1,
-            'align': 'center',
-            'valign': 'vcenter',
-            'font_color': 'yellow',
-            'bg_color': 'black',
-            'border': 1,
-            'text_wrap': True
-        })
-
-        format3 = workbook.add_format({
-            'font_size':12,
-            'bold': 1,
-            'align': 'center',
-            'valign': 'vcenter',
-            'font_color':'black',
-            'bg_color':'#FFC7CE',
-            'border':1
-        })
-
+        format1 = workbook.add_format({'font_size': 14,'bold': 1,'align': 'center','valign': 'vcenter','font_color': 'black','text_wrap': True,'bg_color': '#FEFFCC','border': 1})
+        format2 = workbook.add_format({'font_size': 10,'bold': 1,'align': 'center','valign': 'vcenter','font_color': 'yellow','bg_color': 'black','border': 1,'text_wrap': True})
+        format3 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
         format4 = workbook.add_format({'num_format':'mm/dd/yyyy','font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1})
         format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1})
         format6 = workbook.add_format({'bg_color':'black','border':1})
         format7 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#90EE90','border':1})
         format8 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign':'vcenter','font_color':'black','bg_color':'#89CFF0','border':1})
+	    
         # Initialize a list to store worksheets
         worksheets = []
 
@@ -1583,23 +1550,9 @@ elif st.session_state.page == "Create List":
         df.to_csv('datesT.csv',index=False)
 
         df=pd.read_csv('PALIST.csv',dtype=str)
-        #import io
-        #output = io.StringIO()
-        #df.to_csv(output, index=False)
-        #output.seek(0)
-
-        # Streamlit download button
-        #st.download_button(
-        #    label="Download CSV File",
-        #    data=output.getvalue(),
-        #    file_name="PALIST.csv",
-        #    mime="text/csv"
-        #)
- 
 	    
         df['text'] = df['providers'] + " - " + "[" + df['clinic'] + "]"
         df = df[['datecode','type','student','text','date','clinic']]
-
 
         mydict = {}
         with open('datesT.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
@@ -1612,14 +1565,6 @@ elif st.session_state.page == "Create List":
         df = df.loc[df['student'] != "0"]
 
         df.to_excel('Source1.xlsx', index=False)
-        #import io 
-        #output = io.BytesIO()
-        #with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        #    df.to_excel(writer, index=False, sheet_name='Sheet1')
-        #    writer.close()
-        #output.seek(0)
-        #st.download_button(label="Download Excel File", data=output, file_name="Source1.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
 
         import openpyxl
         import numpy as np 
