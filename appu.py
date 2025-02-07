@@ -711,6 +711,18 @@ elif st.session_state.page == "OPD Creator":
 	    
 	    # Store in dictionary
 	    filtered_dfs[df_name] = filtered_df
+	def process_filtered_file(df_name, new_name):
+	    if df_name in filtered_dfs:
+	        df = filtered_dfs[df_name]
+	        print(f"Processing {new_name}...")
+	        return df  # Return the processed DataFrame
+	    else:
+	        print(f"Error: {df_name} not found.")
+	        return None
+
+	hope_drive_df = process_filtered_file("hope_drive_df", "HOPE_DRIVE")
+	etown_df = process_filtered_file("etown_df", "ETOWN")
+	nyes_df = process_filtered_file("nyes_df", "NYES")
 
 	st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
 	
