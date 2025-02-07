@@ -184,7 +184,7 @@ elif st.session_state.page == "Upload Files":
 		      "WARD_P": "WARD_P.xlsx",
 		      "COMPLEX": "COMPLEX.xlsx",
 		      "PICU": "PICU.xlsx",
-		      "PSHCH_NURSERY":"PSHCH_NURSERY.xlsx"}
+		      "PSHCH_NURSERY":"PSHCH_NURSERY.xlsx","ADOLMED":"ADOLMED.xlsx"}
 
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
 
