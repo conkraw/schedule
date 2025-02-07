@@ -703,7 +703,14 @@ elif st.session_state.page == "OPD Creator":
 	filtered_dfs = {}
 	
 	for keyword, df_name in filters.items():
-	    filtered_dfs[df_name] = (outpatient_df[outpatient_df.iloc[:, 0].str.contains(keyword, na=False)].replace(outpatient_replacements))
+	    # Filter rows where *any* column contains the keyword
+	    filtered_df = outpatient_df[outpatient_df.apply(lambda row: row.astype(str).str.contains(keyword, na=False).any(), axis=1)]
+	    
+	    # Apply replacements across all columns
+	    filtered_df = filtered_df.replace(outpatient_replacements, regex=False)
+	    
+	    # Store in dictionary
+	    filtered_dfs[df_name] = filtered_df
 
 	st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
 	
