@@ -1149,28 +1149,14 @@ elif st.session_state.page == "Create List":
 
         # Process all sheets dynamically
         for sheet in sheet_names:
-            process_clinic_schedule(sheet, sheet.lower(), uploaded_opd_file)
-		
+            process_clinic_schedule(sheet, sheet.lower(), uploaded_opd_file)	
 	############################################################################
-        df1=pd.read_csv('etowns.csv')
-        df2=pd.read_csv('hopes.csv')
-        df3=pd.read_csv('nyess.csv')
-        df4=pd.read_csv('mhss.csv')
-        df5=pd.read_csv('extra_a.csv')
-        df6=pd.read_csv('extra_c.csv')
-        df7=pd.read_csv('extra_p.csv')
-        df8=pd.read_csv('extra_picu.csv')
-        df9=pd.read_csv('extra_nurs.csv')
-        df10=pd.read_csv('extra_hnurs.csv')
-        df11=pd.read_csv('extra_sjrhosp.csv')
-        df12=pd.read_csv('extra_ercons.csv')
-        df13=pd.read_csv('extra_nf.csv')
-	    
-        dfx=pd.DataFrame(columns=df1.columns)
-        dfx=pd.concat([dfx,df1,df2,df3,df4,df5,df6,df7,df8,df9,df10,df11,df12,df13])
-        dfx['providers']=dfx['provider'].str.split('~').str[0]
-        dfx['student']=dfx['provider'].str.split('~').str[1]
-        dfx1=dfx[['date','type','providers','student','clinic','provider','class']]
+        summary_files = [f"{sheet.lower()}_summary.csv" for sheet in sheet_names]
+        dfx = pd.concat([pd.read_csv(file) for file in summary_files], ignore_index=True)
+
+        dfx['providers'] = dfx['provider'].str.split('~').str[0]
+        dfx['student'] = dfx['provider'].str.split('~').str[1]
+        dfx1 = dfx[['date', 'type', 'providers', 'student', 'clinic', 'provider', 'class']]
 
         dfx1['date'] = pd.to_datetime(dfx1['date'])
         dfx1['date'] = dfx1['date'].dt.strftime('%m/%d/%Y')
@@ -1208,22 +1194,7 @@ elif st.session_state.page == "Create List":
         dfx1.to_csv('PALIST.csv',index=False)
 
         dfx1 = pd.read_csv('PALIST.csv')
-        #df = dfx1
-        #df=pd.read_csv('PALIST.csv',dtype=str)
-        #import io
-        #output = io.StringIO()
-        #df.to_csv(output, index=False)
-        #output.seek(0)
 
-        # Streamlit download button
-        #st.download_button(
-        #    label="Download CSV File",
-        #    data=output.getvalue(),
-        #    file_name="PALIST.csv",
-        #    mime="text/csv"
-        #)
- 
- 
         new_row = pd.DataFrame({'date':0, 'type':0, 'providers':0,
                                 'student':0, 'clinic':0, 'provider':0,
                                 'class':0, 'datecode':0, 'datecode2':0},
