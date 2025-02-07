@@ -177,14 +177,18 @@ elif st.session_state.page == "Upload Files":
     #    with open(st.session_state.generated_file, "rb") as f:
     #        st.download_button("Download Generated Excel File", f, "Duplicated_File.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx",
-		      "ETOWN": "ETOWN.xlsx",
-		      "NYES": "NYES.xlsx",
-		      "WARD_A": "WARD_A.xlsx",
-		      "WARD_P": "WARD_P.xlsx",
-		      "COMPLEX": "COMPLEX.xlsx",
-		      "PICU": "PICU.xlsx",
-		      "PSHCH_NURSERY":"PSHCH_NURSERY.xlsx","ADOLMED":"ADOLMED.xlsx"}
+    required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx", 
+		      "ETOWN": "ETOWN.xlsx", 
+		      "NYES": "NYES.xlsx", 
+		      "WARD_A": "WARD_A.xlsx", 
+		      "WARD_P": "WARD_P.xlsx", 
+		      "COMPLEX": "COMPLEX.xlsx", 
+		      "PICU": "PICU.xlsx", 
+		      "PSHCH_NURSERY":"PSHCH_NURSERY.xlsx", 
+		      "ADOLMED":"ADOLMED.xlsx", 
+		      "WARD_CARDIOLOGY": "WARD_CARDIOLOGY.xlsx", 
+		      "WARD_GI": "WARD_GI.xlsx", 
+		      "WARD_NEPHRO": "WARD_NEPHRO.xlsx"}
 
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
 
@@ -247,44 +251,31 @@ elif st.session_state.page == "OPD Creator":
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
 	# Define worksheet names
-	worksheet_names = [
-	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C',
-	    'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY',
-	    'SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED"
-	]
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C','W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED"]
 	
 	# Create worksheets and store them in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
-	
-	# Assign worksheets to separate variables dynamically
-	(
-	    worksheet, worksheet2, worksheet3, worksheet4, worksheet5, 
-	    worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, 
-	    worksheet11, worksheet12, worksheet13, worksheet14,worksheet15
-	) = worksheets.values()
+	(worksheet, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14,worksheet15) = worksheets.values()
 	
 	# Define format
-	format1 = workbook.add_format({
-	    'font_size': 18, 'bold': 1, 'align': 'center',
-	    'valign': 'vcenter', 'font_color': 'black',
-	    'bg_color': '#FEFFCC', 'border': 1
-	})
+	format1 = workbook.add_format({'font_size': 18, 'bold': 1, 'align': 'center','valign': 'vcenter', 'font_color': 'black','bg_color': '#FEFFCC', 'border': 1})
 	
 	# Define site names corresponding to worksheet names
-	worksheet_sites = {
-	    worksheet: 'Hope Drive',
-	    worksheet2: 'Elizabethtown',
-	    worksheet3: 'Nyes Road',
-	    worksheet4: 'Complex Care',
-	    worksheet5: 'WARD A',
-	    worksheet6: 'WARD C',
-	    worksheet7: 'WARD P',
-	    worksheet8: 'PICU',
-	    worksheet9: 'PSHCH NURSERY',
-	    worksheet10: 'HAMPDEN NURSERY',
-	    worksheet11: 'SJR HOSPITALIST',
-	    worksheet12: 'AAC', worksheet13: 'ER CONSULTS', worksheet14: 'NIGHT FLOAT', worksheet15: 'ADOLMED'
-	}
+	worksheet_sites = {worksheet: 'Hope Drive', 
+			   worksheet2: 'Elizabethtown', 
+			   worksheet3: 'Nyes Road', 
+			   worksheet4: 'Complex Care', 
+			   worksheet5: 'WARD A', 
+			   worksheet6: 'WARD C', 
+			   worksheet7: 'WARD P', 
+			   worksheet8: 'PICU', 
+			   worksheet9: 'PSHCH NURSERY', 
+			   worksheet10: 'HAMPDEN NURSERY',
+			   worksheet11: 'SJR HOSPITALIST', 
+			   worksheet12: 'AAC', 
+			   worksheet13: 'ER CONSULTS', 
+			   worksheet14: 'NIGHT FLOAT', 
+			   worksheet15: 'ADOLMED'}
 	
 	# Write "Site:" and corresponding site names in each worksheet
 	for ws, site in worksheet_sites.items():
@@ -507,9 +498,7 @@ elif st.session_state.page == "OPD Creator":
 
 	column_pairs = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)]
 	
-	days = [day0, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13,
-	        day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25, day26, day27,
-	        day28, day29, day30, day31, day32, day33, day34]
+	days = [day0, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14, day15, day16, day17, day18, day19, day20, day21, day22, day23, day24, day25, day26, day27, day28, day29, day30, day31, day32, day33, day34]
 	
 	# Function to process each file
 
