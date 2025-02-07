@@ -670,7 +670,7 @@ elif st.session_state.page == "OPD Creator":
 	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
 	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
-	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float"},
+	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "Day Admitting 7a-5p": "consults"}, #Assume Day Admitting is Consults
 	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
@@ -721,6 +721,7 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
 	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
+	consults_df = warda_df[warda_df["type"] == "consults "].assign(type="PM - Continuity ", clinic="NF")
 
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
@@ -749,6 +750,7 @@ elif st.session_state.page == "OPD Creator":
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
+	consults_df = duplicate_am_continuity(nf_df, "ER_CONS")
 
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
@@ -763,10 +765,11 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(sjrhosp_df, "SJR_HOSP", "22.csv", "23.csv")
 	process_continuity_classes(aac_df, "AAC", "24.csv", "25.csv")
 	process_continuity_classes(nf_df, "NF", "26.csv", "27.csv")
+	process_continuity_classes(nf_df, "ER_CONS", "28.csv", "29.csv")
 
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 28)}
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27 = tables.values()
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 30)}
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29 = tables.values()
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
@@ -872,6 +875,7 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("SJR_HOSP","SJR_HOSP")
 	process_excel_mapping("AAC","AAC")
 	process_excel_mapping("NF","NF")
+	process_excel_mapping("ER_CONS","ER_CONS")
 
 	###############################################################################################
 
