@@ -988,7 +988,7 @@ elif st.session_state.page == "Create List":
     # Ensure the "HOPE_DRIVE" sheet exists in the uploaded Excel file
     try:
         df = pd.read_excel(uploaded_opd_file, skiprows=1, header=None)
-        st.write("Row 2 contents:", df.iloc[2, :].tolist())
+        st.dataframe(df)
         test_date = df.iloc[2, 1]; st.write("Extracted test_date:", test_date)
 
         # Ensure that test_date is a valid datetime object
