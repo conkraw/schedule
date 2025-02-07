@@ -993,7 +993,7 @@ elif st.session_state.page == "Create List":
 
         # Ensure that test_date is a valid datetime object
         # If it's a string, convert it into a datetime object using pd.to_datetime
-        if isinstance(test_date, str):
+        if not isinstance(test_date, str):
             test_date = pd.to_datetime(test_date, errors='coerce')  # Handle invalid date gracefully
 
         # Check if the date is valid (not NaT)
@@ -1001,7 +1001,7 @@ elif st.session_state.page == "Create List":
             print("Invalid date format in the cell.")
         else:
             # Format the date to mm-dd-yyyy
-            formatted_date = test_date.strftime('%m/%d/%Y') 
+            formatted_date = test_date.strftime('%m/%d/%Y'); ; st.write("formatted_date:", formatted_date) 
 
             # Calculate the start date (use test_date directly as it's already a datetime object)
             start_date = test_date
