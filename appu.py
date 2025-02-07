@@ -989,7 +989,7 @@ elif st.session_state.page == "Create List":
     try:
         df = pd.read_excel(uploaded_opd_file, skiprows=2, header=None)
         st.dataframe(df)
-        test_date = df.iloc[2, 1]; st.write("Extracted test_date:", test_date)
+        test_date = df.iloc[0, 1]; st.write("Extracted test_date:", test_date)
 
         # Ensure that test_date is a valid datetime object
         # If it's a string, convert it into a datetime object using pd.to_datetime
