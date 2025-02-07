@@ -177,19 +177,16 @@ elif st.session_state.page == "Upload Files":
     #    with open(st.session_state.generated_file, "rb") as f:
     #        st.download_button("Download Generated Excel File", f, "Duplicated_File.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx", 
-		      "ETOWN": "ETOWN.xlsx", 
-		      "NYES": "NYES.xlsx", 
-		      "WARD_A": "WARD_A.xlsx", 
+    required_files = {"WARD_A": "WARD_A.xlsx", 
 		      "WARD_P": "WARD_P.xlsx", 
 		      "COMPLEX": "COMPLEX.xlsx", 
 		      "PICU": "PICU.xlsx", 
-		      "PSHCH_NURSERY":"PSHCH_NURSERY.xlsx", 
 		      "ADOLMED":"ADOLMED.xlsx", 
 		      "WARD_CARDIOLOGY": "WARD_CARDIOLOGY.xlsx", 
 		      "WARD_GI": "WARD_GI.xlsx", 
-		      "WARD_NEPHRO": "WARD_NEPHRO.xlsx"}
-
+		      "WARD_NEPHRO": "WARD_NEPHRO.xlsx",
+		      "OUTPATIENT": "OUTPATIENT.xlsx"}
+	
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
 
     if uploaded_files:
@@ -647,22 +644,25 @@ elif st.session_state.page == "OPD Creator":
 
 	# Define replacement rules for each clinic
 	replacement_rules = {
-	    "HOPE_DRIVE.xlsx": {
+	    "OUTPATIENT.xlsx": {
 	        "Hope Drive AM Continuity": "AM - Continuity",
 	        "Hope Drive PM Continuity": "PM - Continuity",
 	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
 	        "Hope Drive PM Acute Precept": "PM - ACUTES",
 	        "Hope Drive Weekend Continuity": "AM - Continuity",
 	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
-	        "Hope Drive Weekend Acute 2": "AM - ACUTES"
+	        "Hope Drive Weekend Acute 2": "AM - ACUTES",
+	        "Etown AM Continuity": "AM - Continuity",
+	        "Etown PM Continuity": "PM - Continuity",
+		"Nyes Rd AM Continuity": "AM - Continuity",
+	        "Nyes Rd PM Continuity": "PM - Continuity",
+		"Nursery Weekday 8a-6p": "AM - Continuity",
+	        "Nursery Weekend": "AM - Continuity"
 	    },
 	    "PICU.xlsx": {"2nd PICU Attending 7:45a-4p": "AM - Continuity", "1st PICU Attending 7:30a-5p": "AM - Continuity"},
-	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
-	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
 	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "AM Pager 7a-12p": "consultsa", "PM Pager 12p-4p":"consultsp", "Evening Pager 4p-9p":"consultsp", "Overnight Pager 9p-7a":"consultsp"}, #Assume Day Admitting is Consults
 	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
-	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
 	    "SJR_HOSP.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
 	    "AAC.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
@@ -697,16 +697,23 @@ elif st.session_state.page == "OPD Creator":
 	
 	    return df
 
-	# Process each file
-
-	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
-	etown_df = process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
-	nyes_df = process_file("NYES.xlsx", "NYES", replacement_rules.get("NYES.xlsx"))
+	outpatient_df = pd.read_excel(uploaded_files["OUTPATIENT.xlsx"], dtype=str)
+	outpatient_replacements = replacement_rules.get("OUTPATIENT.xlsx", {})
+	filters = {"Hope": "hopedrive_df","Etown": "etown_df","Nyes": "nyes_df","Nursery": "pshchnursery_df"}
+	filtered_dfs = {}
+	
+	for keyword, df_name in filters.items():
+	    filtered_dfs[df_name] = (outpatient_df[outpatient_df.iloc[:, 0].str.contains(keyword, na=False)].replace(outpatient_replacements))
+	
+	import ace_tools as tools
+	for df_name, df in filtered_dfs.items():
+	    tools.display_dataframe_to_user(name=df_name.replace("_df", "").title(), dataframe=df)
+		
 	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
-	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
+	#pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
