@@ -990,7 +990,7 @@ elif st.session_state.page == "Create List":
         df = pd.read_excel(uploaded_opd_file)
 
         # Extract the value from row 2, column 1
-        test_date = df.iloc[2, 1]
+        test_date = df.iloc[3, 1]
 
         # Ensure that test_date is a valid datetime object
         # If it's a string, convert it into a datetime object using pd.to_datetime
