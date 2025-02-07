@@ -660,7 +660,7 @@ elif st.session_state.page == "OPD Creator":
 	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
 	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
-	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity"},
+	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "PM - Continuity"},
 	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
@@ -709,7 +709,9 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
-
+	
+	nf_df = pd.read_excel("WARD_A.xlsx", dtype=str)
+	
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
 	
@@ -736,6 +738,7 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY")
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
+	nf_df = duplicate_am_continuity(nf_df, "NF")
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
@@ -748,6 +751,7 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(hampdennursery_df, "HAMPDEN_NURSERY", "20.csv", "21.csv")
 	process_continuity_classes(sjrhosp_df, "SJR_HOSP", "22.csv", "23.csv")
 	process_continuity_classes(aac_df, "AAC", "24.csv", "25.csv")
+	process_continuity_classes(nf_df, "NF", "26.csv", "27.csv")
 
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 26)}
@@ -856,6 +860,7 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("HAMPDEN_NURSERY","HAMPDEN_NURSERY")
 	process_excel_mapping("SJR_HOSP","SJR_HOSP")
 	process_excel_mapping("AAC","AAC")
+	process_excel_mapping("NF","NF")
 
 	###############################################################################################
 
