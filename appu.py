@@ -420,7 +420,8 @@ elif st.session_state.page == "OPD Creator":
 	    date_rows = [3, 27, 51, 75] #[4, 28, 52, 76]
 	    for i, start_row in enumerate(date_rows):
 	        worksheet.write(f'A{start_row - 1}', "", format_label)
-	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label)
+	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in 
+	        worksheet.write_formula(f'A{start_row}', f'="")', format_label)
 	        worksheet.write(f'A{start_row + 1}', "", format_label)
 	
 	    # Set Pink Bars (Conditional Format)
