@@ -1037,8 +1037,8 @@ elif st.session_state.page == "Create List":
         read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
         read_file.to_csv ('hopedrive.csv', index = False, header=False)
         df=pd.read_csv('hopedrive.csv')
-        clinictype=df.iloc[3:23, 0:1]; st.dataframe(clinictype)
-        a1 = pd.DataFrame(clinictype, columns = ['type']); st.dataframe(a1)
+        clinictype=df.iloc[3:23, 0:1]
+        a1 = pd.DataFrame(clinictype, columns = ['type'])
         a2 = pd.DataFrame(clinictype, columns = ['type'])
         a3 = pd.DataFrame(clinictype, columns = ['type'])
         a4 = pd.DataFrame(clinictype, columns = ['type'])
