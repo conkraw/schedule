@@ -712,7 +712,7 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
 	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
-	consults_df = (warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS").groupby(["date", "clinic", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) if x.name == "PM - Continuity " else list(x)}))
+	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS").groupby(["date", "clinic", "type"], as_index=False).agg({"provider": lambda x: " / ".join(x) if x.name == "PM - Continuity " else x.str.strip()})
 
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"]
