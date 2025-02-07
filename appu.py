@@ -723,8 +723,6 @@ elif st.session_state.page == "OPD Creator":
 	wnephro_df = process_file("WARD_NEPHRO.xlsx", "WARD_NEPHRO", replacement_rules.get("WARD_NEPHRO.xlsx"))
 	
 	wardc_df = (pd.concat([wcard_df, wgi_df, wnephro_df], ignore_index=True).query("type == 'AM - Continuity '").assign(clinic="WARD_C").groupby(["date", "clinic"], as_index=False).agg({"type": "first", "provider": lambda x: "/".join(x)}))
-
-	st.dataframe(wardc_df) 
 	
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
