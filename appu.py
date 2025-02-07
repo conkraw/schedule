@@ -670,7 +670,8 @@ elif st.session_state.page == "OPD Creator":
 	    "WARD_GI.xlsx": {"GI Daytime Service 7:30a-5p": "AM - Continuity", "GI Daytime Service 7:30a-3p": "AM - Continuity", "GI Weekend Call 7:30a-7:30a": "AM - Continuity"},  
 	    "WARD_NEPHRO.xlsx": {"Neph On Call 8a-8a": "AM - Continuity"},  
 	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
-	}	
+	}
+	
 	def process_picu_exclusions(df):
 	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement using Streamlit's date format (m/d/yyyy)."""
 	    if df is not None and 'date' in df.columns:
@@ -709,10 +710,10 @@ elif st.session_state.page == "OPD Creator":
 		filtered_dfs[df_name] = outpatient_df[outpatient_df.apply(lambda row: row.astype(str).str.contains(suffix, na=False).any(), axis=1)]
 
 	# Assign to individual variables
-	hope_drive_df = filtered_dfs["hope_drive_df"]
-	etown_df = filtered_dfs["etown_df"]
-	nyes_df = filtered_dfs["nyes_df"]
-	pshchnursery_df = filtered_dfs["pshchnursery_df"]
+	hope_drive_df = filtered_dfs["hope_drive_df"]; st.dataframe(hope_drive_df)
+	etown_df = filtered_dfs["etown_df"]; st.dataframe(etown_df)
+	nyes_df = filtered_dfs["nyes_df"]; st.dataframe(nyes_df)
+	pshchnursery_df = filtered_dfs["pshchnursery_df"]; st.dataframe(pshchnursery_df)
 
 	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
