@@ -1031,10 +1031,8 @@ elif st.session_state.page == "Create List":
         dateMAP['date'] = pd.to_datetime(dateMAP['date'])
         dateMAP['date'] = dateMAP['date'].dt.strftime('%m/%d/%Y')
 
-        # Save the result to a CSV file
-        dateMAP.to_csv('xxxDATEMAP.csv', index=False)
-	a1 = a2 = a3 = a4 = a5 = a6 = a7 = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE').iloc[3:23, [0]].rename(columns={0: 'type'})
-
+      	dateMAP.to_csv('xxxDATEMAP.csv', index=False)
+        a1 = a2 = a3 = a4 = a5 = a6 = a7 = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE').iloc[3:23, [0]].rename(columns={0: 'type'})
 
         #read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
         #read_file.to_csv ('hopedrive.csv', index = False, header=False)
