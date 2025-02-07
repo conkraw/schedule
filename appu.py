@@ -742,7 +742,7 @@ elif st.session_state.page == "OPD Creator":
 	else:
 	    print("Error: PICU.xlsx could not be processed. Check if the file exists or is uploaded correctly.")
 		
-	process_hope_classes(filtered_dfs["hope_df"], "HOPE_DRIVE")
+	process_hope_classes(filtered_dfs["hope_drive_df"], "HOPE_DRIVE")
 	
 	# Apply AM → PM Continuity Transformation... df and the name
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
