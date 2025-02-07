@@ -993,7 +993,7 @@ elif st.session_state.page == "Create List":
 
         # Ensure that test_date is a valid datetime object
         # If it's a string, convert it into a datetime object using pd.to_datetime
-        if not isinstance(test_date, str):
+        if not isinstance(test_date, pd.Timestamp):
             test_date = pd.to_datetime(test_date, errors='coerce')  # Handle invalid date gracefully
 
         # Check if the date is valid (not NaT)
