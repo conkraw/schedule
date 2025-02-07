@@ -711,7 +711,7 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
 	nf_df = warda_df[warda_df["type"] == "night_float"].assign(type="PM - Continuity").copy()
-
+	st.dataframe(warda_df)
 	st.dataframe(nf_df)
 
 	# Step 1: Read and preprocess PICU file first
