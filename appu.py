@@ -901,7 +901,32 @@ elif st.session_state.page == "OPD Creator":
 	        file_name="OPD.xlsx",
 	        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	    )
-		
+
+def process_week(df, start_row, end_row, date_row, clinic_name, filename):
+    clinictype = df.iloc[start_row:end_row, [0]]
+    days, providers = df.iloc[date_row, 1:8].values, [df.iloc[start_row:end_row, i] for i in range(1, 8)]
+    
+    week = pd.concat([
+        clinictype.assign(
+            type=clinictype.iloc[:, 0].str.replace(r'- Continuity', '', regex=True),
+            date=days[i],
+            provider=providers[i],
+            clinic=clinic_name
+        ) for i in range(7)
+    ])
+    
+    week.to_csv(filename, index=False)
+    st.dataframe(week)
+    return week
+
+def process_hope_data(df, type_filter, start_count, filename):
+    subset = df[df['type'] == type_filter].copy()  # Ensure we’re working with a copy
+    subset['count'] = subset.groupby(['date'])['provider'].cumcount() + start_count
+    subset['class'] = "H" + subset['count'].astype(str)
+    subset = subset.loc[:, ('date', 'type', 'provider', 'clinic', 'class')]
+    subset.to_csv(filename, index=False)
+    return subset
+
 elif st.session_state.page == "Create Student Schedule":
     st.title("Create Student Schedule")
     # Upload the OPD.xlsx file
