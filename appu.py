@@ -714,7 +714,7 @@ elif st.session_state.page == "OPD Creator":
 
 	st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
 	
-	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
+	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"));st.dataframe(complex_df)
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
