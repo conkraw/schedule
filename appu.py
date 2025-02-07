@@ -670,7 +670,7 @@ elif st.session_state.page == "OPD Creator":
 	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
 	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
-	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "Day Admitting 7a-5p": "consultsa", "Short Call 4p-9p":"consultsp"}, #Assume Day Admitting is Consults
+	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "Day Admitting 7a-5p": "consultsa", "Short Call 4p-9p":"consultsp", "Evening Flex 12p-9p":"consultsp"}, #Assume Day Admitting is Consults
 	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
@@ -721,7 +721,7 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
 	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
-	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa": "AM - Continuity "}), clinic="ER_CONS")
+	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS")
 
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
