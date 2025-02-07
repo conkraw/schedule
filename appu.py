@@ -1030,8 +1030,8 @@ elif st.session_state.page == "Create List":
         # Convert 'date' column to datetime and then format it
         dateMAP['date'] = pd.to_datetime(dateMAP['date'])
         dateMAP['date'] = dateMAP['date'].dt.strftime('%m/%d/%Y')
-
-      	dateMAP.to_csv('xxxDATEMAP.csv', index=False)
+	    
+        dateMAP.to_csv('xxxDATEMAP.csv', index=False)
         a1 = a2 = a3 = a4 = a5 = a6 = a7 = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE').iloc[3:23, [0]].rename(columns={0: 'type'})
 
         #read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
