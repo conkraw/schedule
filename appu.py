@@ -712,6 +712,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	nf_df = warda_df[warda_df["type"] == "night_float"].assign(type="PM - Continuity").copy()
 
+	st.dataframe(nf_df)
+
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
 	
