@@ -1027,7 +1027,7 @@ elif st.session_state.page == "Create List":
         dateMAP = xf201[['date', 'T']].copy()  # Use .copy() to avoid the SettingWithCopyWarning
 
         # Convert 'date' column to datetime and then format it
-        dateMAP['date'] = pd.to_datetime(dateMAP['date'])
+        #dateMAP['date'] = pd.to_datetime(dateMAP['date'])
         dateMAP['date'] = dateMAP['date'].dt.strftime('%m/%d/%Y')
 	    
         dateMAP.to_csv('xxxDATEMAP.csv', index=False)
