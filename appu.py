@@ -645,19 +645,19 @@ elif st.session_state.page == "OPD Creator":
 	# Define replacement rules for each clinic
 	replacement_rules = {
 	    "OUTPATIENT.xlsx": {
-	        "Hope Drive AM Continuity": "AM - Continuity",
-	        "Hope Drive PM Continuity": "PM - Continuity",
-	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
-	        "Hope Drive PM Acute Precept": "PM - ACUTES",
-	        "Hope Drive Weekend Continuity": "AM - Continuity",
-	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
-	        "Hope Drive Weekend Acute 2": "AM - ACUTES",
-	        "Etown AM Continuity": "AM - Continuity",
-	        "Etown PM Continuity": "PM - Continuity",
-		"Nyes Rd AM Continuity": "AM - Continuity",
-	        "Nyes Rd PM Continuity": "PM - Continuity",
-		"Nursery Weekday 8a-6p": "AM - Continuity",
-	        "Nursery Weekend": "AM - Continuity"
+	        "Hope Drive AM Continuity": "AM - Continuity_H",
+	        "Hope Drive PM Continuity": "PM - Continuity_H",
+	        "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES_H",  # Handles non-breaking space (\xa0)
+	        "Hope Drive PM Acute Precept": "PM - ACUTES_H",
+	        "Hope Drive Weekend Continuity": "AM - Continuity_H",
+	        "Hope Drive Weekend Acute 1": "AM - ACUTES_H",
+	        "Hope Drive Weekend Acute 2": "AM - ACUTES_H",
+	        "Etown AM Continuity": "AM - Continuity_E",
+	        "Etown PM Continuity": "PM - Continuity_E",
+		"Nyes Rd AM Continuity": "AM - Continuity_N",
+	        "Nyes Rd PM Continuity": "PM - Continuity_N",
+		"Nursery Weekday 8a-6p": "AM - Continuity_Nurs",
+	        "Nursery Weekend": "AM - Continuity_Nurs"
 	    },
 	    "PICU.xlsx": {"2nd PICU Attending 7:45a-4p": "AM - Continuity", "1st PICU Attending 7:30a-5p": "AM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
@@ -697,11 +697,23 @@ elif st.session_state.page == "OPD Creator":
 	
 	    return df
 
-
-	#st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
-
+	#Break up the Outpatient. 
 	outpatient_df = process_file("OUTPATIENT.xlsx", "OUTPATIENT", replacement_rules.get("OUTPATIENT.xlsx")); st.dataframe(outpatient_df)
+	filters = {"_H": "hope_drive_df","_E": "etown_df","_N": "nyes_df","_Nurs": "pshchnursery_df"}
 	
+	# Create a dictionary to store the filtered DataFrames
+	filtered_dfs = {}
+	
+	# Apply filtering based on the updated replacement suffixes
+	for suffix, df_name in filters.items():
+		filtered_dfs[df_name] = outpatient_df[outpatient_df.apply(lambda row: row.astype(str).str.contains(suffix, na=False).any(), axis=1)]
+
+	# Assign to individual variables
+	hope_drive_df = filtered_dfs["hope_drive_df"]
+	etown_df = filtered_dfs["etown_df"]
+	nyes_df = filtered_dfs["nyes_df"]
+	pshchnursery_df = filtered_dfs["pshchnursery_df"]
+
 	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
@@ -739,7 +751,7 @@ elif st.session_state.page == "OPD Creator":
 	else:
 	    print("Error: PICU.xlsx could not be processed. Check if the file exists or is uploaded correctly.")
 		
-	process_hope_classes(filtered_dfs["hope_drive_df"], "HOPE_DRIVE")
+	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
 	# Apply AM → PM Continuity Transformation... df and the name
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
@@ -753,10 +765,10 @@ elif st.session_state.page == "OPD Creator":
 	
 	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C") 
 
-	process_continuity_classes(filtered_dfs["etown_df"], "ETOWN", "1.csv", "2.csv")
-	process_continuity_classes(filtered_dfs["nyes_df"], "NYES", "3.csv", "4.csv")
-	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
+	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
+	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
 	
+	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
 	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
 	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
 	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
