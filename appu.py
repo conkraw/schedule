@@ -957,7 +957,7 @@ elif st.session_state.page == "Create List":
         ])
 
         week.to_csv(filename, index=False)
-        st.dataframe(week)
+        #st.dataframe(week)
         return week
 ##############################################################################################
     def process_hope_data(df, type_filter, start_count, filename):
