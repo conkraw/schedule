@@ -1036,7 +1036,7 @@ elif st.session_state.page == "Create List":
 
         read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
         read_file.to_csv ('hopedrive.csv', index = False, header=False)
-        df=pd.read_csv('hopedrive.csv')
+        df=pd.read_csv('hopedrive.csv'); st.dataframe(df)
         clinictype=df.iloc[3:23, 0:1]
         a1 = pd.DataFrame(clinictype, columns = ['type'])
         a2 = pd.DataFrame(clinictype, columns = ['type'])
@@ -1353,7 +1353,7 @@ elif st.session_state.page == "Create List":
         hopes = pd.concat([hopei, hopeii, hopeiii, hopeiiii])
 
         # Save the combined DataFrame to CSV
-        hopes.to_csv('hopes.csv', index=False); st.dataframe(hopes)
+        hopes.to_csv('hopes.csv', index=False)
 	    
         ####################################NYES#############################################################################
         import pandas as pd
