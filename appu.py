@@ -250,7 +250,7 @@ elif st.session_state.page == "OPD Creator":
 	worksheet_names = [
 	    'HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C',
 	    'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY',
-	    'SJR_HOSP', 'AAC', 'ER_CONS','NF'
+	    'SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED"
 	]
 	
 	# Create worksheets and store them in a dictionary
@@ -260,7 +260,7 @@ elif st.session_state.page == "OPD Creator":
 	(
 	    worksheet, worksheet2, worksheet3, worksheet4, worksheet5, 
 	    worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, 
-	    worksheet11, worksheet12, worksheet13, worksheet14
+	    worksheet11, worksheet12, worksheet13, worksheet14,worksheet15
 	) = worksheets.values()
 	
 	# Define format
@@ -283,7 +283,7 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet9: 'PSHCH NURSERY',
 	    worksheet10: 'HAMPDEN NURSERY',
 	    worksheet11: 'SJR HOSPITALIST',
-	    worksheet12: 'AAC', worksheet13: 'ER CONSULTS', worksheet14: 'NIGHT FLOAT'
+	    worksheet12: 'AAC', worksheet13: 'ER CONSULTS', worksheet14: 'NIGHT FLOAT', worksheet15: 'ADOLMED'
 	}
 	
 	# Write "Site:" and corresponding site names in each worksheet
@@ -360,7 +360,7 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'I{start_row + i}', label, formate)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14]
+	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15]
 	
 	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
@@ -675,9 +675,9 @@ elif st.session_state.page == "OPD Creator":
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
 	    "SJR_HOSP.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
-	    "AAC.xlsx": {"custom_value": "AM - Continuity "}  # Same format as HAMPDEN_NURSERY.xlsx
+	    "AAC.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
+	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity ", "Briarcrest Clinic PM": "PM - Continuity "},  
 	}
-
 
 
 	def process_picu_exclusions(df):
@@ -723,6 +723,9 @@ elif st.session_state.page == "OPD Creator":
 	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
 	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS")
 
+	adol_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
+
+	
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
 	
@@ -751,6 +754,7 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	consults_df = duplicate_am_continuity(consults_df, "ER_CONS")
+	adolmed_df = duplicate_am_continuity(adolmed_df, "ADOLMED")
 
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
@@ -766,10 +770,11 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(aac_df, "AAC", "24.csv", "25.csv")
 	process_continuity_classes(nf_df, "NF", "26.csv", "27.csv")
 	process_continuity_classes(consults_df, "ER_CONS", "28.csv", "29.csv")
+	process_continuity_classes(adolmed_df, "ADOLMED", "30.csv", "31.csv")
 
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 30)}
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29 = tables.values()
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 32)}
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31 = tables.values()
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
@@ -876,6 +881,7 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("AAC","AAC")
 	process_excel_mapping("NF","NF")
 	process_excel_mapping("ER_CONS","ER_CONS")
+	process_excel_mapping("ADOLMED","ADOLMED")
 
 	###############################################################################################
 
