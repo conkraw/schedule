@@ -135,11 +135,13 @@ elif st.session_state.page == "Create OPD":
     # User Input for Start Date
     date_input = st.text_input('Start Date')
 
+
     if st.button('Submit Date') and date_input:
         try:
-            start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
-            st.session_state.start_date = start_date  # Store in session state
-            st.success(f"Valid date entered: {start_date.strftime('%m/%d/%Y')}")
+            start_date, end_date = datetime.datetime.strptime(date_input, "%m/%d/%Y"), datetime.datetime.strptime(date_input, "%m/%d/%Y") + datetime.timedelta(days=28)
+            st.session_state.start_date, st.session_state.end_date = start_date, end_date
+		
+            st.success(f"✅ Valid date entered: {start_date.strftime('%B %d, %Y')} | 📅 Date range: {start_date.strftime('%B %d, %Y')} ➝ {end_date.strftime('%B %d, %Y')}")
 
             # Generate all predefined Excel files
             generated_files = {}
