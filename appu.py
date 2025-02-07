@@ -700,7 +700,9 @@ elif st.session_state.page == "OPD Creator":
 
 	#Break up the Outpatient. 
 	outpatient_df = process_file("OUTPATIENT.xlsx", "OUTPATIENT", replacement_rules.get("OUTPATIENT.xlsx")); st.dataframe(outpatient_df)
-	filters = {"_H": "hope_drive_df","_E": "etown_df","_N": "nyes_df","_Nurs": "pshchnursery_df"}
+	
+	# Define filters based on exact suffix match
+	filters = {"Continuity_H": "hope_drive_df","ACUTES_H": "hope_drive_df","Continuity_E": "etown_df","Continuity_N": "nyes_df","Continuity_Nurs": "pshchnursery_df"}
 	
 	# Create a dictionary to store the filtered DataFrames
 	filtered_dfs = {}
