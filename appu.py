@@ -420,7 +420,7 @@ elif st.session_state.page == "OPD Creator":
 	    date_rows = [3, 27, 51, 75] #[4, 28, 52, 76]
 	    for i, start_row in enumerate(date_rows):
 	        worksheet.write(f'A{start_row - 1}', "", format_label)
-	        worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label)
+	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label)
 	        worksheet.write(f'A{start_row + 1}', "", format_label)
 	
 	    # Set Pink Bars (Conditional Format)
@@ -448,8 +448,8 @@ elif st.session_state.page == "OPD Creator":
 	            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
 	
 	    # Set Column Widths
-	    worksheet.set_column('A:A', 22)
-	    worksheet.set_column('B:H', 40)
+	    worksheet.set_column('A:A', 7)
+	    worksheet.set_column('B:H', 60)
 	    worksheet.set_row(0, 37.25)
 	
 	    # Merge Format for Text
