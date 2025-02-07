@@ -19,9 +19,9 @@ def format_date_with_suffix(date):
     return date.strftime(f"%B {day}{suffix}, %Y")
 	
 file_configs = {
-    "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep"]},
-    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Garfield, Andrew"]}, #FIND ALL THE HOSPITALIST NAMES 
-    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Smith, Jane", "Doe, John", "Miller, Sarah"]} #LIST ALL NAMES
+    "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani"]},
+    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry"]}, 
+    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik"]} #LIST ALL NAMES
 }
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
