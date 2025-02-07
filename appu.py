@@ -1033,7 +1033,7 @@ elif st.session_state.page == "Create List":
 
         dateMAP.to_csv('xxxDATEMAP.csv', index=False)
         
-        a1 = a2 = a3 = a4 = a5 = a6 = a7 = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE').iloc[3:23, [0]].rename(columns={0: 'type'})
+        df = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE').iloc[3:23, 0:1]; a1 = a2 = a3 = a4 = a5 = a6 = a7 = pd.DataFrame(df, columns=['type'])
 	    
         #read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
         #read_file.to_csv ('hopedrive.csv', index = False, header=False)
@@ -1048,13 +1048,13 @@ elif st.session_state.page == "Create List":
         #a6 = pd.DataFrame(clinictype, columns = ['type'])
         #a7 = pd.DataFrame(clinictype, columns = ['type'])
 
-        a1['type']=clinictype
-        a2['type']=clinictype
-        a3['type']=clinictype
-        a4['type']=clinictype
-        a5['type']=clinictype
-        a6['type']=clinictype
-        a7['type']=clinictype
+        #a1['type']=clinictype
+        #a2['type']=clinictype
+        #a3['type']=clinictype
+        #a4['type']=clinictype
+        #a5['type']=clinictype
+        #a6['type']=clinictype
+        #a7['type']=clinictype
 
         week1day1=a1.replace(to_replace=r'- Continuity', value='', regex=True)
         week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
