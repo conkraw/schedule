@@ -1033,7 +1033,7 @@ elif st.session_state.page == "Create List":
 
         dateMAP.to_csv('xxxDATEMAP.csv', index=False)
         
-        df = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE', usecols=[0]).iloc[3:23]; a1 = a2 = a3 = a4 = a5 = a6 = a7 = df.rename(columns={df.columns[0]: 'type'}); st.dataframe(df)
+        df = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE').iloc[3:23, [0]]; df.to_csv('hopedrive.csv', index=False, header=False); df = pd.read_csv('hopedrive.csv', header=None, names=['type']); a1 = a2 = a3 = a4 = a5 = a6 = a7 = df.copy()
 	    
         #read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
         #read_file.to_csv ('hopedrive.csv', index = False, header=False)
