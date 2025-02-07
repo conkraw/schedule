@@ -1353,7 +1353,7 @@ elif st.session_state.page == "Create List":
         hopes = pd.concat([hopei, hopeii, hopeiii, hopeiiii])
 
         # Save the combined DataFrame to CSV
-        hopes.to_csv('hopes.csv', index=False)
+        hopes.to_csv('hopes.csv', index=False); st.dataframe(hopes)
 	    
         ####################################NYES#############################################################################
         import pandas as pd
