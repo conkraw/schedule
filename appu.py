@@ -164,6 +164,14 @@ elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write("Upload the following required Excel files:")
 
+    # Ensure start_date and end_date exist in session state
+    if "start_date" in st.session_state and "end_date" in st.session_state:
+        start_date, end_date = st.session_state.start_date, st.session_state.end_date
+        st.success(f"✅ Valid date entered: {start_date.strftime('%B %d, %Y')} | 📅 Date range: {start_date.strftime('%B %d, %Y')} ➝ {end_date.strftime('%B %d, %Y')}")
+    else:
+        st.error("❌ No valid date found. Please enter a start date first.")
+
+	
     # Display download button for the generated Excel file
     #if "generated_file" in st.session_state:
     #    with open(st.session_state.generated_file, "rb") as f:
