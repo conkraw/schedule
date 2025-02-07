@@ -641,13 +641,6 @@ elif st.session_state.page == "OPD Creator":
 	                # Save to CSV
 	                subset_df.to_csv(filename, index=False)
 	                print(f"{clinic_name} {type_key} saved to {filename}.")
-	def process_filtered_clinic(df_name, clinic_name):
-	    """Wrapper to process a pre-filtered clinic DataFrame instead of loading from a file."""
-	    if df_name in filtered_dfs:
-	        return process_file(None, clinic_name, replacement_rules.get("OUTPATIENT.xlsx", {}), filtered_dfs[df_name])
-	    else:
-	        print(f"❌ ERROR: {clinic_name} DataFrame not found.")
-	        return None
 
 	# Define replacement rules for each clinic
 	replacement_rules = {
@@ -704,36 +697,12 @@ elif st.session_state.page == "OPD Creator":
 	
 	    return df
 
-	outpatient_df = pd.read_excel(uploaded_files["OUTPATIENT.xlsx"], dtype=str)
-	outpatient_replacements = replacement_rules.get("OUTPATIENT.xlsx", {})
-	filters = {"Hope": "hope_drive_df","Etown": "etown_df","Nyes": "nyes_df","Nursery": "pshchnursery_df"}
-	filtered_dfs = {}
-	
-	for keyword, df_name in filters.items():
-	    # Filter rows where *any* column contains the keyword
-	    filtered_df = outpatient_df[outpatient_df.apply(lambda row: row.astype(str).str.contains(keyword, na=False).any(), axis=1)]
-	    
-	    # Apply replacements across all columns
-	    filtered_df = filtered_df.replace(outpatient_replacements, regex=False)
-	    
-	    # Store in dictionary
-	    filtered_dfs[df_name] = filtered_df
-	def process_filtered_file(df_name, new_name):
-	    if df_name in filtered_dfs:
-	        df = filtered_dfs[df_name]
-	        print(f"Processing {new_name}...")
-	        return df  # Return the processed DataFrame
-	    else:
-	        print(f"Error: {df_name} not found.")
-	        return None
 
-	hope_drive_df = process_filtered_clinic("hope_drive_df", "HOPE_DRIVE")
-	etown_df = process_filtered_clinic("etown_df", "ETOWN")
-	nyes_df = process_filtered_clinic("nyes_df", "NYES")
+	#st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
 
-	st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
+	outpatient_df = process_file("OUTPATIENT.xlsx", "OUTPATIENT", replacement_rules.get("OUTPATIENT.xlsx")); st.dataframe(outpatient_df)
 	
-	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"));st.dataframe(complex_df)
+	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
