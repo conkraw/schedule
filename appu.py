@@ -710,7 +710,7 @@ elif st.session_state.page == "OPD Creator":
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
-	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity").copy()
+	nf_df = warda_df[warda_df["type"] == "night_float"].assign(type="PM - Continuity", clinic="NF")
 	st.dataframe(warda_df)
 	st.dataframe(nf_df)
 
