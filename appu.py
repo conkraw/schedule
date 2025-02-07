@@ -665,10 +665,11 @@ elif st.session_state.page == "OPD Creator":
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
 	    "SJR_HOSP.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
 	    "AAC.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
-	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
+	    "WARD_CARDIOLOGY.xlsx": {"Wards 8a-5p": "AM - Continuity"},  
+	    "WARD_GI.xlsx": {"GI Daytime Service 7:30a-5p": "AM - Continuity"},  
+	    "WARD_NEPHRO.xlsx": {"Neph On Call 8a-8a": "AM - Continuity"},  
 	}
-
-
+	
 	def process_picu_exclusions(df):
 	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement using Streamlit's date format (m/d/yyyy)."""
 	    if df is not None and 'date' in df.columns:
@@ -714,6 +715,14 @@ elif st.session_state.page == "OPD Creator":
 
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 
+	#Combine Ward C Together
+	wcard_df = process_file("WARD_CARDIOLOGY.xlsx", "WARD_CARDIOLOGY", replacement_rules.get("WARD_CARDIOLOGY.xlsx"))
+	wgi_df = process_file("WARD_GI.xlsx", "WARD_GI", replacement_rules.get("WARD_GI.xlsx"))
+	wnephro_df = process_file("WARD_NEPHRO.xlsx", "WARD_NEPHRO", replacement_rules.get("WARD_NEPHRO.xlsx"))
+
+	wardc_df = pd.concat([wcard_df, wgi_df, wnephro_df], ignore_index=True).query("type == 'AM - Continuity'").assign(type="WARD_C")
+
+	st.dataframe(wardc_df) 
 	
 	# Step 1: Read and preprocess PICU file first
 	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
@@ -733,7 +742,7 @@ elif st.session_state.page == "OPD Creator":
 		
 	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
-	# Apply AM → PM Continuity Transformation for WARDA, WARDP, and PICU
+	# Apply AM → PM Continuity Transformation... df and the name
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
 	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
@@ -743,8 +752,8 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	consults_df = duplicate_am_continuity(consults_df, "ER_CONS")
-	#adolmed_df = duplicate_am_continuity(adolmed_df, "ADOLMED") #Don't need to duplicate Adolescent Medicine
-
+	
+	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C")
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
@@ -760,10 +769,11 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(nf_df, "NF", "26.csv", "27.csv")
 	process_continuity_classes(consults_df, "ER_CONS", "28.csv", "29.csv")
 	process_continuity_classes(adolmed_df, "ADOLMED", "30.csv", "31.csv")
+	process_continuity_classes(wardc_df, "WARD_C", "32.csv", "33.csv")
 
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 32)}
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31 = tables.values()
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 34)}
+	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31, t32, t33 = tables.values()
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
@@ -871,6 +881,7 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("NF","NF")
 	process_excel_mapping("ER_CONS","ER_CONS")
 	process_excel_mapping("ADOLMED","ADOLMED")
+	process_excel_mapping("WARD_C","W_C")
 
 	###############################################################################################
 
