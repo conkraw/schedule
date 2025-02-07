@@ -709,7 +709,6 @@ elif st.session_state.page == "OPD Creator":
 	
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
-	#pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
@@ -743,7 +742,7 @@ elif st.session_state.page == "OPD Creator":
 	else:
 	    print("Error: PICU.xlsx could not be processed. Check if the file exists or is uploaded correctly.")
 		
-	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
+	process_hope_classes(filtered_dfs["hope_df"], "HOPE_DRIVE")
 	
 	# Apply AM → PM Continuity Transformation... df and the name
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
@@ -757,8 +756,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C") 
 
-	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
-	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
+	process_continuity_classes(filtered_dfs["etown_df"], "ETOWN", "1.csv", "2.csv")
+	process_continuity_classes(filtered_dfs["nyes_df"], "NYES", "3.csv", "4.csv")
 	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
 	
 	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
