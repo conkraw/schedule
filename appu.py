@@ -641,6 +641,13 @@ elif st.session_state.page == "OPD Creator":
 	                # Save to CSV
 	                subset_df.to_csv(filename, index=False)
 	                print(f"{clinic_name} {type_key} saved to {filename}.")
+	def process_filtered_clinic(df_name, clinic_name):
+	    """Wrapper to process a pre-filtered clinic DataFrame instead of loading from a file."""
+	    if df_name in filtered_dfs:
+	        return process_file(None, clinic_name, replacement_rules.get("OUTPATIENT.xlsx", {}), filtered_dfs[df_name])
+	    else:
+	        print(f"❌ ERROR: {clinic_name} DataFrame not found.")
+	        return None
 
 	# Define replacement rules for each clinic
 	replacement_rules = {
@@ -720,9 +727,9 @@ elif st.session_state.page == "OPD Creator":
 	        print(f"Error: {df_name} not found.")
 	        return None
 
-	hope_drive_df = process_filtered_file("hope_drive_df", "HOPE_DRIVE")
-	etown_df = process_filtered_file("etown_df", "ETOWN")
-	nyes_df = process_filtered_file("nyes_df", "NYES")
+	hope_drive_df = process_filtered_clinic("hope_drive_df", "HOPE_DRIVE")
+	etown_df = process_filtered_clinic("etown_df", "ETOWN")
+	nyes_df = process_filtered_clinic("nyes_df", "NYES")
 
 	st.dataframe(filtered_dfs["hope_drive_df"]);st.dataframe(filtered_dfs["etown_df"]);st.dataframe(filtered_dfs["nyes_df"])
 	
