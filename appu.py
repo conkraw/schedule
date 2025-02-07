@@ -669,8 +669,8 @@ elif st.session_state.page == "OPD Creator":
 	    "WARD_CARDIOLOGY.xlsx": {"Wards 8a-5p": "AM - Continuity", "Wards 8a-8a": "AM - Continuity"},  
 	    "WARD_GI.xlsx": {"GI Daytime Service 7:30a-5p": "AM - Continuity", "GI Daytime Service 7:30a-3p": "AM - Continuity", "GI Weekend Call 7:30a-7:30a": "AM - Continuity"},  
 	    "WARD_NEPHRO.xlsx": {"Neph On Call 8a-8a": "AM - Continuity"},  
-	}
-	
+	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
+	}	
 	def process_picu_exclusions(df):
 	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement using Streamlit's date format (m/d/yyyy)."""
 	    if df is not None and 'date' in df.columns:
