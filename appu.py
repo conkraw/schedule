@@ -1037,22 +1037,22 @@ elif st.session_state.page == "Create List":
         read_file.to_csv ('hopedrive.csv', index = False, header=False)
         df=pd.read_csv('hopedrive.csv')
 
-        a1 = a2 = a3 = a4 = a5 = a6 = a7 = pd.DataFrame(df.iloc[3:23, [0]], columns=['type']) #clinictype=df.iloc[3:23, 0:1]
-        #a1 = pd.DataFrame(clinictype, columns = ['type'])
-        #a2 = pd.DataFrame(clinictype, columns = ['type'])
-        #a3 = pd.DataFrame(clinictype, columns = ['type'])
-        #a4 = pd.DataFrame(clinictype, columns = ['type'])
-        #a5 = pd.DataFrame(clinictype, columns = ['type'])
-        #a6 = pd.DataFrame(clinictype, columns = ['type'])
-        #a7 = pd.DataFrame(clinictype, columns = ['type'])
+        clinictype=df.iloc[3:23, 0:1]
+        a1 = pd.DataFrame(clinictype, columns = ['type'])
+        a2 = pd.DataFrame(clinictype, columns = ['type'])
+        a3 = pd.DataFrame(clinictype, columns = ['type'])
+        a4 = pd.DataFrame(clinictype, columns = ['type'])
+        a5 = pd.DataFrame(clinictype, columns = ['type'])
+        a6 = pd.DataFrame(clinictype, columns = ['type'])
+        a7 = pd.DataFrame(clinictype, columns = ['type'])
 
-        #a1['type']=clinictype
-        #a2['type']=clinictype
-        #a3['type']=clinictype
-        #a4['type']=clinictype
-        #a5['type']=clinictype
-        #a6['type']=clinictype
-        #a7['type']=clinictype
+        a1['type']=clinictype
+        a2['type']=clinictype
+        a3['type']=clinictype
+        a4['type']=clinictype
+        a5['type']=clinictype
+        a6['type']=clinictype
+        a7['type']=clinictype
 
         week1day1=a1.replace(to_replace=r'- Continuity', value='', regex=True)
         week1day2=a2.replace(to_replace=r'- Continuity', value='', regex=True)
