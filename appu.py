@@ -720,12 +720,12 @@ elif st.session_state.page == "OPD Creator":
 	    "Hope Drive Weekend Continuity": "AM - Continuity",
 	    "Hope Drive Weekend Acute 1": "AM - ACUTES",
 	    "Hope Drive Weekend Acute 2": "AM - ACUTES",
-	    "Etown AM Continuity": "AM - Continuity",
-	    "Etown PM Continuity": "PM - Continuity",
-	    "Nyes Rd AM Continuity": "AM - Continuity",
-	    "Nyes Rd PM Continuity": "PM - Continuity",
-	    "Nursery Weekday 8a-6p": "AM - Continuity",
-	    "Nursery Weekend": "AM - Continuity"
+	    "Etown AM Continuity ": "AM - Continuity",
+	    "Etown PM Continuity ": "PM - Continuity",
+	    "Nyes Rd AM Continuity ": "AM - Continuity",
+	    "Nyes Rd PM Continuity ": "PM - Continuity",
+	    "Nursery Weekday 8a-6p ": "AM - Continuity",
+	    "Nursery Weekend ": "AM - Continuity"
 	}
 	
 	# Step 5️⃣: Apply replacements only **after filtering**
