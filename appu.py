@@ -1939,7 +1939,7 @@ elif st.session_state.page == "Create List":
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
         # Prepare the workbook for download
-        df = pd.read_csv('PALIST.csv')
+        df = pd.read_csv('PALIST.csv',dtype=str)
         csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download PALIST",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
  
     except Exception as e:
