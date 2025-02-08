@@ -1940,6 +1940,6 @@ elif st.session_state.page == "Create List":
 	df = pd.read_csv('PALIST.csv)
 	csv_bytes = save_to_bytes_csv(df)
 	st.download_button(label="Download PALIST",data=wb_bytes,file_name="PALIST.csv",mime="text/csv")
-	    
+ 
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
