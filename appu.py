@@ -559,23 +559,46 @@ elif st.session_state.page == "OPD Creator":
 	    print(f"✅ Processed {clinic_name} and saved to {filename}")
 	    return dfx  # Return DataFrame for further processing
 
-	def duplicate_am_continuity(df, clinic_name):
-	    if df is not None:
-	        # Identify rows containing "AM - Continuity"
-	        am_continuity_rows = df[df.eq("AM - Continuity ").any(axis=1)].copy()
+	def duplicate_am_continuity(df, clinic_name, special_cases=None):
+	    """
+	    Duplicates "AM - Continuity" rows as "PM - Continuity" for normal cases.
+	    If the clinic is in `special_cases`, only duplicates AM - Continuity and renames it to PM - Continuity.
+	    """
+	    if df is not None and not df.empty:
+	        # Ensure special_cases is a set for fast lookup
+	        special_cases = special_cases or set()
 	
-	        # Create corresponding "PM - Continuity" rows
-	        pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
+	        if clinic_name in special_cases:
+	            # Special handling: Only copy AM - Continuity and rename it
+	            am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
 	
-	        # Append new rows to the original dataframe
-	        df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).sort_values(by=["date","provider"]).reset_index(drop=True)
+	            if am_continuity_rows.empty:
+	                print(f"⚠️ No AM - Continuity rows found in {clinic_name}. Skipping special processing.")
+	                return df  # No modifications needed
+	            
+	            # Replace AM -> PM
+	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	
+	            # Only append the PM version, no double duplication
+	            df = pd.concat([df, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
+	
+	            print(f"✅ Special processing for {clinic_name}: Only duplicated AM - Continuity as PM - Continuity.")
+	
+	        else:
+	            # Default behavior (original functionality)
+	            am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
+	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	
+	            df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
+	
+	            print(f"✅ Standard processing for {clinic_name}: Fully duplicated AM - Continuity.")
 	
 	        # Save the updated data
 	        filename = f"{clinic_name.lower()}.csv"
 	        df.to_csv(filename, index=False)
-	        #st.dataframe(df)
-	    
-	    return df
+	
+	    return df  # Return modified DataFrame
+
 
 
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
@@ -739,7 +762,9 @@ elif st.session_state.page == "OPD Creator":
 	    print("PICU updated and saved with Friday exclusions.")
 	else:
 	    print("Error: PICU.xlsx could not be processed. Check if the file exists or is uploaded correctly.")
-		
+
+	special_clinics = {"AAC"}
+	
 	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
 	# Apply AM → PM Continuity Transformation... df and the name
@@ -749,7 +774,7 @@ elif st.session_state.page == "OPD Creator":
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
 	#hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY")
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
-	#aac_df = duplicate_am_continuity(aac_df, "AAC")
+	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	
 	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C") 
