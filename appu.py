@@ -159,46 +159,6 @@ elif st.session_state.page == "Create OPD":
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
-# Upload Files Page
-elif st.session_state.page == "Upload Files":
-    st.title("File Upload Section")
-    st.write("Upload the following required Excel files:")
-
-    # Ensure start_date and end_date exist in session state
-    if "start_date" in st.session_state and "end_date" in st.session_state:
-        start_date, end_date = st.session_state.start_date, st.session_state.end_date
-        st.success(f"✅ Valid date entered: {start_date.strftime('%B %d, %Y')} | 📅 Date range: {start_date.strftime('%B %d, %Y')} ➝ {end_date.strftime('%B %d, %Y')}")
-    else:
-        st.error("❌ No valid date found. Please enter a start date first.")
-
-
-    required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx", 
-		      "ETOWN": "ETOWN.xlsx", 
-		      "NYES": "NYES.xlsx", 
-		      "WARD_A": "WARD_A.xlsx", 
-		      "WARD_P": "WARD_P.xlsx", 
-		      "COMPLEX": "COMPLEX.xlsx", 
-		      "PICU": "PICU.xlsx", 
-		      "PSHCH_NURSERY":"PSHCH_NURSERY.xlsx", 
-		      "ADOLMED":"ADOLMED.xlsx", 
-		      "WARD_CARDIOLOGY": "WARD_CARDIOLOGY.xlsx", 
-		      "WARD_GI": "WARD_GI.xlsx", 
-		      "WARD_NEPHRO": "WARD_NEPHRO.xlsx"}
-
-    uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
-
-    if uploaded_files:
-        uploaded_files_dict = {fname: file for file in uploaded_files for key, fname in required_files.items() if key in file.name}
-
-        st.session_state.uploaded_files = uploaded_files_dict
-
-        missing_files = [fname for fname in required_files.values() if fname not in uploaded_files_dict]
-
-        if not missing_files:
-            st.success("All required files uploaded successfully!")
-            navigate_to("OPD Creator")
-        else:
-            st.error(f"Missing files: {', '.join(missing_files)}. Please upload all required files.")
 
 elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
