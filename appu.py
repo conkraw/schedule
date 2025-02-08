@@ -1961,7 +1961,7 @@ elif st.session_state.page == "Create List":
         st.write("Duplicate Check:"); st.dataframe(df_duplicates)
         
 
-        df_eval = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14))); st.write('Evaluation Due Dates:"); st.dataframe(df_eval)
+        df_eval = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14))); st.write("Evaluation Due Dates:"); st.dataframe(df_eval)
         csv_bytes = save_to_bytes_csv(df_eval); st.download_button(label="Download PALIST",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
     except Exception as e:
