@@ -570,14 +570,14 @@ elif st.session_state.page == "OPD Creator":
 	
 	        if clinic_name in special_cases:
 	            # Special handling: Only copy AM - Continuity and rename it
-	            am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
+	            am_continuity_rows = df[df.eq("AM - Continuity ").any(axis=1)].copy()
 	
 	            if am_continuity_rows.empty:
 	                print(f"⚠️ No AM - Continuity rows found in {clinic_name}. Skipping special processing.")
 	                return df  # No modifications needed
 	            
 	            # Replace AM -> PM
-	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 	
 	            # Only append the PM version, no double duplication
 	            df = pd.concat([df, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
