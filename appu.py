@@ -1932,7 +1932,7 @@ elif st.session_state.page == "Create List":
                 output = StringIO()
                 df.to_csv(output, index=False) 
                 output.seek(0)  # Rewind the file pointer to the start
-                return output
+                return output.getvalue()  
 	
         # Prepare the workbook for download
         wb_bytes = save_to_bytes_wb(wb1)
