@@ -771,8 +771,7 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
 	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
-	#consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS"); st.dataframe(consults_df)
-	consults_df = warda_df[warda_df["type"].isin(["PM - Continuity ", "AM - Continuity "])].assign(clinic="ER_CONS")
+	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS"); st.dataframe(consults_df)
 	consults_df = consults_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity" in x.name else ", ".join(x)})
 	consults_df["clinic"] = "ER_CONS"
 	
