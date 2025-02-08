@@ -799,7 +799,7 @@ elif st.session_state.page == "OPD Creator":
 	else:
 	    print("Error: PICU.xlsx could not be processed. Check if the file exists or is uploaded correctly.")
 
-	special_clinics = {"AAC"}
+	special_clinics = {"AAC","HAMPDEN_NURSERY"}
 	
 	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
@@ -808,7 +808,7 @@ elif st.session_state.page == "OPD Creator":
 	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
-	#hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY")
+	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
 	nf_df = duplicate_am_continuity(nf_df, "NF")
