@@ -171,11 +171,6 @@ elif st.session_state.page == "Upload Files":
     else:
         st.error("❌ No valid date found. Please enter a start date first.")
 
-	
-    # Display download button for the generated Excel file
-    #if "generated_file" in st.session_state:
-    #    with open(st.session_state.generated_file, "rb") as f:
-    #        st.download_button("Download Generated Excel File", f, "Duplicated_File.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     required_files = {"HOPE_DRIVE": "HOPE_DRIVE.xlsx", 
 		      "ETOWN": "ETOWN.xlsx", 
@@ -204,6 +199,80 @@ elif st.session_state.page == "Upload Files":
             navigate_to("OPD Creator")
         else:
             st.error(f"Missing files: {', '.join(missing_files)}. Please upload all required files.")
+
+elif st.session_state.page == "Upload Files":
+    st.title("File Upload Section")
+    st.write("Upload the required Excel files:")
+
+    # Define file name mappings based on content identifiers
+    file_identifiers = {
+        "Nyes Rd AM Continuity": "NYES.xlsx",
+        "Hope Drive AM Continuity": "HOPE_DRIVE.xlsx",
+        "Etown AM Continuity": "ETOWN.xlsx",
+        "Nursery Weekday 8a-6p": "PSHCH_NURSERY.xlsx",
+        "Penn State Health Children's Hospital - Pulmonary": "WARD_P.xlsx",
+        "Penn State Health Children's Hospital - Hospitalists": "WARD_A.xlsx",
+        "Penn State Health - Pediatric Cardiology": "WARD_CARDIOLOGY.xlsx",
+        "Neph On Call 8a-8a": "WARD_NEPHRO.xlsx",
+        "PICU": "PICU.xlsx",
+        "GI Daytime Service 7:30a-5p": "WARD_GI.xlsx",
+        "Complex Care On Call 5p-8a": "COMPLEX.xlsx",
+        "Adol Med On Call 8a-8a": "ADOLMED.xlsx"
+    }
+
+    # Required files for validation
+    required_files = set(file_identifiers.values())
+
+    # Streamlit UI
+    st.title("File Upload Section")
+    st.write("Upload the following required Excel files:")
+
+    # Ensure start_date and end_date exist in session state
+    if "start_date" in st.session_state and "end_date" in st.session_state:
+        start_date, end_date = st.session_state.start_date, st.session_state.end_date
+        st.success(f"✅ Valid date entered: {start_date.strftime('%B %d, %Y')} | 📅 Date range: {start_date.strftime('%B %d, %Y')} ➝ {end_date.strftime('%B %d, %Y')}")
+    else:
+        st.error("❌ No valid date found. Please enter a start date first.")
+
+    # File uploader
+    uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
+
+    if uploaded_files:
+        uploaded_files_dict = {}
+        detected_files = set()
+
+        for file in uploaded_files:
+            try:
+                # Read the first few rows of the Excel file
+                df = pd.read_excel(file, dtype=str, nrows=10)  # Read only first 10 rows to speed up processing
+
+                # Convert all values to strings and check if any match our identifiers
+                found_file = None
+                for key, expected_filename in file_identifiers.items():
+                    if df.astype(str).apply(lambda x: x.str.contains(key, na=False)).any().any():
+                        found_file = expected_filename
+                        break  # Stop checking once a match is found
+
+                if found_file:
+                    uploaded_files_dict[found_file] = file  # Store the correctly named file
+                    detected_files.add(found_file)
+                else:
+                    st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
+
+            except Exception as e:
+                st.error(f"❌ Error reading {file.name}: {str(e)}")
+
+        # Save detected files to session state
+        st.session_state.uploaded_files = uploaded_files_dict
+
+        # Check for missing files
+        missing_files = required_files - detected_files
+
+        if not missing_files:
+            st.success("✅ All required files uploaded and detected successfully!")
+            navigate_to("OPD Creator")
+        else:
+            st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
 
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
