@@ -821,7 +821,7 @@ elif st.session_state.page == "OPD Creator":
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
 	final2.to_csv('final2.csv',index=False)
 	
-	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
+	df=pd.read_csv('final2.csv',dtype=str); st.dataframe(df) #MAP to Final2
 	
 	df['date'] = pd.to_datetime(df['date'])
 	df['date'] = df['date'].dt.strftime('%m/%d/%Y')
