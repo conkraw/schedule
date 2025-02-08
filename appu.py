@@ -1939,7 +1939,7 @@ elif st.session_state.page == "Create List":
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
         # Prepare the workbook for download
-        df = pd.read_csv('PALIST.csv',dtype=str); df0 = df
+        df = pd.read_csv('PALIST.csv',dtype=str)
 	    
         df['type_adj'] = df['type']
         df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('AM')), 'type_adj'] = 'AM'
@@ -1949,7 +1949,7 @@ elif st.session_state.page == "Create List":
         df['duplicate_flag'] = df.duplicated(subset=['date', 'type', 'student'], keep=False) & (df['clinic'] != 'HOPE_DRIVE')
     
         # Identify duplicate assignments within HOPE_DRIVE using adjusted type
-        df['duplicate_flag'] |= (df.duplicated(subset=['date', 'type_adj', 'student'], keep=False) &(df['clinic'] == 'HOPE_DRIVE') & df['student'].notna() & (df['student'].str.strip() != "")); df_duplicates = df[df['duplicate_flag'] == True]; st.dataframe(df)
+        df['duplicate_flag'] |= (df.duplicated(subset=['date', 'type_adj', 'student'], keep=False) &(df['clinic'] == 'HOPE_DRIVE') & df['student'].notna() & (df['student'].str.strip() != "")); df_duplicates = df[df['duplicate_flag'] == True]; st.dataframe(df_duplicates)
 
         csv_bytes = save_to_bytes_csv(df0); st.download_button(label="Download PALIST",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
  
