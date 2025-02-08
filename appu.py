@@ -764,7 +764,7 @@ elif st.session_state.page == "OPD Creator":
 	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx")); st.dataframe(picu_df)
 	picu_df = picu_df[picu_df["type"] == "AM - Continuity"]["provider"].value_counts()
 	picu_df = picu_df[picu_df > 1].index.tolist()
-	picu_df = picu_df[(picu_df["type"] != "AM - Continuity") | (picu_df["provider"].isin(repeating_providers)) | (picu_df.groupby(["date", "type"])["provider"].transform("count") == 1) 
+	picu_df = picu_df[(picu_df["type"] != "AM - Continuity") | (picu_df["provider"].isin(repeating_providers)) | (picu_df.groupby(["date", "type"])["provider"].transform("count") == 1)] 
 
 	special_clinics = {"AAC","HAMPDEN_NURSERY"}
 	
