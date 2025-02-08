@@ -18,7 +18,24 @@ def format_date_with_suffix(date):
     day = date.day
     suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return date.strftime(f"%B {day}{suffix}, %Y")
-	
+
+def save_to_bytes_wb(wb):
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)  # Rewind the file pointer to the start
+    return output
+#How to set up xlsx Download
+#wb_bytes = save_to_bytes_wb(wb1); st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+def save_to_bytes_csv(df):
+    output = StringIO()
+    df.to_csv(output, index=False) 
+    output.seek(0)  # Rewind the file pointer to the start
+    return output.getvalue()  
+
+#How to Set Up CSV Download. 
+#csv_bytes = save_to_bytes_csv(df_eval); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
+
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani"]},
     "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry"]}, 
@@ -830,10 +847,9 @@ elif st.session_state.page == "OPD Creator":
 	
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
-	df.to_csv('final.csv',index=False)
-	#st.dataframe(df)
-	df.to_excel('final.xlsx',index=False)
+	df.to_csv('final.csv',index=False); csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="final.csv",mime="text/csv"); 	#st.dataframe(df)
 
+	df.to_excel('final.xlsx',index=False)
 	########################################################################################################################################################################
 	import openpyxl
 	from openpyxl.styles import Alignment
