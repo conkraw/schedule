@@ -747,9 +747,9 @@ elif st.session_state.page == "OPD Creator":
 	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
-	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY")
+	#hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY")
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
-	aac_df = duplicate_am_continuity(aac_df, "AAC")
+	#aac_df = duplicate_am_continuity(aac_df, "AAC")
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	
 	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C") 
