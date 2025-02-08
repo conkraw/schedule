@@ -170,9 +170,9 @@ elif st.session_state.page == "Upload Files":
         "Hope Drive AM Continuity": "HOPE_DRIVE.xlsx",
         "Etown AM Continuity": "ETOWN.xlsx",
         "Nursery Weekday 8a-6p": "PSHCH_NURSERY.xlsx",
-        "Penn State Health Children's Hospital - Pulmonary": "WARD_P.xlsx",
-        "Penn State Health Children's Hospital - Hospitalists": "WARD_A.xlsx",
-        "Penn State Health - Pediatric Cardiology": "WARD_CARDIOLOGY.xlsx",
+        "Pulmonary": "WARD_P.xlsx",  # Adjusted to be more flexible
+        "Hospitalists": "WARD_A.xlsx",
+        "Pediatric Cardiology": "WARD_CARDIOLOGY.xlsx",
         "Neph On Call 8a-8a": "WARD_NEPHRO.xlsx",
         "PICU": "PICU.xlsx",
         "GI Daytime Service 7:30a-5p": "WARD_GI.xlsx",
@@ -205,11 +205,17 @@ elif st.session_state.page == "Upload Files":
             try:
                 # Read the first few rows of the Excel file
                 df = pd.read_excel(file, dtype=str, nrows=10)  # Read only first 10 rows to speed up processing
+                
+                # Normalize text: strip spaces, handle line breaks, convert to lowercase
+                df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
 
-                # Convert all values to strings and check if any match our identifiers
+                # Convert all values into a single string for better search
+                full_text = " ".join(df_clean.to_string().split()).lower()
+
+                # Try to find a match
                 found_file = None
                 for key, expected_filename in file_identifiers.items():
-                    if df.astype(str).apply(lambda x: x.str.contains(key, na=False)).any().any():
+                    if key.lower() in full_text:
                         found_file = expected_filename
                         break  # Stop checking once a match is found
 
@@ -233,6 +239,7 @@ elif st.session_state.page == "Upload Files":
             navigate_to("OPD Creator")
         else:
             st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
+
 
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
