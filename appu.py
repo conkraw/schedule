@@ -1940,6 +1940,15 @@ elif st.session_state.page == "Create List":
 
         # Prepare the workbook for download
         df = pd.read_csv('PALIST.csv',dtype=str)
+	df['type_adj'] = df['type']
+	df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('AM')), 'type_adj'] = 'AM'
+	df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('PM')), 'type_adj'] = 'PM'
+	
+	# Identify duplicate student assignments (excluding HOPE_DRIVE)
+	df['duplicate_flag'] = df.duplicated(subset=['date', 'type', 'student'], keep=False) & (df['clinic'] != 'HOPE_DRIVE')
+	
+	# Identify duplicate assignments within HOPE_DRIVE using adjusted type
+	df['duplicate_flag'] |= df.duplicated(subset=['date', 'type_adj', 'student'], keep=False) & (df['clinic'] == 'HOPE_DRIVE')
         csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download PALIST",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
  
     except Exception as e:
