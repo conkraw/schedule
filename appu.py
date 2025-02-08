@@ -823,7 +823,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df=pd.read_csv('final2.csv',dtype=str); st.dataframe(df) #MAP to Final2
 	
-	df['date'] = pd.to_datetime(df['date'], , format='mixed')
+	df['date'] = pd.to_datetime(df['date'], format='mixed')
 	df['date'] = df['date'].dt.strftime('%m/%d/%Y')
 	
 	import csv
