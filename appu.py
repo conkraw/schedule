@@ -1938,27 +1938,29 @@ elif st.session_state.page == "Create List":
         wb_bytes = save_to_bytes_wb(wb1)
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-	df = pd.read_csv('PALIST.csv', dtype=str)
-	
-	# Normalize 'type' for HOPE_DRIVE clinic
-	df['type_adj'] = df['type']
-	df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('AM')), 'type_adj'] = 'AM'
-	df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('PM')), 'type_adj'] = 'PM'
-	
-	# Ensure 'student' column is clean (replace NaN with empty string)
-	df['student'] = df['student'].fillna("").str.strip()
-	
-	# Identify duplicate student assignments (excluding HOPE_DRIVE)
-	df['duplicate_flag'] = df.duplicated(subset=['date', 'type', 'student'], keep=False) & (df['clinic'] != 'HOPE_DRIVE') & (df['student'] != "")
-	
-	# Identify duplicate assignments within HOPE_DRIVE using adjusted type
-	df['duplicate_flag'] |= df.duplicated(subset=['date', 'type_adj', 'student'], keep=False) & (df['clinic'] == 'HOPE_DRIVE') & (df['student'] != "")
-	
-	# Filter only flagged duplicates
-	df_duplicates = df[df['duplicate_flag']]
-	
-	# Display only flagged duplicate records
-	st.dataframe(df_duplicates)
+        df = pd.read_csv('PALIST.csv', dtype=str)
+
+        # Normalize 'type' for HOPE_DRIVE clinic
+        df['type_adj'] = df['type']
+        df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('AM')), 'type_adj'] = 'AM'
+        df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('PM')), 'type_adj'] = 'PM'
+    
+        # Ensure 'student' column is clean (replace NaN with empty string)
+        df['student'] = df['student'].fillna("").str.strip()
+    
+        # Identify duplicate student assignments (excluding HOPE_DRIVE)
+        df['duplicate_flag'] = df.duplicated(subset=['date', 'type', 'student'], keep=False) & (df['clinic'] != 'HOPE_DRIVE') & (df['student'] != "")
+    
+        # Identify duplicate assignments within HOPE_DRIVE using adjusted type
+        df['duplicate_flag'] |= df.duplicated(subset=['date', 'type_adj', 'student'], keep=False) & (df['clinic'] == 'HOPE_DRIVE') & (df['student'] != "")
+    
+        # Filter only flagged duplicates
+        df_duplicates = df[df['duplicate_flag']]
+    
+        # Display only flagged duplicate records
+        st.dataframe(df_duplicates)
+
+
 
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
