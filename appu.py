@@ -761,7 +761,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	wardc_df = (pd.concat([wcard_df, wgi_df, wnephro_df], ignore_index=True).query("type == 'AM - Continuity '").assign(clinic="WARD_C").groupby(["date", "clinic"], as_index=False).agg({"type": "first", "provider": lambda x: "/".join(x)}))
 
-	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
+	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx")); st.dataframe(picu_df)
 
 	special_clinics = {"AAC","HAMPDEN_NURSERY"}
 	
