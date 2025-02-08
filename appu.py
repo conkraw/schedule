@@ -762,20 +762,6 @@ elif st.session_state.page == "OPD Creator":
 	wardc_df = (pd.concat([wcard_df, wgi_df, wnephro_df], ignore_index=True).query("type == 'AM - Continuity '").assign(clinic="WARD_C").groupby(["date", "clinic"], as_index=False).agg({"type": "first", "provider": lambda x: "/".join(x)}))
 
 	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
-	multiple_providers_dates = picu_df[picu_df["type"] == "AM - Continuity "].groupby("date")["provider"].count()
-	
-	multiple_providers_dates = multiple_providers_dates[multiple_providers_dates > 1].index.tolist()
-	
-	# Step 2️⃣: Sort the dataframe by date
-	df_sorted = picu_df.sort_values(by="date").copy()
-	
-	# Step 3️⃣: Create a new column for the previous day's provider
-	df_sorted["prev_provider"] = df_sorted.groupby("type")["provider"].shift(1)
-	
-	# Step 4️⃣: Keep rows where:
-	filtered_df = df_sorted[(~df_sorted["date"].isin(multiple_providers_dates)) |  (df_sorted["provider"] == df_sorted["prev_provider"])]
-
-	picu_df = filtered_df
 	
 	special_clinics = {"AAC","HAMPDEN_NURSERY"}
 	
