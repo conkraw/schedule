@@ -730,34 +730,9 @@ elif st.session_state.page == "OPD Creator":
 	    "WARD_NEPHRO.xlsx": {"Neph On Call 8a-8a": "AM - Continuity"},  
 	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
 	}	
-	def process_picu_exclusions(df):
-	    """Exclude Friday from '1st PICU Attending 7:30a-5p' replacement using Streamlit's date format (m/d/yyyy)."""
-	    if df is not None and 'date' in df.columns:
-	        # Convert date using Streamlit's format (m/d/yyyy)
-	        df['date'] = pd.to_datetime(df['date'], format="%m/%d/%Y", errors='coerce')  # Matches user input format
-	
-	        # Check if any dates remain unrecognized
-	        if df['date'].isna().sum() > 0:
-	            print("Warning: Some dates could not be parsed. Check format consistency.")
-	
-	        # Extract weekday number (0=Monday, ..., 6=Sunday)
-	        df['weekday'] = df['date'].dt.weekday
-	
-	        # Replace "1st PICU Attending 7:30a-5p" with "AM - Continuity" only on non-Fridays
-	        df.loc[df['weekday'] != 4, 'type'] = df['type'].replace(
-	            {"1st PICU Attending 7:30a-5p": "AM - Continuity"}
-	        )
-	
-	        # Convert date back to Streamlit's preferred format (m/d/yyyy) for consistency
-	        df['date'] = df['date'].dt.strftime("%-m/%-d/%Y")
-	
-	        # Drop temporary weekday column
-	        df = df.drop(columns=['weekday'])
-	
-	    return df
+
 
 	# Process each file
-
 	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
 	etown_df = process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
 	nyes_df = process_file("NYES.xlsx", "NYES", replacement_rules.get("NYES.xlsx"))
@@ -771,13 +746,13 @@ elif st.session_state.page == "OPD Creator":
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
 	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
-	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS"); st.dataframe(consults_df)
-	#consults_df = consults_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity" in x.name else ", ".join(x)}); st.dataframe(consults_df)
-	consults_df = consults_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity " in x.name else "/".join(x)}); st.dataframe(consults_df)
+	
+	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS")
+	consults_df = consults_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity " in x.name else "/".join(x)})
 	consults_df["clinic"] = "ER_CONS"
 	
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
-	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"]
+	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"] #Only Extract Jennifer Shook
 
 	#Combine Ward C Together
 	wcard_df = process_file("WARD_CARDIOLOGY.xlsx", "WARD_CARDIOLOGY", replacement_rules.get("WARD_CARDIOLOGY.xlsx"))
@@ -785,22 +760,8 @@ elif st.session_state.page == "OPD Creator":
 	wnephro_df = process_file("WARD_NEPHRO.xlsx", "WARD_NEPHRO", replacement_rules.get("WARD_NEPHRO.xlsx"))
 	
 	wardc_df = (pd.concat([wcard_df, wgi_df, wnephro_df], ignore_index=True).query("type == 'AM - Continuity '").assign(clinic="WARD_C").groupby(["date", "clinic"], as_index=False).agg({"type": "first", "provider": lambda x: "/".join(x)}))
-	
-	# Step 1: Read and preprocess PICU file first
-	raw_picu_df = pd.read_excel(uploaded_files["PICU.xlsx"], dtype=str)  # Read raw data
-	
-	# Step 2: Apply Friday exclusions before normal processing
-	cleaned_picu_df = process_picu_exclusions(raw_picu_df)
-	
-	# Step 3: Process the cleaned PICU data as usual
-	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"), df = cleaned_picu_df)
-	
-	# Save the updated PICU file
-	if picu_df is not None:
-	    picu_df.to_csv("picu.csv", index=False)
-	    print("PICU updated and saved with Friday exclusions.")
-	else:
-	    print("Error: PICU.xlsx could not be processed. Check if the file exists or is uploaded correctly.")
+
+	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
 
 	special_clinics = {"AAC","HAMPDEN_NURSERY"}
 	
