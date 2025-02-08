@@ -1937,8 +1937,8 @@ elif st.session_state.page == "Create List":
         wb_bytes = save_to_bytes_wb(wb1)
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-	df = pd.read_csv('PALIST.csv)
-	csv_bytes = save_to_bytes_csv(df)
+	
+	df = pd.read_csv('PALIST.csv); csv_bytes = save_to_bytes_csv(df)
 	st.download_button(label="Download PALIST",data=wb_bytes,file_name="PALIST.csv",mime="text/csv")
  
     except Exception as e:
