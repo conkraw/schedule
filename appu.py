@@ -1933,13 +1933,13 @@ elif st.session_state.page == "Create List":
                 output.seek(0)  # Rewind the file pointer to the start
                 return output
 	
-            # Prepare the workbook for download
+        # Prepare the workbook for download
         wb_bytes = save_to_bytes_wb(wb1)
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-	
-	df = pd.read_csv('PALIST.csv); csv_bytes = save_to_bytes_csv(df)
-	st.download_button(label="Download PALIST",data=wb_bytes,file_name="PALIST.csv",mime="text/csv")
+        # Prepare the workbook for download
+        df = pd.read_csv('PALIST.csv)
+        csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download PALIST",data=wb_bytes,file_name="PALIST.csv",mime="text/csv")
  
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
