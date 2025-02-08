@@ -586,8 +586,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	        else:
 	            # Default behavior (original functionality)
-	            am_continuity_rows = df[df.eq("AM - Continuity").any(axis=1)].copy()
-	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity", "PM - Continuity")
+	            am_continuity_rows = df[df.eq("AM - Continuity ").any(axis=1)].copy()
+	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 	
 	            df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
 	
