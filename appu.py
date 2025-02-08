@@ -713,13 +713,13 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Step 4️⃣: Define **replacement rules** (applied only after filtering)
 	replacement_rules_filtered = {
-	    "Hope Drive AM Continuity": "AM - Continuity",
-	    "Hope Drive PM Continuity": "PM - Continuity",
+	    "Hope Drive AM Continuity ": "AM - Continuity",
+	    "Hope Drive PM Continuity ": "PM - Continuity",
 	    "Hope Drive\xa0AM Acute Precept ": "AM - ACUTES",  # Handles non-breaking space (\xa0)
-	    "Hope Drive PM Acute Precept": "PM - ACUTES",
-	    "Hope Drive Weekend Continuity": "AM - Continuity",
-	    "Hope Drive Weekend Acute 1": "AM - ACUTES",
-	    "Hope Drive Weekend Acute 2": "AM - ACUTES",
+	    "Hope Drive PM Acute Precept ": "PM - ACUTES",
+	    "Hope Drive Weekend Continuity ": "AM - Continuity",
+	    "Hope Drive Weekend Acute 1 ": "AM - ACUTES",
+	    "Hope Drive Weekend Acute 2 ": "AM - ACUTES",
 	    "Etown AM Continuity ": "AM - Continuity",
 	    "Etown PM Continuity ": "PM - Continuity",
 	    "Nyes Rd AM Continuity ": "AM - Continuity",
@@ -737,7 +737,12 @@ elif st.session_state.page == "OPD Creator":
 	etown_df = filtered_dfs.get("etown_df", pd.DataFrame())
 	nyes_df = filtered_dfs.get("nyes_df", pd.DataFrame())
 	pshchnursery_df = filtered_dfs.get("pshchnursery_df", pd.DataFrame())
-	
+
+	hope_drive_df["clinic"] = "HOPE_DRIVE"
+	etown_df["clinic"] = "ETOWN"
+	nyes_df["clinic"] = "NYES"
+	pshchnursery_df["clinic"] = "PSHCH_NURSERY"
+
 	# Step 7️⃣: Display filtered & replaced DataFrames in Streamlit
 	st.dataframe(hope_drive_df)
 	st.dataframe(etown_df)
