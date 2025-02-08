@@ -1960,8 +1960,9 @@ elif st.session_state.page == "Create List":
         # Display only flagged duplicate records
         st.write("Duplicate Check:"); st.dataframe(df_duplicates)
         
-        csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download PALIST",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
-        st.dataframe(df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14)))
 
+        st.dataframe(df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14)))
+        csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download PALIST",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
+	    
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
