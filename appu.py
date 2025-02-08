@@ -166,18 +166,18 @@ elif st.session_state.page == "Upload Files":
 
     # Define file name mappings based on content identifiers
     file_identifiers = {
-        "Nyes Rd AM Continuity": "NYES.xlsx",
-        "Hope Drive AM Continuity": "HOPE_DRIVE.xlsx",
-        "Etown AM Continuity": "ETOWN.xlsx",
-        "Nursery Weekday 8a-6p": "PSHCH_NURSERY.xlsx",
+        "Nyes": "NYES.xlsx",
+        "Hope": "HOPE_DRIVE.xlsx",
+        "Etown": "ETOWN.xlsx",
+        "Nursery": "PSHCH_NURSERY.xlsx",
         "Pulmonary": "WARD_P.xlsx",  # Adjusted to be more flexible
         "Hospitalists": "WARD_A.xlsx",
-        "Pediatric Cardiology": "WARD_CARDIOLOGY.xlsx",
-        "Neph On Call 8a-8a": "WARD_NEPHRO.xlsx",
+        "Cardiology": "WARD_CARDIOLOGY.xlsx",
+        "Neph": "WARD_NEPHRO.xlsx",
         "PICU": "PICU.xlsx",
-        "GI Daytime Service 7:30a-5p": "WARD_GI.xlsx",
-        "Complex Care On Call 5p-8a": "COMPLEX.xlsx",
-        "Adol Med On Call 8a-8a": "ADOLMED.xlsx"
+        "GI Daytime Service": "WARD_GI.xlsx",
+        "Complex": "COMPLEX.xlsx",
+        "Adol Med": "ADOLMED.xlsx"
     }
 
     # Required files for validation
