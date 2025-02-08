@@ -1948,7 +1948,7 @@ elif st.session_state.page == "Create List":
         df['duplicate_flag'] = df.duplicated(subset=['date', 'type', 'student'], keep=False) & (df['clinic'] != 'HOPE_DRIVE')
     
         # Identify duplicate assignments within HOPE_DRIVE using adjusted type
-        df['duplicate_flag'] |= df.duplicated(subset=['date', 'type_adj', 'student'], keep=False) & (df['clinic'] == 'HOPE_DRIVE')
+        df['duplicate_flag'] |= (df.duplicated(subset=['date', 'type_adj', 'student'], keep=False) &(df['clinic'] == 'HOPE_DRIVE') & df['student'].notna() & (df['student'].str.strip() != "")); st.dataframe(df)
 
         csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download PALIST",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
  
