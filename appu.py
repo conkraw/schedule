@@ -847,7 +847,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
-	df.to_csv('final.csv',index=False); csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="final.csv",mime="text/csv"); 	#st.dataframe(df)
+	df.to_csv('final.csv',index=False); csv_bytes = save_to_bytes_csv(df); st.download_button(label="Download Final File",data=csv_bytes,file_name="final.csv",mime="text/csv"); 	#st.dataframe(df)
 
 	df.to_excel('final.xlsx',index=False)
 	########################################################################################################################################################################
