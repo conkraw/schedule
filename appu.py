@@ -199,35 +199,39 @@ elif st.session_state.page == "Upload Files":
     uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
 
     if uploaded_files:
-        uploaded_files_dict = {}
-        detected_files = set()
+	uploaded_files_dict = {}
+	detected_files = set()
+	
+	for file in uploaded_files:
+	    try:
+	        # Read the first few rows, including headers
+	        df = pd.read_excel(file, dtype=str, nrows=10)  
+	        
+	        # Normalize text: strip spaces, handle line breaks, convert to lowercase
+	        df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
+	
+	        # Convert all values into a single string for better search
+	        full_text = " ".join(df_clean.to_string().split()).lower()
+	
+	        # **NEW: Also search in column headers**
+	        headers_text = " ".join(df.columns.astype(str)).lower()
+	
+	        # Try to find a match in **either** the headers or the values
+	        found_file = None
+	        for key, expected_filename in file_identifiers.items():
+	            if key.lower() in full_text or key.lower() in headers_text:
+	                found_file = expected_filename
+	                break  # Stop checking once a match is found
+	
+	        if found_file:
+	            uploaded_files_dict[found_file] = file  # Store the correctly named file
+	            detected_files.add(found_file)
+	        else:
+	            st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
+	
+	    except Exception as e:
+	        st.error(f"❌ Error reading {file.name}: {str(e)}")
 
-        for file in uploaded_files:
-            try:
-                # Read the first few rows of the Excel file
-                df = pd.read_excel(file, dtype=str, nrows=10)  # Read only first 10 rows to speed up processing
-                
-                # Normalize text: strip spaces, handle line breaks, convert to lowercase
-                df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
-
-                # Convert all values into a single string for better search
-                full_text = " ".join(df_clean.to_string().split()).lower()
-
-                # Try to find a match
-                found_file = None
-                for key, expected_filename in file_identifiers.items():
-                    if key.lower() in full_text:
-                        found_file = expected_filename
-                        break  # Stop checking once a match is found
-
-                if found_file:
-                    uploaded_files_dict[found_file] = file  # Store the correctly named file
-                    detected_files.add(found_file)
-                else:
-                    st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
-
-            except Exception as e:
-                st.error(f"❌ Error reading {file.name}: {str(e)}")
 
         # Save detected files to session state
         st.session_state.uploaded_files = uploaded_files_dict
