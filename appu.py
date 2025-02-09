@@ -179,7 +179,7 @@ elif st.session_state.page == "Upload Files":
 }
 
     # Required files for validation
-    required_files = set(file_identifiers.values())
+    #required_files = set(file_identifiers.values())
 
     # Streamlit UI
     st.title("File Upload Section")
