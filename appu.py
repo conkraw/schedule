@@ -177,10 +177,6 @@ elif st.session_state.page == "Upload Files":
     "Complex": ["COMPLEX.xlsx"],
     "Adol Med": ["ADOLMED.xlsx"]
 }
-
-    # Required files for validation
-    #required_files = set(file_identifiers.values())
-
     # Streamlit UI
     st.title("File Upload Section")
     st.write("Upload the following required Excel files:")
@@ -216,16 +212,11 @@ elif st.session_state.page == "Upload Files":
                 # **Check for matches in file name, headers, or values**
                 found_file = None
                 for key, expected_filenames in file_identifiers.items():
-                    if key.lower() in full_text:  # Match in file content
-                        for expected_filename in expected_filenames:
+                    if key.lower() in full_text or key.lower() in filename_lower.replace(".xlsx", ""):  
+                        for expected_filename in expected_filenames:  # Loop through list
                             if expected_filename not in detected_files:  # Prevent duplicate assignments
                                 found_file = expected_filename
-                                break
-                    elif key.lower() in filename_lower.replace(".xlsx", ""):  # Match in file name
-                        for expected_filename in expected_filenames:
-                            if expected_filename not in detected_files:
-                                found_file = expected_filename
-                                break
+                                break  # Stop checking after the first available match
 
                     if found_file:
                         break  # Stop checking once a match is found
@@ -238,7 +229,6 @@ elif st.session_state.page == "Upload Files":
 
             except Exception as e:
                 st.error(f"❌ Error reading {file.name}: {str(e)}")
-
 
 
 elif st.session_state.page == "OPD Creator":
