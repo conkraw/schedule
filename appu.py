@@ -167,19 +167,16 @@ elif st.session_state.page == "Upload Files":
 
     # Define file name mappings based on content identifiers
     file_identifiers = {
-        "Academic General Pediatrics": "PSHCH_NURSERY.xlsx",
-        "Academic General Pediatrics": "HOPE_DRIVE.xlsx",
-        "Academic General Pediatrics": "ETOWN.xlsx",
-        "Academic General Pediatrics": "NYES.xlsx",
-        "Pulmonary": "WARD_P.xlsx",  # Adjusted to be more flexible
-        "Hospitalists": "WARD_A.xlsx",
-        "Cardiology": "WARD_CARDIOLOGY.xlsx",
-        "Neph": "WARD_NEPHRO.xlsx",
-        "PICU": "PICU.xlsx",
-        "GI Daytime Service": "WARD_GI.xlsx",
-        "Complex": "COMPLEX.xlsx",
-        "Adol Med": "ADOLMED.xlsx"
-    }
+    "Academic General Pediatrics": ["PSHCH_NURSERY.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "NYES.xlsx"],
+    "Pulmonary": ["WARD_P.xlsx"],
+    "Hospitalists": ["WARD_A.xlsx"],
+    "Cardiology": ["WARD_CARDIOLOGY.xlsx"],
+    "Neph": ["WARD_NEPHRO.xlsx"],
+    "PICU": ["PICU.xlsx"],
+    "GI Daytime Service": ["WARD_GI.xlsx"],
+    "Complex": ["COMPLEX.xlsx"],
+    "Adol Med": ["ADOLMED.xlsx"]
+}
 
     # Required files for validation
     required_files = set(file_identifiers.values())
@@ -204,20 +201,33 @@ elif st.session_state.page == "Upload Files":
 
         for file in uploaded_files:
             try:
+                # Extract the filename
+                filename_lower = file.name.lower()
+
                 # Read the first few rows of the Excel file
-                df = pd.read_excel(file, dtype=str, nrows=10)  # Read only first 10 rows to speed up processing
-                
+                df = pd.read_excel(file, dtype=str, nrows=10)  
+
                 # Normalize text: strip spaces, handle line breaks, convert to lowercase
                 df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
 
                 # Convert all values into a single string for better search
                 full_text = " ".join(df_clean.to_string().split()).lower()
 
-                # Try to find a match
+                # **Check for matches in file name, headers, or values**
                 found_file = None
-                for key, expected_filename in file_identifiers.items():
-                    if key.lower() in full_text:
-                        found_file = expected_filename
+                for key, expected_filenames in file_identifiers.items():
+                    if key.lower() in full_text:  # Match in file content
+                        for expected_filename in expected_filenames:
+                            if expected_filename not in detected_files:  # Prevent duplicate assignments
+                                found_file = expected_filename
+                                break
+                    elif key.lower() in filename_lower.replace(".xlsx", ""):  # Match in file name
+                        for expected_filename in expected_filenames:
+                            if expected_filename not in detected_files:
+                                found_file = expected_filename
+                                break
+
+                    if found_file:
                         break  # Stop checking once a match is found
 
                 if found_file:
@@ -229,17 +239,6 @@ elif st.session_state.page == "Upload Files":
             except Exception as e:
                 st.error(f"❌ Error reading {file.name}: {str(e)}")
 
-        # Save detected files to session state
-        st.session_state.uploaded_files = uploaded_files_dict
-
-        # Check for missing files
-        missing_files = required_files - detected_files
-
-        if not missing_files:
-            st.success("✅ All required files uploaded and detected successfully!")
-            navigate_to("OPD Creator")
-        else:
-            st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
 
 
 elif st.session_state.page == "OPD Creator":
