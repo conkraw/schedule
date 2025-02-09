@@ -184,10 +184,10 @@ elif st.session_state.page == "Upload Files":
 
     # Define file name mappings based on content identifiers
     file_identifiers = {
-        "Academic General Pediatrics": "NYES.xlsx",
-        "Academic General Pediatrics": "HOPE_DRIVE.xlsx",
-        "Academic General Pediatrics": "ETOWN.xlsx",
-        "Academic General Pediatrics": "PSHCH_NURSERY.xlsx",
+        "Penn State Health Hershey Medical Center - Academic General Pediatrics": "NYES.xlsx",
+        "Penn State Health Hershey Medical Center - Academic General Pediatrics": "HOPE_DRIVE.xlsx",
+        "Penn State Health Hershey Medical Center - Academic General Pediatrics": "ETOWN.xlsx",
+        "Penn State Health Hershey Medical Center - Academic General Pediatrics": "PSHCH_NURSERY.xlsx",
         "Pulmonary": "WARD_P.xlsx",  # Adjusted to be more flexible
         "Hospitalists": "WARD_A.xlsx",
         "Cardiology": "WARD_CARDIOLOGY.xlsx",
