@@ -166,22 +166,19 @@ elif st.session_state.page == "Upload Files":
 
     # Define file name mappings based on content identifiers
     file_identifiers = {
-        "Academic General Pediatrics": "NYES.xlsx",
-        "Academic General Pediatrics": "HOPE_DRIVE.xlsx",
-        "Academic General Pediatrics": "ETOWN.xlsx",
-        "Academic General Pediatrics": "PSHCH_NURSERY.xlsx",
-        "Pulmonary": "WARD_P.xlsx",  # Adjusted to be more flexible
-        "Hospitalists": "WARD_A.xlsx",
-        "Cardiology": "WARD_CARDIOLOGY.xlsx",
-        "Neph": "WARD_NEPHRO.xlsx",
-        "PICU": "PICU.xlsx",
-        "GI Daytime Service": "WARD_GI.xlsx",
-        "Complex": "COMPLEX.xlsx",
-        "Adol Med": "ADOLMED.xlsx"
+        "Academic General Pediatrics": ["NYES.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "PSHCH_NURSERY.xlsx"],
+        "Pulmonary": ["WARD_P.xlsx"],
+        "Hospitalists": ["WARD_A.xlsx"],
+        "Cardiology": ["WARD_CARDIOLOGY.xlsx"],
+        "Neph": ["WARD_NEPHRO.xlsx"],
+        "PICU": ["PICU.xlsx"],
+        "GI Daytime Service": ["WARD_GI.xlsx"],
+        "Complex": ["COMPLEX.xlsx"],
+        "Adol Med": ["ADOLMED.xlsx"]
     }
 
     # Required files for validation
-    required_files = set(file_identifiers.values())
+    required_files = set(file for filenames in file_identifiers.values() for file in filenames)
 
     # Streamlit UI
     st.title("File Upload Section")
@@ -204,24 +201,25 @@ elif st.session_state.page == "Upload Files":
         for file in uploaded_files:
             try:
                 # Read the first few rows of the Excel file
-                df = pd.read_excel(file, dtype=str, nrows=10)  # Read only first 10 rows to speed up processing
-                
+                df = pd.read_excel(file, dtype=str, nrows=10)  
+
                 # Normalize text: strip spaces, handle line breaks, convert to lowercase
                 df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
 
                 # Convert all values into a single string for better search
                 full_text = " ".join(df_clean.to_string().split()).lower()
 
-                # Try to find a match
-                found_file = None
-                for key, expected_filename in file_identifiers.items():
+                # Assign multiple filenames for "Academic General Pediatrics"
+                found_files = []
+                for key, expected_filenames in file_identifiers.items():
                     if key.lower() in full_text:
-                        found_file = expected_filename
-                        break  # Stop checking once a match is found
+                        found_files.extend(expected_filenames)
 
-                if found_file:
-                    uploaded_files_dict[found_file] = file  # Store the correctly named file
-                    detected_files.add(found_file)
+                if found_files:
+                    for expected_filename in found_files:
+                        uploaded_files_dict[expected_filename] = file  # Assign the same file to multiple expected filenames
+                        detected_files.add(expected_filename)
+
                 else:
                     st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
 
@@ -239,6 +237,8 @@ elif st.session_state.page == "Upload Files":
             navigate_to("OPD Creator")
         else:
             st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
+
+		
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
