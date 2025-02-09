@@ -232,7 +232,17 @@ elif st.session_state.page == "Upload Files":
 
             except Exception as e:
                 st.error(f"❌ Error reading {file.name}: {str(e)}")
+		    
+        st.session_state.uploaded_files = uploaded_files_dict
 
+        # Check for missing files
+        missing_files = required_files - detected_files
+
+        if not missing_files:
+            st.success("✅ All required files uploaded and detected successfully!")
+            navigate_to("OPD Creator")
+        else:
+            st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
 
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
