@@ -160,26 +160,27 @@ elif st.session_state.page == "Create OPD":
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
-# Define file name mappings based on content identifiers
-file_identifiers = {
-    "Academic General Pediatrics": ["PSHCH_NURSERY.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "NYES.xlsx"],
-    "Pulmonary": ["WARD_P.xlsx"],
-    "Hospitalists": ["WARD_A.xlsx"],
-    "Cardiology": ["WARD_CARDIOLOGY.xlsx"],
-    "Neph": ["WARD_NEPHRO.xlsx"],
-    "PICU": ["PICU.xlsx"],
-    "GI Daytime Service": ["WARD_GI.xlsx"],
-    "Complex": ["COMPLEX.xlsx"],
-    "Adol Med": ["ADOLMED.xlsx"]
-}
-
-# Required files for validation
-required_files = set(file for filenames in file_identifiers.values() for file in filenames)
 
 elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write("Upload the required Excel files:")
 
+    # Define file name mappings based on content identifiers
+    file_identifiers = {
+        "Academic General Pediatrics": ["PSHCH_NURSERY.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "NYES.xlsx"],
+        "Pulmonary": ["WARD_P.xlsx"],
+        "Hospitalists": ["WARD_A.xlsx"],
+        "Cardiology": ["WARD_CARDIOLOGY.xlsx"],
+        "Neph": ["WARD_NEPHRO.xlsx"],
+        "PICU": ["PICU.xlsx"],
+        "GI Daytime Service": ["WARD_GI.xlsx"],
+        "Complex": ["COMPLEX.xlsx"],
+        "Adol Med": ["ADOLMED.xlsx"]
+    }
+
+    # Required files for validation
+    required_files = set(file for filenames in file_identifiers.values() for file in filenames)
+	
     # Ensure start_date and end_date exist in session state
     if "start_date" in st.session_state and "end_date" in st.session_state:
         start_date, end_date = st.session_state.start_date, st.session_state.end_date
