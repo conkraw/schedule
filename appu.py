@@ -855,7 +855,8 @@ elif st.session_state.page == "OPD Creator":
 	# Display results in Streamlit
 	#st.dataframe(sorted_shift_counts)
 
-	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df)
+	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); st.write(unique_student_names)
+	
 	df.to_excel('final.xlsx',index=False)
 
 	########################################################################################################################################################################
