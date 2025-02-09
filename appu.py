@@ -201,9 +201,12 @@ elif st.session_state.page == "Upload Files":
     if uploaded_files:
         uploaded_files_dict = {}
         detected_files = set()
-    
+
         for file in uploaded_files:
             try:
+                # Extract the filename (convert to lowercase for uniform comparison)
+                filename_lower = file.name.lower()
+
                 # Read the first few rows, including headers
                 df = pd.read_excel(file, dtype=str, nrows=10)  
 
@@ -216,10 +219,17 @@ elif st.session_state.page == "Upload Files":
                 # **NEW: Also search in column headers**
                 headers_text = " ".join(df.columns.astype(str)).lower()
 
-                # Try to find a match in **either** the headers or the values
+                # Try to find an exact match in **filename, headers, or values**
                 found_file = None
                 for key, expected_filename in file_identifiers.items():
-                    if key.lower() in full_text or key.lower() in headers_text:
+                    key_lower = key.lower()  # Ensure case-insensitive match
+
+                    # **Check for an exact match**
+                    if (
+                        key_lower == filename_lower.replace(".xlsx", "")  # File name match
+                        or key_lower in full_text.split()  # Exact match in values
+                        or key_lower in headers_text.split()  # Exact match in headers
+                    ):
                         found_file = expected_filename
                         break  # Stop checking once a match is found
 
@@ -231,20 +241,6 @@ elif st.session_state.page == "Upload Files":
 
             except Exception as e:
                 st.error(f"❌ Error reading {file.name}: {str(e)}")
-
-
-        # Save detected files to session state
-        st.session_state.uploaded_files = uploaded_files_dict
-
-        # Check for missing files
-        missing_files = required_files - detected_files
-
-        if not missing_files:
-            st.success("✅ All required files uploaded and detected successfully!")
-            navigate_to("OPD Creator")
-        else:
-            st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
-
 
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
