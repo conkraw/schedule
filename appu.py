@@ -160,27 +160,25 @@ elif st.session_state.page == "Create OPD":
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
-
 elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
     st.write("Upload the required Excel files:")
 
     # Define file name mappings based on content identifiers
     file_identifiers = {
-        ("General Pediatrics", "NYES"): "NYES.xlsx",
-        ("Academic General", "HOPE DRIVE", "Hope Drive"): "HOPE_DRIVE.xlsx",
-        ("Academic General Pediatrics", "ETOWN"): "ETOWN.xlsx",
-        ("Penn State Health Hershey Medical Center - Academic General Pediatrics", "PSHCH", "Hershey", "Penn State Health"): "PSHCH_NURSERY.xlsx",
-        ("Pulmonary", "WARD P"): "WARD_P.xlsx",
-        ("Hospitalists", "WARD A"): "WARD_A.xlsx",
-        ("Cardiology", "WARD CARDIOLOGY"): "WARD_CARDIOLOGY.xlsx",
-        ("Neph", "Nephrology", "WARD NEPHRO"): "WARD_NEPHRO.xlsx",
-        ("PICU", "Pediatric ICU"): "PICU.xlsx",
-        ("GI Daytime Service", "WARD GI", "Gastroenterology"): "WARD_GI.xlsx",
-        ("Complex", "Complex Care"): "COMPLEX.xlsx",
-        ("Adol Med", "Adolescent Medicine"): "ADOLMED.xlsx"
+        "Academic General Pediatrics": "NYES.xlsx",
+        "Academic General Pediatrics": "HOPE_DRIVE.xlsx",
+        "Academic General Pediatrics": "ETOWN.xlsx",
+        "Academic General Pediatrics": "PSHCH_NURSERY.xlsx",
+        "Pulmonary": "WARD_P.xlsx",  # Adjusted to be more flexible
+        "Hospitalists": "WARD_A.xlsx",
+        "Cardiology": "WARD_CARDIOLOGY.xlsx",
+        "Neph": "WARD_NEPHRO.xlsx",
+        "PICU": "PICU.xlsx",
+        "GI Daytime Service": "WARD_GI.xlsx",
+        "Complex": "COMPLEX.xlsx",
+        "Adol Med": "ADOLMED.xlsx"
     }
-
 
     # Required files for validation
     required_files = set(file_identifiers.values())
@@ -205,34 +203,32 @@ elif st.session_state.page == "Upload Files":
 
         for file in uploaded_files:
             try:
-                # Extract filename (lowercase)
-                filename_lower = file.name.lower()
-
-                # Read file contents
-                df = pd.read_excel(file, dtype=str, nrows=10)
-
-                # Normalize text (strip spaces, remove line breaks, lowercase)
+                # Read the first few rows of the Excel file
+                df = pd.read_excel(file, dtype=str, nrows=10)  # Read only first 10 rows to speed up processing
+                
+                # Normalize text: strip spaces, handle line breaks, convert to lowercase
                 df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
 
-                # Convert all values to a single string for searching
+                # Convert all values into a single string for better search
                 full_text = " ".join(df_clean.to_string().split()).lower()
 
-                # Try to find a match in **filename, headers, or cell values**
+                # Try to find a match
                 found_file = None
-                for key_variations, expected_filename in file_identifiers.items():
-                    if any(variant.lower() in full_text or variant.lower() in filename_lower for variant in key_variations):
+                for key, expected_filename in file_identifiers.items():
+                    if key.lower() in full_text:
                         found_file = expected_filename
                         break  # Stop checking once a match is found
 
                 if found_file:
-                    uploaded_files_dict[found_file] = file
+                    uploaded_files_dict[found_file] = file  # Store the correctly named file
                     detected_files.add(found_file)
                 else:
                     st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
 
             except Exception as e:
                 st.error(f"❌ Error reading {file.name}: {str(e)}")
-		    
+
+        # Save detected files to session state
         st.session_state.uploaded_files = uploaded_files_dict
 
         # Check for missing files
@@ -243,7 +239,6 @@ elif st.session_state.page == "Upload Files":
             navigate_to("OPD Creator")
         else:
             st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
-
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
