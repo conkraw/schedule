@@ -828,7 +828,14 @@ elif st.session_state.page == "OPD Creator":
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False)
-	st.dataframe(df); analysis = df
+	#st.dataframe(df)
+	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
+	types_of_interest = ["AM - Continuity", "PM - Continuity"]
+	filtered_df = df[(df["clinic"].isin(clinics_of_interest)) & (df["type"].isin(types_of_interest))]
+	shift_counts = filtered_df.groupby(["provider", "clinic"]).size().reset_index(name="shift_count")
+	sorted_shift_counts = shift_counts.sort_values(by="shift_count", ascending=False)
+	st.dataframe(sorted_shift_counts)
+	
 	df.to_excel('final.xlsx',index=False)
 
 	########################################################################################################################################################################
