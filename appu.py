@@ -633,8 +633,6 @@ elif st.session_state.page == "OPD Creator":
 	
 	    return df  # Return modified DataFrame
 
-
-
 	def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
 	    if df is not None:
 	        # Process AM - Continuity
@@ -727,9 +725,9 @@ elif st.session_state.page == "OPD Creator":
 	    "WARD_GI.xlsx": {"GI Daytime Service 7:30a-5p": "AM - Continuity", "GI Daytime Service 7:30a-3p": "AM - Continuity", "GI Weekend Call 7:30a-7:30a": "AM - Continuity"},  
 	    "WARD_NEPHRO.xlsx": {"Neph On Call 8a-8a": "AM - Continuity"},  
 	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
+	    "Book4.xlsx": {"": "", "": ""},  
 	}	
-
-
+	
 	# Process each file
 	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
 	etown_df = process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
@@ -856,7 +854,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Display results in Streamlit
 	#st.dataframe(sorted_shift_counts)
-	
+
+	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df)
 	df.to_excel('final.xlsx',index=False)
 
 	########################################################################################################################################################################
