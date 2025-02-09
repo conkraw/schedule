@@ -205,42 +205,33 @@ elif st.session_state.page == "Upload Files":
 
         for file in uploaded_files:
             try:
-                # Read the first few rows of the Excel file
-                df = pd.read_excel(file, dtype=str, nrows=10)  # Read only first 10 rows to speed up processing
-                
-                # Normalize text: strip spaces, handle line breaks, convert to lowercase
+                # Extract filename (lowercase)
+                filename_lower = file.name.lower()
+
+                # Read file contents
+                df = pd.read_excel(file, dtype=str, nrows=10)
+
+                # Normalize text (strip spaces, remove line breaks, lowercase)
                 df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
 
-                # Convert all values into a single string for better search
+                # Convert all values to a single string for searching
                 full_text = " ".join(df_clean.to_string().split()).lower()
 
-                # Try to find a match
+                # Try to find a match in **filename, headers, or cell values**
                 found_file = None
-                for key, expected_filename in file_identifiers.items():
-                    if key.lower() in full_text:
+                for key_variations, expected_filename in file_identifiers.items():
+                    if any(variant.lower() in full_text or variant.lower() in filename_lower for variant in key_variations):
                         found_file = expected_filename
                         break  # Stop checking once a match is found
 
                 if found_file:
-                    uploaded_files_dict[found_file] = file  # Store the correctly named file
+                    uploaded_files_dict[found_file] = file
                     detected_files.add(found_file)
                 else:
                     st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
 
             except Exception as e:
                 st.error(f"❌ Error reading {file.name}: {str(e)}")
-
-        # Save detected files to session state
-        st.session_state.uploaded_files = uploaded_files_dict
-
-        # Check for missing files
-        missing_files = required_files - detected_files
-
-        if not missing_files:
-            st.success("✅ All required files uploaded and detected successfully!")
-            navigate_to("OPD Creator")
-        else:
-            st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
 
 
 elif st.session_state.page == "OPD Creator":
