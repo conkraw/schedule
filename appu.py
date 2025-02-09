@@ -205,7 +205,7 @@ elif st.session_state.page == "Upload Files":
         for file in uploaded_files:
             try:
                 # Read the first few rows of the Excel file
-                df = pd.read_excel(file, dtype=str, nrows=100)  # Read only first 10 rows to speed up processing
+                df = pd.read_excel(file, dtype=str, nrows=2)  # Read only first 10 rows to speed up processing
                 
                 # Normalize text: strip spaces, handle line breaks, convert to lowercase
                 df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
