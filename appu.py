@@ -167,19 +167,20 @@ elif st.session_state.page == "Upload Files":
 
     # Define file name mappings based on content identifiers
     file_identifiers = {
-        "General Pediatrics": "NYES.xlsx",
-        "Academic General": "HOPE_DRIVE.xlsx",
-        "Academic General Pediatrics": "ETOWN.xlsx",
-        "Penn State Health Hershey Medical Center - Academic General Pediatrics": "PSHCH_NURSERY.xlsx",
-        "Pulmonary": "WARD_P.xlsx",  # Adjusted to be more flexible
-        "Hospitalists": "WARD_A.xlsx",
-        "Cardiology": "WARD_CARDIOLOGY.xlsx",
-        "Neph": "WARD_NEPHRO.xlsx",
-        "PICU": "PICU.xlsx",
-        "GI Daytime Service": "WARD_GI.xlsx",
-        "Complex": "COMPLEX.xlsx",
-        "Adol Med": "ADOLMED.xlsx"
+        ("General Pediatrics", "NYES"): "NYES.xlsx",
+        ("Academic General", "HOPE DRIVE", "Hope Drive"): "HOPE_DRIVE.xlsx",
+        ("Academic General Pediatrics", "ETOWN"): "ETOWN.xlsx",
+        ("Penn State Health Hershey Medical Center - Academic General Pediatrics", "PSHCH", "Hershey", "Penn State Health"): "PSHCH_NURSERY.xlsx",
+        ("Pulmonary", "WARD P"): "WARD_P.xlsx",
+        ("Hospitalists", "WARD A"): "WARD_A.xlsx",
+        ("Cardiology", "WARD CARDIOLOGY"): "WARD_CARDIOLOGY.xlsx",
+        ("Neph", "Nephrology", "WARD NEPHRO"): "WARD_NEPHRO.xlsx",
+        ("PICU", "Pediatric ICU"): "PICU.xlsx",
+        ("GI Daytime Service", "WARD GI", "Gastroenterology"): "WARD_GI.xlsx",
+        ("Complex", "Complex Care"): "COMPLEX.xlsx",
+        ("Adol Med", "Adolescent Medicine"): "ADOLMED.xlsx"
     }
+
 
     # Required files for validation
     required_files = set(file_identifiers.values())
