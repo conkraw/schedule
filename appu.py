@@ -827,8 +827,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
-	df.to_csv('final.csv',index=False)
-	#st.dataframe(df)
+	df.to_csv('final.csv',index=False); st.dataframe(df)
+	#
 	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
 	types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]
 	
@@ -855,7 +855,7 @@ elif st.session_state.page == "OPD Creator":
 	sorted_shift_counts = shift_counts.sort_values(by=["week_label", "shift_count"], ascending=[True, False])
 	
 	# Display results in Streamlit
-	st.dataframe(sorted_shift_counts)
+	#st.dataframe(sorted_shift_counts)
 	
 	df.to_excel('final.xlsx',index=False)
 
