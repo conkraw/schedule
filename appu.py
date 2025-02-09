@@ -160,13 +160,8 @@ elif st.session_state.page == "Create OPD":
         except ValueError:
             st.error('Invalid date format. Please enter the date in **m/d/yyyy** format.')
 
-
-elif st.session_state.page == "Upload Files":
-    st.title("File Upload Section")
-    st.write("Upload the required Excel files:")
-
-    # Define file name mappings based on content identifiers
-    file_identifiers = {
+# Define file name mappings based on content identifiers
+file_identifiers = {
     "Academic General Pediatrics": ["PSHCH_NURSERY.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "NYES.xlsx"],
     "Pulmonary": ["WARD_P.xlsx"],
     "Hospitalists": ["WARD_A.xlsx"],
@@ -177,9 +172,13 @@ elif st.session_state.page == "Upload Files":
     "Complex": ["COMPLEX.xlsx"],
     "Adol Med": ["ADOLMED.xlsx"]
 }
-    # Streamlit UI
+
+# Required files for validation
+required_files = set(file for filenames in file_identifiers.values() for file in filenames)
+
+elif st.session_state.page == "Upload Files":
     st.title("File Upload Section")
-    st.write("Upload the following required Excel files:")
+    st.write("Upload the required Excel files:")
 
     # Ensure start_date and end_date exist in session state
     if "start_date" in st.session_state and "end_date" in st.session_state:
@@ -230,6 +229,24 @@ elif st.session_state.page == "Upload Files":
             except Exception as e:
                 st.error(f"❌ Error reading {file.name}: {str(e)}")
 
+        # Save detected files to session state
+        st.session_state.uploaded_files = uploaded_files_dict
+
+        # Check for missing files
+        missing_files = required_files - detected_files
+
+        if not missing_files:
+            st.success("✅ All required files uploaded and detected successfully!")
+
+            # ✅ Move to OPD Creator automatically
+            st.session_state.page = "OPD Creator"
+            st.rerun()  # Refresh Streamlit to navigate to next page
+        else:
+            st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
+
+elif st.session_state.page == "OPD Creator":
+    test_date = st.session_state.start_date
+    uploaded_files = st.session_state.uploaded_files
 
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
