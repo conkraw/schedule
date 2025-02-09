@@ -831,9 +831,30 @@ elif st.session_state.page == "OPD Creator":
 	#st.dataframe(df)
 	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
 	types_of_interest = ["AM - Continuity ", "PM - Continuity "]
+	
+	df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
+	
+	# Get start date from session state
+	start_date = pd.to_datetime(st.session_state.start_date)
+	
+	# Calculate weeks: Monday–Friday groupings
+	df["week_num"] = ((df["date"] - start_date).dt.days // 7) + 1
+	df["week_label"] = "Week " + df["week_num"].astype(str)
+	
+	# Filter data for relevant clinics and shift types
 	filtered_df = df[(df["clinic"].isin(clinics_of_interest)) & (df["type"].isin(types_of_interest))]
-	shift_counts = filtered_df.groupby(["provider", "clinic"]).size().reset_index(name="shift_count")
-	sorted_shift_counts = shift_counts.sort_values(by="shift_count", ascending=False)
+	
+	# Count shifts per provider per clinic per week
+	shift_counts = (
+	    filtered_df.groupby(["week_label", "provider", "clinic"])
+	    .size()
+	    .reset_index(name="shift_count")
+	)
+	
+	# Sort by week and shift count (descending order)
+	sorted_shift_counts = shift_counts.sort_values(by=["week_label", "shift_count"], ascending=[True, False])
+	
+	# Display results in Streamlit
 	st.dataframe(sorted_shift_counts)
 	
 	df.to_excel('final.xlsx',index=False)
