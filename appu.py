@@ -838,13 +838,7 @@ elif st.session_state.page == "OPD Creator":
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
 	# Define class groups mapping
-	class_groups = {
-	    'H0': 0, 'H10': 0, 
-	    'H1': 1, 'H11': 1, 
-	    'H2': 2, 'H12': 2, 
-	    'H3': 3, 'H13': 3, 
-	    'H4': 4, 'H14': 4
-	}
+	class_groups = {'H0': 0, 'H10': 0, 'H1': 1, 'H11': 1, 'H2': 2, 'H12': 2, 'H3': 3, 'H13': 3, 'H4': 4, 'H14': 4}
 	
 	# Shuffle students before assigning
 	random.shuffle(unique_student_names)
@@ -865,11 +859,13 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # Assign students based on class groups
 	    for class_type, student_pos in class_groups.items():
-	        class_filter = (df['class'] == class_type) & (df['date'] - pd.to_timedelta(df['date'].dt.weekday, unit='D') == week_start)
+	        class_filter = (
+	            (df['class'] == class_type) &
+	            (df['clinic'] == 'WARD_A') &  # ✅ Ensure only WARD_A is assigned
+	            (df['date'] - pd.to_timedelta(df['date'].dt.weekday, unit='D') == week_start)
+	        )
 	        df.loc[class_filter, 'student'] = selected_students[student_pos]
 
-
-		    
 	df['text'] = df['provider'] + " ~ " + df['student']
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
