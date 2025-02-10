@@ -53,7 +53,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     name_columns = ["B", "D", "F", "H", "J", "L", "N"]
 
     # Row ranges to repeat the pattern
-    row_ranges = [(5, 17), (18, 27), (28, 37), (38, 47), (48, 57), (58, 67)]
+    row_ranges = [(5, 17), (18, 27), (28, 37), (38, 47), (48, 57), (58, 67), (68, 77), (78, 87)]
 
     # Ensure names list has at least one name
     if not names:
