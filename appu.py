@@ -97,7 +97,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
             ws[f"{col_letter}{start_row}"] = day  # Place the day name
             
             # ✅ **Use format_date_with_suffix() for proper formatting**
-            formatted_date = format_date_with_suffix(current_date + datetime.timedelta(days=i))
+            formatted_date = (current_date + datetime.timedelta(days=i)).strftime("%B %-d, %Y")
             ws[f"{col_letter}{start_row + 1}"] = formatted_date  # Assign formatted date
         
         start_row += 10  # Skip 10 rows before the next week starts
