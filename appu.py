@@ -810,11 +810,8 @@ elif st.session_state.page == "OPD Creator":
 	team_mapping = {'H0': 'WARD_A_Team 1', 'H1': 'WARD_A_Team 2', 'H2': 'WARD_A_Team 3','H3': 'WARD_A_Team 1', 'H4': 'WARD_A_Team 2', 'H5': 'WARD_A_Team 3','H10': 'WARD_A_Team 1', 'H11': 'WARD_A_Team 2', 'H12': 'WARD_A_Team 3','H13': 'WARD_A_Team 1', 'H14': 'WARD_A_Team 2', 'H15': 'WARD_A_Team 3'}
 	
 	# Identify missing providers and fill with appropriate team names
-	df['provider'] = df.apply(lambda row: team_mapping.get(row['class'], row['provider'])
-	                          if pd.isna(row['provider']) else row['provider'], axis=1)
-
+	df.loc[(df['clinic'] == 'WARD_A') & (df['provider'].isna()), 'provider'] = df['class'].map(team_mapping)
 	
-
 	df['date'] = pd.to_datetime(df['date'])
 	df['date'] = df['date'].dt.strftime('%m/%d/%Y')
 	
