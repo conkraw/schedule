@@ -614,7 +614,7 @@ elif st.session_state.page == "OPD Creator":
 	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 	
 	            # Only append the PM version, no double duplication
-	            df = pd.concat([df, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
+	            df = pd.concat([df, pm_continuity_rows], ignore_index=True).reset_index(drop=True); #df = pd.concat([df, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
 	
 	            print(f"✅ Special processing for {clinic_name}: Only duplicated AM - Continuity as PM - Continuity.")
 	
@@ -623,7 +623,7 @@ elif st.session_state.page == "OPD Creator":
 	            am_continuity_rows = df[df.eq("AM - Continuity ").any(axis=1)].copy()
 	            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
 	
-	            df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
+	            df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).reset_index(drop=True); #df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
 	
 	            print(f"✅ Standard processing for {clinic_name}: Fully duplicated AM - Continuity.")
 	
