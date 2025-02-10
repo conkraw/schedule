@@ -822,7 +822,7 @@ elif st.session_state.page == "OPD Creator":
 
 	df['student'] = ""
 
-	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); st.write(unique_student_names)
+	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(unique_student_names)
 
 	# Extract the minimum date
 	min_date = df['date'].min()
@@ -830,24 +830,31 @@ elif st.session_state.page == "OPD Creator":
 	# Filter for WARD_A and exclude providers with class H5 and H15
 	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))]
 	
-	# Get unique dates for WARD_A
-	date_range = sorted(df_filtered['date'].unique())
-	
+	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].dt.weekday, unit='D')
+	unique_weeks = sorted(df_filtered['week_start'].unique())
+
+	class_groups = {('H0', 'H10'): 0,('H1', 'H11'): 1,('H2', 'H12'): 2,('H3', 'H13'): 3,('H4', 'H14'): 4}
 	# Reset student assignment index
 	student_index = 0
 	total_students = len(unique_student_names)
 	
-	# Assign students one at a time to each provider for each day
-	for date in date_range:
-	    available_slots = df[(df['date'] == date) & (df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].index
+	for week_start in unique_weeks:
+	    # Shuffle students for each new week to mix them up
+	    selected_students = unique_student_names[student_index:student_index+5]
 	    
-	    for idx in available_slots:
-	        if student_index >= total_students:
-	            student_index = 0  # Restart student list if we run out
+	    # Ensure we have 5 students; if not, restart the list
+	    if len(selected_students) < 5:
+	        student_index = 0  # Restart student list
+	        random.shuffle(unique_student_names)
+	        selected_students = unique_student_names[student_index:student_index+5]
+	    
+	    student_index += 5  # Move to next batch for next week
 	
-	        df.at[idx, 'student'] = unique_student_names[student_index]  # Assign student
-	        student_index += 1
-
+	    # Assign students based on class grouping
+	    for class_group, student_pos in class_groups.items():
+	        class_filter = df_filtered['class'].isin(class_group) & (df_filtered['week_start'] == week_start)
+	        df.loc[class_filter.index, 'student'] = selected_students[student_pos]
+		    
 	df['text'] = df['provider'] + " ~ " + df['student']
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
