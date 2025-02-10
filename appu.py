@@ -128,6 +128,7 @@ for file_name, config in file_configs.items():
     generate_excel_file(datetime.date.today(), config["title"], config["custom_text"], file_name, config["names"])
 
 
+
 # Initialize session state variables efficiently
 session_defaults = {
     "page": "Home",
