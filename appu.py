@@ -831,32 +831,44 @@ elif st.session_state.page == "OPD Creator":
 	df['date'] = pd.to_datetime(df['date'], errors='coerce')
 	
 	# Filter for WARD_A and exclude providers with class H5 and H15
-	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))]
+	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].copy()
 	
+	# Compute the Monday start of each week
 	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].dt.weekday, unit='D')
 	unique_weeks = sorted(df_filtered['week_start'].unique())
-
-	class_groups = {('H0', 'H10'): 0,('H1', 'H11'): 1,('H2', 'H12'): 2,('H3', 'H13'): 3,('H4', 'H14'): 4}
+	
+	# Define class groups mapping
+	class_groups = {
+	    'H0': 0, 'H10': 0, 
+	    'H1': 1, 'H11': 1, 
+	    'H2': 2, 'H12': 2, 
+	    'H3': 3, 'H13': 3, 
+	    'H4': 4, 'H14': 4
+	}
+	
+	# Shuffle students before assigning
+	random.shuffle(unique_student_names)
+	
 	# Reset student assignment index
 	student_index = 0
 	total_students = len(unique_student_names)
 	
+	# Assign students for each week
 	for week_start in unique_weeks:
-	    # Shuffle students for each new week to mix them up
-	    selected_students = unique_student_names[student_index:student_index+5]
-	    
-	    # Ensure we have 5 students; if not, restart the list
-	    if len(selected_students) < 5:
-	        student_index = 0  # Restart student list
-	        random.shuffle(unique_student_names)
-	        selected_students = unique_student_names[student_index:student_index+5]
-	    
-	    student_index += 5  # Move to next batch for next week
+	    # Ensure a new set of 5 students for each week
+	    if student_index + 5 > total_students:
+	        student_index = 0  # Restart the list if we run out of students
+	        random.shuffle(unique_student_names)  # Shuffle again for fairness
 	
-	    # Assign students based on class grouping
-	    for class_group, student_pos in class_groups.items():
-	        class_filter = df_filtered['class'].isin(class_group) & (df_filtered['week_start'] == week_start)
-	        df.loc[class_filter.index, 'student'] = selected_students[student_pos]
+	    selected_students = unique_student_names[student_index:student_index+5]
+	    student_index += 5  # Move to the next batch for the next week
+	
+	    # Assign students based on class groups
+	    for class_type, student_pos in class_groups.items():
+	        class_filter = (df['class'] == class_type) & (df['date'] - pd.to_timedelta(df['date'].dt.weekday, unit='D') == week_start)
+	        df.loc[class_filter, 'student'] = selected_students[student_pos]
+
+
 		    
 	df['text'] = df['provider'] + " ~ " + df['student']
 
