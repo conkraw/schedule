@@ -848,9 +848,9 @@ elif st.session_state.page == "OPD Creator":
 		reader = csv.reader(inp)
 		df1 = {rows[1]:rows[0] for rows in reader} 
 	
-	df['datecode'] = df.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
+	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
-	df.to_csv('final2.csv', index=False) 
+	df.to_csv('final2.csv', index=False); st.dataframe(df) 
 
 	df = pd.read_csv('final2.csv',dtype=str) 
 	
