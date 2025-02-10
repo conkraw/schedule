@@ -882,7 +882,7 @@ elif st.session_state.page == "OPD Creator":
 	        student_index += 1
 
 	# Save the updated dataset
-	output_path = "final.xlsx"; st.dataframe(output_path)
+	output_path = "final.xlsx"; st.dataframe(df)
 	df.to_excel(output_path, index=False)
 
 	#df.to_excel('final.xlsx',index=False)
