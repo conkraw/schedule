@@ -1005,14 +1005,13 @@ elif st.session_state.page == "OPD Creator":
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
 	#st.dataframe(df)
-
-
-	    
-	
 	
 	################################################################################################################################################################################################
+	# ✅ Filter out rows where 'student' is empty or NaN
+	df_filtered = df[df['student'].notna() & df['student'].str.strip().ne("")]
+	
 	# ✅ Find duplicate student assignments across all clinics
-	duplicate_students = df[df.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
+	duplicate_students = df_filtered[df_filtered.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
 	
 	if not duplicate_students.empty:
 	    st.warning("⚠️ Duplicate student assignments found across different clinics!")
@@ -1025,10 +1024,14 @@ elif st.session_state.page == "OPD Creator":
 	    )
 	
 	    # ✅ Show only problematic cases (students assigned to multiple clinics in the same datecode and class)
-	    duplicate_summary = duplicate_summary[duplicate_summary.duplicated(subset=['student', 'datecode', 'class'], keep=False)]; st.write('Duplicate Check'); st.dataframe(duplicate_summary)
-
+	    duplicate_summary = duplicate_summary[duplicate_summary.duplicated(subset=['student', 'datecode', 'class'], keep=False)]
+	    
+	    st.write('Duplicate Check')
+	    st.dataframe(duplicate_summary)
+	
 	else:
 	    st.success("✅ No duplicate student assignments detected across clinics!")
+
 	#####################################################################OUTPATIENT SHIFT ANALYIS#####################################################################################################################################
 	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]; types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]; df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
 	
