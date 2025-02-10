@@ -817,16 +817,43 @@ elif st.session_state.page == "OPD Creator":
 	with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
 		reader = csv.reader(inp)
 		df1 = {rows[0]:rows[1] for rows in reader} 
+	
 	df['datecode'] = df.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
+
+	df['student'] = ""
 	
 	df['text'] = df['provider'] + " ~ "
 	
-	df['student'] = ""
-	
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
+
+	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); st.write(unique_student_names)
+
+	# Extract the minimum date
+	min_date = df['date'].min()
 	
+	# Filter for WARD_A and exclude providers with class H5 and H15
+	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))]
+	
+	# Get unique dates for WARD_A
+	date_range = sorted(df_filtered['date'].unique())
+	
+	# Reset student assignment index
+	student_index = 0
+	total_students = len(unique_student_names)
+	
+	# Assign students one at a time to each provider for each day
+	for date in date_range:
+	    available_slots = df[(df['date'] == date) & (df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].index
+	    
+	    for idx in available_slots:
+	        if student_index >= total_students:
+	            student_index = 0  # Restart student list if we run out
+	
+	        df.at[idx, 'student'] = unique_student_names[student_index]  # Assign student
+	        student_index += 1
+		    
 	df.to_csv('final.csv',index=False); st.dataframe(df)
-	#
+	
 	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
 	types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]
 	
@@ -854,42 +881,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Display results in Streamlit
 	#st.dataframe(sorted_shift_counts)
-
-	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); st.write(unique_student_names)
-
-	# Ensure date column is in datetime format
-	df['date'] = pd.to_datetime(df['date'], errors='coerce')
-
 	
-	# Extract the minimum date
-	min_date = df['date'].min()
-	
-	# Filter for WARD_A and exclude providers with class H5 and H15
-	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))]
-	
-	# Get unique dates for WARD_A
-	date_range = sorted(df_filtered['date'].unique())
-	
-	# Reset student assignment index
-	student_index = 0
-	total_students = len(unique_student_names)
-	
-	# Assign students one at a time to each provider for each day
-	for date in date_range:
-	    available_slots = df[(df['date'] == date) & (df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].index
-	    
-	    for idx in available_slots:
-	        if student_index >= total_students:
-	            student_index = 0  # Restart student list if we run out
-	
-	        df.at[idx, 'student'] = unique_student_names[student_index]  # Assign student
-	        student_index += 1
-
-	# Save the updated dataset
-	output_path = "final.xlsx"; st.dataframe(df)
-	df.to_excel(output_path, index=False)
-
-	#df.to_excel('final.xlsx',index=False)
+	df.to_excel('final.xlsx',index=False)
 
 	########################################################################################################################################################################
 	import openpyxl
