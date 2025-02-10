@@ -872,7 +872,8 @@ elif st.session_state.page == "OPD Creator":
 	            class_filter = (
 	                (df['class'] == class_type) &
 	                (df['clinic'] == 'WARD_A') &  # ✅ Ensure only WARD_A is assigned
-	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start)
+	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start) &
+	                (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
 	            )
 	            df.loc[class_filter, 'student'] = selected_student
 	
