@@ -856,29 +856,33 @@ elif st.session_state.page == "OPD Creator":
 	#st.dataframe(sorted_shift_counts)
 
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); st.write(unique_student_names)
+
+	# Ensure date column is in datetime format
+	df['date'] = pd.to_datetime(df['date'], errors='coerce')
+
 	
-	# Filter WARD A and exclude providers with class H5 and H15
-	df_filtered = df[(df['clinic'] == 'WARD A') & (~df['class'].isin(['H5', 'H15']))]
-	
-	# Get the minimum date from the dataset
+	# Extract the minimum date
 	min_date = df['date'].min()
 	
-	# Get unique dates within the dataset (to maintain existing dates)
+	# Filter for WARD_A and exclude providers with class H5 and H15
+	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))]
+	
+	# Get unique dates for WARD_A
 	date_range = sorted(df_filtered['date'].unique())
 	
-	# Initialize student assignment
+	# Reset student assignment index
 	student_index = 0
 	total_students = len(unique_student_names)
 	
 	# Assign students one at a time to each provider for each day
 	for date in date_range:
-	    available_slots = df_filtered[df_filtered['date'] == date].index  # Rows to fill for the day
+	    available_slots = df[(df['date'] == date) & (df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].index
 	    
 	    for idx in available_slots:
 	        if student_index >= total_students:
-	            student_index = 0  # Restart the student list if we run out
-	        
-	        df.loc[idx, 'student'] = unique_student_names[student_index]  # Assign student
+	            student_index = 0  # Restart student list if we run out
+	
+	        df.at[idx, 'student'] = unique_student_names[student_index]  # Assign student
 	        student_index += 1
 
 	# Save the updated dataset
