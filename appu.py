@@ -834,7 +834,7 @@ elif st.session_state.page == "OPD Creator":
 	# ✅ Fix: Ensure `week_start` exists in the main dataframe
 	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
 	
-	# Define only SJR_HOSP assignment rules
+	# Define SJR_HOSP assignment rules
 	sjr_hosp_rules = {
 	    "H2": {"max_students_per_week": 1},
 	    "H12": {"max_students_per_week": 1},
@@ -903,11 +903,24 @@ elif st.session_state.page == "OPD Creator":
 	                (df['week_start'] == week_start)
 	            )
 	
-	            if not df.loc[class_filter].empty:
+	            # ✅ Fix: Use `.notna()` and `.isnull()` more reliably
+	            if df.loc[class_filter, 'student'].isnull().any():  # Checks for empty slots correctly
 	                df.loc[class_filter, 'student'] = selected_student
 	                assigned_students.add(selected_student)
 	                sjr_hosp_assigned_students.add(selected_student)
 	                assigned_this_week += 1
+	
+	### **3️⃣ Final Checks & Display Results**
+	# ✅ Check for Unassigned Students
+	remaining_students = [s for s in unique_student_names if s not in sjr_hosp_assigned_students]
+	
+	if remaining_students:
+	    st.warning(f"⚠️ Some students were not assigned to SJR_HOSP: {remaining_students}")
+	
+	# ✅ Ensure No Student Has Conflicting Assignments
+	conflicted_students = ward_a_assigned_students.intersection(sjr_hosp_assigned_students)
+	if conflicted_students:
+	    st.warning(f"⚠️ Conflict detected! These students were assigned to both WARD_A and SJR_HOSP: {conflicted_students}")
 
 	df['text'] = df['provider'] + " ~ " + df['student']
 
