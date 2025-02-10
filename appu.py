@@ -515,24 +515,16 @@ elif st.session_state.page == "OPD Creator":
 	# Disable chained assignment warning
 	pd.options.mode.chained_assignment = None
 	
-	# Parse the start date (assuming `test_date` is already defined)
-	formatted_date = test_date.strftime('%m-%d-%Y')
-	start_date = datetime.datetime.strptime(formatted_date, '%m-%d-%Y')
-	
-	# Calculate the end date (34 days from the start date)
+	start_date = test_date.replace(hour=0, minute=0, second=0, microsecond=0)
 	end_date = start_date + timedelta(days=34)
 	
-	# Generate the date range
-	date_range = pd.date_range(start=start_date, end=end_date)
-	
-	# Create a DataFrame with the formatted dates
-	xf201 = pd.DataFrame({'date': date_range})
+	# Create DataFrame with formatted dates
+	xf201 = pd.DataFrame({'date': pd.date_range(start=start_date, end=end_date)})
 	xf201['convert'] = xf201['date'].dt.strftime('%B %-d, %Y')
 	
-	xf201['t'] = "T"
-	xf201['c'] = xf201.index+0
-	xf201['T'] = xf201['t'].astype(str) + xf201 ['c'].astype(str)
-	
+	# Generate 'T' column
+	xf201['T'] = "T" + xf201.index.astype(str)
+		
 	for i in range(35):
 	    exec(f"day{i} = xf201['convert'][{i}]")
 
