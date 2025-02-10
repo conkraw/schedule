@@ -774,7 +774,7 @@ elif st.session_state.page == "OPD Creator":
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
-	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP", special_clinics)
+	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	
