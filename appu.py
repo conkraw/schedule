@@ -851,7 +851,7 @@ elif st.session_state.page == "OPD Creator":
 	sjr_hosp_assigned_students = set()
 	alert_triggered = False  # Flag to detect if no student was available
 	
-	### **1️⃣ Assign Students to WARD_A First (Ensuring No Conflicts)**
+	### **1️⃣ Assign Students to WARD_A First**
 	ward_a_class_groups = [
 	    ('H0', 'H10'), 
 	    ('H1', 'H11'),
@@ -880,7 +880,11 @@ elif st.session_state.page == "OPD Creator":
 	            )
 	            df.loc[class_filter, 'student'] = selected_student
 	
-	### **2️⃣ Assign Students to `SJR_HOSP` (Only if They Haven't Been Assigned to WARD_A)**
+	### **2️⃣ Debug: Check If SJR_HOSP Has Valid Rows**
+	valid_sjr_hosp_rows = df[(df['clinic'] == "SJR_HOSP") & df['student'].isna()]
+	st.write(f"Valid SJR_HOSP Rows Before Assignment: {len(valid_sjr_hosp_rows)}")
+	
+	### **3️⃣ Assign Students to `SJR_HOSP`**
 	for week_start in unique_weeks:
 	    assigned_this_week = 0
 	    available_students = [s for s in unique_student_names if s not in assigned_students]
@@ -903,14 +907,19 @@ elif st.session_state.page == "OPD Creator":
 	                (df['week_start'] == week_start)
 	            )
 	
-	            # ✅ Fix: Use `.notna()` and `.isnull()` more reliably
-	            if df.loc[class_filter, 'student'].isnull().any():  # Checks for empty slots correctly
+	            # ✅ Debug: Print rows before assignment
+	            filtered_rows = df.loc[class_filter]
+	            if not filtered_rows.empty:
+	                st.write(f"Found {len(filtered_rows)} rows in SJR_HOSP for {class_type} in week {week_start}")
+	                
 	                df.loc[class_filter, 'student'] = selected_student
 	                assigned_students.add(selected_student)
 	                sjr_hosp_assigned_students.add(selected_student)
 	                assigned_this_week += 1
+	            else:
+	                st.write(f"No available rows for {class_type} in week {week_start}")
 	
-	### **3️⃣ Final Checks & Display Results**
+	### **4️⃣ Final Checks & Display Results**
 	# ✅ Check for Unassigned Students
 	remaining_students = [s for s in unique_student_names if s not in sjr_hosp_assigned_students]
 	
@@ -921,7 +930,7 @@ elif st.session_state.page == "OPD Creator":
 	conflicted_students = ward_a_assigned_students.intersection(sjr_hosp_assigned_students)
 	if conflicted_students:
 	    st.warning(f"⚠️ Conflict detected! These students were assigned to both WARD_A and SJR_HOSP: {conflicted_students}")
-
+	
 	df['text'] = df['provider'] + " ~ " + df['student']
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
