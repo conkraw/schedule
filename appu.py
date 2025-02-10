@@ -99,7 +99,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     with open(file_path, "rb") as f:
         st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    #time.sleep(10)  
+    time.sleep(10)  
 
     return file_path  # Return file path for later use
 	
