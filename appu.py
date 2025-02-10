@@ -97,7 +97,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     st.dataframe(df_display)  # Display file in Streamlit
 
     with open(file_path, "rb") as f:
-        st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); time.sleep(30)
 
     return file_path  # Return file path for later use
 	
