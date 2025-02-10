@@ -839,7 +839,7 @@ elif st.session_state.page == "OPD Creator":
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
 	# Define class groups mapping (ordered so we fill one group at a time)
-	class_groups = [('H0', 'H10'), ('H1', 'H11'),  # Group 2 ('H2', 'H12'),  # Group 3 ('H3', 'H13'),  # Group 4('H4', 'H14')   # Group 5]
+	class_groups = [('H0', 'H10'), ('H1', 'H11'),('H2', 'H12'), ('H3', 'H13'), ('H4', 'H14')]
 	
 	# Shuffle students before assigning (so they are not in a fixed order)
 	random.shuffle(unique_student_names)
