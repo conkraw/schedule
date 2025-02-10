@@ -883,12 +883,14 @@ elif st.session_state.page == "OPD Creator":
 
 	################################################################################################################################################################################################
 	# Filter for SJR_HOSP
+	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
+	
 	df_filtered = df[(df['clinic'] == 'SJR_HOSP')].copy()
 	
 	# ✅ Replace NaN values with None only in the "student" column
 	df_filtered['student'] = df_filtered['student'].where(pd.notna(df_filtered['student']), None)
 	
-	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
+
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
 	class_groups = [('H2', 'H12'), ('H3', 'H13')]
