@@ -26,8 +26,6 @@ file_configs = {
     "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]} #LIST ALL NAMES
 }
 
-from openpyxl import Workbook
-import datetime
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
     """
@@ -65,6 +63,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Initial row where the first week starts
     start_row = 4
     num_weeks = 5  # Define the number of weeks
+    week_height = 13  # Number of rows per week (date row + names + custom_value rows)
 
     for week in range(num_weeks):  
         current_date = start_date + datetime.timedelta(weeks=week)
@@ -84,21 +83,20 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
             for j, name in enumerate(names):
                 ws[f"{col}{names_start_row + j}"] = name  # Start names right after date row
 
-        # Fill remaining rows with "custom_value"
-        max_rows = start_row + 13  # Define the height of each week's section
+        # Fill remaining rows with "custom_value" from the **date row** to the **next week's date row**
+        next_week_start = start_row + week_height  # Set end range dynamically
         for col in custom_value_columns:
-            for row in range(names_end_row, max_rows):
-                ws[f"{col}{row}"] = "custom_value"
+            for row in range(start_row + 1, next_week_start):  # Fill from date row up to next week's start row
+                if row >= names_end_row:  # Avoid overwriting names
+                    ws[f"{col}{row}"] = "custom_value"
 
         # Move to the next week's section
-        start_row += 13  
+        start_row = next_week_start  
 
     # Save the Excel file
     file_path = f"{file_name}"
     wb.save(file_path)
 
-
-	
     # ✅ **Display & Download Immediately**
     st.success(f"✅ File '{file_name}' has been successfully created!")
 
