@@ -880,8 +880,14 @@ elif st.session_state.page == "OPD Creator":
 	# Alert if no students were available for assignment
 	if alert_triggered:
 	    st.warning("⚠️ Not enough students to complete assignments! Some providers may be unassigned.")
+	
+	df['text'] = df['provider'] + " ~ " + df['student']
 
+	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
+	
+	df.to_csv('final.csv',index=False); st.dataframe(df)
 	################################################################################################################################################################################################
+	df = pd.read_csv('final.csv')
 	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
 	if 'week_start' not in df.columns:
 	    df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
@@ -922,13 +928,10 @@ elif st.session_state.page == "OPD Creator":
 	
 	            df.loc[class_filter, 'student'] = selected_student
 
-
-	################################################################################################################################################################################################			
 	df['text'] = df['provider'] + " ~ " + df['student']
-
-	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
-	
 	df.to_csv('final.csv',index=False); st.dataframe(df)
+	################################################################################################################################################################################################			
+
 
 	#####################################################################OUTPATIENT SHIFT ANALYIS#####################################################################################################################################
 	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]; types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]; df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
