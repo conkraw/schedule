@@ -827,123 +827,55 @@ elif st.session_state.page == "OPD Creator":
 
 	# Extract the minimum date
 	min_date = df['date'].min()
-	
+
 	# Ensure date column is in datetime format (strip timestamps)
 	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
 	
-	# ✅ Fix: Ensure `week_start` exists in the main dataframe
-	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
+	# Filter for WARD_A and exclude providers with class H5 and H15
+	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].copy()
 	
-	# Define nurseries and their respective class restrictions
-	nurseries = {
-	    "HAMPDEN_NURSERY": {"classes": ["H3", "H13"], "max_students_per_week": 1},
-	    "SJR_HOSP": {"classes": ["H2", "H12", "H3", "H13"], "max_students_per_week": 2},  # 1 in H2/H12, 1 in H3/H13
-	    "PSHCH_NURSERY": {"classes": ["H0", "H10", "H1", "H11"], "max_students_per_week": 2}  # H0/H10 first, then H1/H11
-	}
+	# Compute the Monday start of each week
+	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
+	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
-	# Define the clinics where students should be assigned (including nurseries)
-	clinics_to_assign = ["WARD_A", "HAMPDEN_NURSERY", "SJR_HOSP", "PSHCH_NURSERY"]
+	# Define class groups mapping (ordered so we fill one group at a time)
+	class_groups = [('H0', 'H10'), ('H1', 'H11'),('H2', 'H12'), ('H3', 'H13'), ('H4', 'H14')]
 	
-	# Compute unique weeks
-	unique_weeks = sorted(df['week_start'].unique())
-	
-	# Define WARD_A assignments
-	ward_a_class_groups = [
-	    ('H0', 'H10'), 
-	    ('H1', 'H11'),
-	    ('H2', 'H12'), 
-	    ('H3', 'H13'), 
-	    ('H4', 'H14')
-	]
+	# Shuffle students before assigning (so they are not in a fixed order)
+	random.shuffle(unique_student_names)
 	
 	# Track assigned students to ensure they are only used once (globally)
 	assigned_students = set()
-	ward_a_assigned_students = set()
-	nursery_assigned_students = set()
+	total_students = len(unique_student_names)
 	alert_triggered = False  # Flag to detect if no student was available
 	
-	### **1️⃣ Assign Students to WARD_A First**
-	for class_group in ward_a_class_groups:
+	# Assign students **by group first** instead of filling whole weeks at once
+	for class_group in class_groups:
 	    for week_start in unique_weeks:
-	        # Select students for WARD_A (only unassigned)
+	        # Select students for this group (only unassigned students)
 	        available_students = [s for s in unique_student_names if s not in assigned_students]
 	        
+	        # If not enough students are left, trigger an alert and stop assigning
 	        if len(available_students) < 1:
-	            alert_triggered = True
-	            break
+	            alert_triggered = True  # No students left to assign
+	            break  # Stop assignment process
 	
 	        selected_student = available_students[0]  # Take one student for this group
-	        assigned_students.add(selected_student)
-	        ward_a_assigned_students.add(selected_student)  # Track WARD_A assignments
+	        assigned_students.add(selected_student)  # Mark as assigned
 	
 	        # Assign student to all classes in this group for that week
 	        for class_type in class_group:
 	            class_filter = (
 	                (df['class'] == class_type) &
-	                (df['clinic'] == "WARD_A") &
-	                (df['week_start'] == week_start)
+	                (df['clinic'] == 'WARD_A') &  # ✅ Ensure only WARD_A is assigned
+	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start)
 	            )
 	            df.loc[class_filter, 'student'] = selected_student
 	
-	### **2️⃣ Assign Students to Nurseries**
-	for nursery, config in nurseries.items():
-	    for week_start in unique_weeks:
-	        assigned_this_week = 0
-	        available_students = [s for s in unique_student_names if s not in assigned_students]
-	
-	        if len(available_students) < 1:
-	            alert_triggered = True
-	            break
-	
-	        for class_type in config["classes"]:
-	            if assigned_this_week >= config["max_students_per_week"]:
-	                break  # Stop assigning more than allowed per week
-	
-	            # ✅ Ensure the student is not already in WARD_A
-	            selected_student = next((s for s in available_students if s not in ward_a_assigned_students and s not in nursery_assigned_students), None)
-	
-	            if selected_student:
-	                class_filter = (
-	                    (df['class'] == class_type) &
-	                    (df['clinic'] == nursery) &
-	                    (df['week_start'] == week_start)
-	                )
-	
-	                if not df.loc[class_filter].empty:
-	                    df.loc[class_filter, 'student'] = selected_student
-	                    assigned_students.add(selected_student)
-	                    nursery_assigned_students.add(selected_student)
-	                    assigned_this_week += 1
-	
-	### **3️⃣ Check for Unassigned Students & Reassign Them**
-	remaining_students = [s for s in unique_student_names if s not in nursery_assigned_students]
-	
-	# 🔹 Try to reassign them in any available nursery week
-	for student in remaining_students:
-	    for nursery, config in nurseries.items():
-	        for week_start in unique_weeks:
-	            assigned_this_week = df[(df['week_start'] == week_start) & (df['clinic'] == nursery)]['student'].notna().sum()
-	
-	            if assigned_this_week < config["max_students_per_week"]:
-	                # Find an empty slot for this student
-	                for class_type in config["classes"]:
-	                    class_filter = (
-	                        (df['class'] == class_type) &
-	                        (df['clinic'] == nursery) &
-	                        (df['week_start'] == week_start) &
-	                        (df['student'].isna())
-	                    )
-	
-	                    if not df.loc[class_filter].empty:
-	                        df.loc[class_filter, 'student'] = student
-	                        nursery_assigned_students.add(student)
-	                        break  # Stop after assigning this student
-	
-	# ✅ Ensure No Student Has Conflicting Assignments
-	conflicted_students = ward_a_assigned_students.intersection(nursery_assigned_students)
-	if conflicted_students:
-	    st.warning(f"⚠️ Conflict detected! These students were assigned to both WARD_A and a nursery: {conflicted_students}")
-	
+	# Alert if no students were available for assignment
+	if alert_triggered:
+	    st.warning("⚠️ Not enough students to complete assignments! Some providers may be unassigned.")
+		
 	df['text'] = df['provider'] + " ~ " + df['student']
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
