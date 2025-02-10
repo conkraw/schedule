@@ -886,38 +886,34 @@ elif st.session_state.page == "OPD Creator":
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False); st.dataframe(df)
-	################################################################################################################################################################################################t
 	
-	# ✅ Load dataset
-	df = pd.read_csv('final.csv'); st.write('pre'); st.dataframe(df)
-	
-	# ✅ Convert date to datetime and strip timestamps
+	################################################################################################################################################################################################
+	# ✅ Convert date to datetime
 	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
 	
-	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
-	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
-	
-	# ✅ Define the weeks and class groups for each clinic
-	unique_weeks = sorted(df['week_start'].unique())
-	
+	# ✅ Define the class groups per clinic
 	sjr_hosp_groups = [('H2', 'H12'), ('H3', 'H13')]
 	hampden_nursery_groups = [('H3', 'H13')]
 	pshch_nursery_groups = [('H0', 'H10'), ('H1', 'H11')]
 	
-	# ✅ Track assigned students to avoid duplicates
+	# ✅ Identify unique datecodes (T0, T1, ..., T25)
+	unique_datecodes = sorted(df['datecode'].unique())
+	
+	# ✅ Track assigned students to prevent conflicts
 	assigned_students = set()
 	
 	### **1️⃣ Assign Students to `SJR_HOSP` First**
-	for week_start in unique_weeks:
+	for datecode in unique_datecodes:
+	    # ✅ Get available students
 	    available_students = [s for s in unique_student_names if s not in assigned_students]
 	    
 	    if not available_students:
 	        continue  # ✅ Skip if no students left
 	
-	    # ✅ Exclude students already assigned to WARD_A in the same week
-	    unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
+	    # ✅ Exclude students already assigned to `WARD_A` for the same datecode
+	    unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['datecode'] == datecode)]['student'].dropna())
 	
-	    # ✅ Keep only students not assigned in WARD_A that week
+	    # ✅ Keep only students not assigned in `WARD_A` for that datecode
 	    available_students = [s for s in available_students if s not in unavailable_students]
 	
 	    # ✅ Shuffle students to distribute fairly
@@ -932,18 +928,24 @@ elif st.session_state.page == "OPD Creator":
 	
 	        class_filter = df['class'].isin(class_group) & \
 	                       (df['clinic'] == 'SJR_HOSP') & \
-	                       (df['week_start'] == week_start) & \
-	                       (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday & Sunday
+	                       (df['datecode'] == datecode) & \
+	                       (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude weekends
 	
 	        df.loc[class_filter, 'student'] = selected_student
 	
 	### **2️⃣ Assign Students to `HAMPDEN_NURSERY` (H3/H13)**
-	for week_start in unique_weeks:
+	for datecode in unique_datecodes:
 	    available_students = [s for s in unique_student_names if s not in assigned_students]
 	    
 	    if not available_students:
-	        continue
+	        continue  # ✅ Skip if no students left
 	
+	    # ✅ Exclude students assigned to `WARD_A` or `SJR_HOSP` for the same datecode
+	    unavailable_students = set(df[(df['clinic'].isin(['WARD_A', 'SJR_HOSP'])) & (df['datecode'] == datecode)]['student'].dropna())
+	    available_students = [s for s in available_students if s not in unavailable_students]
+	
+	    random.shuffle(available_students)
+	    
 	    for class_group in hampden_nursery_groups:
 	        if not available_students:
 	            break
@@ -953,18 +955,24 @@ elif st.session_state.page == "OPD Creator":
 	
 	        class_filter = df['class'].isin(class_group) & \
 	                       (df['clinic'] == 'HAMPDEN_NURSERY') & \
-	                       (df['week_start'] == week_start) & \
+	                       (df['datecode'] == datecode) & \
 	                       (df['date'].apply(lambda x: x.weekday()) < 5)
 	
 	        df.loc[class_filter, 'student'] = selected_student
 	
 	### **3️⃣ Assign Remaining Students to `PSHCH_NURSERY` (H0/H10, H1/H11)**
-	for week_start in unique_weeks:
+	for datecode in unique_datecodes:
 	    available_students = [s for s in unique_student_names if s not in assigned_students]
 	    
 	    if not available_students:
-	        continue
+	        continue  # ✅ Skip if no students left
 	
+	    # ✅ Exclude students assigned to `WARD_A`, `SJR_HOSP`, or `HAMPDEN_NURSERY` for the same datecode
+	    unavailable_students = set(df[(df['clinic'].isin(['WARD_A', 'SJR_HOSP', 'HAMPDEN_NURSERY'])) & (df['datecode'] == datecode)]['student'].dropna())
+	    available_students = [s for s in available_students if s not in unavailable_students]
+	
+	    random.shuffle(available_students)
+	    
 	    for class_group in pshch_nursery_groups:
 	        if not available_students:
 	            break
@@ -974,7 +982,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	        class_filter = df['class'].isin(class_group) & \
 	                       (df['clinic'] == 'PSHCH_NURSERY') & \
-	                       (df['week_start'] == week_start) & \
+	                       (df['datecode'] == datecode) & \
 	                       (df['date'].apply(lambda x: x.weekday()) < 5)
 	
 	        df.loc[class_filter, 'student'] = selected_student
@@ -985,8 +993,9 @@ elif st.session_state.page == "OPD Creator":
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
 	st.dataframe(df)
-
-	################################################################################################################################################################################################			
+	
+	################################################################################################################################################################################################
+				
 
 
 	#####################################################################OUTPATIENT SHIFT ANALYIS#####################################################################################################################################
