@@ -98,7 +98,6 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     wb.save(file_path)
 
     return file_path  # Return file path for later use
-
 	
     # ✅ **Display & Download Immediately**
     st.success(f"✅ File '{file_name}' has been successfully created!")
@@ -108,8 +107,6 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
 
     with open(file_path, "rb") as f:
         st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); time.sleep(30)
-
-    return file_path  # Return file path for later use
 	
 # Initialize session state variables efficiently
 session_defaults = {
