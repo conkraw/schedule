@@ -767,7 +767,7 @@ elif st.session_state.page == "OPD Creator":
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
-	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP"); st.dataframe(sjrhosp_df)
+	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	
@@ -795,7 +795,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
-	final2.to_csv('final2.csv',index=False)
+	final2.to_csv('final2.csv',index=False); st.dataframe(final2)
 	
 	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
 	
