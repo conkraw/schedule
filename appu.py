@@ -964,6 +964,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	#st.dataframe(sorted_shift_counts)
 	
+	df['text'] = df['provider'] + " ~ " + df['student']
+	
 	df.to_excel('final.xlsx',index=False); st.dataframe(df)
 
 	########################################################################################################################################################################
