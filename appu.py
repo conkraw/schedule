@@ -808,9 +808,20 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Define the mapping for missing providers
 	team_mapping = {'H0': 'WARD_A_Team 1', 'H1': 'WARD_A_Team 2', 'H2': 'WARD_A_Team 3','H3': 'WARD_A_Team 1', 'H4': 'WARD_A_Team 2', 'H5': 'WARD_A_Team 3','H10': 'WARD_A_Team 1', 'H11': 'WARD_A_Team 2', 'H12': 'WARD_A_Team 3','H13': 'WARD_A_Team 1', 'H14': 'WARD_A_Team 2', 'H15': 'WARD_A_Team 3'}
+
+	all_t_values = [f'T{i}' for i in range(28)]
+	all_classes = list(team_mapping.keys())
 	
-	# Identify missing providers and fill with appropriate team names
+	# Create a complete set of WARD_A entries
+	df_ward_a = pd.DataFrame([(t, h) for t in all_t_values for h in all_classes], columns=['datecode', 'class'])
+	df_ward_a['clinic'] = 'WARD_A'
+	
+	# Merge with existing data
+	df = df.merge(df_ward_a, on=['clinic', 'datecode', 'class'], how='outer')
+	
+	# Apply the mapping only for clinic "WARD_A" where provider is missing
 	df.loc[(df['clinic'] == 'WARD_A') & (df['provider'].isna()), 'provider'] = df['class'].map(team_mapping)
+
 	
 	df['date'] = pd.to_datetime(df['date'])
 	df['date'] = df['date'].dt.strftime('%m/%d/%Y')
