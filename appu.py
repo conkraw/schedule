@@ -987,6 +987,13 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv', index=False)
 	st.dataframe(df)
 
+	duplicate_check = df[df.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
+
+	if not duplicate_check.empty:
+	    st.warning("⚠️ Duplicate student assignments found in the same datecode and class!")
+	    st.dataframe(duplicate_check)  # Show the duplicate assignments
+	else:
+	    st.success("✅ No duplicate student assignments detected!")
 	
 	################################################################################################################################################################################################
 				
