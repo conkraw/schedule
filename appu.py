@@ -88,7 +88,8 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
         for col in custom_value_columns:
             for row in range(start_row + 1, next_week_start):  # Fill from date row up to next week's start row
                 if row >= names_end_row:  # Avoid overwriting names
-                    ws[f"{col}{row}"] = "custom_value"
+                    ws[f"{col}{row}"] = "custom_value"; ws[f"{custom_col}{row}"] = "custom_value"  # Place "custom_value" in the left column
+
 
         # Move to the next week's section
         start_row = next_week_start  
