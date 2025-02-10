@@ -883,6 +883,7 @@ elif st.session_state.page == "OPD Creator":
 
 	################################################################################################################################################################################################
 	df_filtered = df[(df['clinic'] == 'SJR_HOSP')].copy()
+	df_filtered['student'] = df_filtered['student'].where(pd.notna(df_filtered['student']), None)
 	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
