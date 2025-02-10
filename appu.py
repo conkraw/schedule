@@ -813,6 +813,8 @@ elif st.session_state.page == "OPD Creator":
 	df['provider'] = df.apply(lambda row: team_mapping.get(row['class'], row['provider'])
 	                          if pd.isna(row['provider']) else row['provider'], axis=1)
 
+	
+
 	df['date'] = pd.to_datetime(df['date'])
 	df['date'] = df['date'].dt.strftime('%m/%d/%Y')
 	
