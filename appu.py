@@ -888,6 +888,12 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv',index=False); st.dataframe(df)
 	################################################################################################################################################################################################
 	df = pd.read_csv('final.csv')
+
+	min_date = df['date'].min()
+
+	# Ensure date column is in datetime format (strip timestamps)
+	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
+	
 	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
 	if 'week_start' not in df.columns:
 	    df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
