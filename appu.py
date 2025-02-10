@@ -824,12 +824,15 @@ elif st.session_state.page == "OPD Creator":
 	df['student'] = ""
 
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(unique_student_names)
-	
+
 	# Extract the minimum date
 	min_date = df['date'].min()
 	
 	# Ensure date column is in datetime format (strip timestamps)
 	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
+	
+	# ✅ Fix: Ensure `week_start` exists in the main dataframe
+	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
 	
 	# Define nurseries and their respective class restrictions
 	nurseries = {
@@ -844,11 +847,10 @@ elif st.session_state.page == "OPD Creator":
 	# Filter for the specified clinics and exclude providers with class H5 and H15
 	df_filtered = df[(df['clinic'].isin(clinics_to_assign)) & (~df['class'].isin(['H5', 'H15']))].copy()
 	
-	# Compute the Monday start of each week
-	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
-	unique_weeks = sorted(df_filtered['week_start'].unique())
+	# Compute unique weeks
+	unique_weeks = sorted(df['week_start'].unique())
 	
-	# Define WARD_A assignments (as before)
+	# Define WARD_A assignments
 	ward_a_class_groups = [
 	    ('H0', 'H10'), 
 	    ('H1', 'H11'),
@@ -882,7 +884,7 @@ elif st.session_state.page == "OPD Creator":
 	            class_filter = (
 	                (df['class'] == class_type) &
 	                (df['clinic'] == "WARD_A") &
-	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start)
+	                (df['week_start'] == week_start)
 	            )
 	            df.loc[class_filter, 'student'] = selected_student
 	
@@ -907,7 +909,7 @@ elif st.session_state.page == "OPD Creator":
 	                class_filter = (
 	                    (df['class'] == class_type) &
 	                    (df['clinic'] == nursery) &
-	                    (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start)
+	                    (df['week_start'] == week_start)
 	                )
 	
 	                df.loc[class_filter, 'student'] = selected_student
@@ -930,7 +932,7 @@ elif st.session_state.page == "OPD Creator":
 	                    class_filter = (
 	                        (df['class'] == class_type) &
 	                        (df['clinic'] == nursery) &
-	                        (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start) &
+	                        (df['week_start'] == week_start) &
 	                        (df['student'].isna())
 	                    )
 	
@@ -943,7 +945,6 @@ elif st.session_state.page == "OPD Creator":
 	conflicted_students = ward_a_assigned_students.intersection(nursery_assigned_students)
 	if conflicted_students:
 	    st.warning(f"⚠️ Conflict detected! These students were assigned to both WARD_A and a nursery: {conflicted_students}")
-
 
 	df['text'] = df['provider'] + " ~ " + df['student']
 
