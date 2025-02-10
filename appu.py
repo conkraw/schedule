@@ -886,38 +886,44 @@ elif st.session_state.page == "OPD Creator":
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False); st.dataframe(df)
-
+	
 	################################################################################################################################################################################################
+	
 	# ✅ Load dataset
 	df = pd.read_csv('final.csv')
 	
-	# ✅ Convert date to datetime
+	# ✅ Convert date to datetime and strip timestamps
 	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
 	
-	# ✅ Define the `SJR_HOSP` class groups
+	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
+	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
+	
+	# ✅ Define the weeks and class groups for each clinic
+	unique_weeks = sorted(df['week_start'].unique())
+	
 	sjr_hosp_groups = [('H2', 'H12'), ('H3', 'H13')]
+	hampden_nursery_groups = [('H3', 'H13')]
+	pshch_nursery_groups = [('H0', 'H10'), ('H1', 'H11')]
 	
-	# ✅ Identify unique datecodes (T0, T1, ..., T25)
-	unique_datecodes = sorted(df['datecode'].unique())
-	
-	# ✅ Track assigned students to prevent conflicts
+	# ✅ Track assigned students to avoid duplicates
 	assigned_students = set()
 	
-	### **1️⃣ Assign Students to `SJR_HOSP` for the Entire Week**
-	for datecode in unique_datecodes:
-	    # ✅ Get students not already assigned
+	### **1️⃣ Assign Students to `SJR_HOSP` First**
+	for week_start in unique_weeks:
 	    available_students = [s for s in unique_student_names if s not in assigned_students]
-	
+	    
 	    if not available_students:
 	        continue  # ✅ Skip if no students left
 	
-	    # ✅ Exclude students assigned to `WARD_A` for the same datecode
-	    unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['datecode'] == datecode)]['student'].dropna())
+	    # ✅ Exclude students already assigned to WARD_A in the same week
+	    unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
+	
+	    # ✅ Keep only students not assigned in WARD_A that week
 	    available_students = [s for s in available_students if s not in unavailable_students]
 	
-	    # ✅ Shuffle to ensure fair distribution
+	    # ✅ Shuffle students to distribute fairly
 	    random.shuffle(available_students)
-	
+	    
 	    for class_group in sjr_hosp_groups:
 	        if not available_students:
 	            break  # ✅ Stop if no students left
@@ -925,14 +931,57 @@ elif st.session_state.page == "OPD Creator":
 	        selected_student = available_students.pop(0)  # Take one student
 	        assigned_students.add(selected_student)  # Mark as assigned
 	
-	        # ✅ Assign for the entire week (Monday-Friday)
-	        for day_offset in range(5):  # ✅ Monday to Friday
-	            class_filter = (df['class'].isin(class_group)) & \
-	                           (df['clinic'] == 'SJR_HOSP') & \
-	                           (df['datecode'] == datecode) & \
-	                           (df['date'].apply(lambda x: x.weekday()) == day_offset)  # ✅ Ensure Monday-Friday
-	            
-	            df.loc[class_filter, 'student'] = selected_student
+	        class_filter = df['class'].isin(class_group) & \
+	                       (df['clinic'] == 'SJR_HOSP') & \
+	                       (df['week_start'] == week_start) & \
+	                       (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday & Sunday
+	
+	        df.loc[class_filter, 'student'] = selected_student
+	
+	### **2️⃣ Assign Students to `HAMPDEN_NURSERY` (H3/H13)**
+	for week_start in unique_weeks:
+	    available_students = [s for s in unique_student_names if s not in assigned_students]
+	    
+	    if not available_students:
+	        continue
+	
+	    for class_group in hampden_nursery_groups:
+	        if not available_students:
+	            break
+	
+	        selected_student = available_students.pop(0)
+	        assigned_students.add(selected_student)
+	
+	        class_filter = df['class'].isin(class_group) & \
+	                       (df['clinic'] == 'HAMPDEN_NURSERY') & \
+	                       (df['week_start'] == week_start) & \
+	                       (df['date'].apply(lambda x: x.weekday()) < 5)
+	
+	        df.loc[class_filter, 'student'] = selected_student
+	
+	### **3️⃣ Assign Remaining Students to `PSHCH_NURSERY` (H0/H10, H1/H11)**
+	for week_start in unique_weeks:
+	    available_students = [s for s in unique_student_names if s not in assigned_students]
+	    
+	    if not available_students:
+	        continue
+	
+	    for class_group in pshch_nursery_groups:
+	        if not available_students:
+	            break
+	
+	        selected_student = available_students.pop(0)
+	        assigned_students.add(selected_student)
+	
+	        class_filter = df['class'].isin(class_group) & \
+	                       (df['clinic'] == 'PSHCH_NURSERY') & \
+	                       (df['week_start'] == week_start) & \
+	                       (df['date'].apply(lambda x: x.weekday()) < 5)
+	
+	        df.loc[class_filter, 'student'] = selected_student
+	
+	# ✅ Create a text column for easier viewing
+	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
