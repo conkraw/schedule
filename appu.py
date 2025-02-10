@@ -889,7 +889,7 @@ elif st.session_state.page == "OPD Creator":
 	################################################################################################################################################################################################t
 	
 	# ✅ Load dataset
-	df = pd.read_csv('final.csv')
+	df = pd.read_csv('final.csv'); st.write('pre'); st.dataframe(df)
 	
 	# ✅ Convert date to datetime and strip timestamps
 	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
