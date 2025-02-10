@@ -99,31 +99,8 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     with open(file_path, "rb") as f:
         st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    
-
     return file_path  # Return file path for later use
 	
-def generate_all_files():
-    start_date = datetime.date.today()
-    file_names = ["File1.xlsx", "File2.xlsx", "File3.xlsx"]  # List of file names
-    generated_files = []
-
-    for file_name in file_names:
-        file_path = generate_excel_file(start_date, "Title", "Custom Text", file_name, ["Alice", "Bob", "Charlie"])
-        generated_files.append(file_path)
-
-    # Create a ZIP file
-    zip_filename = "Generated_Files.zip"
-    with zipfile.ZipFile(zip_filename, 'w') as zipf:
-        for file in generated_files:
-            zipf.write(file, os.path.basename(file))
-	
-    return zip_filename
-
-# Generate files and create ZIP
-time.sleep(10)  
-
-zip_file_path = generate_all_files()
 
 # ✅ Provide a download button for the ZIP file
 with open(zip_file_path, "rb") as f:
