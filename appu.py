@@ -885,7 +885,6 @@ elif st.session_state.page == "OPD Creator":
 	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
 	if 'week_start' not in df.columns:
 	    df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
-	    st.success("✅ `week_start` successfully added to `df`!")
 	
 	# ✅ Filter for SJR_HOSP
 	df_filtered = df[(df['clinic'] == 'SJR_HOSP')].copy()
@@ -899,33 +898,18 @@ elif st.session_state.page == "OPD Creator":
 	
 	for class_group in class_groups:
 	    for week_start in unique_weeks:
-	        # ✅ Debugging: Print which week is being processed
-	        st.write(f"🔍 Processing Week: {week_start}")
-	
-	        # ✅ Exclude students assigned to WARD_A in the same week
-	        if 'student' in df.columns:
-	            unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
-	        else:
-	            st.error("❌ `student` column is missing in `df`!")
-	            unavailable_students = set()
+	        # ✅ Exclude students already assigned to WARD_A in the same week
+	        unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
 	
 	        # ✅ Get available students who are not already assigned that week
 	        available_students = [s for s in unique_student_names if s not in assigned_students and s not in unavailable_students]
 	
-	        # ✅ Debugging: Print available students for this week
-	        st.write(f"👥 Available Students for Week {week_start}: {available_students}")
+	        # ✅ If no available students, just continue (DO NOT STOP)
+	        if not available_students:
+	            continue  # ✅ Instead of stopping, just move to the next week
 	
-	        # If not enough students are left, trigger an alert and stop assigning
-	        if len(available_students) < 1:
-	            alert_triggered = True  # No students left to assign
-	            st.warning(f"⚠️ Not enough students to assign for week {week_start} in SJR_HOSP!")
-	            break  # Stop assignment process
-	
-	        selected_student = available_students[0]  # Take one student for this group
+	        selected_student = available_students[0]  # Take the first available student
 	        assigned_students.add(selected_student)  # Mark as assigned
-	
-	        # ✅ Debugging: Show which student is assigned
-	        st.write(f"🎯 Assigned {selected_student} to SJR_HOSP in week {week_start}")
 	
 	        # Assign student to all classes in this group for that week
 	        for class_type in class_group:
@@ -937,7 +921,6 @@ elif st.session_state.page == "OPD Creator":
 	            )
 	
 	            df.loc[class_filter, 'student'] = selected_student
-
 
 
 	################################################################################################################################################################################################			
