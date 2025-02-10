@@ -23,7 +23,7 @@ def format_date_with_suffix(date):
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY", "HAMPDEN_NURSERY2"]},
     "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry"]}, 
-    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC1", "Test12", "AAC3"]} #LIST ALL NAMES
+    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC", "AAC", "AAC"]} #LIST ALL NAMES
 }
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
@@ -52,7 +52,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     custom_value_columns = ["A", "C", "E", "G", "I", "K", "M"]
     name_columns = ["B", "D", "F", "H", "J", "L", "N"]
 
-    # Row ranges to repeat the pattern
+    # Row ranges to repeat the pattern #Place to add more names, if having trouble adding extra names. 
     row_ranges = [(5, 17), (18, 27), (28, 37), (38, 47), (48, 57), (58, 67), (68, 77), (78, 87)]
 
     # Ensure names list has at least one name
