@@ -21,9 +21,9 @@ def format_date_with_suffix(date):
     return date.strftime(f"%B {day}{suffix}, %Y")
 	
 file_configs = {
-    "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
-    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_HOSP1", "SJR_HOSP1"]}, 
-    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC", "AAC", "AAC"]} #LIST ALL NAMES
+    "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani"]},
+    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry"]}, 
+    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik"]} #LIST ALL NAMES
 }
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
@@ -52,7 +52,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     custom_value_columns = ["A", "C", "E", "G", "I", "K", "M"]
     name_columns = ["B", "D", "F", "H", "J", "L", "N"]
 
-    # Row ranges to repeat the pattern #Place to add more names, if having trouble adding extra names. 
+    # Row ranges to repeat the pattern
     row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44), (45, 54)]
 
     # Ensure names list has at least one name
@@ -66,7 +66,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
                 ws[f"{col}{row}"] = "custom_value"
 
         for col in name_columns:
-            for i, row in enumerate(range(start_row + 1, start_row + 1 + min(len(names), 8))): #for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
+            for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
                 ws[f"{col}{row}"] = names[i % len(names)]  # Cycle through names
             for row in range(start_row + 1 + len(names), end_row + 1):  # Fill remaining with "custom_value"
                 ws[f"{col}{row}"] = ""
