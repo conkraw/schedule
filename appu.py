@@ -84,7 +84,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
             ws[f"{col_letter}{start_row}"] = day  # Place the day name
             formatted_date = (current_date + datetime.timedelta(days=i)).strftime("%B %-d, %Y")
             ws[f"{col_letter}{start_row + 1}"] = formatted_date
-        start_row += 13  # Skip 10 rows before the next week starts
+        start_row += 12  # Skip 10 rows before the next week starts
 
     # Save the Excel file with the specified name
     file_path = f"{file_name}"
