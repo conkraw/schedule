@@ -48,7 +48,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
         title (str): The text to be placed in cell A1.
         custom_text (str): The text to be placed in cell A2.
         file_name (str): The name of the output file.
-        names (list): A list of names to be placed in the file.
+        names (list): A list of up to 10 names to be placed in the file.
 
     Returns:
         str: Path of the saved file.
@@ -79,7 +79,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
                 ws[f"{col}{row}"] = "custom_value"
 
         for col in name_columns:
-            for i, row in enumerate(range(start_row + 1, start_row + 1 + len(names))):
+            for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
                 ws[f"{col}{row}"] = names[i % len(names)]  # Cycle through names
             for row in range(start_row + 1 + len(names), end_row + 1):  # Fill remaining with "custom_value"
                 ws[f"{col}{row}"] = ""
@@ -90,23 +90,20 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Start row for the first week
     start_row = 4
 
-    for week in range(4):  # 5 weeks
+    for week in range(5):  # 4 weeks
         current_date = start_date + datetime.timedelta(weeks=week)
         for i, day in enumerate(days):
             col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K, M)
             ws[f"{col_letter}{start_row}"] = day  # Place the day name
-            
-            # ✅ **Use format_date_with_suffix() for proper formatting**
             formatted_date = (current_date + datetime.timedelta(days=i)).strftime("%B %-d, %Y")
-            ws[f"{col_letter}{start_row + 1}"] = formatted_date  # Assign formatted date
-        
+            ws[f"{col_letter}{start_row + 1}"] = formatted_date
         start_row += 10  # Skip 10 rows before the next week starts
 
     # Save the Excel file with the specified name
     file_path = f"{file_name}"
     wb.save(file_path)
 
-    # ✅ **Display & Download Immediately in Streamlit**
+    # ✅ **Display & Download Immediately**
     st.success(f"✅ File '{file_name}' has been successfully created!")
 
     df_display = pd.read_excel(file_path, dtype=str)
@@ -115,8 +112,9 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     with open(file_path, "rb") as f:
         st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    return file_path  # Return file path for later use
+    #time.sleep(10)  
 
+    return file_path  # Return file path for later use
 
 # Initialize session state variables efficiently
 session_defaults = {
