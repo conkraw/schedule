@@ -26,9 +26,6 @@ file_configs = {
     "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]} #LIST ALL NAMES
 }
 
-from openpyxl import Workbook
-import datetime
-
 def generate_excel_file(start_date, title, custom_text, file_name, names):
     """
     Generates an Excel file where each week's structure aligns properly.
@@ -101,7 +98,9 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Save the Excel file
     file_path = f"{file_name}"
     wb.save(file_path)
-	
+
+    return file_path  # Return file path for later use
+
     # ✅ **Display & Download Immediately**
     st.success(f"✅ File '{file_name}' has been successfully created!")
 
