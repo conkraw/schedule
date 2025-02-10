@@ -886,8 +886,10 @@ elif st.session_state.page == "OPD Creator":
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False); st.dataframe(df)
+
+	# ✅ Load dataset
+	df = pd.read_csv('final.csv')
 	
-	################################################################################################################################################################################################
 	# ✅ Convert date to datetime
 	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
 	
@@ -902,9 +904,8 @@ elif st.session_state.page == "OPD Creator":
 	# ✅ Track assigned students to prevent conflicts
 	assigned_students = set()
 	
-	### **1️⃣ Assign Students to `SJR_HOSP` First**
+	### **1️⃣ Assign Students to `SJR_HOSP` First (Filling for the Entire Week)**
 	for datecode in unique_datecodes:
-	    # ✅ Get available students
 	    available_students = [s for s in unique_student_names if s not in assigned_students]
 	    
 	    if not available_students:
@@ -926,12 +927,14 @@ elif st.session_state.page == "OPD Creator":
 	        selected_student = available_students.pop(0)  # Take one student
 	        assigned_students.add(selected_student)  # Mark as assigned
 	
-	        class_filter = df['class'].isin(class_group) & \
-	                       (df['clinic'] == 'SJR_HOSP') & \
-	                       (df['datecode'] == datecode) & \
-	                       (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude weekends
-	
-	        df.loc[class_filter, 'student'] = selected_student
+	        # ✅ Assign for the entire week
+	        for day_offset in range(5):  # ✅ Monday to Friday
+	            class_filter = (df['class'].isin(class_group)) & \
+	                           (df['clinic'] == 'SJR_HOSP') & \
+	                           (df['datecode'] == datecode) & \
+	                           (df['date'].apply(lambda x: x.weekday()) == day_offset)  # ✅ Ensure Monday-Friday
+	            
+	            df.loc[class_filter, 'student'] = selected_student
 	
 	### **2️⃣ Assign Students to `HAMPDEN_NURSERY` (H3/H13)**
 	for datecode in unique_datecodes:
@@ -953,12 +956,13 @@ elif st.session_state.page == "OPD Creator":
 	        selected_student = available_students.pop(0)
 	        assigned_students.add(selected_student)
 	
-	        class_filter = df['class'].isin(class_group) & \
-	                       (df['clinic'] == 'HAMPDEN_NURSERY') & \
-	                       (df['datecode'] == datecode) & \
-	                       (df['date'].apply(lambda x: x.weekday()) < 5)
+	        for day_offset in range(5):  # ✅ Monday to Friday
+	            class_filter = (df['class'].isin(class_group)) & \
+	                           (df['clinic'] == 'HAMPDEN_NURSERY') & \
+	                           (df['datecode'] == datecode) & \
+	                           (df['date'].apply(lambda x: x.weekday()) == day_offset)
 	
-	        df.loc[class_filter, 'student'] = selected_student
+	            df.loc[class_filter, 'student'] = selected_student
 	
 	### **3️⃣ Assign Remaining Students to `PSHCH_NURSERY` (H0/H10, H1/H11)**
 	for datecode in unique_datecodes:
@@ -980,12 +984,13 @@ elif st.session_state.page == "OPD Creator":
 	        selected_student = available_students.pop(0)
 	        assigned_students.add(selected_student)
 	
-	        class_filter = df['class'].isin(class_group) & \
-	                       (df['clinic'] == 'PSHCH_NURSERY') & \
-	                       (df['datecode'] == datecode) & \
-	                       (df['date'].apply(lambda x: x.weekday()) < 5)
+	        for day_offset in range(5):  # ✅ Monday to Friday
+	            class_filter = (df['class'].isin(class_group)) & \
+	                           (df['clinic'] == 'PSHCH_NURSERY') & \
+	                           (df['datecode'] == datecode) & \
+	                           (df['date'].apply(lambda x: x.weekday()) == day_offset)
 	
-	        df.loc[class_filter, 'student'] = selected_student
+	            df.loc[class_filter, 'student'] = selected_student
 	
 	# ✅ Create a text column for easier viewing
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
@@ -993,6 +998,7 @@ elif st.session_state.page == "OPD Creator":
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
 	st.dataframe(df)
+
 	
 	################################################################################################################################################################################################
 				
