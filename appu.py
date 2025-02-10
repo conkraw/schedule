@@ -821,10 +821,6 @@ elif st.session_state.page == "OPD Creator":
 	df['datecode'] = df.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
 	df['student'] = ""
-	
-	df['text'] = df['provider'] + " ~ "
-	
-	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); st.write(unique_student_names)
 
@@ -851,7 +847,11 @@ elif st.session_state.page == "OPD Creator":
 	
 	        df.at[idx, 'student'] = unique_student_names[student_index]  # Assign student
 	        student_index += 1
-		    
+
+	df['text'] = df['provider'] + " ~ " + df['student']
+
+	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
+	
 	df.to_csv('final.csv',index=False); st.dataframe(df)
 	
 	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
