@@ -846,7 +846,7 @@ elif st.session_state.page == "OPD Creator":
 
 	df = pd.read_csv('final2.csv',dtype=str) 
 	
-	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(unique_student_names)
+	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(unique_student_names)
 
 	# Extract the minimum date
 	min_date = df['date'].min()
