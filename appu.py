@@ -987,26 +987,27 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv', index=False)
 	st.dataframe(df)
 
-	# ✅ Find duplicate student assignments in the same datecode, class, and clinic
-	duplicate_students = df[df.duplicated(subset=['datecode', 'class', 'clinic', 'student'], keep=False)]
+	# ✅ Find duplicate student assignments across all clinics
+	duplicate_students = df[df.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
 	
 	if not duplicate_students.empty:
-	    st.warning("⚠️ Duplicate student assignments found!")
+	    st.warning("⚠️ Duplicate student assignments found across different clinics!")
 	
-	    # ✅ Group and count occurrences
+	    # ✅ Group by student, datecode, class, and clinic
 	    duplicate_summary = (
 	        duplicate_students.groupby(['student', 'datecode', 'class', 'clinic'])
 	        .size()
 	        .reset_index(name='Count')
 	    )
 	
-	    # ✅ Show only problematic cases (where a student appears more than once)
-	    duplicate_summary = duplicate_summary[duplicate_summary['Count'] > 1]
+	    # ✅ Show only problematic cases (students assigned to multiple clinics in the same datecode and class)
+	    duplicate_summary = duplicate_summary[duplicate_summary.duplicated(subset=['student', 'datecode', 'class'], keep=False)]; st.write('Duplicate Check'); st.dataframe(duplicate_summary)
 
-	    st.write('Duplicate Check'); st.dataframe(duplicate_summary)
-	
 	else:
-	    st.success("✅ No duplicate student assignments detected!")
+	    st.success("✅ No duplicate student assignments detected across clinics!")
+
+	    
+	
 	
 	################################################################################################################################################################################################
 				
