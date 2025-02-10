@@ -838,8 +838,8 @@ elif st.session_state.page == "OPD Creator":
 	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
-	# Define class groups mapping
-	class_groups = {'H0': 0, 'H10': 0, 'H1': 1, 'H11': 1, 'H2': 2, 'H12': 2, 'H3': 3, 'H13': 3, 'H4': 4, 'H14': 4}
+	# Define class groups mapping (ordered so we fill one group at a time)
+	class_groups = [('H0', 'H10'), ('H1', 'H11'),  # Group 2 ('H2', 'H12'),  # Group 3 ('H3', 'H13'),  # Group 4('H4', 'H14')   # Group 5]
 	
 	# Shuffle students before assigning (so they are not in a fixed order)
 	random.shuffle(unique_student_names)
@@ -849,29 +849,28 @@ elif st.session_state.page == "OPD Creator":
 	total_students = len(unique_student_names)
 	alert_triggered = False  # Flag to detect if no student was available
 	
-	# Assign students for each week (only in WARD_A)
-	for week_start in unique_weeks:
-	    # Select 5 students for this week (only unassigned students)
-	    available_students = [s for s in unique_student_names if s not in assigned_students]
-	    
-	    # If not enough students are left, trigger an alert and stop assigning
-	    if len(available_students) < 5:
-	        alert_triggered = True  # No students left to assign
-	        break  # Stop assignment process
+	# Assign students **by group first** instead of filling whole weeks at once
+	for class_group in class_groups:
+	    for week_start in unique_weeks:
+	        # Select students for this group (only unassigned students)
+	        available_students = [s for s in unique_student_names if s not in assigned_students]
+	        
+	        # If not enough students are left, trigger an alert and stop assigning
+	        if len(available_students) < 1:
+	            alert_triggered = True  # No students left to assign
+	            break  # Stop assignment process
 	
-	    selected_students = available_students[:5]
-	    
-	    # Mark students as permanently assigned
-	    assigned_students.update(selected_students)
+	        selected_student = available_students[0]  # Take one student for this group
+	        assigned_students.add(selected_student)  # Mark as assigned
 	
-	    # Assign students based on class groups (only for WARD_A)
-	    for class_type, student_pos in class_groups.items():
-	        class_filter = (
-	            (df['class'] == class_type) &
-	            (df['clinic'] == 'WARD_A') &  # ✅ Ensure only WARD_A is assigned
-	            (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start)
-	        )
-	        df.loc[class_filter, 'student'] = selected_students[student_pos]
+	        # Assign student to all classes in this group for that week
+	        for class_type in class_group:
+	            class_filter = (
+	                (df['class'] == class_type) &
+	                (df['clinic'] == 'WARD_A') &  # ✅ Ensure only WARD_A is assigned
+	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start)
+	            )
+	            df.loc[class_filter, 'student'] = selected_student
 	
 	# Alert if no students were available for assignment
 	if alert_triggered:
