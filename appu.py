@@ -987,6 +987,11 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv', index=False)
 	st.dataframe(df)
 
+
+	    
+	
+	
+	################################################################################################################################################################################################
 	# ✅ Find duplicate student assignments across all clinics
 	duplicate_students = df[df.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
 	
@@ -1005,14 +1010,6 @@ elif st.session_state.page == "OPD Creator":
 
 	else:
 	    st.success("✅ No duplicate student assignments detected across clinics!")
-
-	    
-	
-	
-	################################################################################################################################################################################################
-				
-
-
 	#####################################################################OUTPATIENT SHIFT ANALYIS#####################################################################################################################################
 	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]; types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]; df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
 	
