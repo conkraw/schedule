@@ -101,11 +101,6 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
 
     return file_path  # Return file path for later use
 	
-
-# ✅ Provide a download button for the ZIP file
-with open(zip_file_path, "rb") as f:
-    st.download_button("Download All Files as ZIP", f, zip_file_path, "application/zip")
-
 # Initialize session state variables efficiently
 session_defaults = {
     "page": "Home",
