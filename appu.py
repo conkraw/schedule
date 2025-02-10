@@ -52,44 +52,42 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     custom_value_columns = ["A", "C", "E", "G", "I", "K", "M"]
     name_columns = ["B", "D", "F", "H", "J", "L", "N"]
 
-    # Row ranges to repeat the pattern
-    row_ranges = [(5, 17), (18, 27), (28, 37), (38, 47), (48, 57)]#row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44), (45, 54)]
+   days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-    # Ensure names list has at least one name
-    if not names:
-        names = ["Default Name ~"]
-
-    # Fill the table with names and "custom_value"
-    for start_row, end_row in row_ranges:
-        for col in custom_value_columns:
-            for row in range(start_row, end_row + 1):
-                ws[f"{col}{row}"] = ""
-
-        for col in name_columns:
-            for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
-                ws[f"{col}{row}"] = names[i % len(names)]  # Cycle through names
-            for row in range(start_row + 1 + len(names), end_row + 1):  # Fill remaining with "custom_value"
-                ws[f"{col}{row}"] = ""
-
-    # Days of the week to be placed across the row
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-
-    # Start row for the first week
+    # Initial row where the first week starts
     start_row = 4
+    num_weeks = 5  # Define the number of weeks
 
-    for week in range(5):  # 4 weeks
+    for week in range(num_weeks):  
         current_date = start_date + datetime.timedelta(weeks=week)
+
+        # Place day names and corresponding dates
         for i, day in enumerate(days):
             col_letter = chr(65 + (i * 2))  # Convert to Excel column letters (A, C, E, G, I, K, M)
-            ws[f"{col_letter}{start_row}"] = day  # Place the day name
+            ws[f"{col_letter}{start_row}"] = day  
             formatted_date = (current_date + datetime.timedelta(days=i)).strftime("%B %-d, %Y")
-            ws[f"{col_letter}{start_row + 1}"] = formatted_date
-        start_row += 13  # Skip 10 rows before the next week starts
+            ws[f"{col_letter}{start_row + 1}"] = formatted_date  
 
-    # Save the Excel file with the specified name
+        # Start placing names **immediately after the date row**
+        names_start_row = start_row + 2  
+        names_end_row = names_start_row + len(names)
+
+        for i, col in enumerate(name_columns):
+            for j, name in enumerate(names):
+                ws[f"{col}{names_start_row + j}"] = name  # Start names right after date row
+
+        # Fill remaining rows with "custom_value"
+        max_rows = start_row + 13  # Define the height of each week's section
+        for col in custom_value_columns:
+            for row in range(names_end_row, max_rows):
+                ws[f"{col}{row}"] = "custom_value"
+
+        # Move to the next week's section
+        start_row += 13  
+
+    # Save the Excel file
     file_path = f"{file_name}"
     wb.save(file_path)
-
     # ✅ **Display & Download Immediately**
     st.success(f"✅ File '{file_name}' has been successfully created!")
 
