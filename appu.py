@@ -26,6 +26,8 @@ file_configs = {
     "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]} #LIST ALL NAMES
 }
 
+from openpyxl import Workbook
+import datetime
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
     """
@@ -80,16 +82,18 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
         names_end_row = names_start_row + len(names)
 
         for i, col in enumerate(name_columns):
+            custom_col = custom_value_columns[i]  # Get the column to the left
             for j, name in enumerate(names):
-                ws[f"{col}{names_start_row + j}"] = name  # Start names right after date row
+                row = names_start_row + j
+                ws[f"{col}{row}"] = name  # Place the name
+                ws[f"{custom_col}{row}"] = "custom_value"  # Place "custom_value" in the left column
 
         # Fill remaining rows with "custom_value" from the **date row** to the **next week's date row**
         next_week_start = start_row + week_height  # Set end range dynamically
-        for col in custom_value_columns:
+        for i, col in enumerate(custom_value_columns):
             for row in range(start_row + 1, next_week_start):  # Fill from date row up to next week's start row
                 if row >= names_end_row:  # Avoid overwriting names
-                    ws[f"{col}{row}"] = "custom_value"; ws[f"{custom_col}{row}"] = "custom_value"  # Place "custom_value" in the left column
-
+                    ws[f"{col}{row}"] = "custom_value"
 
         # Move to the next week's section
         start_row = next_week_start  
@@ -97,7 +101,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Save the Excel file
     file_path = f"{file_name}"
     wb.save(file_path)
-
+	
     # ✅ **Display & Download Immediately**
     st.success(f"✅ File '{file_name}' has been successfully created!")
 
