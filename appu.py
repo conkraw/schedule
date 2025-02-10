@@ -964,7 +964,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	#st.dataframe(sorted_shift_counts)
 	
-	df.to_excel('final.xlsx',index=False)
+	df.to_excel('final.xlsx',index=False); st.dataframe(df)
 
 	########################################################################################################################################################################
 	import openpyxl
