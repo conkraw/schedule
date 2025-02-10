@@ -52,8 +52,8 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     custom_value_columns = ["A", "C", "E", "G", "I", "K", "M"]
     name_columns = ["B", "D", "F", "H", "J", "L", "N"]
 
-    # Row ranges to repeat the pattern... #Change to get more name... do not forget to adjust line 87... start_rrow _= 13 to skip rows. 
-    row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44), (45, 54)]
+    # Row ranges to repeat the pattern
+    row_ranges = [(5, 17), (18, 27), (28, 37), (38, 47), (48, 57)]#row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44), (45, 54)]
 
     # Ensure names list has at least one name
     if not names:
@@ -63,7 +63,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     for start_row, end_row in row_ranges:
         for col in custom_value_columns:
             for row in range(start_row, end_row + 1):
-                ws[f"{col}{row}"] = "custom_value"
+                ws[f"{col}{row}"] = ""
 
         for col in name_columns:
             for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
