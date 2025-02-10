@@ -827,6 +827,8 @@ elif st.session_state.page == "OPD Creator":
 
 	# Extract the minimum date
 	min_date = df['date'].min()
+
+	df['date'] = pd.to_datetime(df['date'], errors='coerce')
 	
 	# Filter for WARD_A and exclude providers with class H5 and H15
 	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))]
