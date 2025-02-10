@@ -12,6 +12,7 @@ from io import BytesIO
 from io import StringIO
 import os
 import time 
+import random 
 
 def format_date_with_suffix(date):
     """Formats a date as 'Month Day[st/nd/rd/th], Year' (e.g., 'February 3rd, 2025')."""
