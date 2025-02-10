@@ -828,14 +828,14 @@ elif st.session_state.page == "OPD Creator":
 	# Extract the minimum date
 	min_date = df['date'].min()
 
-	# Ensure date column is in datetime format
-	df['date'] = pd.to_datetime(df['date'], errors='coerce')
+	# Ensure date column is in datetime format (strip timestamps)
+	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
 	
 	# Filter for WARD_A and exclude providers with class H5 and H15
 	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].copy()
 	
 	# Compute the Monday start of each week
-	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].dt.weekday, unit='D')
+	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
 	# Define class groups mapping
@@ -844,30 +844,24 @@ elif st.session_state.page == "OPD Creator":
 	# Shuffle students before assigning (so they are not in a fixed order)
 	random.shuffle(unique_student_names)
 	
-	# Track assigned students to ensure they are only used once
+	# Track assigned students to ensure they are only used once (globally)
 	assigned_students = set()
 	total_students = len(unique_student_names)
-	
-	# Assign students for each week (only in WARD_A)
 	alert_triggered = False  # Flag to detect if no student was available
 	
+	# Assign students for each week (only in WARD_A)
 	for week_start in unique_weeks:
-	    # Filter out students already assigned
+	    # Select 5 students for this week (only unassigned students)
 	    available_students = [s for s in unique_student_names if s not in assigned_students]
 	    
-	    # If not enough students are left, restart & shuffle
+	    # If not enough students are left, trigger an alert and stop assigning
 	    if len(available_students) < 5:
-	        if len(available_students) == 0:
-	            alert_triggered = True  # No students left to assign
-	            break  # Stop assignment process
-	        assigned_students.clear()
-	        random.shuffle(unique_student_names)
-	        available_students = [s for s in unique_student_names if s not in assigned_students]
-	    
-	    # Select 5 students for this week
-	    selected_students = available_students[:5]
+	        alert_triggered = True  # No students left to assign
+	        break  # Stop assignment process
 	
-	    # Mark students as assigned
+	    selected_students = available_students[:5]
+	    
+	    # Mark students as permanently assigned
 	    assigned_students.update(selected_students)
 	
 	    # Assign students based on class groups (only for WARD_A)
@@ -875,7 +869,7 @@ elif st.session_state.page == "OPD Creator":
 	        class_filter = (
 	            (df['class'] == class_type) &
 	            (df['clinic'] == 'WARD_A') &  # ✅ Ensure only WARD_A is assigned
-	            (df['date'] - pd.to_timedelta(df['date'].dt.weekday, unit='D') == week_start)
+	            (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start)
 	        )
 	        df.loc[class_filter, 'student'] = selected_students[student_pos]
 	
