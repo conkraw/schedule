@@ -821,7 +821,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['datecode'] = df.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
-	df['student'] = ""
+	df['student'] = None 
 
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); st.dataframe(list_df); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(unique_student_names)
 	
