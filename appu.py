@@ -844,9 +844,6 @@ elif st.session_state.page == "OPD Creator":
 	# Define the clinics where students should be assigned (including nurseries)
 	clinics_to_assign = ["WARD_A", "HAMPDEN_NURSERY", "SJR_HOSP", "PSHCH_NURSERY"]
 	
-	# Filter for the specified clinics and exclude providers with class H5 and H15
-	df_filtered = df[(df['clinic'].isin(clinics_to_assign)) & (~df['class'].isin(['H5', 'H15']))].copy()
-	
 	# Compute unique weeks
 	unique_weeks = sorted(df['week_start'].unique())
 	
@@ -912,10 +909,11 @@ elif st.session_state.page == "OPD Creator":
 	                    (df['week_start'] == week_start)
 	                )
 	
-	                df.loc[class_filter, 'student'] = selected_student
-	                assigned_students.add(selected_student)
-	                nursery_assigned_students.add(selected_student)
-	                assigned_this_week += 1
+	                if not df.loc[class_filter].empty:
+	                    df.loc[class_filter, 'student'] = selected_student
+	                    assigned_students.add(selected_student)
+	                    nursery_assigned_students.add(selected_student)
+	                    assigned_this_week += 1
 	
 	### **3️⃣ Check for Unassigned Students & Reassign Them**
 	remaining_students = [s for s in unique_student_names if s not in nursery_assigned_students]
@@ -924,7 +922,7 @@ elif st.session_state.page == "OPD Creator":
 	for student in remaining_students:
 	    for nursery, config in nurseries.items():
 	        for week_start in unique_weeks:
-	            assigned_this_week = sum(df[(df['week_start'] == week_start) & (df['clinic'] == nursery)]['student'].notna())
+	            assigned_this_week = df[(df['week_start'] == week_start) & (df['clinic'] == nursery)]['student'].notna().sum()
 	
 	            if assigned_this_week < config["max_students_per_week"]:
 	                # Find an empty slot for this student
@@ -945,7 +943,7 @@ elif st.session_state.page == "OPD Creator":
 	conflicted_students = ward_a_assigned_students.intersection(nursery_assigned_students)
 	if conflicted_students:
 	    st.warning(f"⚠️ Conflict detected! These students were assigned to both WARD_A and a nursery: {conflicted_students}")
-
+	
 	df['text'] = df['provider'] + " ~ " + df['student']
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
