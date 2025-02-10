@@ -882,15 +882,15 @@ elif st.session_state.page == "OPD Creator":
 	    st.warning("⚠️ Not enough students to complete assignments! Some providers may be unassigned.")
 
 	################################################################################################################################################################################################
-	# Filter for SJR_HOSP
-	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
+	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
+	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
 	
+	# Filter for SJR_HOSP
 	df_filtered = df[(df['clinic'] == 'SJR_HOSP')].copy()
 	
 	# ✅ Replace NaN values with None only in the "student" column
 	df_filtered['student'] = df_filtered['student'].where(pd.notna(df_filtered['student']), None)
 	
-
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
 	class_groups = [('H2', 'H12'), ('H3', 'H13')]
@@ -920,6 +920,7 @@ elif st.session_state.page == "OPD Creator":
 	                (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
 	            )
 	            df.loc[class_filter, 'student'] = selected_student
+
 
 	################################################################################################################################################################################################			
 	df['text'] = df['provider'] + " ~ " + df['student']
