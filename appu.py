@@ -880,39 +880,70 @@ elif st.session_state.page == "OPD Creator":
 	# Alert if no students were available for assignment
 	if alert_triggered:
 	    st.warning("⚠️ Not enough students to complete assignments! Some providers may be unassigned.")
-		
+
+	################################################################################################################################################################################################
+	df_filtered = df[(df['clinic'] == 'SJR_HOSP')].copy()
+	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
+	unique_weeks = sorted(df_filtered['week_start'].unique())
+	
+	class_groups = [('H2', 'H12'), ('H3', 'H13')]
+	
+	for class_group in class_groups:
+	    for week_start in unique_weeks:
+	        # Select students for this group (only unassigned students)
+	        available_students = [s for s in unique_student_names if s not in assigned_students]
+	
+	        # If not enough students are left, trigger an alert and stop assigning
+	        if len(available_students) < 1:
+	            alert_triggered = True  # No students left to assign
+	            break  # Stop assignment process
+	
+	        selected_student = None  # Initialize with no student assigned
+	
+	        for student in available_students:
+	            # ✅ Check if the student was already assigned in WARD_A for the same date and class
+	            conflict_filter = (
+	                (df['clinic'] == 'WARD_A') &  # Check in WARD_A
+	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start) & 
+	                (df['class'].isin(class_group)) &  # Match the same class group
+	                (df['student'] == student)  # Check if this student was already assigned
+	            )
+	
+	            if df.loc[conflict_filter].empty:  # ✅ If no conflict, assign the student
+	                selected_student = student
+	                assigned_students.add(selected_student)  # Mark as assigned
+	                break  # Exit loop once we find a valid student
+	
+	        # If no valid student was found, skip this assignment
+	        if not selected_student:
+	            continue
+	
+	        # Assign student to all classes in this group for that week
+	        for class_type in class_group:
+	            class_filter = (
+	                (df['class'] == class_type) &
+	                (df['clinic'] == 'SJR_HOSP') &
+	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start) &
+	                (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
+	            )
+	            df.loc[class_filter, 'student'] = selected_student
+	################################################################################################################################################################################################			
 	df['text'] = df['provider'] + " ~ " + df['student']
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False); st.dataframe(df)
+
+	#####################################################################OUTPATIENT SHIFT ANALYIS#####################################################################################################################################
+	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]; types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]; df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
 	
-	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
-	types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]
+	start_date = pd.to_datetime(st.session_state.start_date); df["week_num"] = ((df["date"] - start_date).dt.days // 7) + 1; df["week_label"] = "Week " + df["week_num"].astype(str)
 	
-	df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
-	
-	# Get start date from session state
-	start_date = pd.to_datetime(st.session_state.start_date)
-	
-	# Calculate weeks: Monday–Friday groupings
-	df["week_num"] = ((df["date"] - start_date).dt.days // 7) + 1
-	df["week_label"] = "Week " + df["week_num"].astype(str)
-	
-	# Filter data for relevant clinics and shift types
 	filtered_df = df[(df["clinic"].isin(clinics_of_interest)) & (df["type"].isin(types_of_interest))]
 	
 	# Count shifts per provider per clinic per week
-	shift_counts = (
-	    filtered_df.groupby(["week_label", "provider", "clinic"])
-	    .size()
-	    .reset_index(name="shift_count")
-	)
+	shift_counts = (filtered_df.groupby(["week_label", "provider", "clinic"]).size().reset_index(name="shift_count"));sorted_shift_counts = shift_counts.sort_values(by=["week_label", "shift_count"], ascending=[True, False])
 	
-	# Sort by week and shift count (descending order)
-	sorted_shift_counts = shift_counts.sort_values(by=["week_label", "shift_count"], ascending=[True, False])
-	
-	# Display results in Streamlit
 	#st.dataframe(sorted_shift_counts)
 	
 	df.to_excel('final.xlsx',index=False)
