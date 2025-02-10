@@ -883,7 +883,23 @@ elif st.session_state.page == "OPD Creator":
 	### **2️⃣ Debug: Check If SJR_HOSP Has Valid Rows**
 	valid_sjr_hosp_rows = df[(df['clinic'] == "SJR_HOSP") & df['student'].isna()]
 	st.write(f"Valid SJR_HOSP Rows Before Assignment: {len(valid_sjr_hosp_rows)}")
+
+	# ✅ Debug Step 1: Count total rows for SJR_HOSP
+	sjr_hosp_rows = df[df['clinic'] == "SJR_HOSP"]
+	st.write(f"Total SJR_HOSP Rows in Data: {len(sjr_hosp_rows)}")
 	
+	# ✅ Debug Step 2: Count rows where 'student' is NaN (empty)
+	sjr_hosp_empty_rows = df[(df['clinic'] == "SJR_HOSP") & (df['student'].isna())]
+	st.write(f"Total Unassigned SJR_HOSP Rows: {len(sjr_hosp_empty_rows)}")
+	
+	# ✅ Debug Step 3: Show 5 sample rows from SJR_HOSP
+	st.write("Sample Rows from SJR_HOSP:")
+	st.dataframe(sjr_hosp_rows.head())
+	
+	# ✅ Debug Step 4: Show 5 unassigned rows from SJR_HOSP
+	st.write("Sample Unassigned Rows from SJR_HOSP:")
+	st.dataframe(sjr_hosp_empty_rows.head())
+
 	### **3️⃣ Assign Students to `SJR_HOSP`**
 	for week_start in unique_weeks:
 	    assigned_this_week = 0
@@ -918,32 +934,6 @@ elif st.session_state.page == "OPD Creator":
 	                assigned_this_week += 1
 	            else:
 	                st.write(f"No available rows for {class_type} in week {week_start}")
-	
-	### **4️⃣ Final Checks & Display Results**
-	# ✅ Check for Unassigned Students
-	remaining_students = [s for s in unique_student_names if s not in sjr_hosp_assigned_students]
-	
-	if remaining_students:
-	    st.warning(f"⚠️ Some students were not assigned to SJR_HOSP: {remaining_students}")
-	
-	# ✅ Ensure No Student Has Conflicting Assignments
-	conflicted_students = ward_a_assigned_students.intersection(sjr_hosp_assigned_students)
-	if conflicted_students:
-	    st.warning(f"⚠️ Conflict detected! These students were assigned to both WARD_A and SJR_HOSP: {conflicted_students}")
-
-	st.write(f"Unique Clinics in Data: {df['clinic'].unique()}")
-
-	# ✅ Debug Step 2: Check if SJR_HOSP exists in df
-	sjr_hosp_rows = df[df['clinic'] == "SJR_HOSP"]
-	st.write(f"Total SJR_HOSP Rows in Data: {len(sjr_hosp_rows)}")
-	
-	# ✅ Debug Step 3: Check if any SJR_HOSP rows are missing student assignments
-	sjr_hosp_empty_rows = df[(df['clinic'] == "SJR_HOSP") & (df['student'].isna())]
-	st.write(f"Total Unassigned SJR_HOSP Rows: {len(sjr_hosp_empty_rows)}")
-	
-	# ✅ Debug Step 4: Show sample rows for SJR_HOSP
-	st.write("Sample Rows from SJR_HOSP:")
-	st.dataframe(sjr_hosp_rows.head())
 
 	df['text'] = df['provider'] + " ~ " + df['student']
 
