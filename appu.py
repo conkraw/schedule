@@ -1043,7 +1043,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
-	df.to_excel('final.xlsx',index=False); st.dataframe(df)
+	df.to_excel('final.xlsx',index=False); #st.dataframe(df)
 
 	########################################################################################################################################################################
 	import openpyxl
