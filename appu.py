@@ -52,7 +52,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     custom_value_columns = ["A", "C", "E", "G", "I", "K", "M"]
     name_columns = ["B", "D", "F", "H", "J", "L", "N"]
 
-    # Row ranges to repeat the pattern
+    # Row ranges to repeat the pattern... #Change to get more name... do not forget to adjust line 87... start_rrow _= 13 to skip rows. 
     row_ranges = [(5, 17), (18, 27), (28, 37), (38, 47), (48, 57), (58, 67), (68, 77), (78, 87)] #row_ranges = [(5, 14), (15, 24), (25, 34), (35, 44), (45, 54)]
 
     # Ensure names list has at least one name
@@ -84,7 +84,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
             ws[f"{col_letter}{start_row}"] = day  # Place the day name
             formatted_date = (current_date + datetime.timedelta(days=i)).strftime("%B %-d, %Y")
             ws[f"{col_letter}{start_row + 1}"] = formatted_date
-        start_row += 10  # Skip 10 rows before the next week starts
+        start_row += 13  # Skip 10 rows before the next week starts
 
     # Save the Excel file with the specified name
     file_path = f"{file_name}"
