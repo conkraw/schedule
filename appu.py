@@ -882,8 +882,12 @@ elif st.session_state.page == "OPD Creator":
 	    st.warning("⚠️ Not enough students to complete assignments! Some providers may be unassigned.")
 
 	################################################################################################################################################################################################
+	# Filter for SJR_HOSP
 	df_filtered = df[(df['clinic'] == 'SJR_HOSP')].copy()
+	
+	# ✅ Replace NaN values with None only in the "student" column
 	df_filtered['student'] = df_filtered['student'].where(pd.notna(df_filtered['student']), None)
+	
 	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
 	unique_weeks = sorted(df_filtered['week_start'].unique())
 	
@@ -891,43 +895,30 @@ elif st.session_state.page == "OPD Creator":
 	
 	for class_group in class_groups:
 	    for week_start in unique_weeks:
-	        # Select students for this group (only unassigned students)
-	        available_students = [s for s in unique_student_names if s not in assigned_students]
+	        # ✅ Exclude students assigned to WARD_A in the same week
+	        unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
+	
+	        # ✅ Get available students who are not already assigned that week
+	        available_students = [s for s in unique_student_names if s not in assigned_students and s not in unavailable_students]
 	
 	        # If not enough students are left, trigger an alert and stop assigning
 	        if len(available_students) < 1:
 	            alert_triggered = True  # No students left to assign
 	            break  # Stop assignment process
 	
-	        selected_student = None  # Initialize with no student assigned
-	
-	        for student in available_students:
-	            # ✅ Check if the student was already assigned in WARD_A for the same date and class
-	            conflict_filter = (
-	                (df['clinic'] == 'WARD_A') &  # Check in WARD_A
-	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start) & 
-	                (df['class'].isin(class_group)) &  # Match the same class group
-	                (df['student'] == student)  # Check if this student was already assigned
-	            )
-	
-	            if df.loc[conflict_filter].empty:  # ✅ If no conflict, assign the student
-	                selected_student = student
-	                assigned_students.add(selected_student)  # Mark as assigned
-	                break  # Exit loop once we find a valid student
-	
-	        # If no valid student was found, skip this assignment
-	        if not selected_student:
-	            continue
+	        selected_student = available_students[0]  # Take one student for this group
+	        assigned_students.add(selected_student)  # Mark as assigned
 	
 	        # Assign student to all classes in this group for that week
 	        for class_type in class_group:
 	            class_filter = (
 	                (df['class'] == class_type) &
 	                (df['clinic'] == 'SJR_HOSP') &
-	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start) &
+	                (df['week_start'] == week_start) &
 	                (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
 	            )
 	            df.loc[class_filter, 'student'] = selected_student
+
 	################################################################################################################################################################################################			
 	df['text'] = df['provider'] + " ~ " + df['student']
 
