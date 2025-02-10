@@ -736,7 +736,7 @@ elif st.session_state.page == "OPD Creator":
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
-	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx")); st.dataframe(sjrhosp_df)
+	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
 	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
@@ -767,7 +767,7 @@ elif st.session_state.page == "OPD Creator":
 	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
-	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
+	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP"); st.dataframe(sjrhosp_df)
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
 	nf_df = duplicate_am_continuity(nf_df, "NF")
 	
