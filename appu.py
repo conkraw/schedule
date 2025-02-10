@@ -725,7 +725,8 @@ elif st.session_state.page == "OPD Creator":
 	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
 	    "Book4.xlsx": {"": "", "": ""},  
 	}	
-	
+
+	xf = pd.read_excel(uploaded_files['SJR_HOSP.xlsx']); st.dataframe(xf)
 	# Process each file
 	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
 	etown_df = process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
