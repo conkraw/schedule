@@ -886,56 +886,69 @@ elif st.session_state.page == "OPD Creator":
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
 	df.to_csv('final.csv',index=False); st.dataframe(df)
-	################################################################################################################################################################################################
+	################################################################################################################################################################################################t
+	
+	# ✅ Load dataset
 	df = pd.read_csv('final.csv')
-
-	min_date = df['date'].min()
-
-	# Ensure date column is in datetime format (strip timestamps)
+	
+	# ✅ Convert date to datetime and strip timestamps
 	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
 	
 	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
-	if 'week_start' not in df.columns:
-	    df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
+	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
 	
 	# ✅ Filter for SJR_HOSP
-	df_filtered = df[(df['clinic'] == 'SJR_HOSP')].copy()
+	df_filtered = df[df['clinic'] == 'SJR_HOSP'].copy()
 	
 	# ✅ Replace NaN values with None only in the "student" column
 	df_filtered['student'] = df_filtered['student'].where(pd.notna(df_filtered['student']), None)
 	
+	# ✅ Define the weeks and class groups
 	unique_weeks = sorted(df_filtered['week_start'].unique())
-	
 	class_groups = [('H2', 'H12'), ('H3', 'H13')]
 	
-	for class_group in class_groups:
-	    for week_start in unique_weeks:
-	        # ✅ Exclude students already assigned to WARD_A in the same week
-	        unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
+	# ✅ Track assigned students to avoid duplicates
+	assigned_students = set()
 	
-	        # ✅ Get available students who are not already assigned that week
-	        available_students = [s for s in unique_student_names if s not in assigned_students and s not in unavailable_students]
+	# ✅ Iterate over each week and assign students
+	for week_start in unique_weeks:
+	    available_students = [s for s in unique_student_names if s not in assigned_students]
+	    
+	    if not available_students:
+	        continue  # ✅ Skip if no students left
 	
-	        # ✅ If no available students, just continue (DO NOT STOP)
+	    # ✅ Exclude students already assigned to WARD_A in the same week
+	    unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
+	
+	    # ✅ Keep only students not assigned in WARD_A that week
+	    available_students = [s for s in available_students if s not in unavailable_students]
+	
+	    # ✅ Shuffle students to distribute fairly
+	    random.shuffle(available_students)
+	    
+	    # ✅ Assign students per class group
+	    for class_group in class_groups:
 	        if not available_students:
-	            continue  # ✅ Instead of stopping, just move to the next week
+	            break  # ✅ Stop if no students left
 	
-	        selected_student = available_students[0]  # Take the first available student
+	        selected_student = available_students.pop(0)  # Take one student
 	        assigned_students.add(selected_student)  # Mark as assigned
 	
-	        # Assign student to all classes in this group for that week
-	        for class_type in class_group:
-	            class_filter = (
-	                (df['class'] == class_type) &
-	                (df['clinic'] == 'SJR_HOSP') &
-	                (df['week_start'] == week_start) &
-	                (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
-	            )
+	        # ✅ Assign student to all classes in this group for that week
+	        class_filter = df['class'].isin(class_group) & \
+	                       (df['clinic'] == 'SJR_HOSP') & \
+	                       (df['week_start'] == week_start) & \
+	                       (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday & Sunday
 	
-	            df.loc[class_filter, 'student'] = selected_student
-
+	        df.loc[class_filter, 'student'] = selected_student
+	
+	# ✅ Create a text column for easier viewing
 	df['text'] = df['provider'] + " ~ " + df['student']
-	df.to_csv('final.csv',index=False); st.dataframe(df)
+	
+	# ✅ Save and display the updated dataset
+	df.to_csv('final.csv', index=False)
+	st.dataframe(df)
+
 	################################################################################################################################################################################################			
 
 
