@@ -66,7 +66,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
                 ws[f"{col}{row}"] = "custom_value"
 
         for col in name_columns:
-            for i, row in enumerate(range(start_row + 1, start_row + 1 + min(len(names), 10))): #for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
+            for i, row in enumerate(range(start_row + 1, start_row + 1 + min(len(names), 8))): #for i, row in enumerate(range(start_row+1, start_row+1 + len(names))):
                 ws[f"{col}{row}"] = names[i % len(names)]  # Cycle through names
             for row in range(start_row + 1 + len(names), end_row + 1):  # Fill remaining with "custom_value"
                 ws[f"{col}{row}"] = ""
