@@ -794,7 +794,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
-	final2.to_csv('final2.csv',index=False); st.dataframe(final2)
+	final2.to_csv('final2.csv',index=False); #st.dataframe(final2)
 	
 	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
 	
@@ -842,7 +842,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
-	df.to_csv('final2.csv', index=False); st.dataframe(df) 
+	df.to_csv('final2.csv', index=False); #st.dataframe(df) 
 
 	df = pd.read_csv('final2.csv',dtype=str) 
 	
@@ -904,7 +904,7 @@ elif st.session_state.page == "OPD Creator":
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
-	df.to_csv('final.csv',index=False); st.dataframe(df)
+	df.to_csv('final.csv',index=False); #st.dataframe(df)
 	
 	################################################################################################################################################################################################
 	
@@ -1004,7 +1004,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
-	st.dataframe(df)
+	#st.dataframe(df)
 
 
 	    
