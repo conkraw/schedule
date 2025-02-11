@@ -1007,11 +1007,15 @@ elif st.session_state.page == "OPD Creator":
 	#st.dataframe(df)
 	
 	################################################################################################################################################################################################
-	st.write("Filtered DataFrame (Non-Empty Student Names)")
-	st.dataframe(df[df['student'].notna() & df['student'].str.strip().ne("")])
+	#st.write("Filtered DataFrame (Non-Empty Student Names)")
+	#st.dataframe(df[df['student'].notna() & df['student'].str.strip().ne("")])
 
+	
 	df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
-	df_filtered = df[df['student'].ne("") & df['student'].ne("nan")]  # Exclude empty & 'nan'
+	df['student'].replace("nan", pd.NA, inplace=True)
+	df_filtered = df.dropna(subset=['student'])
+	
+	#df_filtered = df[df['student'].ne("") & df['student'].ne("nan")]  # Exclude empty & 'nan'
 
 	# ✅ Find duplicate student assignments across all clinics
 	duplicate_students = df_filtered[df_filtered.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
