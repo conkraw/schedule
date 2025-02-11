@@ -1034,7 +1034,7 @@ elif st.session_state.page == "OPD Creator":
 	    duplicate_summary = duplicate_summary[duplicate_summary.duplicated(subset=['student', 'datecode', 'class'], keep=False)]
 
 
-	    st.write("Unique student values (post-cleaning):", df['student'].unique()); st.write('Duplicate Check')
+	    st.write('Duplicate Check')
 	    st.dataframe(duplicate_summary)
 		
 	else:
