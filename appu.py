@@ -1007,9 +1007,12 @@ elif st.session_state.page == "OPD Creator":
 	#st.dataframe(df)
 	
 	################################################################################################################################################################################################
-	# ✅ Filter out rows where 'student' is empty or NaN
-	df_filtered = df[df['student'].notna() & df['student'].str.strip().ne("")]
-	
+	st.write("Filtered DataFrame (Non-Empty Student Names)")
+	st.dataframe(df[df['student'].notna() & df['student'].str.strip().ne("")])
+
+	df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
+	df_filtered = df[df['student'].ne("") & df['student'].ne("nan")]  # Exclude empty & 'nan'
+
 	# ✅ Find duplicate student assignments across all clinics
 	duplicate_students = df_filtered[df_filtered.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
 	
@@ -1025,10 +1028,11 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # ✅ Show only problematic cases (students assigned to multiple clinics in the same datecode and class)
 	    duplicate_summary = duplicate_summary[duplicate_summary.duplicated(subset=['student', 'datecode', 'class'], keep=False)]
-	    
-	    st.write('Duplicate Check')
+
+
+	    st.write("Unique student values (post-cleaning):", df['student'].unique()); st.write('Duplicate Check')
 	    st.dataframe(duplicate_summary)
-	
+		
 	else:
 	    st.success("✅ No duplicate student assignments detected across clinics!")
 
