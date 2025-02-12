@@ -2189,9 +2189,9 @@ elif st.session_state.page == "Create List":
 	    required_mapping_cols = {"name", "Formatted Name"}
 	
 	    if not required_provider_cols.issubset(provider_df.columns):
-		raise ValueError("Ensure 'provider' column exists in Provider Dataset.")
+	        raise ValueError("Ensure 'provider' column exists in Provider Dataset.")
 	    if not required_mapping_cols.issubset(mapping_df.columns):
-		raise ValueError("Ensure 'name' and 'Formatted Name' columns exist in Mapping Dataset.")
+	        raise ValueError("Ensure 'name' and 'Formatted Name' columns exist in Mapping Dataset.")
 	
 	# Function to process and match provider names
 	def match_provider_names(provider_df, mapping_df):
@@ -2213,7 +2213,7 @@ elif st.session_state.page == "Create List":
 	    unmatched_providers = merged_df[merged_df["formatted_name"].isna()]["provider"].unique()
 	
 	    return merged_df, unmatched_providers
-
+	
 	csv_bytes = save_to_bytes_csv(merged_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
     except Exception as e:
