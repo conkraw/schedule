@@ -1050,13 +1050,34 @@ elif st.session_state.page == "OPD Creator":
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
 	df.to_excel('final.xlsx',index=False)
-	table_df = df[['student','clinic','date']]
+	# Select relevant columns
+	table_df = df[['student', 'clinic', 'date']]
+	
+	# Convert 'date' column to datetime format
 	table_df["date"] = pd.to_datetime(table_df["date"])
+	
+	# Calculate week number and create a week label
 	table_df["week_num"] = ((table_df["date"] - start_date).dt.days // 7) + 1
 	table_df["week_label"] = "Week " + table_df["week_num"].astype(str)
-	grouped_df = table_df.groupby("week_label")["student"].apply(lambda x: ", ".join(x.dropna())).reset_index()
 	
-	st.dataframe(grouped_df)
+	# Sort students alphabetically within each week before grouping
+	table_df = table_df.sort_values(by=["week_label", "student"])
+	
+	# Group by week_label, combining student names and assigned clinics
+	grouped_df = table_df.groupby("week_label").apply(
+	    lambda x: pd.DataFrame({
+	        "Student": sorted(x["student"].dropna().unique()),  # Sorted student names
+	        "Clinics": [", ".join(x[x["student"] == s]["clinic"].dropna().unique()) for s in sorted(x["student"].dropna().unique())]  # Assigned clinics
+	    })
+	).reset_index(level=0)
+	
+	# Pivot the table to show weeks as columns
+	pivot_df = grouped_df.pivot(columns="week_label", values=["Student", "Clinics"])
+	
+	# Flatten multi-index column names for readability
+	pivot_df.columns = [f"{col[1]}" for col in pivot_df.columns]
+	
+	st.dataframe(pivot_df)
 
 	########################################################################################################################################################################
 	import openpyxl
