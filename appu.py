@@ -2217,7 +2217,7 @@ elif st.session_state.page == "Create List":
         # Map names
         provider_df["record_id"] = provider_df["student"].map(mapping_dict)
         
-        provider_df = provider_df[['record_id','formatted_name','eval_due_date']]  
+        #provider_df = provider_df[['record_id','formatted_name','eval_due_date']]  
 	
         csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
