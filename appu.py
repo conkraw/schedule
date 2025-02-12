@@ -1050,6 +1050,7 @@ elif st.session_state.page == "OPD Creator":
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
 	df.to_excel('final.xlsx',index=False)
+	
 	# Select relevant columns
 	table_df = df[['student', 'clinic', 'date']]
 	
@@ -1064,18 +1065,18 @@ elif st.session_state.page == "OPD Creator":
 	table_df = table_df.sort_values(by=["week_label", "student"])
 	
 	# Group by week_label, combining student names and assigned clinics
-	grouped_df = table_df.groupby("week_label").apply(
-	    lambda x: pd.DataFrame({
-	        "Student": sorted(x["student"].dropna().unique()),  # Sorted student names
-	        "Clinics": [", ".join(x[x["student"] == s]["clinic"].dropna().unique()) for s in sorted(x["student"].dropna().unique())]  # Assigned clinics
-	    })
-	).reset_index(level=0)
+	grouped_df = table_df.groupby(["week_label", "student"])["clinic"].apply(lambda x: ", ".join(x.dropna().unique())).reset_index()
 	
-	# Pivot the table to show weeks as columns
-	pivot_df = grouped_df.pivot(columns="week_label", values=["Student", "Clinics"])
+	# Pivot the table to show weeks as columns while ensuring unique column names
+	pivot_df = grouped_df.pivot(index="student", columns="week_label", values="clinic")
 	
-	# Flatten multi-index column names for readability
-	pivot_df.columns = [f"{col[1]}" for col in pivot_df.columns]
+	# Reset index to ensure student names appear as a column
+	pivot_df = pivot_df.reset_index()
+	
+	# Rename columns to remove multi-level indexing issues
+	pivot_df.columns.name = None  # Remove multi-level index name
+	pivot_df = pivot_df.rename_axis(None, axis=1)  # Ensure a clean dataframe
+
 	
 	st.dataframe(pivot_df)
 
