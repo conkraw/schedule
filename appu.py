@@ -2184,23 +2184,23 @@ elif st.session_state.page == "Create List":
 
         provider_df = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], format="%Y-%m-%d", errors='coerce'))  .groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14)));st.write("Evaluation Due Dates:");st.dataframe(provider_df); provider_df.to_csv('provider_df.csv',index=False)
 
-	provider_df = pd.read_csv("provider_df.csv")
-	mapping_df = pd.read_csv("mapping_df.csv")  # The file with 'name' and 'Formatted Name'
-	
-	# Normalize columns for matching
-	provider_df["name"] = provider_df["name"].str.strip().str.lower()
-	mapping_df["name"] = mapping_df["name"].str.strip().str.lower()
-	
-	# Convert mapping dataframe to dictionary
-	mapping_dict = dict(zip(mapping_df["name"], mapping_df["Formatted Name"]))
-	
-	# Map names
-	provider_df["formatted_name"] = provider_df["name"].map(mapping_dict)
-	
-	# Print unmatched values
-	unmatched = provider_df[provider_df["formatted_name"].isna()]["name"].unique()
-	if unmatched.size > 0:
-	    print("Warning: Unmatched names found:", unmatched)
+        provider_df = pd.read_csv("provider_df.csv")
+        mapping_df = pd.read_csv("mapping_df.csv")  # The file with 'name' and 'Formatted Name'
+
+        # Normalize columns for matching
+        provider_df["name"] = provider_df["name"].str.strip().str.lower()
+        mapping_df["name"] = mapping_df["name"].str.strip().str.lower()
+
+        # Convert mapping dataframe to dictionary
+        mapping_dict = dict(zip(mapping_df["name"], mapping_df["Formatted Name"]))
+
+        # Map names
+        provider_df["formatted_name"] = provider_df["name"].map(mapping_dict)
+
+        # Print unmatched values
+        unmatched = provider_df[provider_df["formatted_name"].isna()]["name"].unique()
+        if unmatched.size > 0:
+            print("Warning: Unmatched names found:", unmatched)
 
         csv_bytes = save_to_bytes_csv(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
