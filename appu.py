@@ -883,28 +883,28 @@ elif st.session_state.page == "OPD Creator":
 	            alert_triggered = True  # No students left to assign
 	            break  # Stop assignment process
 	
+	
 	        selected_student = available_students[0]  # Take one student for this group
 	        assigned_students.add(selected_student)  # Mark as assigned
-	
-			        # Assign student to all classes in this group for that week
-		for class_type in class_group:
-		    # Ensure 'date' is in datetime format
-		    df["date"] = pd.to_datetime(df["date"])
-		
-		    # Compute week start separately to avoid chained operations
-		    df["week_start"] = df["date"] - pd.to_timedelta(df["date"].dt.weekday, unit="D")
-		
-		    # Create filter condition
-		    class_filter = (
-		        (df["class"] == class_type) &
-		        (df["clinic"] == "WARD_A") &  # ✅ Ensure only WARD_A is assigned
-		        (df["week_start"] == week_start) &  # ✅ Match the calculated week start
-		        (df["date"].dt.weekday < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
-		    )
-		
-		    # Assign student where conditions match
-		    df.loc[class_filter, "student"] = selected_student
-		
+
+            for class_type in class_group:
+                # Ensure 'date' is in datetime format
+                df["date"] = pd.to_datetime(df["date"])
+
+                # Compute week start separately to avoid chained operations
+                df["week_start"] = df["date"] - pd.to_timedelta(df["date"].dt.weekday, unit="D")
+
+                # Create filter condition
+                class_filter = (
+                    (df["class"] == class_type) &
+                    (df["clinic"] == "WARD_A") &  # ✅ Ensure only WARD_A is assigned
+                    (df["week_start"] == week_start) &  # ✅ Match the calculated week start
+                    (df["date"].dt.weekday < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
+                )
+
+                # Assign student where conditions match
+                df.loc[class_filter, "student"] = selected_student
+
 			
 	# Alert if no students were available for assignment
 	if alert_triggered:
