@@ -842,12 +842,12 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
-	df.to_csv('final2.csv', index=False); #st.dataframe(df) 
+	df.to_csv('final2.csv', index=False)
 
 	df = pd.read_csv('final2.csv',dtype=str) 
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
-
+	
 	# Extract the minimum date
 	min_date = df['date'].min()
 
@@ -1004,13 +1004,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
-	#st.dataframe(df)
 	
 	################################################################################################################################################################################################
-	#st.write("Filtered DataFrame (Non-Empty Student Names)")
-	#st.dataframe(df[df['student'].notna() & df['student'].str.strip().ne("")])
-
-	
 	df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
 	df['student'].replace("nan", pd.NA, inplace=True)
 	df_filtered = df.dropna(subset=['student'])
@@ -1054,7 +1049,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
-	df.to_excel('final.xlsx',index=False); #st.dataframe(df)
+	df.to_excel('final.xlsx',index=False); st.dataframe(df)
 
 	########################################################################################################################################################################
 	import openpyxl
