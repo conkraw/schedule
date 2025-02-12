@@ -883,9 +883,8 @@ elif st.session_state.page == "OPD Creator":
 	            alert_triggered = True  # No students left to assign
 	            break  # Stop assignment process
 	
-	
-	        selected_student = available_students[0]  # Take one student for this group
-	        assigned_students.add(selected_student)  # Mark as assigned
+            selected_student = available_students[0]  # Take one student for this group
+            assigned_students.add(selected_student)  # Mark as assigned
 
             for class_type in class_group:
                 # Ensure 'date' is in datetime format
@@ -904,6 +903,8 @@ elif st.session_state.page == "OPD Creator":
 
                 # Assign student where conditions match
                 df.loc[class_filter, "student"] = selected_student
+
+
 
 			
 	# Alert if no students were available for assignment
