@@ -2202,7 +2202,7 @@ elif st.session_state.page == "Create List":
         if unmatched.size > 0:
             print("Warning: Unmatched names found:", unmatched)
 
-        csv_bytes = save_to_bytes_csv(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
+        csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
