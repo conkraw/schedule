@@ -2160,7 +2160,7 @@ elif st.session_state.page == "Create List":
         wb_bytes = save_to_bytes_wb(wb1)
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-        df = pd.read_csv('PALIST.csv', dtype=str); mapping_df = st.secrets["dataset"]["data"]; st.dataframe(data)
+        df = pd.read_csv('PALIST.csv', dtype=str); mapping_df = st.secrets["dataset"]["data"]; st.dataframe(mapping_df)
 	
         # Normalize 'type' for HOPE_DRIVE clinic
         df['type_adj'] = df['type']
@@ -2180,7 +2180,7 @@ elif st.session_state.page == "Create List":
         df_duplicates = df[df['duplicate_flag']]
     
         # Display only flagged duplicate records
-        st.write("Duplicate Check:"); st.dataframe(df_duplicates)
+        st.write("Duplicate Check:"); st.dataframe(df_duplicates);                
 
         provider_df = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14))); st.write("Evaluation Due Dates:"); st.dataframe(provider_df)
 
