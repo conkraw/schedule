@@ -2160,7 +2160,7 @@ elif st.session_state.page == "Create List":
         wb_bytes = save_to_bytes_wb(wb1)
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-        df = pd.read_csv('PALIST.csv', dtype=str); mapping_df = st.secrets["dataset"]["data"]; st.dataframe(mapping_df); mapping_df.to_csv('mapping_df.csv',index=False)
+        df = pd.read_csv('PALIST.csv', dtype=str); mapping_df = st.secrets["dataset"]["data"]; st.dataframe(mapping_df); mapping_df = pd.Dataframe(mapping_df); mapping_df.to_csv('mapping_df.csv',index=False)
 	
         # Normalize 'type' for HOPE_DRIVE clinic
         df['type_adj'] = df['type']
