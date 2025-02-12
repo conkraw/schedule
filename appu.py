@@ -905,7 +905,6 @@ elif st.session_state.page == "OPD Creator":
                 df.loc[class_filter, "student"] = selected_student
 
 
-
 			
 	# Alert if no students were available for assignment
 	if alert_triggered:
