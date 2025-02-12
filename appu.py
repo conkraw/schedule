@@ -872,17 +872,17 @@ elif st.session_state.page == "OPD Creator":
 	total_students = len(unique_student_names)
 	alert_triggered = False  # Flag to detect if no student was available
 	
-	# Assign students **by group first** instead of filling whole weeks at once
-	for class_group in class_groups:
-	    for week_start in unique_weeks:
-	        # Select students for this group (only unassigned students)
-	        available_students = [s for s in unique_student_names if s not in assigned_students]
-	        
-	        # If not enough students are left, trigger an alert and stop assigning
-	        if len(available_students) < 1:
-	            alert_triggered = True  # No students left to assign
-	            break  # Stop assignment process
-	
+    # Assign students **by group first** instead of filling whole weeks at once
+    for class_group in class_groups:
+        for week_start in unique_weeks:
+            # Select students for this group (only unassigned students)
+            available_students = [s for s in unique_student_names if s not in assigned_students]
+
+            # If not enough students are left, trigger an alert and stop assigning
+            if len(available_students) < 1:
+                alert_triggered = True  # No students left to assign
+                break  # Stop assignment process
+
             selected_student = available_students[0]  # Take one student for this group
             assigned_students.add(selected_student)  # Mark as assigned
 
