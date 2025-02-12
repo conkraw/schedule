@@ -1054,7 +1054,8 @@ elif st.session_state.page == "OPD Creator":
 	table_df["date"] = pd.to_datetime(table_df["date"])
 	table_df["week_num"] = ((table_df["date"] - start_date).dt.days // 7) + 1
 	table_df["week_label"] = "Week " + table_df["week_num"].astype(str)
-	grouped_df = table_df.groupby("week_label")["student"].apply(lambda x: ", ".join(x)).reset_index()
+	grouped_df = table_df.groupby("week_label")["student"].apply(lambda x: ", ".join(x.dropna())).reset_index()
+	
 	st.dataframe(grouped_df)
 
 	########################################################################################################################################################################
