@@ -2213,17 +2213,17 @@ elif st.session_state.page == "Create List":
             unmatched_providers = merged_df[merged_df["formatted_name"].isna()]["provider"].unique()
 
             return merged_df, unmatched_providers
+	
+        processed_df, unmatched_names = match_provider_names(provider_df, mapping_df)
 
-	processed_df, unmatched_names = match_provider_names(provider_df, mapping_df)
-	
-	processed_df.to_csv("PALIST.csv", index=False)
-	
-	# Alert if there are unmatched providers
-	if unmatched_names.size > 0:
-		print("Warning: Some provider names did not match:")
-		print(unmatched_names)
-	else:
-		print("All provider names matched successfully!")
+        processed_df.to_csv("PALIST.csv", index=False)
+
+        # Alert if there are unmatched providers
+        if unmatched_names.size > 0:
+            print("Warning: Some provider names did not match:")
+            print(unmatched_names)
+        else:
+            print("All provider names matched successfully!")
         csv_bytes = save_to_bytes_csv(processed_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
     except Exception as e:
