@@ -2189,9 +2189,9 @@ elif st.session_state.page == "Create List":
 	    required_mapping_cols = {"name", "Formatted Name"}
 	
 	    if not required_provider_cols.issubset(provider_df.columns):
-	        raise ValueError("Ensure 'provider' column exists in Provider Dataset.")
+		raise ValueError("Ensure 'provider' column exists in Provider Dataset.")
 	    if not required_mapping_cols.issubset(mapping_df.columns):
-	        raise ValueError("Ensure 'name' and 'Formatted Name' columns exist in Mapping Dataset.")
+		raise ValueError("Ensure 'name' and 'Formatted Name' columns exist in Mapping Dataset.")
 	
 	# Function to process and match provider names
 	def match_provider_names(provider_df, mapping_df):
