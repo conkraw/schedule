@@ -2160,8 +2160,16 @@ elif st.session_state.page == "Create List":
         wb_bytes = save_to_bytes_wb(wb1)
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-        df = pd.read_csv('PALIST.csv', dtype=str); mapping_df = st.secrets["dataset"]["data"]; st.dataframe(mapping_df); mapping_df = pd.DataFrame(mapping_df); mapping_df.to_csv('mapping_df.csv',index=False)
-	
+        df = pd.read_csv('PALIST.csv', dtype=str)
+        mapping_df = st.secrets["dataset"]["data"]
+        st.dataframe(mapping_df)
+        mapping_df = pd.DataFrame(mapping_df)
+        mapping_df.to_csv('mapping_df.csv',index=False)
+
+        records_df = st.secrets["dataset_record"]["data_record"]
+        records_df = pd.DataFrame(records_df)
+        records_df.to_csv('record_df.csv',index=False)
+	    
         # Normalize 'type' for HOPE_DRIVE clinic
         df['type_adj'] = df['type']
         df.loc[(df['clinic'] == 'HOPE_DRIVE') & (df['type'].str.startswith('AM')), 'type_adj'] = 'AM'
@@ -2203,6 +2211,14 @@ elif st.session_state.page == "Create List":
         if unmatched.size > 0:
             st.write("Warning: Unmatched names found:", unmatched)
 
+        # Convert mapping dataframe to dictionary
+        mapping_dict = dict(zip(records_df["legal_name"], records_df["record_id"]))
+
+        # Map names
+        provider_df["record_id"] = provider_df["student"].map(mapping_dict)
+        
+        provider_df = provider_df[['record_id','formatted_name','eval_due_date']]  
+	
         csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
     except Exception as e:
