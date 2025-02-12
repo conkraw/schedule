@@ -2160,7 +2160,7 @@ elif st.session_state.page == "Create List":
         wb_bytes = save_to_bytes_wb(wb1)
         st.download_button(label="Download Medical Student Schedule",data=wb_bytes,file_name="Main_Schedule_MS.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-        df = pd.read_csv('PALIST.csv', dtype=str); data = st.secrets["dataset"]["data"]; st.dataframe(data)
+        df = pd.read_csv('PALIST.csv', dtype=str); mapping_df = st.secrets["dataset"]["data"]; st.dataframe(data)
 	
         # Normalize 'type' for HOPE_DRIVE clinic
         df['type_adj'] = df['type']
@@ -2182,8 +2182,39 @@ elif st.session_state.page == "Create List":
         # Display only flagged duplicate records
         st.write("Duplicate Check:"); st.dataframe(df_duplicates)
 
-        df_eval = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14))); st.write("Evaluation Due Dates:"); st.dataframe(df_eval)
-        csv_bytes = save_to_bytes_csv(df_eval); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
+        provider_df = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14))); st.write("Evaluation Due Dates:"); st.dataframe(provider_df)
+
+	def validate_columns(provider_df, mapping_df):
+	    required_provider_cols = {"provider"}
+	    required_mapping_cols = {"name", "Formatted Name"}
+	
+	    if not required_provider_cols.issubset(provider_df.columns):
+	        raise ValueError("Ensure 'provider' column exists in Provider Dataset.")
+	    if not required_mapping_cols.issubset(mapping_df.columns):
+	        raise ValueError("Ensure 'name' and 'Formatted Name' columns exist in Mapping Dataset.")
+	
+	# Function to process and match provider names
+	def match_provider_names(provider_df, mapping_df):
+	    # Validate columns
+	    validate_columns(provider_df, mapping_df)
+	
+	    # Clean the provider and name columns
+	    provider_df["provider"] = provider_df["provider"].str.lower().str.strip()
+	    mapping_df["name"] = mapping_df["name"].str.lower().str.strip()
+	
+	    # Merge datasets on the 'name' column
+	    merged_df = provider_df.merge(mapping_df, left_on="provider", right_on="name", how="left")
+	
+	    # Drop unnecessary columns and rename formatted name
+	    merged_df = merged_df.drop(columns=["name"])
+	    merged_df.rename(columns={"Formatted Name": "formatted_name"}, inplace=True)
+	
+	    # Identify unmatched providers
+	    unmatched_providers = merged_df[merged_df["formatted_name"].isna()]["provider"].unique()
+	
+	    return merged_df, unmatched_providers
+
+	csv_bytes = save_to_bytes_csv(merged_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
