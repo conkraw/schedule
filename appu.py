@@ -1049,7 +1049,13 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
-	df.to_excel('final.xlsx',index=False); table_df = df[['student','clinic','date']]; table_df["date"] = pd.to_datetime(table_df["date"]); start_date = pd.to_datetime(st.session_state.start_date); table_df["week_num"] = ((table_df["date"] - start_date).dt.days // 7) + 1; table_df["week_label"] = "Week " + table_df["week_num"].astype(str); st.dataframe(table_df)
+	df.to_excel('final.xlsx',index=False)
+	table_df = df[['student','clinic','date']]
+	table_df["date"] = pd.to_datetime(table_df["date"])
+	table_df["week_num"] = ((table_df["date"] - start_date).dt.days // 7) + 1
+	table_df["week_label"] = "Week " + table_df["week_num"].astype(str)
+	grouped_df = table_df.groupby("week_label")["student"].apply(lambda x: ", ".join(x)).reset_index()
+	st.dataframe(grouped_df)
 
 	########################################################################################################################################################################
 	import openpyxl
