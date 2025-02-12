@@ -2199,11 +2199,11 @@ elif st.session_state.page == "Create List":
             validate_columns(provider_df, mapping_df)
 
             # Clean the provider and name columns
-            provider_df["provider"] = provider_df["provider"].str.lower().str.strip()
+            provider_df["providers"] = provider_df["providers"].str.lower().str.strip()
             mapping_df["name"] = mapping_df["name"].str.lower().str.strip()
 
             # Merge datasets on the 'name' column
-            merged_df = provider_df.merge(mapping_df, left_on="provider", right_on="name", how="left")
+            merged_df = provider_df.merge(mapping_df, left_on="providers", right_on="name", how="left")
 
             # Drop unnecessary columns and rename formatted name
             merged_df = merged_df.drop(columns=["name"])
