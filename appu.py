@@ -2204,7 +2204,7 @@ elif st.session_state.page == "Create List":
         mapping_dict = dict(zip(mapping_df["name"], mapping_df["Formatted Name"]))
 
         # Map names
-        provider_df["formatted_name"] = provider_df["providers"].map(mapping_dict)
+        provider_df["formatted_name"] = provider_df["providers"].map(mapping_dict).fillna(provider_df["providers"])
 
         # Print unmatched values
         unmatched = provider_df[provider_df["formatted_name"].isna()]["providers"].unique()
