@@ -2216,7 +2216,7 @@ elif st.session_state.page == "Create List":
 	
         processed_df, unmatched_names = match_provider_names(provider_df, mapping_df)
 
-        processed_df.to_csv("PALIST.csv", index=False)
+        processed_df.to_csv("PALIST.csv", index=False); st.dataframe(processed_df)
 
         # Alert if there are unmatched providers
         if unmatched_names.size > 0:
