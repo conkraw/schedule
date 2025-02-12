@@ -2182,7 +2182,7 @@ elif st.session_state.page == "Create List":
         # Display only flagged duplicate records
         st.write("Duplicate Check:"); st.dataframe(df_duplicates);                
 
-        provider_df = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14))); st.write("Evaluation Due Dates:"); st.dataframe(provider_df)
+        provider_df = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], format="%Y-%m-%d", errors='coerce'))  .groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14)));st.write("Evaluation Due Dates:");st.dataframe(provider_df)
 
         def validate_columns(provider_df, mapping_df):
             required_provider_cols = {"providers"}
