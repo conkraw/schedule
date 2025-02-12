@@ -2188,17 +2188,17 @@ elif st.session_state.page == "Create List":
         mapping_df = pd.read_csv("mapping_df.csv")  # The file with 'name' and 'Formatted Name'
 
         # Normalize columns for matching
-        provider_df["name"] = provider_df["name"].str.strip().str.lower()
+        provider_df["providers"] = provider_df["providers"].str.strip().str.lower()
         mapping_df["name"] = mapping_df["name"].str.strip().str.lower()
 
         # Convert mapping dataframe to dictionary
         mapping_dict = dict(zip(mapping_df["name"], mapping_df["Formatted Name"]))
 
         # Map names
-        provider_df["formatted_name"] = provider_df["name"].map(mapping_dict)
+        provider_df["formatted_name"] = provider_df["providers"].map(mapping_dict)
 
         # Print unmatched values
-        unmatched = provider_df[provider_df["formatted_name"].isna()]["name"].unique()
+        unmatched = provider_df[provider_df["formatted_name"].isna()]["providers"].unique()
         if unmatched.size > 0:
             print("Warning: Unmatched names found:", unmatched)
 
