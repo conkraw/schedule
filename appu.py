@@ -1009,7 +1009,7 @@ elif st.session_state.page == "OPD Creator":
 
 	
 	
-	df.to_csv("resident_schedule.csv", index=False)
+	df.to_csv("resident_schedule.csv", index=False); st.dataframe(df)
 
 	
 	# Process each file
