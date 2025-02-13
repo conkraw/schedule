@@ -1093,7 +1093,7 @@ elif st.session_state.page == "OPD Creator":
 	dateMAP['date'] = pd.to_datetime(dateMAP['date'])
 	dateMAP['date'] = dateMAP['date'].dt.strftime('%m/%d/%Y')
 	
-	dateMAP.to_csv('xxxDATEMAP.csv',index=False)
+	dateMAP.to_csv('xxxDATEMAP.csv',index=False); st.dataframe(dateMAP)
 	
 	mydict = {}
 	with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
