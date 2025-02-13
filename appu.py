@@ -730,9 +730,7 @@ elif st.session_state.page == "OPD Creator":
 
 	import pandas as pd
 	
-	# Load dataset
-	file_path = "test.xlsx"  # Replace with actual filename if needed
-	df = pd.read_excel(file_path, dtype=str)
+	df = pd.read_excel(uploadedfiles["RESIDENT.xlsx", dtype=str)
 	
 	# Save to CSV
 	df.to_csv("test.csv", index=False)
