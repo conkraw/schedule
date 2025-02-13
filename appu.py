@@ -1153,7 +1153,7 @@ elif st.session_state.page == "OPD Creator":
 	df2 = pd.read_csv('final2.csv', dtype=str)
 	
 	# Combine both DataFrames (stack rows)
-	df = pd.concat([df1, df2], ignore_index=True); st.dataframe(df)
+	df = pd.concat([df1, df2], ignore_index=True)
 	
 	# Save and display the combined dataset
 	#df_combined.to_csv('combined_resident_schedule.csv', index=False)
@@ -1316,7 +1316,7 @@ elif st.session_state.page == "OPD Creator":
 	                    break
 		
 	# ✅ Save and display the updated dataset
-	df.to_csv('final.csv', index=False)
+	df.to_csv('final.csv', index=False); st.dataframe(df)
 	
 	################################################################################################################################################################################################
 	df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
