@@ -1466,6 +1466,7 @@ elif st.session_state.page == "OPD Creator":
 	process_excel_mapping("ER_CONS","ER_CONS")
 	process_excel_mapping("ADOLMED","ADOLMED")
 	process_excel_mapping("WARD_C","W_C")
+	process_excel_mapping("RESIDENT","RESIDENT")
 
 	###############################################################################################
 
