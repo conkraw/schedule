@@ -1129,7 +1129,7 @@ elif st.session_state.page == "OPD Creator":
 
 	df.to_csv('final2.csv', index=False)
 	
-	df = pd.read_csv('resident_schedule.csv', dtype=str)
+	df = pd.read_csv('resident_schedule.csv')
 	df['date'] = pd.to_datetime(df['date'], errors='coerce')
 	
 	start_date = pd.to_datetime(st.session_state.start_date, format='%Y-%m-%d', errors='coerce')
