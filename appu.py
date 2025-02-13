@@ -2571,8 +2571,7 @@ elif st.session_state.page == "Create List":
 
         # Print unmatched values
         unmatched = provider_df[provider_df["formatted_name"].isna()]["providers"].unique()
-        if unmatched.size > 0:
-            st.write("Warning: Unmatched names found:", unmatched)
+        st.write('Unmatched:'); st.write(unmatched)
 
         # Convert mapping dataframe to dictionary
         mapping_dict = dict(zip(records_df["legal_name"], records_df["record_id"]))
