@@ -1006,6 +1006,8 @@ elif st.session_state.page == "OPD Creator":
 	# Save and display the updated DataFrame
 	
 	df['clinic'] = "RESIDENT"
+
+	
 	
 	df.to_csv("resident_schedule.csv", index=False)
 
@@ -1145,6 +1147,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
+	df = df[["date", "type", "provider", "clinic", "class", "datecode", "student"]]
+	
 	df.to_csv('resident_schedule.csv', index=False); st.dataframe(df)
 	
 	df = pd.read_csv('final2.csv',dtype=str); st.dataframe(df) 
