@@ -940,6 +940,76 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Save to CSV
 	df.to_csv('resident_schedule.csv', index=False)
+
+	df = pd.read_csv('resident_schedule.csv', dtype=str)
+
+	df["type"] = "AM - Continuity"
+	df["student"] = ""
+	df["text"] = ""
+	df["class"] = ""
+	df["datecode"] = ""
+	
+	# Define the new column order
+	new_column_order = ["Date", "type", "Name", "student", "Rotation", "text", "class", "datecode"]
+	
+	# Reorder the DataFrame
+	df = df[new_column_order]
+	
+	# Rename columns
+	df = df.rename(columns={
+	    "Date": "date",
+	    "Name": "provider",
+	    "Rotation": "clinic"
+	})
+	          
+	
+	df_copy = df.copy()
+	
+	# Change the 'Type' column to 'PM - Continuity' in the copied DataFrame
+	df_copy["type"] = "PM - Continuity"
+	
+	# Concatenate the original and modified DataFrames
+	df = pd.concat([df, df_copy], ignore_index=True)
+	
+	# Update 'Type' column based on 'Rotation' containing 'HOPE_DRIVE'
+	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "AM - Continuity"), "type"] = "AM - ACUTES"
+	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "PM - Continuity"), "type"] = "PM - ACUTES"
+	
+	# Ensure 'type' is grouped separately to retain both AM and PM
+	df = df.groupby(["date", "clinic", "type"], as_index=False).agg({
+	    "provider": lambda x: " / ".join(x.dropna()),  # Join providers while handling NaN values
+	    "student": lambda x: " / ".join(x.dropna()),   # Join students while handling NaN values
+	    "text": "first",         # Keep the first non-null text entry
+	    "class": "first",        # Keep the first non-null class
+	    "datecode": "first"      # Keep the first non-null datecode
+	})
+	
+	df['student'] = ""
+	
+	# Define conditions for AM types
+	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "AM - ACUTES"), "class"] = "H0"
+	df.loc[(df["clinic"] == "WARD_A") & (df["type"] == "AM - Continuity"), "class"] = "H1"
+	df.loc[(df["clinic"] == "PSHCH_NURSERY") & (df["type"] == "AM - Continuity"), "class"] = "H2"
+	df.loc[(df["clinic"] == "WARD_P") & (df["type"] == "AM - Continuity"), "class"] = "H3"
+	df.loc[(df["clinic"] == "WARD_C") & (df["type"] == "AM - Continuity"), "class"] = "H4"
+	df.loc[(df["clinic"] == "ED_CONSULTS") & (df["type"] == "AM - Continuity"), "class"] = "H5"
+	df.loc[(df["clinic"] == "PICU") & (df["type"] == "AM - Continuity"), "class"] = "H6"
+	
+	# Define conditions for PM types (incrementing H numbers)
+	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "PM - ACUTES"), "class"] = "H10"
+	df.loc[(df["clinic"] == "WARD_A") & (df["type"] == "PM - Continuity"), "class"] = "H11"
+	df.loc[(df["clinic"] == "PSHCH_NURSERY") & (df["type"] == "PM - Continuity"), "class"] = "H12"
+	df.loc[(df["clinic"] == "WARD_P") & (df["type"] == "PM - Continuity"), "class"] = "H13"
+	df.loc[(df["clinic"] == "WARD_C") & (df["type"] == "PM - Continuity"), "class"] = "H14"
+	df.loc[(df["clinic"] == "ED_CONSULTS") & (df["type"] == "PM - Continuity"), "class"] = "H15"
+	df.loc[(df["clinic"] == "PICU") & (df["type"] == "PM - Continuity"), "class"] = "H16"
+	
+	# Save and display the updated DataFrame
+	
+	df['clinic'] = "RESIDENT"
+	
+	df.to_csv("resident_schedule.csv", index=False)
+
 	
 	# Process each file
 	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
@@ -1059,19 +1129,26 @@ elif st.session_state.page == "OPD Creator":
 	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
 	df.to_csv('final2.csv', index=False)
-
-	#df = pd.read_csv('resident_schedule.csv')
-	#df['date'] = df['date'].dt.strftime('%m/%d/%Y')
-	#mydict = {}
-	#with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
-	#	reader = csv.reader(inp)
-	#	df1 = {rows[1]:rows[0] for rows in reader} 
 	
-	#df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
+	df = pd.read_csv('resident_schedule.csv', dtype=str)
+	df['date'] = pd.to_datetime(df['date'], format='%m/%d/%Y')
+	
+	start_date = pd.to_datetime(st.session_state.start_date)
+	end_date = start_date + pd.Timedelta(days=34)
 
-	#df.to_csv('resident_schedule.csv', index=False)
+	df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+	df['date'] = df['date'].dt.strftime('%m/%d/%Y')
+	
+	mydict = {}
+	with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
+		reader = csv.reader(inp)
+		df1 = {rows[1]:rows[0] for rows in reader} 
+	
+	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
-	df = pd.read_csv('final2.csv',dtype=str) 
+	df.to_csv('resident_schedule.csv', index=False); st.dataframe(df)
+	
+	df = pd.read_csv('final2.csv',dtype=str); st.dataframe(df) 
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 	
