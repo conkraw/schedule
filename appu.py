@@ -950,7 +950,7 @@ elif st.session_state.page == "OPD Creator":
 	df["datecode"] = ""
 	
 	# Define the new column order
-	new_column_order = ["Date", "type", "Name", "student", "Rotation", "text", "class", "datecode"]
+	new_column_order = ["Date", "type", "Name", "Rotation", "class", "datecode", "student"]
 	
 	# Reorder the DataFrame
 	df = df[new_column_order]
