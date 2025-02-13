@@ -182,7 +182,8 @@ elif st.session_state.page == "Upload Files":
         "GI Daytime Service": ["WARD_GI.xlsx"],
         "Complex": ["COMPLEX.xlsx"],
         "Adol Med": ["ADOLMED.xlsx"], 
-        "cl5rks1p": ["Book4.xlsx"]
+        "cl5rks1p": ["Book4.xlsx"], 
+        "Rotation": ["RESIDENT.xlsx"], 
     }
     # Required files for validation
     required_files = set(file for filenames in file_identifiers.values() for file in filenames)
@@ -726,6 +727,119 @@ elif st.session_state.page == "OPD Creator":
 	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
 	    "Book4.xlsx": {"": "", "": ""},  
 	}	
+
+	import pandas as pd
+	import re
+	from datetime import datetime, timedelta
+	
+	# Load dataset
+	df = pd.read_excel(uploaded_files['RESIDENT.xlsx'], dtype=str)
+	
+	# Fix encoding issues and remove non-breaking spaces
+	df["Rotation"] = df["Rotation"].astype(str).str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True).str.strip()
+	
+	# Fill down 'Rotation' column to propagate values forward
+	df["Rotation"] = df["Rotation"].fillna(method="ffill")
+	
+	# Define the list of valid rotations
+	valid_rotations = [
+	    'Acutes Intern', 'Acute Sr', 'ED Consults', 'NBN Intern', 'NBN Sr', 
+	    'PICU', 'Ward A Intern', 'Ward A Sr', 
+	    'Ward C Intern', 'Ward C Sr', 'Ward P Intern', 'Ward P Sr'
+	]
+	
+	# Filter dataset to keep only valid rotations
+	df = df[df["Rotation"].isin(valid_rotations)]
+	
+	# Drop fully empty rows
+	df = df.dropna(how="all")
+	
+	# Define block columns
+	block_columns = [col for col in df.columns if "Block" in col]
+	
+	# Remove R1, R2, R3, R4 from block columns
+	df[block_columns] = df[block_columns].applymap(lambda x: "" if x in ["R1", "R2", "R3", "R4"] else x)
+	
+	# Trim and strip whitespace from all columns
+	df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+	
+	# Expand dataset by creating rows for each day within assigned blocks
+	expanded_rows = []
+	
+	# Function to extract block start and end dates
+	def extract_dates(block_name):
+	    match = re.search(r"\((\d{2}/\d{2}/\d{4}) - (\d{2}/\d{2}/\d{4})\)", block_name)
+	    return (datetime.strptime(match.group(1), "%m/%d/%Y"), datetime.strptime(match.group(2), "%m/%d/%Y")) if match else (None, None)
+	
+	# Iterate through each row to expand by block dates
+	for _, row in df.iterrows():
+	    rotation = row["Rotation"]
+	    for block in block_columns:
+	        start_date, end_date = extract_dates(block)
+	        if start_date and end_date and pd.notna(row[block]):
+	            name = row[block].strip()
+	            current_date = start_date
+	            while current_date <= end_date:
+	                expanded_rows.append([rotation, current_date.strftime("%m/%d/%Y"), name])
+	                current_date += timedelta(days=1)
+	
+	# Create expanded DataFrame
+	expanded_df = pd.DataFrame(expanded_rows, columns=["Rotation", "Date", "Name"])
+	
+	# Convert Date column to datetime format
+	expanded_df["Date"] = pd.to_datetime(expanded_df["Date"], format="%m/%d/%Y")
+	
+	# Function to filter rows based on valid date ranges in "Name"
+	def extract_valid_dates(name, reference_year):
+	    match = re.search(r"\((\d{1,2}/\d{1,2}) - (\d{1,2}/\d{1,2})\)", name)
+	    if match:
+	        start_date = datetime(reference_year, *map(int, match.group(1).split("/")))
+	        end_date = datetime(reference_year, *map(int, match.group(2).split("/")))
+	        return start_date, end_date
+	    return None, None
+	
+	# Get reference year from the dataset
+	reference_year = expanded_df["Date"].dt.year.mode()[0]
+	
+	# Filter dataset to include only valid date ranges
+	filtered_rows = [
+	    row for _, row in expanded_df.iterrows()
+	    if (start_date := extract_valid_dates(row["Name"], reference_year))[0] is None or start_date[0] <= row["Date"] <= start_date[1]
+	]
+	
+	# Create filtered DataFrame
+	filtered_df = pd.DataFrame(filtered_rows)
+	
+	# Function to clean names by removing parentheses and their contents
+	filtered_df["Name"] = filtered_df["Name"].apply(lambda x: re.sub(r"\s*\(.*?\)", "", x).strip() if pd.notna(x) else x)
+	
+	# Mapping dictionary for rotation names
+	mapping = {
+	    'Acutes Intern': 'HOPE_DRIVE',
+	    'Acute Sr': 'HOPE_DRIVE',
+	    'ED Consults': 'ED_CONSULTS',
+	    'NBN Intern': 'PSHCH_NURSERY',
+	    'NBN Sr': 'PSHCH_NURSERY',
+	    'PICU': 'PICU',
+	    'Ward A Intern': 'WARD_A',
+	    'Ward A Sr': 'WARD_A',
+	    'Ward C Intern': 'WARD_C',
+	    'Ward C Sr': 'WARD_C',
+	    'Ward P Intern': 'WARD_P',
+	    'Ward P Sr': 'WARD_P'
+	}
+	
+	# Apply mapping to rotation column
+	filtered_df['Rotation'] = filtered_df['Rotation'].map(mapping)
+	
+	# List of rotations to remove
+	remove_list = ['Anesthesia', 'Family & Community Medicine @ State College', 'Family & Community Medicine']
+	
+	# Remove unwanted names
+	filtered_df = filtered_df[~filtered_df['Name'].isin(remove_list)]
+	
+	# Save final dataset
+	filtered_df.to_csv("resident_schedule.csv", index=False)
 
 	# Process each file
 	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
