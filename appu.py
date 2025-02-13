@@ -2174,7 +2174,7 @@ elif st.session_state.page == "Create List":
 
         df = df.loc[df['student'] != "0"]
 
-        df.to_excel('Source1.xlsx', index=False); st.dataframe(df)
+        df.to_excel('Source1.xlsx', index=False)
 
         import openpyxl
         import numpy as np 
@@ -2525,7 +2525,7 @@ elif st.session_state.page == "Create List":
 
         df = pd.read_csv('PALIST.csv', dtype=str)
         mapping_df = st.secrets["dataset"]["data"]
-        st.dataframe(mapping_df)
+        #st.dataframe(mapping_df)
         mapping_df = pd.DataFrame(mapping_df)
         mapping_df.to_csv('mapping_df.csv',index=False)
 
@@ -2554,7 +2554,7 @@ elif st.session_state.page == "Create List":
         st.write("Duplicate Check:"); st.dataframe(df_duplicates);                
 
         provider_df = (df[df['student'].notna() & (df['student'].str.strip() != "")].assign(date=pd.to_datetime(df['date'], errors='coerce')).groupby(['student', 'providers'], as_index=False)['date'].max().assign(eval_due_date=lambda x: x['date'] + pd.Timedelta(days=14)))
-        provider_df['providers'] = provider_df['providers'].str.split('/'); provider_df = provider_df.explode('providers').reset_index(drop=True); st.write("Evaluation Due Dates:");st.dataframe(provider_df); provider_df.to_csv('provider_df.csv',index=False)
+        provider_df['providers'] = provider_df['providers'].str.split('/'); provider_df = provider_df.explode('providers').reset_index(drop=True); provider_df.to_csv('provider_df.csv',index=False)
 
         provider_df = pd.read_csv("provider_df.csv")
         mapping_df = pd.read_csv("mapping_df.csv")  # The file with 'name' and 'Formatted Name'
@@ -2575,7 +2575,7 @@ elif st.session_state.page == "Create List":
         # Map names
         provider_df["record_id"] = provider_df["student"].map(mapping_dict)
         
-        provider_df = provider_df[['record_id','formatted_name','date', 'eval_due_date']]; lower_case_names_list = provider_df.loc[provider_df['formatted_name'].str.islower(), 'formatted_name'].drop_duplicates().tolist(); horizontal_string = ", ".join(lower_case_names_list); st.write('Unmatched:'); st.write(horizontal_string)  
+        provider_df = provider_df[['record_id','formatted_name','date', 'eval_due_date']]; lower_case_names_list = provider_df.loc[provider_df['formatted_name'].str.islower(), 'formatted_name'].drop_duplicates().tolist(); horizontal_string = ", ".join(lower_case_names_list); st.write('Unmatched:' + horizontal_string)  
 	
         csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
