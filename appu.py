@@ -1131,9 +1131,9 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final2.csv', index=False)
 	
 	df = pd.read_csv('resident_schedule.csv', dtype=str)
-	df['date'] = pd.to_datetime(df['date'], format='%m/%d/%Y')
+	df['date'] = pd.to_datetime(df['date'], errors='coerce', format='mixed')
 	
-	start_date = pd.to_datetime(st.session_state.start_date)
+	start_date = pd.to_datetime(st.session_state.start_date, format='%Y-%m-%d', errors='coerce')
 	end_date = start_date + pd.Timedelta(days=34)
 
 	df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
