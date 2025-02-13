@@ -2568,18 +2568,14 @@ elif st.session_state.page == "Create List":
 
         # Map names
         provider_df["formatted_name"] = provider_df["providers"].map(mapping_dict).fillna(provider_df["providers"])
-
-        # Print unmatched values
-        unmatched = provider_df[provider_df["formatted_name"].isna()]["providers"].unique()
-        st.write('Unmatched:'); st.write(unmatched)
-
+	    
         # Convert mapping dataframe to dictionary
         mapping_dict = dict(zip(records_df["legal_name"], records_df["record_id"]))
 
         # Map names
         provider_df["record_id"] = provider_df["student"].map(mapping_dict)
         
-        provider_df = provider_df[['record_id','formatted_name','date', 'eval_due_date']]  
+        provider_df = provider_df[['record_id','formatted_name','date', 'eval_due_date']]; lower_case_names = provider_df.loc[provider_df['formatted_name'].str.islower(), 'formatted_name']; st.write('Unmatched:'); st.write(lower_case_names)  
 	
         csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="PALIST.csv",mime="text/csv")
 	    
