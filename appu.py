@@ -1007,7 +1007,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['clinic'] = "RESIDENT"
 	
-	df.to_csv("resident_schedule.csv", index=False); st.dataframe(df)
+	df.to_csv("resident_schedule.csv", index=False)
 
 	
 	# Process each file
