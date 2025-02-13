@@ -1316,7 +1316,7 @@ elif st.session_state.page == "OPD Creator":
 	                    break
 		
 	# ✅ Save and display the updated dataset
-	df.to_csv('final.csv', index=False); st.dataframe(df)
+	df.to_csv('final.csv', index=False)
 	
 	################################################################################################################################################################################################
 	df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
@@ -1362,7 +1362,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
-	df.to_excel('final.xlsx',index=False)
+	df.to_excel('final.xlsx',index=False); st.dataframe(df)
 	
 	# Select relevant columns
 	table_df = df[['student', 'clinic', 'date']]
