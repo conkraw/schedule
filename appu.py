@@ -1162,159 +1162,159 @@ elif st.session_state.page == "OPD Creator":
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 	
-	# Extract the minimum date
-	min_date = df['date'].min()
-
-	# Ensure date column is in datetime format (strip timestamps)
-	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
+	# -----------------------------
+	# PRE-REQUISITES:
+	# - df is your DataFrame containing rows for clinics with columns "clinic", "datecode", "class", etc.
+	# - student_names is your master list (or Series) of student names.
+	# - Clear the "student" column before starting.
+	# -----------------------------
+	df["student"] = np.nan
 	
-	# Filter for WARD_A and exclude providers with class H5 and H15
-	df_filtered = df[(df['clinic'] == 'WARD_A') & (~df['class'].isin(['H5', 'H15']))].copy()
+	# -----------------------------
+	# Define week mapping (datecodes for each week)
+	# -----------------------------
+	weeks = {
+	    "week1": ["T0", "T1", "T2", "T3", "T4"],
+	    "week2": ["T7", "T8", "T9", "T10", "T11"],
+	    "week3": ["T14", "T15", "T16", "T17", "T18"],
+	    "week4": ["T21", "T22", "T23", "T24", "T25"]
+	}
 	
-	# Compute the Monday start of each week
-	df_filtered['week_start'] = df_filtered['date'] - pd.to_timedelta(df_filtered['date'].apply(lambda x: x.weekday()), unit='D')
-	unique_weeks = sorted(df_filtered['week_start'].unique())
+	# =============================
+	# STEP 1: EVENLY DISTRIBUTED WARD_A ASSIGNMENT
+	# -----------------------------
+	# WARD_A uses 5 room pairs:
+	ward_a_room_pairs = [("H0", "H10"), ("H1", "H11"), ("H2", "H12"), ("H3", "H13"), ("H4", "H14")]
+	ward_a_capacity = 5  # maximum number of assignments (students) per week in WARD_A
 	
-	# Define class groups mapping (ordered so we fill one group at a time)
-	class_groups = [('H0', 'H10'), ('H1', 'H11'),('H2', 'H12'), ('H3', 'H13'), ('H4', 'H14')]
+	# We'll track the current count per week:
+	ward_a_counts = {"week1": 0, "week2": 0, "week3": 0, "week4": 0}
+	# Record the week each student got a WARD_A assignment.
+	ward_a_assignment = {}
 	
-	# Shuffle students before assigning (so they are not in a fixed order)
-	random.shuffle(unique_student_names)
-	
-	# Track assigned students to ensure they are only used once (globally)
-	assigned_students = set()
-	total_students = len(unique_student_names)
-	alert_triggered = False  # Flag to detect if no student was available
-	
-	# Assign students **by group first** instead of filling whole weeks at once
-	for class_group in class_groups:
-	    for week_start in unique_weeks:
-	        # Select students for this group (only unassigned students)
-	        available_students = [s for s in unique_student_names if s not in assigned_students]
-	        
-	        # If not enough students are left, trigger an alert and stop assigning
-	        if len(available_students) < 1:
-	            alert_triggered = True  # No students left to assign
-	            break  # Stop assignment process
-	
-	        selected_student = available_students[0]  # Take one student for this group
-	        assigned_students.add(selected_student)  # Mark as assigned
-	
-	        # Assign student to all classes in this group for that week
-	        for class_type in class_group:
-	            class_filter = (
-	                (df['class'] == class_type) &
-	                (df['clinic'] == 'WARD_A') &  # ✅ Ensure only WARD_A is assigned
-	                (df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D') == week_start) &
-	                (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday (5) & Sunday (6)
-	            )
-	            df.loc[class_filter, 'student'] = selected_student
-	# Alert if no students were available for assignment
-	if alert_triggered:
-	    st.warning("⚠️ Not enough students to complete assignments! Some providers may be unassigned.")
-	
-	df['text'] = df['provider'] + " ~ " + df['student']
-
-	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
-	
-	df.to_csv('final.csv',index=False); st.dataframe(df)
-	
-	################################################################################################################################################################################################
-	
-	# ✅ Load dataset
-	df = pd.read_csv('final.csv')
-	
-	# ✅ Convert date to datetime and strip timestamps
-	df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.date  
-	
-	# ✅ Ensure `week_start` exists in the main dataframe BEFORE filtering
-	df['week_start'] = df['date'] - pd.to_timedelta(df['date'].apply(lambda x: x.weekday()), unit='D')
-	
-	# ✅ Define the weeks and class groups for each clinic
-	unique_weeks = sorted(df['week_start'].unique())
-	
-	sjr_hosp_groups = [('H2', 'H12'), ('H3', 'H13')]
-	hampden_nursery_groups = [('H3', 'H13')]
-	pshch_nursery_groups = [('H0', 'H10'), ('H1', 'H11')]
-	
-	# ✅ Track assigned students to avoid duplicates
-	assigned_students = set()
-	
-	### **1️⃣ Assign Students to `SJR_HOSP` First**
-	for week_start in unique_weeks:
-	    available_students = [s for s in unique_student_names if s not in assigned_students]
-	    
-	    if not available_students:
-	        continue  # ✅ Skip if no students left
-	
-	    # ✅ Exclude students already assigned to WARD_A in the same week
-	    unavailable_students = set(df[(df['clinic'] == 'WARD_A') & (df['week_start'] == week_start)]['student'].dropna())
-	
-	    # ✅ Keep only students not assigned in WARD_A that week
-	    available_students = [s for s in available_students if s not in unavailable_students]
-	
-	    # ✅ Shuffle students to distribute fairly
-	    random.shuffle(available_students)
-	    
-	    for class_group in sjr_hosp_groups:
-	        if not available_students:
-	            break  # ✅ Stop if no students left
-	
-	        selected_student = available_students.pop(0)  # Take one student
-	        assigned_students.add(selected_student)  # Mark as assigned
-	
-	        class_filter = df['class'].isin(class_group) & \
-	                       (df['clinic'] == 'SJR_HOSP') & \
-	                       (df['week_start'] == week_start) & \
-	                       (df['date'].apply(lambda x: x.weekday()) < 5)  # ✅ Exclude Saturday & Sunday
-	
-	        df.loc[class_filter, 'student'] = selected_student
-	
-	### **2️⃣ Assign Students to `HAMPDEN_NURSERY` (H3/H13)**
-	for week_start in unique_weeks:
-	    available_students = [s for s in unique_student_names if s not in assigned_students]
-	    
-	    if not available_students:
-	        continue
-	
-	    for class_group in hampden_nursery_groups:
-	        if not available_students:
+	# Distribute students evenly over weeks.
+	for student in student_names:
+	    # Find all weeks with available capacity.
+	    available_weeks = {wk: cnt for wk, cnt in ward_a_counts.items() if cnt < ward_a_capacity}
+	    if not available_weeks:
+	        break  # All weeks are full.
+	    # Choose the week with the smallest count.
+	    target_week = min(available_weeks, key=available_weeks.get)
+	    datecodes = weeks[target_week]
+	    slot_found = False
+	    # Try each room pair in order.
+	    for room_pair in ward_a_room_pairs:
+	        mask = (df["clinic"].str.upper() == "WARD_A") & (df["datecode"].isin(datecodes))
+	        df_week = df[mask]
+	        mask1 = (df_week["class"] == room_pair[0]) & (df_week["student"].isna())
+	        mask2 = (df_week["class"] == room_pair[1]) & (df_week["student"].isna())
+	        if mask1.sum() > 0 and mask2.sum() > 0:
+	            idx1 = df_week[mask1].index[0]
+	            idx2 = df_week[mask2].index[0]
+	            df.at[idx1, "student"] = student
+	            df.at[idx2, "student"] = student
+	            ward_a_counts[target_week] += 1
+	            ward_a_assignment[student] = target_week
+	            slot_found = True
 	            break
+	    if not slot_found:
+	        # If no slot found in the chosen week, you might try another week (if desired)
+	        pass
 	
-	        selected_student = available_students.pop(0)
-	        assigned_students.add(selected_student)
+	# =============================
+	# STEP 2: EXTRA ASSIGNMENTS
+	# Each student must also receive one extra assignment (in a week different from their WARD_A week)
+	# Priority order and capacities:
+	#   Priority 1: HAMPDEN_NURSERY (allowed only in week1 and week3, capacity: 1 per week)
+	#   Priority 2: SJR_HOSP (allowed in any week except student's WARD_A week, capacity: 2 per week)
+	#   Priority 3: PSHCH_NURSERY (allowed in any week except student's WARD_A week, capacity: 1 per week;
+	#                if primary slot H0/H10 not available, then fallback slot H1/H11)
+	# -----------------------------
+	# Set up capacity dictionaries:
+	hampden_capacity = {"week1": 1, "week3": 1}      # HAMPDEN_NURSERY only in week1 & week3
+	sjr_capacity    = {"week1": 2, "week2": 2, "week3": 2, "week4": 2}  # SJR_HOSP capacity per week
+	pshch_capacity  = {"week1": 1, "week2": 1, "week3": 1, "week4": 1}  # PSHCH_NURSERY capacity per week
 	
-	        class_filter = df['class'].isin(class_group) & \
-	                       (df['clinic'] == 'HAMPDEN_NURSERY') & \
-	                       (df['week_start'] == week_start) & \
-	                       (df['date'].apply(lambda x: x.weekday()) < 5)
+	# Record extra assignments: student -> (clinic, week)
+	extra_assignment = {}
 	
-	        df.loc[class_filter, 'student'] = selected_student
+	# Helper function: Try to assign a student into a slot.
+	def assign_slot(student, clinic, week, room_pair):
+	    """
+	    Attempt to assign 'student' into an available slot for 'clinic' in the given 'week'
+	    using the provided room_pair (tuple of two class codes).
+	    Returns True if assignment is made; False otherwise.
+	    """
+	    datecodes = weeks[week]
+	    mask = (df["clinic"].str.upper() == clinic.upper()) & (df["datecode"].isin(datecodes))
+	    df_week = df[mask]
+	    mask1 = (df_week["class"] == room_pair[0]) & (df_week["student"].isna())
+	    mask2 = (df_week["class"] == room_pair[1]) & (df_week["student"].isna())
+	    if mask1.sum() > 0 and mask2.sum() > 0:
+	        idx1 = df_week[mask1].index[0]
+	        idx2 = df_week[mask2].index[0]
+	        df.at[idx1, "student"] = student
+	        df.at[idx2, "student"] = student
+	        return True
+	    return False
 	
-	### **3️⃣ Assign Remaining Students to `PSHCH_NURSERY` (H0/H10, H1/H11)**
-	for week_start in unique_weeks:
-	    available_students = [s for s in unique_student_names if s not in assigned_students]
-	    
-	    if not available_students:
-	        continue
+	# For each student (who got a WARD_A assignment), try to assign an extra slot
+	for student in student_names:
+	    if student not in ward_a_assignment:
+	        continue  # Should not happen if all students got a WARD_A assignment.
+	    wa_week = ward_a_assignment[student]
+	    assigned_extra = False
 	
-	    for class_group in pshch_nursery_groups:
-	        if not available_students:
-	            break
+	    # --- Priority 1: HAMPDEN_NURSERY (allowed only in week1 and week3) ---
+	    # Try week1 first (if student's WARD_A week is not week1)
+	    if wa_week != "week1" and hampden_capacity.get("week1", 0) > 0:
+	        if assign_slot(student, "HAMPDEN_NURSERY", "week1", ("H3", "H13")):
+	            hampden_capacity["week1"] -= 1
+	            extra_assignment[student] = ("HAMPDEN_NURSERY", "week1")
+	            assigned_extra = True
+	    # Else try week3 (if student's WARD_A week is not week3)
+	    if not assigned_extra and wa_week != "week3" and hampden_capacity.get("week3", 0) > 0:
+	        if assign_slot(student, "HAMPDEN_NURSERY", "week3", ("H3", "H13")):
+	            hampden_capacity["week3"] -= 1
+	            extra_assignment[student] = ("HAMPDEN_NURSERY", "week3")
+	            assigned_extra = True
 	
-	        selected_student = available_students.pop(0)
-	        assigned_students.add(selected_student)
-	
-	        class_filter = df['class'].isin(class_group) & \
-	                       (df['clinic'] == 'PSHCH_NURSERY') & \
-	                       (df['week_start'] == week_start) & \
-	                       (df['date'].apply(lambda x: x.weekday()) < 5)
-	
-	        df.loc[class_filter, 'student'] = selected_student
-	
-	# ✅ Create a text column for easier viewing
-	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
-	
+	    # --- Priority 2: SJR_HOSP (allowed in any week except student's WARD_A week) ---
+	    if not assigned_extra:
+	        for wk in ["week1", "week2", "week3", "week4"]:
+	            if wk == wa_week:
+	                continue
+	            if sjr_capacity[wk] > 0:
+	                # Try room pair ("H2", "H12") first, then ("H3", "H13")
+	                if assign_slot(student, "SJR_HOSP", wk, ("H2", "H12")):
+	                    sjr_capacity[wk] -= 1
+	                    extra_assignment[student] = ("SJR_HOSP", wk)
+	                    assigned_extra = True
+	                    break
+	                elif assign_slot(student, "SJR_HOSP", wk, ("H3", "H13")):
+	                    sjr_capacity[wk] -= 1
+	                    extra_assignment[student] = ("SJR_HOSP", wk)
+	                    assigned_extra = True
+	                    break
+	    # --- Priority 3: PSHCH_NURSERY (allowed in any week except student's WARD_A week) ---
+	    if not assigned_extra:
+	        for wk in ["week1", "week2", "week3", "week4"]:
+	            if wk == wa_week:
+	                continue
+	            if pshch_capacity[wk] > 0:
+	                # Try primary slot: ("H0", "H10")
+	                if assign_slot(student, "PSHCH_NURSERY", wk, ("H0", "H10")):
+	                    pshch_capacity[wk] -= 1
+	                    extra_assignment[student] = ("PSHCH_NURSERY", wk)
+	                    assigned_extra = True
+	                    break
+	                # Otherwise, try fallback slot: ("H1", "H11")
+	                elif assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
+	                    pshch_capacity[wk] -= 1
+	                    extra_assignment[student] = ("PSHCH_NURSERY", wk)
+	                    assigned_extra = True
+	                    break
+		
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
 	
