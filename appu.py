@@ -1093,7 +1093,7 @@ elif st.session_state.page == "OPD Creator":
 	dateMAP['date'] = pd.to_datetime(dateMAP['date'])
 	dateMAP['date'] = dateMAP['date'].dt.strftime('%m/%d/%Y')
 	
-	dateMAP.to_csv('xxxDATEMAP.csv',index=False); st.dataframe(dateMAP)
+	dateMAP.to_csv('xxxDATEMAP.csv',index=False)
 	
 	mydict = {}
 	with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
@@ -1147,9 +1147,9 @@ elif st.session_state.page == "OPD Creator":
 
 	df = df[["date", "type", "provider", "clinic", "class", "datecode", "student"]]
 	
-	df.to_csv('resident_schedule.csv', index=False); st.dataframe(df)
+	df.to_csv('resident_schedule.csv', index=False)
 	
-	df = pd.read_csv('final2.csv',dtype=str); st.dataframe(df) 
+	df = pd.read_csv('final2.csv',dtype=str)
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 	
