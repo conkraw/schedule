@@ -979,7 +979,6 @@ elif st.session_state.page == "OPD Creator":
 	df = df.groupby(["date", "clinic", "type"], as_index=False).agg({
 	    "provider": lambda x: " / ".join(x.dropna()),  # Join providers while handling NaN values
 	    "student": lambda x: " / ".join(x.dropna()),   # Join students while handling NaN values
-	    "text": "first",         # Keep the first non-null text entry
 	    "class": "first",        # Keep the first non-null class
 	    "datecode": "first"      # Keep the first non-null datecode
 	})
