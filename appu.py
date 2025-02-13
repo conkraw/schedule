@@ -1129,8 +1129,8 @@ elif st.session_state.page == "OPD Creator":
 
 	df.to_csv('final2.csv', index=False)
 	
-	df = pd.read_csv('resident_schedule.csv', dtype=str); st.dataframe(df)
-	df['date'] = pd.to_datetime(df['date'], errors='coerce', format='mixed')
+	df = pd.read_csv('resident_schedule.csv', dtype=str)
+	df['date'] = pd.to_datetime(df['date'], errors='coerce')
 	
 	start_date = pd.to_datetime(st.session_state.start_date, format='%Y-%m-%d', errors='coerce')
 	end_date = start_date + pd.Timedelta(days=34)
@@ -1143,7 +1143,7 @@ elif st.session_state.page == "OPD Creator":
 		reader = csv.reader(inp)
 		df1 = {rows[1]:rows[0] for rows in reader} 
 	
-	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
+	df['datecode'] = df.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
 	df = df[["date", "type", "provider", "clinic", "class", "datecode", "student"]]
 	
