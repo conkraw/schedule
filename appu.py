@@ -1361,6 +1361,8 @@ elif st.session_state.page == "OPD Creator":
 	#st.dataframe(sorted_shift_counts)
 	
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
+
+	df = df[['date', 'type', 'provider', 'student', 'clinic', 'text','class','datecode','week_num','week_label']]
 	
 	df.to_excel('final.xlsx',index=False); st.dataframe(df)
 	
