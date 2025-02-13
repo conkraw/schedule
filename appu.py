@@ -958,7 +958,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
-	df.to_csv('final2.csv', index=False); st.dataframe(df)
+	df.to_csv('final2.csv', index=False)
 
 	df = pd.read_csv('final2.csv',dtype=str) 
 	
@@ -1019,7 +1019,7 @@ elif st.session_state.page == "OPD Creator":
 
 	df = df.loc[:, ('date','type','provider','student','clinic','text','class','datecode')]
 	
-	df.to_csv('final.csv',index=False); #st.dataframe(df)
+	df.to_csv('final.csv',index=False); st.dataframe(df)
 	
 	################################################################################################################################################################################################
 	
