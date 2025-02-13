@@ -1146,10 +1146,19 @@ elif st.session_state.page == "OPD Creator":
 	df['datecode'] = df.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
 	df = df[["date", "type", "provider", "clinic", "class", "datecode", "student"]]
-	
+
 	df.to_csv('resident_schedule.csv', index=False)
+
+	df1 = pd.read_csv('resident_schedule.csv', dtype=str)
+	df2 = pd.read_csv('final2.csv', dtype=str)
 	
-	df = pd.read_csv('final2.csv',dtype=str)
+	# Combine both DataFrames (stack rows)
+	df = pd.concat([df1, df2], ignore_index=True)
+	
+	# Save and display the combined dataset
+	#df_combined.to_csv('combined_resident_schedule.csv', index=False)
+
+	#df = pd.read_csv('final2.csv',dtype=str)
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 	
