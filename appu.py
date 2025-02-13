@@ -729,91 +729,189 @@ elif st.session_state.page == "OPD Creator":
 	}	
 
 	import pandas as pd
-	import re
-	from datetime import datetime, timedelta
 	
 	# Load dataset
-	df = pd.read_excel(uploaded_files['RESIDENT.xlsx'], dtype=str)
+	file_path = "test.xlsx"  # Replace with actual filename if needed
+	df = pd.read_excel(file_path, dtype=str)
+	
+	# Save to CSV
+	df.to_csv("test.csv", index=False)
+	
+	# Reload the CSV to ensure clean reading
+	df = pd.read_csv("test.csv", dtype=str)
 	
 	# Fix encoding issues and remove non-breaking spaces
-	df["Rotation"] = df["Rotation"].astype(str).str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True).str.strip()
+	df["Rotation"] = df["Rotation"].str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True)
 	
-	# Fill down 'Rotation' column to propagate values forward
+	df.to_csv('test.csv', index=False)
+	
+	df = pd.read_csv('test.csv')
+	
+	# Fill down the 'Rotation' column to propagate values forward
 	df["Rotation"] = df["Rotation"].fillna(method="ffill")
 	
-	# Define the list of valid rotations
-	valid_rotations = [
+	# Define the list of rotations to keep
+	new_list = [
 	    'Acutes Intern', 'Acute Sr', 'ED Consults', 'NBN Intern', 'NBN Sr', 
 	    'PICU', 'Ward A Intern', 'Ward A Sr', 
 	    'Ward C Intern', 'Ward C Sr', 'Ward P Intern', 'Ward P Sr'
 	]
 	
-	# Filter dataset to keep only valid rotations
-	df = df[df["Rotation"].isin(valid_rotations)]
+	#Ensure clean text formatting for filtering
+	df["Rotation"] = df["Rotation"].astype(str).str.strip()
+	
+	#Filter dataset based on the Rotation column
+	filtered_df = df[df["Rotation"].isin(new_list)]
 	
 	# Drop fully empty rows
-	df = df.dropna(how="all")
+	filtered_df = filtered_df.dropna(how="all")
 	
-	# Define block columns
-	block_columns = [col for col in df.columns if "Block" in col]
+	filtered_df.to_csv('test.csv',index=False)
 	
-	# Remove R1, R2, R3, R4 from block columns
+	df = pd.read_csv('test.csv')
+	# Define block columns (columns that contain the block names)
+	block_columns = [
+	    "Block 1 (07/01/2024 - 07/28/2024)", "Block 2 (07/29/2024 - 08/25/2024)",
+	    "Block 3 (08/26/2024 - 09/22/2024)", "Block 4 (09/23/2024 - 10/20/2024)",
+	    "Block 5 (10/21/2024 - 11/17/2024)", "Block 6 (11/18/2024 - 12/15/2024)",
+	    "Block 7 (12/16/2024 - 01/12/2025)", "Block 8 (01/13/2025 - 02/09/2025)",
+	    "Block 9 (02/10/2025 - 03/09/2025)", "Block 10 (03/10/2025 - 04/06/2025)",
+	    "Block 11 (04/07/2025 - 05/04/2025)", "Block 12 (05/05/2025 - 06/01/2025)",
+	    "Block 13 (06/02/2025 - 06/30/2025)"
+	]
+	
+	# Remove any values that are "R1", "R2", "R3", or "R4" in the block columns
 	df[block_columns] = df[block_columns].applymap(lambda x: "" if x in ["R1", "R2", "R3", "R4"] else x)
 	
-	# Trim and strip whitespace from all columns
+	# Save and display the cleaned dataset
+	df.to_csv("test.csv", index=False)
+	
+	df = pd.read_csv('test.csv')
+	
+	# Trim and strip all white spaces from all columns
 	df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 	
-	# Expand dataset by creating rows for each day within assigned blocks
+	# Save the cleaned dataset
+	df.to_csv("trimmed_test.csv", index=False, encoding="utf-8")
+	
+	import pandas as pd
+	import re
+	from datetime import datetime, timedelta
+	
+	# Load dataset
+	df = pd.read_csv("trimmed_test.csv", dtype=str)  # Replace with actual filename
+	
+	# Identify block columns
+	block_columns = [col for col in df.columns if "Block" in col]
+	
+	# List to store expanded rows
 	expanded_rows = []
 	
-	# Function to extract block start and end dates
+	# Function to extract dates from block names
 	def extract_dates(block_name):
 	    match = re.search(r"\((\d{2}/\d{2}/\d{4}) - (\d{2}/\d{2}/\d{4})\)", block_name)
-	    return (datetime.strptime(match.group(1), "%m/%d/%Y"), datetime.strptime(match.group(2), "%m/%d/%Y")) if match else (None, None)
+	    if match:
+	        return datetime.strptime(match.group(1), "%m/%d/%Y"), datetime.strptime(match.group(2), "%m/%d/%Y")
+	    return None, None
 	
-	# Iterate through each row to expand by block dates
+	# Loop through each row in the dataset
 	for _, row in df.iterrows():
-	    rotation = row["Rotation"]
-	    for block in block_columns:
-	        start_date, end_date = extract_dates(block)
-	        if start_date and end_date and pd.notna(row[block]):
-	            name = row[block].strip()
-	            current_date = start_date
-	            while current_date <= end_date:
-	                expanded_rows.append([rotation, current_date.strftime("%m/%d/%Y"), name])
-	                current_date += timedelta(days=1)
+	    rotation = row["Rotation"]  # Keep track of rotation type
 	
-	# Create expanded DataFrame
+	    for block in block_columns:
+	        block_start, block_end = extract_dates(block)  # Extract block start/end dates
+	        
+	        if not block_start or not block_end:  # Skip if block dates not found
+	            continue
+	
+	        if pd.notna(row[block]):  # If there is an assigned person
+	            names = [row[block].strip()]  # Keep the full name string as one item in a list
+	
+	
+	            for name in names:
+	                # Generate rows for each day within the assigned range
+	                current_date = block_start
+	                while current_date <= block_end:
+	                    expanded_rows.append([rotation, current_date.strftime("%m/%d/%Y"), name])
+	                    current_date += timedelta(days=1)
+	
+	# Create final expanded DataFrame
 	expanded_df = pd.DataFrame(expanded_rows, columns=["Rotation", "Date", "Name"])
 	
-	# Convert Date column to datetime format
-	expanded_df["Date"] = pd.to_datetime(expanded_df["Date"], format="%m/%d/%Y")
+	# Save and display the final expanded dataset
+	expanded_df.to_csv("expanded_schedule.csv", index=False)
 	
-	# Function to filter rows based on valid date ranges in "Name"
+	import pandas as pd
+	import re
+	from datetime import datetime
+	
+	# Load dataset (replace with actual filename)
+	df = pd.read_csv("expanded_schedule.csv", dtype=str)
+	
+	# Convert Date column to datetime
+	df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y")
+	
+	# Function to extract valid date range from name
 	def extract_valid_dates(name, reference_year):
 	    match = re.search(r"\((\d{1,2}/\d{1,2}) - (\d{1,2}/\d{1,2})\)", name)
 	    if match:
-	        start_date = datetime(reference_year, *map(int, match.group(1).split("/")))
-	        end_date = datetime(reference_year, *map(int, match.group(2).split("/")))
+	        start_month, start_day = map(int, match.group(1).split("/"))
+	        end_month, end_day = map(int, match.group(2).split("/"))
+	        
+	        # Use the year from the dataset (assumes all dates in the same year)
+	        start_date = datetime(reference_year, start_month, start_day)
+	        end_date = datetime(reference_year, end_month, end_day)
+	        
 	        return start_date, end_date
 	    return None, None
 	
-	# Get reference year from the dataset
-	reference_year = expanded_df["Date"].dt.year.mode()[0]
 	
-	# Filter dataset to include only valid date ranges
-	filtered_rows = [
-	    row for _, row in expanded_df.iterrows()
-	    if (start_date := extract_valid_dates(row["Name"], reference_year))[0] is None or start_date[0] <= row["Date"] <= start_date[1]
-	]
+	# Filter rows based on extracted date ranges
+	filtered_rows = []
+	for _, row in df.iterrows():
+	    name = row["Name"]
+	    date = row["Date"]
+	    
+	    # Extract the reference year directly from the Date column
+	    reference_year = date.year
 	
-	# Create filtered DataFrame
+	    start_date, end_date = extract_valid_dates(name, reference_year)
+	
+	    if start_date and end_date:
+	        if start_date <= date <= end_date:
+	            filtered_rows.append(row)  # Keep only rows within the valid range
+	    else:
+	        filtered_rows.append(row)  # If no date range in name, keep as is
+	
+	# Convert filtered rows back into a DataFrame
 	filtered_df = pd.DataFrame(filtered_rows)
 	
-	# Function to clean names by removing parentheses and their contents
-	filtered_df["Name"] = filtered_df["Name"].apply(lambda x: re.sub(r"\s*\(.*?\)", "", x).strip() if pd.notna(x) else x)
+	# Save and display the updated dataset
+	filtered_df.to_csv("filtered_schedule.csv", index=False)
 	
-	# Mapping dictionary for rotation names
+	
+	import pandas as pd
+	import re
+	
+	# Load dataset
+	df = pd.read_csv("filtered_schedule.csv", dtype=str)  # Replace with actual filename
+	
+	# Function to remove parentheses and their contents
+	def clean_name(name):
+	    return re.sub(r"\s*\(.*?\)", "", name).strip()  # Removes anything inside parentheses
+	
+	# Apply the function to the "Name" column
+	df["Name"] = df["Name"].apply(lambda x: clean_name(x) if pd.notna(x) else x)
+	
+	# Save the cleaned dataset
+	df.to_csv("cleaned_names.csv", index=False)
+	
+	import pandas as pd
+	
+	# Load data
+	df = pd.read_csv("cleaned_names.csv")
+	
+	# Mapping dictionary
 	mapping = {
 	    'Acutes Intern': 'HOPE_DRIVE',
 	    'Acute Sr': 'HOPE_DRIVE',
@@ -829,18 +927,22 @@ elif st.session_state.page == "OPD Creator":
 	    'Ward P Sr': 'WARD_P'
 	}
 	
-	# Apply mapping to rotation column
-	filtered_df['Rotation'] = filtered_df['Rotation'].map(mapping)
+	# Apply mapping
+	df['Rotation'] = df['Rotation'].map(mapping)
 	
 	# List of rotations to remove
-	remove_list = ['Anesthesia', 'Family & Community Medicine @ State College', 'Family & Community Medicine']
+	remove_list = [
+	    'Anesthesia', 
+	    'Family & Community Medicine @ State College', 
+	    'Family & Community Medicine'
+	]
 	
-	# Remove unwanted names
-	filtered_df = filtered_df[~filtered_df['Name'].isin(remove_list)]
+	# Remove unwanted rows
+	df = df[~df['Name'].isin(remove_list)]
 	
-	# Save final dataset
-	filtered_df.to_csv("resident_schedule.csv", index=False)
-
+	# Save to CSV
+	df.to_csv('resident_schedule.csv', index=False)
+	
 	# Process each file
 	hope_drive_df = process_file("HOPE_DRIVE.xlsx", "HOPE_DRIVE", replacement_rules.get("HOPE_DRIVE.xlsx"))
 	etown_df = process_file("ETOWN.xlsx", "ETOWN", replacement_rules.get("ETOWN.xlsx"))
@@ -959,6 +1061,17 @@ elif st.session_state.page == "OPD Creator":
 	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
 	df.to_csv('final2.csv', index=False)
+
+	#df = pd.read_csv('resident_schedule.csv')
+	#df['date'] = df['date'].dt.strftime('%m/%d/%Y')
+	#mydict = {}
+	#with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
+	#	reader = csv.reader(inp)
+	#	df1 = {rows[1]:rows[0] for rows in reader} 
+	
+	#df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
+
+	#df.to_csv('resident_schedule.csv', index=False)
 
 	df = pd.read_csv('final2.csv',dtype=str) 
 	
