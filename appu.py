@@ -1755,7 +1755,7 @@ elif st.session_state.page == "Create List":
         hopes.to_csv('hopes.csv', index=False); #st.dataframe(hopes)
         #################################################################################################################
         # List of sheet names to process
-        sheet_names = ['ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C', 'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSP', 'AAC', 'ER_CONS', 'NF', 'ADOLMED']  # Add more as needed
+        sheet_names = ['ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C', 'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSP', 'AAC', 'ER_CONS', 'NF', 'ADOLMED', 'RESIDENT']  # Add more as needed
 
         # Process all sheets dynamically
         for sheet in sheet_names:
