@@ -293,11 +293,11 @@ elif st.session_state.page == "OPD Creator":
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
 	# Define worksheet names
-	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C','W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED"]
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C','W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED","RESIDENT"]
 	
 	# Create worksheets and store them in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
-	(worksheet, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14,worksheet15) = worksheets.values()
+	(worksheet, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14,worksheet15, worksheet16) = worksheets.values()
 	
 	# Define format
 	format1 = workbook.add_format({'font_size': 18, 'bold': 1, 'align': 'center','valign': 'vcenter', 'font_color': 'black','bg_color': '#FEFFCC', 'border': 1})
@@ -317,7 +317,7 @@ elif st.session_state.page == "OPD Creator":
 			   worksheet12: 'AAC', 
 			   worksheet13: 'ER CONSULTS', 
 			   worksheet14: 'NIGHT FLOAT', 
-			   worksheet15: 'ADOLMED'}
+			   worksheet15: 'ADOLMED', worksheet16: 'RESIDENT'}
 	
 	# Write "Site:" and corresponding site names in each worksheet
 	for ws, site in worksheet_sites.items():
@@ -393,7 +393,7 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'I{start_row + i}', label, formate)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15]
+	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
 	
 	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
