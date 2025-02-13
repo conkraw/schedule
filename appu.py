@@ -1362,7 +1362,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
 	
-	df.to_excel('final.xlsx',index=False); st.dataframe(df)
+	df.to_excel('final.xlsx',index=False)
 	
 	# Select relevant columns
 	table_df = df[['student', 'clinic', 'date']]
@@ -1425,7 +1425,7 @@ elif st.session_state.page == "OPD Creator":
 	    """
 	    Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
 	    """
-	    wb = openpyxl.load_workbook('final.xlsx')
+	    wb = openpyxl.load_workbook('final.xlsx'); ws = wb.active; data=ws.values; x = pd.DataFrame(data); st.dataframe(x)
 	    ws = wb['Sheet1']
 	    
 	    wb1 = openpyxl.load_workbook('OPD.xlsx')
