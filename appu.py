@@ -1167,7 +1167,7 @@ if "page" not in st.session_state:
 if "student_names" not in st.session_state:
     st.session_state.student_names = []
 	
-elif st.session_state.page == "select_students":
+if st.session_state.page == "select_students":
     st.header("Step 1: Select Student(s)")
     # Multi-select for student selection.
     if "student_names" in st.session_state:
