@@ -1166,53 +1166,55 @@ elif st.session_state.page == "OPD Creator":
 	import openpyxl
 	from openpyxl.styles import Alignment
 	
-	# =================================================================
-	# Use Session State to manage when the assignment form has been submitted.
-	# =================================================================
-	if 'assignment_done' not in st.session_state:
-	    st.session_state.assignment_done = False
 	
-	with st.form("assignment_form"):
-	    # Multi-select widget to choose one or more students
-	    selected_students = st.multiselect("Select one or more students to assign:", unique_student_names)
-	    
-	    # Dictionary to hold the week assignments for each selected student.
-	    assignments = {}
-	    if selected_students:
+	st.header("Assign Students to Weeks")
+	
+	# Step 1: Select students (outside the form for immediate interactivity)
+	selected_students = st.multiselect("Select one or more students to assign:", unique_student_names)
+	
+	# Only show the week selection form if at least one student is selected.
+	if selected_students:
+	    with st.form("week_assignment_form"):
 	        st.write("#### Choose the week for each selected student:")
+	        assignments = {}
 	        for student in selected_students:
-	            # Use a more unique key by prefixing the student name
+	            # Use a unique key; if names have spaces or special characters,
+	            # you can further sanitize them (or use an index)
 	            week = st.selectbox(
-	                f"Select week for **{student}**", 
+	                f"Select week for **{student}**",
 	                ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
 	                key=f"week_{student}"
 	            )
 	            assignments[student] = week
 	
-	    submitted = st.form_submit_button("Assign Students")
-	    
-	    if submitted:
-	        st.session_state.assignment_done = True
-	        st.session_state.assignments = assignments
+	        submitted = st.form_submit_button("Assign Students")
 	
-	        week_datecode_map = {
-	            'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
-	            'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
-	            'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
-	            'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
-	        }
-	        
-	        for student, week in assignments.items():
-	            condition = (
-	                (df['clinic'] == 'PSHCH_NURSERY') &
-	                (df['class'].isin(['H0', 'H10'])) &
-	                (df['datecode'].isin(week_datecode_map[week]))
-	            )
-	            df.loc[condition, 'student'] = student
+	        if submitted:
+	            # Save assignments to session_state if needed
+	            st.session_state.assignment_done = True
+	            st.session_state.assignments = assignments
 	
-	        st.success("Assignment complete!")
-	        st.write("#### Updated DataFrame:")
-	        st.dataframe(df)
+	            # Mapping from week to datecodes.
+	            week_datecode_map = {
+	                'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
+	                'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
+	                'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
+	                'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
+	            }
+	
+	            # For each selected student, update the DataFrame based on their chosen week.
+	            for student, week in assignments.items():
+	                condition = (
+	                    (df['clinic'] == 'PSHCH_NURSERY') &
+	                    (df['class'].isin(['H0', 'H10'])) &
+	                    (df['datecode'].isin(week_datecode_map[week]))
+	                )
+	                df.loc[condition, 'student'] = student
+	
+	            st.success("Assignment complete!")
+	            st.write("#### Updated DataFrame:")
+	            st.dataframe(df)
+
 
 	# =================================================================
 	# PART 2: Subsequent Processing (runs only after assignment form is submitted)
