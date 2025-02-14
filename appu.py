@@ -1541,9 +1541,9 @@ elif st.session_state.page == "Student Assignments":
         st.write("All students have been assigned to WARD_A.")
 	    
     if st.button("Return to Student Nursery Assignment"):
-        df = pd.read_csv("prenurseryass_df.csv") 
-        #st.session_state.df = pd.read_csv("prenurseryass_df.csv")  # Reset the dataframe
-        #st.session_state.assignments = {}  # Reset any assignment state if needed
+        #df = pd.read_csv("prenurseryass_df.csv") 
+        st.session_state.df = pd.read_csv("prenurseryass_df.csv")  # Reset the dataframe
+        st.session_state.assignments = {}  # Reset any assignment state if needed
         st.session_state.page = "Student Nursery Assignment"
         st.rerun()
 
