@@ -1176,7 +1176,7 @@ week_dict = {
 
 
 # Control flow for pages
-elif st.session_state.page == "Select Student":
+if st.session_state.page == "Select Student":
     student = st.selectbox('Select Student:', unique_student_names)
     week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
 
