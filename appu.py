@@ -1353,7 +1353,7 @@ elif st.session_state.page == "OPD Creator":
 
 		
 	# ✅ Save and display the updated dataset
-	df.to_csv('final.csv', index=False)
+	df.to_csv('final.csv', index=False); st.dataframe(df)
 	
 	################################################################################################################################################################################################
 	df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
