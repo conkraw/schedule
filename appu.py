@@ -1232,7 +1232,7 @@ elif st.session_state.page == "OPD Creator":
 	    df.to_csv("final.csv", index=False)
 	    st.success("Updated DataFrame saved to final.csv")
 
-	df = pd.read_csv('final.csv)	
+	df = pd.read_csv('final.csv')	
 	# -----------------------------
 	# Define week mapping (each week is a list of datecodes)
 	# -----------------------------
