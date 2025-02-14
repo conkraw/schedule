@@ -1513,7 +1513,7 @@ elif st.session_state.page == "Student Assignments":
     pivot_df.columns.name = None  # Remove multi-level index name
     pivot_df = pivot_df.rename_axis(None, axis=1)  # Ensure a clean dataframe
     
-    st.dataframe(pivot_df)
+    st.dataframe(pivot_df, use_container_width=True)
 
     # Get all unique student names (filter out any missing values).
     all_students = df['student'].dropna().unique()
