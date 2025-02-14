@@ -1169,7 +1169,9 @@ elif st.session_state.page == "OPD Creator":
 	import streamlit as st
 	import pandas as pd
 	import random
-	
+
+	if "assignment_done" not in st.session_state:
+    		st.session_state.assignment_done = False
 	st.header("Select Students")
 	selected_students = st.multiselect(
 	    "Select one or more students to assign:",
