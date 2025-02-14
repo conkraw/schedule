@@ -1162,17 +1162,16 @@ elif st.session_state.page == "OPD Creator":
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 
-	# -----------------------------
-	# PRE-REQUISITES:
-	# - df is your DataFrame containing rows for each clinic with columns "clinic", "datecode", "class", etc.
-	# - student_names is your master list (or Series) of student names.
+	# Pre-requisites:
+	# - Assume df is your DataFrame containing rows for each clinic 
+	#   with columns "clinic", "datecode", "class", etc.
 	# - Clear the "student" column before starting.
-	# -----------------------------
+	# ============================================
 	df["student"] = np.nan
 	
-	# -----------------------------
+	# ============================================
 	# Define week mapping (each week is a list of datecodes)
-	# -----------------------------
+	# ============================================
 	weeks = {
 	    "week1": ["T0", "T1", "T2", "T3", "T4"],
 	    "week2": ["T7", "T8", "T9", "T10", "T11"],
@@ -1180,76 +1179,51 @@ elif st.session_state.page == "OPD Creator":
 	    "week4": ["T21", "T22", "T23", "T24", "T25"]
 	}
 	
-	# =============================================================================
-	# STEP 1: EVENLY DISTRIBUTED WARD_A ASSIGNMENT (Capacity: 5 students per week)
-	# =============================================================================
-	# Define the available room pairs for WARD_A:
+	# ============================================
+	# STEP 1: EVENLY DISTRIBUTED WARD_A ASSIGNMENT
+	# (Capacity: 5 students per week)
+	# ============================================
 	ward_a_room_pairs = [("H0", "H10"), ("H1", "H11"), ("H2", "H12"), ("H3", "H13"), ("H4", "H14")]
-	ward_a_capacity = 5  # maximum assignments (students) per week
-	# Keep a count of how many students have been assigned in each week
+	ward_a_capacity = 5
 	ward_a_counts = {"week1": 0, "week2": 0, "week3": 0, "week4": 0}
-	# Record for each student the WARD_A assignment as: student -> (week, room_pair)
 	ward_a_assignment = {}
 	
-	# For each student, choose the week with the fewest WARD_A assignments.
 	for student in student_names:
-	    # Find weeks with available capacity.
 	    available_weeks = {wk: cnt for wk, cnt in ward_a_counts.items() if cnt < ward_a_capacity}
 	    if not available_weeks:
-	        break  # All weeks are full.
-	    # Select the week with the smallest count.
+	        break
 	    target_week = min(available_weeks, key=available_weeks.get)
 	    datecodes = weeks[target_week]
 	    slot_found = False
-	    # Try each room pair in order.
 	    for room_pair in ward_a_room_pairs:
 	        mask = (df["clinic"].str.upper() == "WARD_A") & \
 	               (df["datecode"].isin(datecodes)) & \
 	               (df["class"].isin(room_pair))
-	        # Check if there are any unassigned rows for this room pair.
 	        if df.loc[mask, "student"].isna().any():
-	            # Instead of assigning only one pair of rows, fill all rows for this clinic, week, and room pair.
 	            df.loc[mask, "student"] = student
 	            ward_a_counts[target_week] += 1
 	            ward_a_assignment[student] = (target_week, room_pair)
 	            slot_found = True
 	            break
 	    if not slot_found:
-	        # (Optionally, try another week if desired.)
 	        pass
 	
-	print("WARD_A assignments per week:", ward_a_counts)
-	# You can inspect ward_a_assignment to see each student's WARD_A week and room pair.
+	st.write("WARD_A assignments per week:", ward_a_counts)
+	# (You can inspect ward_a_assignment if needed)
 	
-	# =============================================================================
-	# STEP 2: EXTRA ASSIGNMENT (Each student must also get one extra assignment from one of:)
-	#           HAMPDEN_NURSERY, SJR_HOSP, or PSHCH_NURSERY.
-	# The extra assignment must be in a week different from the student's WARD_A week.
-	# Priority order and per-week capacities:
-	#   Priority 1: HAMPDEN_NURSERY (only in week1 and week3; 1 student per allowed week)
-	#   Priority 2: SJR_HOSP (in any week except the student's WARD_A week; 2 per week)
-	#   Priority 3: PSHCH_NURSERY (in any week except the student's WARD_A week; 1 per week;
-	#                 primary slot: H0/H10, fallback: H1/H11)
-	# =============================================================================
+	# ============================================
+	# STEP 2: MANUAL PSHCH_NURSERY ASSIGNMENT
+	# ============================================
+	st.header("Manual PSHCH_NURSERY Assignment")
+	manual_week = st.selectbox("Select week for manual PSHCH_NURSERY assignment", ["week1", "week2", "week3", "week4"])
+	manual_students = st.multiselect("Select student(s) for manual PSHCH_NURSERY assignment", unique_student_names)
 	
-	# Set up capacity dictionaries for extra assignments:
-	hampden_capacity = {"week1": 1, "week3": 1}
-	sjr_capacity    = {"week1": 2, "week2": 2, "week3": 2, "week4": 2}
-	pshch_capacity  = {"week1": 1, "week2": 1, "week3": 1, "week4": 1}
-	# Record extra assignments as: student -> (clinic, week, room_pair)
-	extra_assignment = {}
+	# Define PSHCH_NURSERY room pairs: primary and fallback.
+	pshch_primary = ("H0", "H10")
+	pshch_fallback = ("H1", "H11")
 	
-	# Helper function to assign a student to all matching rows for a given slot.
+	# Helper function (same as used below) to assign a student to all matching rows.
 	def assign_slot(student, clinic, week, room_pair):
-	    """
-	    Attempts to assign 'student' into a slot for 'clinic' in the given 'week'
-	    using the provided room_pair (a tuple of two class codes).
-	    If at least one row is unassigned, fills ALL rows matching:
-	       - clinic equals clinic,
-	       - datecode in the given week, and
-	       - class is in room_pair.
-	    Returns True if assignment is made; False otherwise.
-	    """
 	    datecodes = weeks[week]
 	    mask = (df["clinic"].str.upper() == clinic.upper()) & \
 	           (df["datecode"].isin(datecodes)) & \
@@ -1259,15 +1233,45 @@ elif st.session_state.page == "OPD Creator":
 	        return True
 	    return False
 	
-	# For each student (who has a WARD_A assignment), assign an extra slot in a different week.
-	extra_assigned = set()
+	manual_assignment = {}
+	if st.button("Run Manual PSHCH_NURSERY Assignment"):
+	    for student in manual_students:
+	        assigned = False
+	        # Try primary slot first.
+	        if assign_slot(student, "PSHCH_NURSERY", manual_week, pshch_primary):
+	            assigned = True
+	            manual_assignment[student] = ("PSHCH_NURSERY", manual_week, pshch_primary)
+	        else:
+	            # Try fallback slot.
+	            if assign_slot(student, "PSHCH_NURSERY", manual_week, pshch_fallback):
+	                assigned = True
+	                manual_assignment[student] = ("PSHCH_NURSERY", manual_week, pshch_fallback)
+	        if not assigned:
+	            st.error(f"Could not manually assign {student} to PSHCH_NURSERY in {manual_week}.")
+	    st.write("Manual PSHCH_NURSERY assignments:", manual_assignment)
+	
+	# ============================================
+	# STEP 3: EXTRA ASSIGNMENT for Remaining Students
+	# (Assign extra slots for students who are not manually assigned)
+	# ============================================
+	# Capacity dictionaries for extra assignments:
+	hampden_capacity = {"week1": 1, "week3": 1}
+	sjr_capacity    = {"week1": 2, "week2": 2, "week3": 2, "week4": 2}
+	pshch_capacity  = {"week1": 1, "week2": 1, "week3": 1, "week4": 1}
+	
+	extra_assignment = {}
+	# Create a set of students who were manually assigned
+	manual_assigned_set = set(manual_assignment.keys())
+	
+	# For each student (with a WARD_A assignment) not manually assigned, assign an extra slot.
 	for student in student_names:
 	    if student not in ward_a_assignment:
 	        continue  # (Should not happen if all students got WARD_A.)
+	    if student in manual_assigned_set:
+	        continue  # Skip manual assignments.
 	    wa_week, _ = ward_a_assignment[student]
 	    assigned_extra = False
-	
-	    # --- Priority 1: HAMPDEN_NURSERY (only allowed in week1 and week3) ---
+	    # Priority 1: HAMPDEN_NURSERY (only in week1 and week3)
 	    if wa_week != "week1" and hampden_capacity.get("week1", 0) > 0:
 	        if assign_slot(student, "HAMPDEN_NURSERY", "week1", ("H3", "H13")):
 	            hampden_capacity["week1"] -= 1
@@ -1278,14 +1282,12 @@ elif st.session_state.page == "OPD Creator":
 	            hampden_capacity["week3"] -= 1
 	            extra_assignment[student] = ("HAMPDEN_NURSERY", "week3", ("H3", "H13"))
 	            assigned_extra = True
-	
-	    # --- Priority 2: SJR_HOSP (allowed in any week except the student's WARD_A week) ---
+	    # Priority 2: SJR_HOSP (allowed in any week except the student's WARD_A week)
 	    if not assigned_extra:
 	        for wk in ["week1", "week2", "week3", "week4"]:
 	            if wk == wa_week:
 	                continue
 	            if sjr_capacity[wk] > 0:
-	                # Try first room pair ("H2", "H12"), then ("H3", "H13")
 	                if assign_slot(student, "SJR_HOSP", wk, ("H2", "H12")):
 	                    sjr_capacity[wk] -= 1
 	                    extra_assignment[student] = ("SJR_HOSP", wk, ("H2", "H12"))
@@ -1296,27 +1298,23 @@ elif st.session_state.page == "OPD Creator":
 	                    extra_assignment[student] = ("SJR_HOSP", wk, ("H3", "H13"))
 	                    assigned_extra = True
 	                    break
-	
-	    # --- Priority 3: PSHCH_NURSERY (allowed in any week except the student's WARD_A week) ---
+	    # Priority 3: PSHCH_NURSERY (allowed in any week except the student's WARD_A week)
 	    if not assigned_extra:
 	        for wk in ["week1", "week2", "week3", "week4"]:
 	            if wk == wa_week:
 	                continue
 	            if pshch_capacity[wk] > 0:
-	                # Try primary slot ("H0", "H10") first.
 	                if assign_slot(student, "PSHCH_NURSERY", wk, ("H0", "H10")):
 	                    pshch_capacity[wk] -= 1
 	                    extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H0", "H10"))
 	                    assigned_extra = True
 	                    break
-	                # Otherwise, try fallback slot ("H1", "H11").
 	                elif assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
 	                    pshch_capacity[wk] -= 1
 	                    extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
 	                    assigned_extra = True
 	                    break
 	    if not assigned_extra:
-	        # As a last resort, force an assignment into PSHCH_NURSERY fallback.
 	        for wk in ["week1", "week2", "week3", "week4"]:
 	            if wk == wa_week:
 	                continue
@@ -1324,20 +1322,9 @@ elif st.session_state.page == "OPD Creator":
 	                extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
 	                break
 	
-	# -----------------------------
-	# End of Combined Assignments
-	# -----------------------------
-	
-	# At this point:
-	# - Every student has been assigned a WARD_A slot (evenly distributed across weeks).
-	# - Every student also has an extra assignment (from one of HAMPDEN_NURSERY, SJR_HOSP, or PSHCH_NURSERY)
-	#   in a week different from their WARD_A week.
-	# - For every assignment, all rows (i.e. all datecodes for that week and matching room pair)
-	#   in df have been filled with the student’s name.
-	#
-	# You can now inspect df, ward_a_assignment, and extra_assignment to verify the results.
+	st.write("Extra assignment mapping:", extra_assignment)
+	st.write("Final DataFrame:", df)
 
-		
 	# ✅ Save and display the updated dataset
 	df.to_csv('final.csv', index=False)
 	
