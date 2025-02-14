@@ -1079,7 +1079,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
-	final2.to_csv('final2.csv',index=False); #st.dataframe(final2)
+	final2.to_csv('final2.csv',index=False)
 	
 	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
 	
@@ -1432,7 +1432,7 @@ elif st.session_state.page == "Student Assignments":
     # -----------------------------
     # Final save to CSV
     df.to_csv('final.csv', index=False)
-    st.dataframe(df)
+    #st.dataframe(df) #DISPLAY ASSIGNMENTS. 
     
     ################################################################################################################################################################################################
     df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
