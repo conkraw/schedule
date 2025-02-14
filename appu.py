@@ -1533,13 +1533,27 @@ elif st.session_state.page == "Student Assignments":
     else:
         st.write("All students have been assigned to WARD_A.")
 	    
-    if st.button("Return to Student Nursery Assignment"):
+    #if st.button("Return to Student Nursery Assignment"):
         #df = pd.read_csv("prenurseryass_df.csv") 
-        st.session_state.df = pd.read_csv("prenurseryass_df.csv")  # Reset the dataframe
-        st.session_state.assignments = {}  # Reset any assignment state if needed
+    #    st.session_state.df = pd.read_csv("prenurseryass_df.csv")  # Reset the dataframe
+    #    st.session_state.assignments = {}  # Reset any assignment state if needed
+    #    st.session_state.page = "Student Nursery Assignment"
+    #    st.rerun()
+    if st.button("Return to Student Nursery Assignment"):
+        # Reset the dataframe
+        st.session_state.df = pd.read_csv("prenurseryass_df.csv")
+
+        # Reset any assignment state if needed
+        st.session_state.assignments = {}
+
+        # Reshuffle student names
+        unique_student_names = st.session_state.get('student_names', [])
+        random.shuffle(unique_student_names)
+        st.session_state.student_names = unique_student_names
+
+        # Set the page state and rerun
         st.session_state.page = "Student Nursery Assignment"
         st.rerun()
-
 
     ########################################################################################################################################################################
     import openpyxl
