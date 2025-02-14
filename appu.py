@@ -1531,7 +1531,7 @@ elif st.session_state.page == "Student Assignments":
     unassigned_ward_a_students = [s for s in all_students if s not in ward_a_assigned_students]
 
     if unassigned_students:
-        st.write(f"Students not assigned to either HAMPDEN_NURSERY or SJR_HOSP: {', '.join(unassigned_students)}")
+        st.markdown(f"**Students not assigned to either HAMPDEN_NURSERY or SJR_HOSP:** {', '.join(unassigned_students)}")
     else:
         st.write("All students have been assigned to either HAMPDEN_NURSERY or SJR_HOSP.")
 
