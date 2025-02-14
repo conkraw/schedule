@@ -1168,7 +1168,8 @@ elif st.session_state.page == "OPD Creator":
 
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
-    if "student_names" in st.session_state:; student_names = st.session_state.student_names
+    if "student_names" in st.session_state:
+	    student_names = st.session_state.student_names
     # df["student"] = np.nan  # Uncomment if needed to initialize the student column.
     
     # -----------------------------
