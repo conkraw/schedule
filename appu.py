@@ -1162,50 +1162,62 @@ elif st.session_state.page == "OPD Creator":
 	# Assign the student's name where conditions are met
 	#df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 	
-	st.header("Assign Students to Weeks")
+	# Initialize session state variables for multi-step process.
+	if "students_selected" not in st.session_state:
+	    st.session_state.students_selected = False
+	if "assignments" not in st.session_state:
+	    st.session_state.assignments = {}
 	
-	# Step 1: Select one or more student names.
-	selected_students = st.multiselect("Select one or more students:", unique_student_names)
+	st.header("Step 1: Select Student(s)")
 	
-	# Step 2: For each selected student, choose the week assignment.
-	assignments = {}
-	if selected_students:
-	    st.write("#### Assign a week for each selected student:")
-	    for student in selected_students:
-	        week = st.selectbox(
-	            f"Select week for **{student}**:",
-	            ["Week 1", "Week 2", "Week 3", "Week 4"],
-	            key=f"week_{student}"
-	        )
+	# Step 1: Select one or more students.
+	selected_students = st.multiselect("Select one or more students:", unique_student_names, key="students_multiselect")
+	
+	# Button to proceed to week selection.
+	if st.button("Next: Select Week(s)") and selected_students:
+	    st.session_state.students_selected = True
+	    st.session_state.selected_students = selected_students
+	
+	# Step 2: Once students have been selected, show week selection widgets.
+	if st.session_state.get("students_selected", False):
+	    st.header("Step 2: Assign Weeks")
+	    assignments = {}
+	    for student in st.session_state.selected_students:
+	        # For each student, show a selectbox for the week.
+	        week = st.selectbox(f"Select week for **{student}**:", 
+	                            ["Week 1", "Week 2", "Week 3", "Week 4"],
+	                            key=f"week_{student}")
 	        assignments[student] = week
-	
-	# Step 3: When the button is pressed, load the CSV, update the DataFrame, and save it.
-	if st.button("Run Assignment"):
-	    # Load the CSV into a DataFrame.
-	    df = pd.read_csv('final.csv')
-	    
-	    # Define the mapping from week to datecodes.
-	    week_datecode_map = {
-	        "Week 1": ['T0', 'T1', 'T2', 'T3', 'T4'],
-	        "Week 2": ['T7', 'T8', 'T9', 'T10', 'T11'],
-	        "Week 3": ['T14', 'T15', 'T16', 'T17', 'T18'],
-	        "Week 4": ['T21', 'T22', 'T23', 'T24', 'T25']
-	    }
-	    
-	    # For each selected student and their assigned week, update the DataFrame.
-	    for student, week in assignments.items():
-	        datecodes = week_datecode_map[week]
-	        condition = (
-	            (df['clinic'] == 'PSHCH_NURSERY') &
-	            (df['class'].isin(['H0', 'H10'])) &
-	            (df['datecode'].isin(datecodes))
-	        )
-	        df.loc[condition, 'student'] = student
-	    
-	    # Save the updated DataFrame back to CSV.
-	    df.to_csv('final.csv', index=False)
-	    
-	    st.success("Assignment complete and file saved!")
+	    # Button to finalize assignment.
+	    if st.button("Assign Students"):
+	        # Load the CSV.
+	        df = pd.read_csv('final.csv')
+	        
+	        # Define the mapping of week to datecodes.
+	        week_datecode_map = {
+	            "Week 1": ['T0', 'T1', 'T2', 'T3', 'T4'],
+	            "Week 2": ['T7', 'T8', 'T9', 'T10', 'T11'],
+	            "Week 3": ['T14', 'T15', 'T16', 'T17', 'T18'],
+	            "Week 4": ['T21', 'T22', 'T23', 'T24', 'T25']
+	        }
+	        
+	        # For each student and their assigned week, update the DataFrame.
+	        for student, week in assignments.items():
+	            datecodes = week_datecode_map[week]
+	            condition = (
+	                (df['clinic'] == 'PSHCH_NURSERY') &
+	                (df['class'].isin(['H0', 'H10'])) &
+	                (df['datecode'].isin(datecodes))
+	            )
+	            df.loc[condition, 'student'] = student
+	        
+	        # Save the updated DataFrame.
+	        df.to_csv('final.csv', index=False)
+	        
+	        st.success("Assignment complete and file saved!")
+	        st.write("#### Updated DataFrame:")
+	        st.dataframe(df)
+
 
 	#df.to_csv('final.csv',index=False)
         
