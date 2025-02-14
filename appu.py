@@ -1215,7 +1215,7 @@ elif st.session_state.page == "Student Assignments":
     if "student_names" in st.session_state:
 	    student_names = st.session_state.student_names
     # Read your CSV
-    df = pd.read_csv('final.csv')
+    df = pd.read_csv('final.csv'); df_prenurseryassignment = df
     
     # Dictionary mapping each week to its corresponding date codes
     week_dict = {
@@ -1541,9 +1541,10 @@ elif st.session_state.page == "Student Assignments":
         st.write("All students have been assigned to WARD_A.")
 	    
     if st.button("Return to Student Assignments"):
-        st.session_state.page = "Student Nursery Assignment"
+        st.session_state.page = "Student Assignments"
+        df = df_prenurseryassignment
         st.rerun()    	
-    
+
     ########################################################################################################################################################################
     import openpyxl
     from openpyxl.styles import Alignment
