@@ -1165,55 +1165,56 @@ elif st.session_state.page == "OPD Creator":
 	import numpy as np
 	import openpyxl
 	from openpyxl.styles import Alignment
+
 	
+	# Ensure session_state holds the multi-select value.
+	if "selected_students" not in st.session_state:
+	    st.session_state.selected_students = []
 	
-	st.header("Assign Students to Weeks")
+	# Multi-select (outside a form) with a fixed key.
+	selected_students = st.multiselect(
+	    "Select one or more students to assign:",
+	    unique_student_names,
+	    key="selected_students",
+	    default=st.session_state.selected_students
+	)
 	
-	# Step 1: Select students (outside the form for immediate interactivity)
-	selected_students = st.multiselect("Select one or more students to assign:", unique_student_names)
+	# Update session_state with current multi-select selection.
+	st.session_state.selected_students = selected_students
 	
-	# Only show the week selection form if at least one student is selected.
 	if selected_students:
-	    with st.form("week_assignment_form"):
-	        st.write("#### Choose the week for each selected student:")
-	        assignments = {}
-	        for student in selected_students:
-	            # Use a unique key; if names have spaces or special characters,
-	            # you can further sanitize them (or use an index)
-	            week = st.selectbox(
-	                f"Select week for **{student}**",
-	                ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-	                key=f"week_{student}"
+	    st.write("#### Choose the week for each selected student:")
+	    assignments = {}
+	    # Create a week select for each student.
+	    for student in selected_students:
+	        # Use a unique key that combines a prefix and the student name.
+	        assignments[student] = st.selectbox(
+	            f"Select week for **{student}**",
+	            ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+	            key=f"week_{student}"
+	        )
+	    
+	    # Use a separate button (outside of an st.form) to process the assignment.
+	    if st.button("Assign Students"):
+	        # Mapping from week to datecodes.
+	        week_datecode_map = {
+	            'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
+	            'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
+	            'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
+	            'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
+	        }
+	        
+	        for student, week in assignments.items():
+	            condition = (
+	                (df['clinic'] == 'PSHCH_NURSERY') &
+	                (df['class'].isin(['H0', 'H10'])) &
+	                (df['datecode'].isin(week_datecode_map[week]))
 	            )
-	            assignments[student] = week
-	
-	        submitted = st.form_submit_button("Assign Students")
-	
-	        if submitted:
-	            # Save assignments to session_state if needed
-	            st.session_state.assignment_done = True
-	            st.session_state.assignments = assignments
-	
-	            # Mapping from week to datecodes.
-	            week_datecode_map = {
-	                'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
-	                'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
-	                'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
-	                'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
-	            }
-	
-	            # For each selected student, update the DataFrame based on their chosen week.
-	            for student, week in assignments.items():
-	                condition = (
-	                    (df['clinic'] == 'PSHCH_NURSERY') &
-	                    (df['class'].isin(['H0', 'H10'])) &
-	                    (df['datecode'].isin(week_datecode_map[week]))
-	                )
-	                df.loc[condition, 'student'] = student
-	
-	            st.success("Assignment complete!")
-	            st.write("#### Updated DataFrame:")
-	            st.dataframe(df)
+	            df.loc[condition, 'student'] = student
+	        
+	        st.success("Assignment complete!")
+	        st.write("#### Updated DataFrame:")
+	        st.dataframe(df)
 
 
 	# =================================================================
