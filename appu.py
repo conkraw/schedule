@@ -1541,7 +1541,7 @@ elif st.session_state.page == "Student Assignments":
     #    st.rerun()
     if st.button("Return to Student Nursery Assignment"):
         # Reset the dataframe
-        st.session_state.df = pd.read_csv("prenurseryass_df.csv"); st.session_state.df["student"] = st.session_state.df["student"].fillna("")
+        st.session_state.df = pd.read_csv("prenurseryass_df.csv"); st.session_state.df["student"] = st.session_state.df.apply(lambda row: row["student_original"] if pd.isna(row["student"]) or row["student"] == "" else row["student"],axis=1)
 
         # Reset any assignment state if needed
         st.session_state.assignments = {}
