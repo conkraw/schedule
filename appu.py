@@ -1165,36 +1165,30 @@ elif st.session_state.page == "OPD Creator":
 	import numpy as np
 	import openpyxl
 	from openpyxl.styles import Alignment
-
 	
-	# Ensure session_state holds the multi-select value.
+	# Ensure the key is set only once on first run.
 	if "selected_students" not in st.session_state:
 	    st.session_state.selected_students = []
 	
-	# Multi-select (outside a form) with a fixed key.
+	# The multi-select widget will store its value in st.session_state["selected_students"]
 	selected_students = st.multiselect(
 	    "Select one or more students to assign:",
 	    unique_student_names,
-	    key="selected_students",
-	    default=st.session_state.selected_students
+	    key="selected_students"
 	)
 	
-	# Update session_state with current multi-select selection.
-	st.session_state.selected_students = selected_students
-	
+	# Now, you can simply read the selected_students value from st.session_state.
 	if selected_students:
 	    st.write("#### Choose the week for each selected student:")
 	    assignments = {}
 	    # Create a week select for each student.
 	    for student in selected_students:
-	        # Use a unique key that combines a prefix and the student name.
 	        assignments[student] = st.selectbox(
 	            f"Select week for **{student}**",
 	            ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
 	            key=f"week_{student}"
 	        )
 	    
-	    # Use a separate button (outside of an st.form) to process the assignment.
 	    if st.button("Assign Students"):
 	        # Mapping from week to datecodes.
 	        week_datecode_map = {
@@ -1215,6 +1209,7 @@ elif st.session_state.page == "OPD Creator":
 	        st.success("Assignment complete!")
 	        st.write("#### Updated DataFrame:")
 	        st.dataframe(df)
+	
 
 
 	# =================================================================
