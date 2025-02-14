@@ -1167,373 +1167,376 @@ elif st.session_state.page == "OPD Creator":
             st.rerun()  # Rerun to update the UI
 
 elif st.session_state.page == "Student Assignments":
-    	st.title("Create Student Schedule")
-	# Assume df is defined elsewhere in your code (e.g., via a prior import or creation)
-	# df["student"] = np.nan  # Uncomment if needed to initialize the student column.
-	
-	# -----------------------------
-	# Define week mapping (each week is a list of datecodes)
-	# -----------------------------
-	weeks = {
-	    "week1": ["T0", "T1", "T2", "T3", "T4"],
-	    "week2": ["T7", "T8", "T9", "T10", "T11"],
-	    "week3": ["T14", "T15", "T16", "T17", "T18"],
-	    "week4": ["T21", "T22", "T23", "T24", "T25"]
-	}
-	
-	# =============================================================================
-	# STEP 1: EVENLY DISTRIBUTED WARD_A ASSIGNMENT (Capacity: 5 students per week)
-	# =============================================================================
-	
-	# Define the available room pairs for WARD_A:
-	ward_a_room_pairs = [("H0", "H10"), ("H1", "H11"), ("H2", "H12"), ("H3", "H13"), ("H4", "H14")]
-	ward_a_capacity = 5  # maximum assignments (students) per week
-	
-	# Keep a count of how many students have been assigned in each week
-	ward_a_counts = {"week1": 0, "week2": 0, "week3": 0, "week4": 0}
-	
-	# Record for each student the WARD_A assignment as: student -> (week, room_pair)
-	ward_a_assignment = {}
-	
-	# --- Pre-check for pre-assigned WARD_A slots ---
-	for student in student_names:
-	    preassigned = df[(df["clinic"].str.upper() == "WARD_A") & (df["student"] == student)]
-	    if not preassigned.empty:
-		# Use the first matching row.
-		existing_datecode = preassigned.iloc[0]["datecode"]
-		target_week = next((wk for wk, codes in weeks.items() if existing_datecode in codes), None)
-		assigned_room_pair = None
-		for room_pair in ward_a_room_pairs:
-		    if preassigned.iloc[0]["class"] in room_pair:
-			assigned_room_pair = room_pair
-			break
-		if target_week and assigned_room_pair:
-		    ward_a_assignment[student] = (target_week, assigned_room_pair)
-		    ward_a_counts[target_week] += 1
-	
-	# --- Now assign WARD_A for students not already assigned ---
-	for student in student_names:
-	    if student in ward_a_assignment:
-		continue  # Skip if already assigned via pre-assignment.
-	    available_weeks = {wk: cnt for wk, cnt in ward_a_counts.items() if cnt < ward_a_capacity}
-	    if not available_weeks:
-		break  # All weeks are full.
-	    target_week = min(available_weeks, key=available_weeks.get)
-	    datecodes = weeks[target_week]
-	    slot_found = False
-	    for room_pair in ward_a_room_pairs:
-		mask = (df["clinic"].str.upper() == "WARD_A") & \
-		       (df["datecode"].isin(datecodes)) & \
-		       (df["class"].isin(room_pair))
-		current = df.loc[mask, "student"]
-		unique_assigned = current.dropna().unique()
-		if len(unique_assigned) == 0 or (len(unique_assigned) == 1 and unique_assigned[0] == student):
-		    df.loc[mask & df["student"].isna(), "student"] = student
-		    ward_a_counts[target_week] += 1
-		    ward_a_assignment[student] = (target_week, room_pair)
-		    slot_found = True
-		    break
-	    if not slot_found:
-		# Optionally, handle the case where no slot was found.
-		pass
-	
-	# -----------------------------
-	# Set up capacities for extra assignments:
-	hampden_capacity = {"week1": 1, "week3": 1}
-	sjr_capacity    = {"week1": 2, "week2": 2, "week3": 2, "week4": 2}
-	pshch_capacity  = {"week1": 1, "week2": 1, "week3": 1, "week4": 1}
-	
-	# Record extra assignments as: student -> (clinic, week, room_pair)
-	extra_assignment = {}
-	
-	# --- Helper function to assign an extra slot, respecting any pre-assignment ---
-	def assign_slot(student, clinic, week, room_pair):
-	    """
-	    Attempts to assign 'student' into a slot for 'clinic' in the given 'week'
-	    using the provided room_pair. Only fills unassigned cells.
-	    Returns True if an assignment was made.
-	    """
-	    datecodes = weeks[week]
-	    mask = (df["clinic"].str.upper() == clinic.upper()) & \
-		   (df["datecode"].isin(datecodes)) & \
-		   (df["class"].isin(room_pair))
-	    current = df.loc[mask, "student"]
-	    unique_assigned = current.dropna().unique()
-	    if len(unique_assigned) == 0 or (len(unique_assigned) == 1 and unique_assigned[0] == student):
-		df.loc[mask & df["student"].isna(), "student"] = student
-		return True
-	    return False
-	
-	# --- Pre-check for pre-assigned extra slots (HAMPDEN_NURSERY, SJR_HOSP, PSHCH_NURSERY) ---
-	extra_clinics = ["HAMPDEN_NURSERY", "SJR_HOSP", "PSHCH_NURSERY"]
-	for student in student_names:
-	    # Only process students who already have a WARD_A slot.
-	    if student not in ward_a_assignment:
-		continue
-	    pre_extra = df[(df["clinic"].str.upper().isin([c.upper() for c in extra_clinics])) &
-			   (df["student"] == student)]
-	    if not pre_extra.empty:
-		row = pre_extra.iloc[0]
-		clinic = row["clinic"].upper()
-		datecode = row["datecode"]
-		target_week = next((wk for wk, codes in weeks.items() if datecode in codes), None)
-		room = row["class"]
-		# Determine the room pair based on the clinic and the room.
-		assigned_room_pair = None
-		if clinic == "HAMPDEN_NURSERY":
-		    assigned_room_pair = ("H3", "H13")
-		elif clinic == "SJR_HOSP":
-		    assigned_room_pair = ("H2", "H12") if room in ("H2", "H12") else ("H3", "H13")
-		elif clinic == "PSHCH_NURSERY":
-		    assigned_room_pair = ("H0", "H10") if room in ("H0", "H10") else ("H1", "H11")
-		if target_week and assigned_room_pair:
-		    extra_assignment[student] = (clinic, target_week, assigned_room_pair)
-	
-	# --- Now assign extra slots for students who lack one ---
-	for student in student_names:
-	    if student not in ward_a_assignment or student in extra_assignment:
-		continue  # Skip if no WARD_A slot or if an extra slot already exists.
-	    wa_week, _ = ward_a_assignment[student]
-	    assigned_extra = False
-	
-	    # --- Priority 1: HAMPDEN_NURSERY (allowed only in week1 and week3) ---
-	    if wa_week != "week1" and hampden_capacity.get("week1", 0) > 0:
-		if assign_slot(student, "HAMPDEN_NURSERY", "week1", ("H3", "H13")):
-		    hampden_capacity["week1"] -= 1
-		    extra_assignment[student] = ("HAMPDEN_NURSERY", "week1", ("H3", "H13"))
-		    assigned_extra = True
-	    if not assigned_extra and wa_week != "week3" and hampden_capacity.get("week3", 0) > 0:
-		if assign_slot(student, "HAMPDEN_NURSERY", "week3", ("H3", "H13")):
-		    hampden_capacity["week3"] -= 1
-		    extra_assignment[student] = ("HAMPDEN_NURSERY", "week3", ("H3", "H13"))
-		    assigned_extra = True
-	
-	    # --- Priority 2: SJR_HOSP (allowed in any week except the student's WARD_A week) ---
-	    if not assigned_extra:
-		for wk in ["week1", "week2", "week3", "week4"]:
-		    if wk == wa_week:
-			continue
-		    if sjr_capacity[wk] > 0:
-			if assign_slot(student, "SJR_HOSP", wk, ("H2", "H12")):
-			    sjr_capacity[wk] -= 1
-			    extra_assignment[student] = ("SJR_HOSP", wk, ("H2", "H12"))
-			    assigned_extra = True
-			    break
-			elif assign_slot(student, "SJR_HOSP", wk, ("H3", "H13")):
-			    sjr_capacity[wk] -= 1
-			    extra_assignment[student] = ("SJR_HOSP", wk, ("H3", "H13"))
-			    assigned_extra = True
-			    break
-	
-	    # --- Priority 3: PSHCH_NURSERY (allowed in any week except the student's WARD_A week) ---
-	    if not assigned_extra:
-		# Build a list of allowed weeks (all except the student's WARD_A week)
-		allowed_weeks = [wk for wk in ["week1", "week2", "week3", "week4"] if wk != wa_week]
-		# First, try the preferred room pair ("H0", "H10")
-		for wk in allowed_weeks:
-		    if pshch_capacity[wk] > 0:
-			if assign_slot(student, "PSHCH_NURSERY", wk, ("H0", "H10")):
-			    pshch_capacity[wk] -= 1
-			    extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H0", "H10"))
-			    assigned_extra = True
-			    break
-		# Only if no preferred slot was found, try the alternative room pair ("H1", "H11")
-		if not assigned_extra:
-		    for wk in allowed_weeks:
-			if pshch_capacity[wk] > 0:
-			    if assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
-				pshch_capacity[wk] -= 1
-				extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
-				assigned_extra = True
-				break
-	    if not assigned_extra:
-		# As a last resort, force an assignment into PSHCH_NURSERY fallback.
-		for wk in ["week1", "week2", "week3", "week4"]:
-		    if wk == wa_week:
-			continue
-		    if assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
-			extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
-			break
-	
-	# -----------------------------
-	# End of Combined Assignments
-	# -----------------------------
-	
-
-		
-	# ✅ Save and display the updated dataset
-	df.to_csv('final.csv', index=False); st.dataframe(df)
-	
-	################################################################################################################################################################################################
-	df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
-	df['student'].replace("nan", pd.NA, inplace=True)
-	df_filtered = df.dropna(subset=['student'])
-	
-	#df_filtered = df[df['student'].ne("") & df['student'].ne("nan")]  # Exclude empty & 'nan'
-
-	# ✅ Find duplicate student assignments across all clinics
-	duplicate_students = df_filtered[df_filtered.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
-	
-	if not duplicate_students.empty:
-	    st.warning("⚠️ Duplicate student assignments found across different clinics!")
-	
-	    # ✅ Group by student, datecode, class, and clinic
-	    duplicate_summary = (
-	        duplicate_students.groupby(['student', 'datecode', 'class', 'clinic'])
-	        .size()
-	        .reset_index(name='Count')
-	    )
-	
-	    # ✅ Show only problematic cases (students assigned to multiple clinics in the same datecode and class)
-	    duplicate_summary = duplicate_summary[duplicate_summary.duplicated(subset=['student', 'datecode', 'class'], keep=False)]
-
-
-	    st.write('Duplicate Check')
-	    st.dataframe(duplicate_summary)
-		
-	else:
-	    st.success("✅ No duplicate student assignments detected across clinics!")
-
-	#####################################################################OUTPATIENT SHIFT ANALYIS#####################################################################################################################################
-	clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]; types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]; df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
-	
-	start_date = pd.to_datetime(st.session_state.start_date); df["week_num"] = ((df["date"] - start_date).dt.days // 7) + 1; df["week_label"] = "Week " + df["week_num"].astype(str)
-	
-	filtered_df = df[(df["clinic"].isin(clinics_of_interest)) & (df["type"].isin(types_of_interest))]
-	
-	# Count shifts per provider per clinic per week
-	shift_counts = (filtered_df.groupby(["week_label", "provider", "clinic"]).size().reset_index(name="shift_count"));sorted_shift_counts = shift_counts.sort_values(by=["week_label", "shift_count"], ascending=[True, False])
-	
-	#st.dataframe(sorted_shift_counts)
-	
-	df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
-
-	df = df[['date', 'type', 'provider', 'student', 'clinic', 'text','class','datecode','week_num','week_label']]
-	
-	df.to_excel('final.xlsx',index=False); st.dataframe(df)
-	
-	# Select relevant columns
-	table_df = df[['student', 'clinic', 'date']]
-	
-	# Convert 'date' column to datetime format
-	table_df["date"] = pd.to_datetime(table_df["date"])
-	
-	# Calculate week number and create a week label
-	table_df["week_num"] = ((table_df["date"] - start_date).dt.days // 7) + 1
-	table_df["week_label"] = "Week " + table_df["week_num"].astype(str)
-	
-	# Sort students alphabetically within each week before grouping
-	table_df = table_df.sort_values(by=["week_label", "student"])
-	
-	# Group by week_label, combining student names and assigned clinics
-	grouped_df = table_df.groupby(["week_label", "student"])["clinic"].apply(lambda x: ", ".join(x.dropna().unique())).reset_index()
-	
-	# Pivot the table to show weeks as columns while ensuring unique column names
-	pivot_df = grouped_df.pivot(index="student", columns="week_label", values="clinic")
-	
-	# Reset index to ensure student names appear as a column
-	pivot_df = pivot_df.reset_index()
-	
-	# Rename columns to remove multi-level indexing issues
-	pivot_df.columns.name = None  # Remove multi-level index name
-	pivot_df = pivot_df.rename_axis(None, axis=1)  # Ensure a clean dataframe
-
-	
-	st.dataframe(pivot_df)
-
-	########################################################################################################################################################################
-	import openpyxl
-	from openpyxl.styles import Alignment
-	
-	def generate_mapping(start_value):
-	    """
-	    Generates a mapping dictionary for H0 to H19 starting at a given start_value.
-	    """
-	    return {f"H{i}": start_value + i for i in range(20)}
-	
-	def create_t_mapping():
-	    """
-	    Creates the combined mapping for T0 to T27.
-	    """
-	    t_mappings = [
-	        (0, 6),  # T0 to T6 starts at 6
-	        (7, 30),  # T7 to T13 starts at 30
-	        (14, 54),  # T14 to T20 starts at 54
-	        (21, 78)   # T21 to T27 starts at 78
-	    ]
-	
-	    combined_mapping = {}
-	    for start_t, start_value in t_mappings:
-	        common_mapping = generate_mapping(start_value)
-	        combined_mapping.update({f"T{i}": common_mapping for i in range(start_t, start_t + 7)})
-	
-	    return combined_mapping
-	
-	def process_excel_mapping(location, sheet_name):
-	    """
-	    Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
-	    """
-	    wb = openpyxl.load_workbook('final.xlsx')     #; ws = wb.active; data=ws.values; x = pd.DataFrame(data); st.dataframe(x)
-	    ws = wb['Sheet1']
-	    
-	    wb1 = openpyxl.load_workbook('OPD.xlsx')
-	    ws1 = wb1[sheet_name]
-	
-	    combined_t_mapping = create_t_mapping()
-	
-	    column_mapping = {f"T{i}": (i % 7) + 2 for i in range(28)}
-	
-	    for row in ws.iter_rows():
-	        t_value = row[7].value  # Column H (index 7)
-	        h_value = row[6].value  # Column G (index 6)
-	        row_location = row[4].value  # Column E (index 4)
-	
-	        if row_location == location and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-	            target_row = combined_t_mapping[t_value][h_value]
-	            target_column = column_mapping[t_value]
-	
-	            ws1.cell(row=target_row, column=target_column).value = row[5].value  # Column F (index 5)
-	            ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-	
-	    wb1.save('OPD.xlsx')
-	    print(f"Processed mapping for {location} in {sheet_name}.")
-
-	# Process HOPE_DRIVE
-	process_excel_mapping("HOPE_DRIVE", "HOPE_DRIVE")
-	process_excel_mapping("ETOWN", "ETOWN")
-	process_excel_mapping("NYES", "NYES")
-	process_excel_mapping("COMPLEX", "COMPLEX")
-	process_excel_mapping("WARD_A", "W_A")
-	process_excel_mapping("WARD_P", "W_P")
-	process_excel_mapping("PICU", "PICU")
-	process_excel_mapping("PSHCH_NURSERY","PSHCH_NURSERY")
-	process_excel_mapping("HAMPDEN_NURSERY","HAMPDEN_NURSERY")
-	process_excel_mapping("SJR_HOSP","SJR_HOSP")
-	process_excel_mapping("AAC","AAC")
-	process_excel_mapping("NF","NF")
-	process_excel_mapping("ER_CONS","ER_CONS")
-	process_excel_mapping("ADOLMED","ADOLMED")
-	process_excel_mapping("WARD_C","W_C")
-	process_excel_mapping("RESIDENT","RESIDENT")
-
-	###############################################################################################
-
-	# Button to trigger the download
-	if st.button('Create OPD'):
-	    # Path to the existing 'OPD.xlsx' workbook
-	    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
-	
-	    # Read the workbook into memory
-	    with open(file_path, 'rb') as file:
-	        file_data = file.read()
-	
-	    # Provide a download button for the existing OPD.xlsx file
-	    st.download_button(
-	        label="Download OPD.xlsx",
-	        data=file_data,
-	        file_name="OPD.xlsx",
-	        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	    )
+    st.title("Create Student Schedule")
+    # Assume df is defined elsewhere in your code (e.g., via a prior import or creation)
+    # df["student"] = np.nan  # Uncomment if needed to initialize the student column.
+    
+    # -----------------------------
+    # Define week mapping (each week is a list of datecodes)
+    # -----------------------------
+    weeks = {
+        "week1": ["T0", "T1", "T2", "T3", "T4"],
+        "week2": ["T7", "T8", "T9", "T10", "T11"],
+        "week3": ["T14", "T15", "T16", "T17", "T18"],
+        "week4": ["T21", "T22", "T23", "T24", "T25"]
+    }
+    
+    # =============================================================================
+    # STEP 1: EVENLY DISTRIBUTED WARD_A ASSIGNMENT (Capacity: 5 students per week)
+    # =============================================================================
+    
+    # Define the available room pairs for WARD_A:
+    ward_a_room_pairs = [("H0", "H10"), ("H1", "H11"), ("H2", "H12"), ("H3", "H13"), ("H4", "H14")]
+    ward_a_capacity = 5  # maximum assignments (students) per week
+    
+    # Keep a count of how many students have been assigned in each week
+    ward_a_counts = {"week1": 0, "week2": 0, "week3": 0, "week4": 0}
+    
+    # Record for each student the WARD_A assignment as: student -> (week, room_pair)
+    ward_a_assignment = {}
+    
+    # --- Pre-check for pre-assigned WARD_A slots ---
+    for student in student_names:
+        preassigned = df[(df["clinic"].str.upper() == "WARD_A") & (df["student"] == student)]
+        if not preassigned.empty:
+            # Use the first matching row.
+            existing_datecode = preassigned.iloc[0]["datecode"]
+            target_week = next((wk for wk, codes in weeks.items() if existing_datecode in codes), None)
+            assigned_room_pair = None
+            for room_pair in ward_a_room_pairs:
+                if preassigned.iloc[0]["class"] in room_pair:
+                    assigned_room_pair = room_pair
+                    break
+            if target_week and assigned_room_pair:
+                ward_a_assignment[student] = (target_week, assigned_room_pair)
+                ward_a_counts[target_week] += 1
+    
+    # --- Now assign WARD_A for students not already assigned ---
+    for student in student_names:
+        if student in ward_a_assignment:
+            continue  # Skip if already assigned via pre-assignment.
+        available_weeks = {wk: cnt for wk, cnt in ward_a_counts.items() if cnt < ward_a_capacity}
+        if not available_weeks:
+            break  # All weeks are full.
+        target_week = min(available_weeks, key=available_weeks.get)
+        datecodes = weeks[target_week]
+        slot_found = False
+        for room_pair in ward_a_room_pairs:
+            mask = (df["clinic"].str.upper() == "WARD_A") & \
+                   (df["datecode"].isin(datecodes)) & \
+                   (df["class"].isin(room_pair))
+            current = df.loc[mask, "student"]
+            unique_assigned = current.dropna().unique()
+            if len(unique_assigned) == 0 or (len(unique_assigned) == 1 and unique_assigned[0] == student):
+                df.loc[mask & df["student"].isna(), "student"] = student
+                ward_a_counts[target_week] += 1
+                ward_a_assignment[student] = (target_week, room_pair)
+                slot_found = True
+                break
+        if not slot_found:
+            # Optionally, handle the case where no slot was found.
+            pass
+    
+    # -----------------------------
+    # Set up capacities for extra assignments:
+    hampden_capacity = {"week1": 1, "week3": 1}
+    sjr_capacity    = {"week1": 2, "week2": 2, "week3": 2, "week4": 2}
+    pshch_capacity  = {"week1": 1, "week2": 1, "week3": 1, "week4": 1}
+    
+    # Record extra assignments as: student -> (clinic, week, room_pair)
+    extra_assignment = {}
+    
+    # --- Helper function to assign an extra slot, respecting any pre-assignment ---
+    def assign_slot(student, clinic, week, room_pair):
+        """
+        Attempts to assign 'student' into a slot for 'clinic' in the given 'week'
+        using the provided room_pair. Only fills unassigned cells.
+        Returns True if an assignment was made.
+        """
+        datecodes = weeks[week]
+        mask = (df["clinic"].str.upper() == clinic.upper()) & \
+               (df["datecode"].isin(datecodes)) & \
+               (df["class"].isin(room_pair))
+        current = df.loc[mask, "student"]
+        unique_assigned = current.dropna().unique()
+        if len(unique_assigned) == 0 or (len(unique_assigned) == 1 and unique_assigned[0] == student):
+            df.loc[mask & df["student"].isna(), "student"] = student
+            return True
+        return False
+    
+    # --- Pre-check for pre-assigned extra slots (HAMPDEN_NURSERY, SJR_HOSP, PSHCH_NURSERY) ---
+    extra_clinics = ["HAMPDEN_NURSERY", "SJR_HOSP", "PSHCH_NURSERY"]
+    for student in student_names:
+        # Only process students who already have a WARD_A slot.
+        if student not in ward_a_assignment:
+            continue
+        pre_extra = df[(df["clinic"].str.upper().isin([c.upper() for c in extra_clinics])) &
+                       (df["student"] == student)]
+        if not pre_extra.empty:
+            row = pre_extra.iloc[0]
+            clinic = row["clinic"].upper()
+            datecode = row["datecode"]
+            target_week = next((wk for wk, codes in weeks.items() if datecode in codes), None)
+            room = row["class"]
+            # Determine the room pair based on the clinic and the room.
+            assigned_room_pair = None
+            if clinic == "HAMPDEN_NURSERY":
+                assigned_room_pair = ("H3", "H13")
+            elif clinic == "SJR_HOSP":
+                assigned_room_pair = ("H2", "H12") if room in ("H2", "H12") else ("H3", "H13")
+            elif clinic == "PSHCH_NURSERY":
+                assigned_room_pair = ("H0", "H10") if room in ("H0", "H10") else ("H1", "H11")
+            if target_week and assigned_room_pair:
+                extra_assignment[student] = (clinic, target_week, assigned_room_pair)
+    
+    # --- Now assign extra slots for students who lack one ---
+    for student in student_names:
+        if student not in ward_a_assignment or student in extra_assignment:
+            continue  # Skip if no WARD_A slot or if an extra slot already exists.
+        wa_week, _ = ward_a_assignment[student]
+        assigned_extra = False
+    
+        # --- Priority 1: HAMPDEN_NURSERY (allowed only in week1 and week3) ---
+        if wa_week != "week1" and hampden_capacity.get("week1", 0) > 0:
+            if assign_slot(student, "HAMPDEN_NURSERY", "week1", ("H3", "H13")):
+                hampden_capacity["week1"] -= 1
+                extra_assignment[student] = ("HAMPDEN_NURSERY", "week1", ("H3", "H13"))
+                assigned_extra = True
+        if not assigned_extra and wa_week != "week3" and hampden_capacity.get("week3", 0) > 0:
+            if assign_slot(student, "HAMPDEN_NURSERY", "week3", ("H3", "H13")):
+                hampden_capacity["week3"] -= 1
+                extra_assignment[student] = ("HAMPDEN_NURSERY", "week3", ("H3", "H13"))
+                assigned_extra = True
+    
+        # --- Priority 2: SJR_HOSP (allowed in any week except the student's WARD_A week) ---
+        if not assigned_extra:
+            for wk in ["week1", "week2", "week3", "week4"]:
+                if wk == wa_week:
+                    continue
+                if sjr_capacity[wk] > 0:
+                    if assign_slot(student, "SJR_HOSP", wk, ("H2", "H12")):
+                        sjr_capacity[wk] -= 1
+                        extra_assignment[student] = ("SJR_HOSP", wk, ("H2", "H12"))
+                        assigned_extra = True
+                        break
+                    elif assign_slot(student, "SJR_HOSP", wk, ("H3", "H13")):
+                        sjr_capacity[wk] -= 1
+                        extra_assignment[student] = ("SJR_HOSP", wk, ("H3", "H13"))
+                        assigned_extra = True
+                        break
+    
+        # --- Priority 3: PSHCH_NURSERY (allowed in any week except the student's WARD_A week) ---
+        if not assigned_extra:
+            # Build a list of allowed weeks (all except the student's WARD_A week)
+            allowed_weeks = [wk for wk in ["week1", "week2", "week3", "week4"] if wk != wa_week]
+            # First, try the preferred room pair ("H0", "H10")
+            for wk in allowed_weeks:
+                if pshch_capacity[wk] > 0:
+                    if assign_slot(student, "PSHCH_NURSERY", wk, ("H0", "H10")):
+                        pshch_capacity[wk] -= 1
+                        extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H0", "H10"))
+                        assigned_extra = True
+                        break
+            # Only if no preferred slot was found, try the alternative room pair ("H1", "H11")
+            if not assigned_extra:
+                for wk in allowed_weeks:
+                    if pshch_capacity[wk] > 0:
+                        if assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
+                            pshch_capacity[wk] -= 1
+                            extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
+                            assigned_extra = True
+                            break
+        if not assigned_extra:
+            # As a last resort, force an assignment into PSHCH_NURSERY fallback.
+            for wk in ["week1", "week2", "week3", "week4"]:
+                if wk == wa_week:
+                    continue
+                if assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
+                    extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
+                    break
+    
+    # -----------------------------
+    # End of Combined Assignments
+    # -----------------------------
+    
+    # ✅ Save and display the updated dataset
+    df.to_csv('final.csv', index=False)
+    st.dataframe(df)
+    
+    ################################################################################################################################################################################################
+    df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
+    df['student'].replace("nan", pd.NA, inplace=True)
+    df_filtered = df.dropna(subset=['student'])
+    
+    # df_filtered = df[df['student'].ne("") & df['student'].ne("nan")]  # Exclude empty & 'nan'
+    
+    # ✅ Find duplicate student assignments across all clinics
+    duplicate_students = df_filtered[df_filtered.duplicated(subset=['datecode', 'class', 'student'], keep=False)]
+    
+    if not duplicate_students.empty:
+        st.warning("⚠️ Duplicate student assignments found across different clinics!")
+    
+        # ✅ Group by student, datecode, class, and clinic
+        duplicate_summary = (
+            duplicate_students.groupby(['student', 'datecode', 'class', 'clinic'])
+            .size()
+            .reset_index(name='Count')
+        )
+    
+        # ✅ Show only problematic cases (students assigned to multiple clinics in the same datecode and class)
+        duplicate_summary = duplicate_summary[duplicate_summary.duplicated(subset=['student', 'datecode', 'class'], keep=False)]
+    
+        st.write('Duplicate Check')
+        st.dataframe(duplicate_summary)
+        
+    else:
+        st.success("✅ No duplicate student assignments detected across clinics!")
+    
+    #####################################################################OUTPATIENT SHIFT ANALYSIS#####################################################################################################################################
+    clinics_of_interest = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
+    types_of_interest = ["AM - Continuity ", "PM - Continuity ", "AM - ACUTES", "PM - ACUTES "]
+    df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y")
+    
+    start_date = pd.to_datetime(st.session_state.start_date)
+    df["week_num"] = ((df["date"] - start_date).dt.days // 7) + 1
+    df["week_label"] = "Week " + df["week_num"].astype(str)
+    
+    filtered_df = df[(df["clinic"].isin(clinics_of_interest)) & (df["type"].isin(types_of_interest))]
+    
+    # Count shifts per provider per clinic per week
+    shift_counts = (
+        filtered_df.groupby(["week_label", "provider", "clinic"]).size().reset_index(name="shift_count")
+    )
+    sorted_shift_counts = shift_counts.sort_values(by=["week_label", "shift_count"], ascending=[True, False])
+    # st.dataframe(sorted_shift_counts)
+    
+    df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
+    df = df[['date', 'type', 'provider', 'student', 'clinic', 'text', 'class', 'datecode', 'week_num', 'week_label']]
+    
+    df.to_excel('final.xlsx', index=False)
+    st.dataframe(df)
+    
+    # Select relevant columns
+    table_df = df[['student', 'clinic', 'date']]
+    
+    # Convert 'date' column to datetime format
+    table_df["date"] = pd.to_datetime(table_df["date"])
+    
+    # Calculate week number and create a week label
+    table_df["week_num"] = ((table_df["date"] - start_date).dt.days // 7) + 1
+    table_df["week_label"] = "Week " + table_df["week_num"].astype(str)
+    
+    # Sort students alphabetically within each week before grouping
+    table_df = table_df.sort_values(by=["week_label", "student"])
+    
+    # Group by week_label, combining student names and assigned clinics
+    grouped_df = table_df.groupby(["week_label", "student"])["clinic"].apply(lambda x: ", ".join(x.dropna().unique())).reset_index()
+    
+    # Pivot the table to show weeks as columns while ensuring unique column names
+    pivot_df = grouped_df.pivot(index="student", columns="week_label", values="clinic")
+    
+    # Reset index to ensure student names appear as a column
+    pivot_df = pivot_df.reset_index()
+    
+    # Rename columns to remove multi-level indexing issues
+    pivot_df.columns.name = None  # Remove multi-level index name
+    pivot_df = pivot_df.rename_axis(None, axis=1)  # Ensure a clean dataframe
+    
+    st.dataframe(pivot_df)
+    
+    ########################################################################################################################################################################
+    import openpyxl
+    from openpyxl.styles import Alignment
+    
+    def generate_mapping(start_value):
+        """
+        Generates a mapping dictionary for H0 to H19 starting at a given start_value.
+        """
+        return {f"H{i}": start_value + i for i in range(20)}
+    
+    def create_t_mapping():
+        """
+        Creates the combined mapping for T0 to T27.
+        """
+        t_mappings = [
+            (0, 6),  # T0 to T6 starts at 6
+            (7, 30),  # T7 to T13 starts at 30
+            (14, 54),  # T14 to T20 starts at 54
+            (21, 78)   # T21 to T27 starts at 78
+        ]
+    
+        combined_mapping = {}
+        for start_t, start_value in t_mappings:
+            common_mapping = generate_mapping(start_value)
+            combined_mapping.update({f"T{i}": common_mapping for i in range(start_t, start_t + 7)})
+    
+        return combined_mapping
+    
+    def process_excel_mapping(location, sheet_name):
+        """
+        Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
+        """
+        wb = openpyxl.load_workbook('final.xlsx')
+        ws = wb['Sheet1']
+        
+        wb1 = openpyxl.load_workbook('OPD.xlsx')
+        ws1 = wb1[sheet_name]
+    
+        combined_t_mapping = create_t_mapping()
+    
+        column_mapping = {f"T{i}": (i % 7) + 2 for i in range(28)}
+    
+        for row in ws.iter_rows():
+            t_value = row[7].value  # Column H (index 7)
+            h_value = row[6].value  # Column G (index 6)
+            row_location = row[4].value  # Column E (index 4)
+    
+            if row_location == location and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
+                target_row = combined_t_mapping[t_value][h_value]
+                target_column = column_mapping[t_value]
+    
+                ws1.cell(row=target_row, column=target_column).value = row[5].value  # Column F (index 5)
+                ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
+    
+        wb1.save('OPD.xlsx')
+        print(f"Processed mapping for {location} in {sheet_name}.")
+    
+    # Process HOPE_DRIVE
+    process_excel_mapping("HOPE_DRIVE", "HOPE_DRIVE")
+    process_excel_mapping("ETOWN", "ETOWN")
+    process_excel_mapping("NYES", "NYES")
+    process_excel_mapping("COMPLEX", "COMPLEX")
+    process_excel_mapping("WARD_A", "W_A")
+    process_excel_mapping("WARD_P", "W_P")
+    process_excel_mapping("PICU", "PICU")
+    process_excel_mapping("PSHCH_NURSERY", "PSHCH_NURSERY")
+    process_excel_mapping("HAMPDEN_NURSERY", "HAMPDEN_NURSERY")
+    process_excel_mapping("SJR_HOSP", "SJR_HOSP")
+    process_excel_mapping("AAC", "AAC")
+    process_excel_mapping("NF", "NF")
+    process_excel_mapping("ER_CONS", "ER_CONS")
+    process_excel_mapping("ADOLMED", "ADOLMED")
+    process_excel_mapping("WARD_C", "W_C")
+    process_excel_mapping("RESIDENT", "RESIDENT")
+    
+    ###############################################################################################
+    
+    # Button to trigger the download
+    if st.button('Create OPD'):
+        # Path to the existing 'OPD.xlsx' workbook
+        file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
+    
+        # Read the workbook into memory
+        with open(file_path, 'rb') as file:
+            file_data = file.read()
+    
+        # Provide a download button for the existing OPD.xlsx file
+        st.download_button(
+            label="Download OPD.xlsx",
+            data=file_data,
+            file_name="OPD.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 elif st.session_state.page == "Create Student Schedule":
     st.title("Create Student Schedule")
