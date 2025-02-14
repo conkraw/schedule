@@ -1158,15 +1158,10 @@ elif st.session_state.page == "OPD Creator":
 
 	# Assign the student's name where conditions are met
 	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
-
-	# Save and display the combined dataset
-	#df_combined.to_csv('combined_resident_schedule.csv', index=False)
-
-	#df = pd.read_csv('final2.csv',dtype=str)
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 
-	#df["student"] = np.nan
+	df["student"] = np.nan
 	
 	# -----------------------------
 	# Define week mapping (each week is a list of datecodes)
