@@ -1476,7 +1476,7 @@ elif st.session_state.page == "Student Assignments":
     
     df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
     df = df[['date', 'type', 'provider', 'student', 'clinic', 'text', 'class', 'datecode', 'week_num', 'week_label']]
-    
+    df = df.loc[df['week_label] != "Week 5"]
     df.to_excel('final.xlsx', index=False)
     st.dataframe(df)
     
@@ -1544,7 +1544,7 @@ elif st.session_state.page == "Student Assignments":
         st.session_state.df = pd.read_csv("prenurseryass_df.csv")
 
         # Reset any assignment state if needed
-        #st.session_state.assignments = {}
+        st.session_state.assignments = {}
 
         # Reshuffle student names
         unique_student_names = st.session_state.get('student_names', [])
