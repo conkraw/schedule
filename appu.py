@@ -1166,10 +1166,15 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('final.csv',index=False)
         
 	if st.button("Next Step"):
-            st.session_state.page = "Student Assignments"
+            st.session_state.page = "Student Nursery Assignment"
             st.rerun()  # Rerun to update the UI
 
-
+elif st.session_state.page == "Student Nursery Assignment":
+    st.title("PSHCH Nursery Assignment")
+    if st.button("Next Step"):
+	st.session_state.page = "Student Assignments"
+	st.rerun()
+	
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
     df = pd.read_csv('final.csv')	
