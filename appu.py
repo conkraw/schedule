@@ -1163,7 +1163,7 @@ elif st.session_state.page == "OPD Creator":
 	#df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 	#df.loc[condition, 'student'] = 'Conrad'
 
-	df.to_csv('final.csv',index=False)
+	df.to_csv('final.csv',index=False); df_prenurseryassignment = df
         
 	if st.button("Next Step"):
             st.session_state.page = "Student Nursery Assignment"
@@ -1215,7 +1215,7 @@ elif st.session_state.page == "Student Assignments":
     if "student_names" in st.session_state:
 	    student_names = st.session_state.student_names
     # Read your CSV
-    df = pd.read_csv('final.csv'); df_prenurseryassignment = df
+    df = pd.read_csv('final.csv')
     
     # Dictionary mapping each week to its corresponding date codes
     week_dict = {
