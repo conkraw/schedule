@@ -1175,7 +1175,6 @@ if "page" not in st.session_state:
 
 if st.session_state.page == "Student Nursery Assignment":
     st.title("PSHCH Nursery Assignment")
-    df = st.session_state.get("df", pd.read_csv("prenurseryass_df.csv"))    
     # Define the weeks
     weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
     unique_student_names = st.session_state.get('student_names', [])
@@ -1209,7 +1208,7 @@ elif st.session_state.page == "Student Assignments":
     if "student_names" in st.session_state:
 	    student_names = st.session_state.student_names
     # Read your CSV
-    df = pd.read_csv('final.csv')
+    df = st.session_state.get("df", pd.read_csv("prenurseryass_df.csv"))    
     
     # Dictionary mapping each week to its corresponding date codes
     week_dict = {
