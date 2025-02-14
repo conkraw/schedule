@@ -1159,26 +1159,31 @@ elif st.session_state.page == "OPD Creator":
 	
 	#condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4']))); df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 
+	
 	st.header("Assign Students to Weeks")
 
-	# Multi-select widget to choose one or more students
-	selected_students = st.multiselect("Select one or more students to assign:", unique_student_names)
+	# Use a form to group the inputs
+	with st.form("assignment_form"):
+	    # Multi-select widget for student selection
+	    selected_students = st.multiselect("Select one or more students to assign:", unique_student_names)
+	    
+	    # Dictionary to hold the week assignments for each selected student
+	    assignments = {}
+	    if selected_students:
+	        st.write("#### Choose the week for each selected student:")
+	        for student in selected_students:
+	            week = st.selectbox(
+	                f"Select week for **{student}**", 
+	                ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+	                key=student  # Ensure each selectbox has a unique key
+	            )
+	            assignments[student] = week
 	
-	# For each selected student, allow the user to select a week assignment.
-	assignments = {}
-	if selected_students:
-	    st.write("#### Choose the week for each selected student:")
-	    for student in selected_students:
-	        week = st.selectbox(
-	            f"Select week for **{student}**", 
-	            ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-	            key=student  # Unique key for each selectbox
-	        )
-	        assignments[student] = week
+	    # This submit button will only trigger when the form is submitted
+	    submitted = st.form_submit_button("Assign Students")
 	
-	# When the "Assign Students" button is clicked, update df accordingly.
-	if st.button("Assign Students"):
-	    # Mapping of week to the corresponding datecodes
+	if submitted:
+	    # Mapping of week to corresponding datecodes
 	    week_datecode_map = {
 	        'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
 	        'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
@@ -1186,7 +1191,7 @@ elif st.session_state.page == "OPD Creator":
 	        'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
 	    }
 	    
-	    # Iterate over each assignment and update the DataFrame 'df'
+	    # Update df for each student based on their assigned week
 	    for student, week in assignments.items():
 	        condition = (
 	            (df['clinic'] == 'PSHCH_NURSERY') &
@@ -1194,6 +1199,11 @@ elif st.session_state.page == "OPD Creator":
 	            (df['datecode'].isin(week_datecode_map[week]))
 	        )
 	        df.loc[condition, 'student'] = student
+	    
+	    st.success("Assignment complete!")
+	    st.write("#### Updated DataFrame:")
+	    st.dataframe(df)
+
 		    
 	# Assume df is defined elsewhere in your code (e.g., via a prior import or creation)
 	# df["student"] = np.nan  # Uncomment if needed to initialize the student column.
