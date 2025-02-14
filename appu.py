@@ -1162,6 +1162,9 @@ elif st.session_state.page == "OPD Creator":
 	# Assign the student's name where conditions are met
 	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 
+	selected_student = st.selectbox("Select a student to assign:", unique_student_names)
+    	st.write(f"**Selected student:** {selected_student}")
+
 	# Assume df is defined elsewhere in your code (e.g., via a prior import or creation)
 	# df["student"] = np.nan  # Uncomment if needed to initialize the student column.
 	
