@@ -1159,37 +1159,37 @@ elif st.session_state.page == "OPD Creator":
 	
 	#condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4']))); df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 	
-	# Streamlit UI elements (initial setup for session state)
-	if 'student' not in st.session_state:
-	    st.session_state.student = None  # Placeholder until a student is selected
-	if 'week' not in st.session_state:
-	    st.session_state.week = None  # Placeholder until a week is selected
-	if 'page' not in st.session_state:
-	    st.session_state.page = "Select Student"  # Initial page
-	
-	week_dict = {
-	    'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
-	    'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
-	    'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
-	    'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
-	}
-	
+# Streamlit UI elements (initial setup for session state)
+if 'student' not in st.session_state:
+    st.session_state.student = None  # Placeholder until a student is selected
+if 'week' not in st.session_state:
+    st.session_state.week = None  # Placeholder until a week is selected
+if 'page' not in st.session_state:
+    st.session_state.page = "Select Student"  # Initial page
 
-	# Control flow for pages
-	elif st.session_state.page == "Select Student":
-	    student = st.selectbox('Select Student:', unique_student_names)
-	    week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
-	
-	    # When user selects a student and week, store these in session state
-	    if student and week:
-	        st.session_state.student = student
-	        st.session_state.week = week
-	
-	    # Only show button once both are selected
-	    if st.session_state.student and st.session_state.week:
-	        if st.button("Next Step"):
-	            st.session_state.page = "Student Assignments"  # Change page
-	            st.rerun()  # Rerun the app to show updated data
+week_dict = {
+    'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
+    'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
+    'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
+    'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
+}
+
+
+# Control flow for pages
+elif st.session_state.page == "Select Student":
+    student = st.selectbox('Select Student:', unique_student_names)
+    week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
+
+    # When user selects a student and week, store these in session state
+    if student and week:
+	st.session_state.student = student
+	st.session_state.week = week
+
+    # Only show button once both are selected
+    if st.session_state.student and st.session_state.week:
+	if st.button("Next Step"):
+	    st.session_state.page = "Student Assignments"  # Change page
+	    st.rerun()  # Rerun the app to show updated data
 
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
