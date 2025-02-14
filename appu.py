@@ -1198,7 +1198,7 @@ elif st.session_state.page == "OPD Creator":
             df = assign_student_to_week(st.session_state.student, st.session_state.week); df.to_csv('final.csv',index=False)
             st.write("Student assignments updated:")
             st.session_state.page = "Student Assignments"
-            st.rerun()  # Rerun to update the UI
+            #st.rerun()  # Rerun to update the UI
 
 
 elif st.session_state.page == "Student Assignments":
