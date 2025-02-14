@@ -1160,10 +1160,7 @@ elif st.session_state.page == "OPD Creator":
 	condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
 
 	# Assign the student's name where conditions are met
-	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
-
-	selected_student = st.selectbox("Select a student to assign:", unique_student_names)
-    	st.write(f"**Selected student:** {selected_student}")
+	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'; selected_student = st.selectbox("Select a student to assign:", unique_student_names); st.write(f"**Selected student:** {selected_student}")
 
 	# Assume df is defined elsewhere in your code (e.g., via a prior import or creation)
 	# df["student"] = np.nan  # Uncomment if needed to initialize the student column.
