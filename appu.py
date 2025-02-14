@@ -1161,6 +1161,11 @@ elif st.session_state.page == "OPD Creator":
 
 	# Assign the student's name where conditions are met
 	#df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
+
+if "page" not in st.session_state:
+    st.session_state.page = "select_students"
+if "student_names" not in st.session_state:
+    st.session_state.student_names = []
 	
 elif st.session_state.page == "select_students":
     st.header("Step 1: Select Student(s)")
