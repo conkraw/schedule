@@ -1232,7 +1232,7 @@ elif st.session_state.page == "Student Assignments":
             df.loc[condition, 'student'] = student
     
     # Save the updated CSV
-    df.to_csv('final.csv', index=False); st.dataframe(df)
+    df.to_csv('final.csv', index=False)
 
     # df["student"] = np.nan  # Uncomment if needed to initialize the student column.
     
