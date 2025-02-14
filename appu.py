@@ -1149,7 +1149,7 @@ elif st.session_state.page == "OPD Creator":
 
 	df.to_csv('resident_schedule.csv', index=False)
 
-	df1 = pd.read_csv('resident_schedule.csv', dtype=str)
+	df1 = pd.read_csv('resident_schedule.csv', dtype=str); exclude_datecodes = ["T29", "T30", "T31", "T32", "T33", "T34"]; df1 = df1[~df1['datecode'].isin(exclude_datecodes)] #exclude these datecodes because it is accidentally making a week 5. 
 	df2 = pd.read_csv('final2.csv', dtype=str)
 	
 	# Combine both DataFrames (stack rows)
