@@ -1169,59 +1169,77 @@ elif st.session_state.page == "OPD Creator":
             st.session_state.page = "Student Nursery Assignment"
             st.rerun()  # Rerun to update the UI
 
-elif st.session_state.page == "Student Nursery Assignment":
+import streamlit as st
+import pandas as pd
+
+# Initialize the page if needed
+if "page" not in st.session_state:
+    st.session_state.page = "Student Nursery Assignment"
+
+# Assume your list of student names is already in session state
+# e.g., st.session_state.student_names = ['student1', 'student2', 'student3', 'student4']
+
+if st.session_state.page == "Student Nursery Assignment":
     st.title("PSHCH Nursery Assignment")
-    if 'student' not in st.session_state:
-        st.session_state.student = None  # Placeholder until a student is selected
-    if 'week' not in st.session_state:
-        st.session_state.week = None  # Placeholder until a week is selected
-    if 'page' not in st.session_state:
-        st.session_state.page = "Student Nursery Assignment"  # Initial page
+    
+    # Define the weeks
+    weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
+    unique_student_names = st.session_state.get('student_names', [])
+    
+    st.write("For each week, choose a student or select None. (Each student may only be assigned once.)")
+    
+    # Use a form so all assignments are submitted together
+    with st.form("assignments_form"):
+        assignments = {}
+        # For each week, show a selectbox with "None" plus all student names.
+        for week in weeks:
+            assignments[week] = st.selectbox(
+                f"Assign student for {week}:",
+                options=[None] + unique_student_names,
+                key=week
+            )
+        submitted = st.form_submit_button("Submit Assignments")
+    
+    if submitted:
+        # Check that no student is assigned to more than one week
+        assigned_students = [s for s in assignments.values() if s is not None]
+        if len(assigned_students) != len(set(assigned_students)):
+            st.error("Each student can only be assigned to one week. Please adjust your assignments.")
+        else:
+            st.session_state.assignments = assignments
+            st.session_state.page = "Student Assignments"
+            st.rerun()  # Rerun the app to load the next page
 
-    unique_student_names = st.session_state.student_names
-    student = st.selectbox('Select Student:', unique_student_names)
-    week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
-
-    # When user selects a student and week, store these in session state
-    if student and week:
-        st.session_state.student = student
-        st.session_state.week = week
-
-    # Only show the "Next Step" button once both are selected
-    if st.session_state.student and st.session_state.week:
-        if st.button("Next Step"):
-            st.session_state.page = "Student Assignments"  # Change page
-            st.rerun()  # Re-run the app to show updated data
-
-    #if st.button("Next Step"):
-    #    st.session_state.page = "Student Assignments"
-    #    st.rerun()
-	
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
-    df = pd.read_csv('final.csv')	
-    if "student_names" in st.session_state:
-	    student_names = st.session_state.student_names
-    student = st.session_state.student
-    week = st.session_state.week
-
-    week_dict = {'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']}; 
-    def assign_student_to_week(student, week):
-        week_codes = week_dict.get(week, [])
-        if week_codes:
+    
+    # Read your CSV
+    df = pd.read_csv('final.csv')
+    
+    # Dictionary mapping each week to its corresponding date codes
+    week_dict = {
+        'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
+        'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
+        'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
+        'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
+    }
+    
+    assignments = st.session_state.get("assignments", {})
+    
+    # For each week, if a student is assigned, update the CSV rows for that week
+    for week, student in assignments.items():
+        if student is not None:
+            week_codes = week_dict.get(week, [])
             condition = (
                 (df['clinic'] == 'PSHCH_NURSERY') &
                 (df['class'].isin(['H0', 'H10'])) &
                 (df['datecode'].isin(week_codes))
             )
             df.loc[condition, 'student'] = student
-            return df
-        return df
-
-    # Update the dataframe and save to CSV
-    df = assign_student_to_week(student, week)
+    
+    # Save the updated CSV
     df.to_csv('final.csv', index=False)
-	
+
     # df["student"] = np.nan  # Uncomment if needed to initialize the student column.
     
     # -----------------------------
