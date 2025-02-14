@@ -1163,7 +1163,7 @@ elif st.session_state.page == "OPD Creator":
 	#df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 	#df.loc[condition, 'student'] = 'Conrad'
 
-	df.to_csv('final.csv',index=False); df_prenurseryassignment = df
+	df.to_csv('final.csv',index=False); df.to_csv('prenurseryass_df.csv',index=False)
         
 	if st.button("Next Step"):
             st.session_state.page = "Student Nursery Assignment"
@@ -1541,9 +1541,12 @@ elif st.session_state.page == "Student Assignments":
         st.write("All students have been assigned to WARD_A.")
 	    
     if st.button("Return to Student Nursery Assignment"):
-        df = df_prenurseryassignment
+        df = pd.read_csv("prenurseryass_df.csv") 
+        #st.session_state.df = pd.read_csv("prenurseryass_df.csv")  # Reset the dataframe
+        #st.session_state.assignments = {}  # Reset any assignment state if needed
         st.session_state.page = "Student Nursery Assignment"
-        st.rerun()    
+        st.rerun()
+
 
     ########################################################################################################################################################################
     import openpyxl
