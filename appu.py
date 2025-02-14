@@ -1633,15 +1633,47 @@ elif st.session_state.page == "Student Assignments":
     ###############################################################################################
     
     # Button to trigger the download
-    if st.button('Create OPD'):
-        # Path to the existing 'OPD.xlsx' workbook
-        file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
+    #if st.button('Create OPD'):
+    #    # Path to the existing 'OPD.xlsx' workbook
+    #    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
     
         # Read the workbook into memory
-        with open(file_path, 'rb') as file:
+    #    with open(file_path, 'rb') as file:
             file_data = file.read()
     
         # Provide a download button for the existing OPD.xlsx file
+    #    st.download_button(
+    #        label="Download OPD.xlsx",
+    #        data=file_data,
+    #        file_name="OPD.xlsx",
+    #        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    #    )
+
+    import openpyxl
+    from io import BytesIO
+    import streamlit as st
+
+    if st.button('Create OPD'):
+        file_path = 'OPD.xlsx'  # Path to your workbook
+
+        # Load the workbook using openpyxl
+        wb = openpyxl.load_workbook(file_path)
+
+        # Iterate over all sheets and cells to replace '<NA>' with an empty string
+        for sheet in wb.worksheets:
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value is not None and str(cell.value) == "<NA>":
+                        cell.value = ""
+
+        # Save the modified workbook to a BytesIO buffer
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)  # Reset buffer position to the beginning
+
+        file_data = buffer.read()
+
+        # Provide a download button for the modified OPD.xlsx file
         st.download_button(
             label="Download OPD.xlsx",
             data=file_data,
