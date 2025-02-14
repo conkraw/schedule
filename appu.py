@@ -1171,6 +1171,16 @@ elif st.session_state.page == "OPD Creator":
 	student = st.selectbox('Select Student:', unique_student_names)
 	week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
 	
+	# Store selected values in session state
+	if 'student' not in st.session_state:
+	    st.session_state.student = student
+	if 'week' not in st.session_state:
+	    st.session_state.week = week
+	
+	# Update session state when selections change
+	st.session_state.student = student
+	st.session_state.week = week
+
 	# Function to assign student to the selected week
 	def assign_student_to_week(student, week):
 	    week_codes = week_dict.get(week, [])
@@ -1185,7 +1195,7 @@ elif st.session_state.page == "OPD Creator":
 	    return df
 
 	if st.button("Next Step"):
-            df = assign_student_to_week(student, week); df.to_csv('final.csv',index=False)
+            df = assign_student_to_week(st.session_state.student, st.session_state.week); df.to_csv('final.csv',index=False)
             st.write("Student assignments updated:")
             st.session_state.page = "Student Assignments"
             st.rerun()  # Rerun to update the UI
