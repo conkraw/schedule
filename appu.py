@@ -1202,6 +1202,26 @@ elif st.session_state.page == "Student Assignments":
     df = pd.read_csv('final.csv')	
     if "student_names" in st.session_state:
 	    student_names = st.session_state.student_names
+    student = st.session_state.student
+    week = st.session_state.week
+
+    # Function to assign student to the selected week
+    def assign_student_to_week(student, week):
+        week_codes = week_dict.get(week, [])
+        if week_codes:
+            condition = (
+                (df['clinic'] == 'PSHCH_NURSERY') &
+                (df['class'].isin(['H0', 'H10'])) &
+                (df['datecode'].isin(week_codes))
+            )
+            df.loc[condition, 'student'] = student
+            return df
+        return df
+
+    # Update the dataframe and save to CSV
+    df = assign_student_to_week(student, week)
+    df.to_csv('final.csv', index=False)
+	
     # df["student"] = np.nan  # Uncomment if needed to initialize the student column.
     
     # -----------------------------
