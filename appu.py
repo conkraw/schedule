@@ -1161,6 +1161,7 @@ elif st.session_state.page == "OPD Creator":
 
 	# Assign the student's name where conditions are met
 	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
+	df.to_csv('final.csv',index=False)
         
 	if st.button("Next Step"):
             st.session_state.page = "Student Assignments"
@@ -1168,6 +1169,7 @@ elif st.session_state.page == "OPD Creator":
 
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
+    df = pd.read_csv('final.csv')	
     if "student_names" in st.session_state:
 	    student_names = st.session_state.student_names
     # df["student"] = np.nan  # Uncomment if needed to initialize the student column.
