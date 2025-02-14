@@ -1433,9 +1433,7 @@ elif st.session_state.page == "Student Assignments":
     # Final save to CSV
     df.to_csv('final.csv', index=False)
     #st.dataframe(df) #DISPLAY ASSIGNMENTS. 
-    if st.button("Return to Student Assignments"):
-        st.session_state.page = "Student Nursery Assignment"
-        st.rerun()    
+
     ################################################################################################################################################################################################
     df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
     df['student'].replace("nan", pd.NA, inplace=True)
@@ -1541,7 +1539,10 @@ elif st.session_state.page == "Student Assignments":
         st.write(f"Students not assigned to WARD_A: {', '.join(unassigned_ward_a_students)}")
     else:
         st.write("All students have been assigned to WARD_A.")
-
+	    
+    if st.button("Return to Student Assignments"):
+        st.session_state.page = "Student Nursery Assignment"
+        st.rerun()    	
     
     ########################################################################################################################################################################
     import openpyxl
