@@ -1478,7 +1478,7 @@ elif st.session_state.page == "Student Assignments":
     df = df[['date', 'type', 'provider', 'student', 'clinic', 'text', 'class', 'datecode', 'week_num', 'week_label']]
     
     df.to_excel('final.xlsx', index=False)
-    #st.dataframe(df)
+    st.dataframe(df)
     
     # Select relevant columns
     table_df = df[['student', 'clinic', 'date']]
