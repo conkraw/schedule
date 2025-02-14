@@ -1210,18 +1210,12 @@ elif st.session_state.page == "assign_weeks":
         # Save the updated CSV.
         df.to_csv('final.csv', index=False)
         st.success("Assignment complete and file saved!")
-        st.write("#### Updated DataFrame:")
-        st.dataframe(df)
+	    
     # Button to proceed to the next page.
     if st.button("Next Step"):
         st.session_state.page = "Student Assignments"
         st.rerun()
-
 	#df.to_csv('final.csv',index=False)
-        
-	if st.button("Next Step"):
-            st.session_state.page = "Student Assignments"
-            st.rerun()  # Rerun to update the UI
 
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
