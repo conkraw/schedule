@@ -1158,13 +1158,6 @@ elif st.session_state.page == "OPD Creator":
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names)); st.session_state.student_names = unique_student_names
 	
 	#condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4']))); df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
-
-	week_dict = {
-	    'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
-	    'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
-	    'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
-	    'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
-	}
 	
 	# Streamlit UI elements (initial setup for session state)
 	if 'student' not in st.session_state:
@@ -1174,6 +1167,14 @@ elif st.session_state.page == "OPD Creator":
 	if 'page' not in st.session_state:
 	    st.session_state.page = "Select Student"  # Initial page
 	
+	week_dict = {
+	    'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
+	    'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
+	    'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
+	    'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
+	}
+	
+
 	# Control flow for pages
 	elif st.session_state.page == "Select Student":
 	    student = st.selectbox('Select Student:', unique_student_names)
