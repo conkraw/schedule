@@ -1474,7 +1474,7 @@ elif st.session_state.page == "Student Assignments":
     sorted_shift_counts = shift_counts.sort_values(by=["week_label", "shift_count"], ascending=[True, False])
     # st.dataframe(sorted_shift_counts)
     
-    df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
+    df['text'] = (df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)).replace("nan", "")
     df = df[['date', 'type', 'provider', 'student', 'clinic', 'text', 'class', 'datecode', 'week_num', 'week_label']]
     df = df.loc[df['week_label'] != "Week 5"]
     df.to_excel('final.xlsx', index=False)
