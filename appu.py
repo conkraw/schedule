@@ -1169,19 +1169,13 @@ elif st.session_state.page == "OPD Creator":
             st.session_state.page = "Student Nursery Assignment"
             st.rerun()  # Rerun to update the UI
 
-import streamlit as st
-import pandas as pd
-
 # Initialize the page if needed
 if "page" not in st.session_state:
     st.session_state.page = "Student Nursery Assignment"
 
-# Assume your list of student names is already in session state
-# e.g., st.session_state.student_names = ['student1', 'student2', 'student3', 'student4']
-
 if st.session_state.page == "Student Nursery Assignment":
     st.title("PSHCH Nursery Assignment")
-    
+    df = st.session_state.get("df", pd.read_csv("prenurseryass_df.csv"))    
     # Define the weeks
     weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
     unique_student_names = st.session_state.get('student_names', [])
