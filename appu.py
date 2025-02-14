@@ -1160,7 +1160,8 @@ elif st.session_state.page == "OPD Creator":
 	condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
 
 	# Assign the student's name where conditions are met
-	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
+	#df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
+	df.loc[condition, 'student'] = 'Conrad'
 
 	df.to_csv('final.csv',index=False)
         
