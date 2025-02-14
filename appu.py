@@ -1431,7 +1431,7 @@ elif st.session_state.page == "Student Assignments":
     df['student'] = df['student'].astype(str).str.strip()  # Convert to string & strip spaces
     df['student'].replace("nan", pd.NA, inplace=True)
     df_filtered = df.dropna(subset=['student'])
-    
+    df_filtered = df_filtered.loc[df_filtered['student'] != "<NA>"]
     # df_filtered = df[df['student'].ne("") & df['student'].ne("nan")]  # Exclude empty & 'nan'
     
     # ✅ Find duplicate student assignments across all clinics
@@ -1481,8 +1481,8 @@ elif st.session_state.page == "Student Assignments":
     #st.dataframe(df)
     
     # Select relevant columns
-    table_df = df[['student', 'clinic', 'date']]
-    
+    table_df = df[['student', 'clinic', 'date']]; table_df = table_df.loc[table_df['student'] != "<NA>"]
+
     # Convert 'date' column to datetime format
     table_df["date"] = pd.to_datetime(table_df["date"])
     
