@@ -1639,7 +1639,7 @@ elif st.session_state.page == "Student Assignments":
     
         # Read the workbook into memory
     #    with open(file_path, 'rb') as file:
-            file_data = file.read()
+    #        file_data = file.read()
     
         # Provide a download button for the existing OPD.xlsx file
     #    st.download_button(
