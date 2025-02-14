@@ -1232,7 +1232,7 @@ elif st.session_state.page == "Student Assignments":
             df.loc[condition, 'student'] = student
     
     # Save the updated CSV
-    df.to_csv('final.csv', index=False)
+    df.to_csv('final.csv', index=False); st.dataframe(df)
 
     # df["student"] = np.nan  # Uncomment if needed to initialize the student column.
     
@@ -1424,7 +1424,7 @@ elif st.session_state.page == "Student Assignments":
     # End of Combined Assignments
     # -----------------------------
     # Final save to CSV
-    df.to_csv('final.csv', index=False); st.dataframe(df)
+    df.to_csv('final.csv', index=False)
     #st.dataframe(df) #DISPLAY ASSIGNMENTS. 
 
     ################################################################################################################################################################################################
