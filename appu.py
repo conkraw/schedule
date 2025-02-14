@@ -1476,7 +1476,7 @@ elif st.session_state.page == "Student Assignments":
     
     df['text'] = df['provider'].fillna("").astype(str) + " ~ " + df['student'].fillna("").astype(str)
     df = df[['date', 'type', 'provider', 'student', 'clinic', 'text', 'class', 'datecode', 'week_num', 'week_label']]
-    df = df.loc[df['week_label] != "Week 5"]
+    df = df.loc[df['week_label'] != "Week 5"]
     df.to_excel('final.xlsx', index=False)
     st.dataframe(df)
     
