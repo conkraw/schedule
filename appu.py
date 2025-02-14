@@ -1157,11 +1157,44 @@ elif st.session_state.page == "OPD Creator":
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 	
-	condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
+	#condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4']))); df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 
-	# Assign the student's name where conditions are met
-	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
+	st.header("Assign Students to Weeks")
 
+	# Multi-select widget to choose one or more students
+	selected_students = st.multiselect("Select one or more students to assign:", unique_student_names)
+	
+	# For each selected student, allow the user to select a week assignment.
+	assignments = {}
+	if selected_students:
+	    st.write("#### Choose the week for each selected student:")
+	    for student in selected_students:
+	        week = st.selectbox(
+	            f"Select week for **{student}**", 
+	            ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+	            key=student  # Unique key for each selectbox
+	        )
+	        assignments[student] = week
+	
+	# When the "Assign Students" button is clicked, update df accordingly.
+	if st.button("Assign Students"):
+	    # Mapping of week to the corresponding datecodes
+	    week_datecode_map = {
+	        'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
+	        'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
+	        'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
+	        'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
+	    }
+	    
+	    # Iterate over each assignment and update the DataFrame 'df'
+	    for student, week in assignments.items():
+	        condition = (
+	            (df['clinic'] == 'PSHCH_NURSERY') &
+	            (df['class'].isin(['H0', 'H10'])) &
+	            (df['datecode'].isin(week_datecode_map[week]))
+	        )
+	        df.loc[condition, 'student'] = student
+		    
 	# Assume df is defined elsewhere in your code (e.g., via a prior import or creation)
 	# df["student"] = np.nan  # Uncomment if needed to initialize the student column.
 	
