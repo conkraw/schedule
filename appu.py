@@ -1337,26 +1337,33 @@ elif st.session_state.page == "OPD Creator":
 	        for wk in ["week1", "week2", "week3", "week4"]:
 	            if wk == wa_week:
 	                continue
-	            if pshch_capacity[wk] > 0:
-	                if assign_slot(student, "PSHCH_NURSERY", wk, ("H0", "H10")):
+	            # Build a mask for the primary PSHCH_NURSERY slot (rooms H0 and H10) for this week.
+	            primary_mask = (
+	                (df["clinic"].str.upper() == "PSHCH_NURSERY")
+	                & (df["datecode"].isin(weeks[wk]))
+	                & (df["class"].isin(("H0", "H10")))
+	            )
+	            primary_assigned = df.loc[primary_mask, "student"]
+	
+	            if primary_assigned.dropna().empty:
+	                # No assignment detected in the primary slot: assign here.
+	                if pshch_capacity[wk] > 0 and assign_slot(student, "PSHCH_NURSERY", wk, ("H0", "H10")):
 	                    pshch_capacity[wk] -= 1
 	                    extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H0", "H10"))
 	                    assigned_extra = True
 	                    break
-	                elif assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
-	                    pshch_capacity[wk] -= 1
-	                    extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
-	                    assigned_extra = True
-	                    break
-	    if not assigned_extra:
-	        # As a last resort, force an assignment into PSHCH_NURSERY fallback.
-	        for wk in ["week1", "week2", "week3", "week4"]:
-	            if wk == wa_week:
-	                continue
-	            if assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
-	                extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
-	                break
-	
+	            else:
+	                # Some assignment is present in the primary slot.
+	                # Only allow a fallback if the primary slot is completely full.
+	                if not df.loc[primary_mask, "student"].isna().any():
+	                    # Primary slot is fully filled, so we can assign the fallback.
+	                    if pshch_capacity[wk] > 0 and assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
+	                        pshch_capacity[wk] -= 1
+	                        extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
+	                        assigned_extra = True
+	                        break
+	                # Otherwise (primary slot partially filled), skip this week.
+
 	# -----------------------------
 	# End of Combined Assignments
 	# -----------------------------
