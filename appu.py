@@ -1153,7 +1153,7 @@ elif st.session_state.page == "OPD Creator":
 	df2 = pd.read_csv('final2.csv', dtype=str)
 	
 	# Combine both DataFrames (stack rows)
-	df = pd.concat([df1, df2], ignore_index=True)
+	df = pd.concat([df1, df2], ignore_index=True); st.dataframe(df)
 	condition = ((df['clinic'] == 'PSHCH_NURSERY') |(df['class'].isin(['H0', 'H10'])) |(df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
 
 	# Assign the student's name where conditions are met
