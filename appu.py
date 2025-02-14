@@ -1527,8 +1527,8 @@ elif st.session_state.page == "Student Assignments":
 
     # Output the list in a horizontal, comma-separated format.
     if unassigned_students:
-        st.write("Students not assigned to either HAMPDEN_NURSERY or SJR_HOSP:")
-        st.write(", ".join(unassigned_students))
+        st.write(f"Students not assigned to either HAMPDEN_NURSERY or SJR_HOSP: {', '.join(unassigned_students)}")
+
     else:
         st.write("All students have been assigned to either HAMPDEN_NURSERY or SJR_HOSP.")
     
