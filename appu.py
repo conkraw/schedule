@@ -1544,7 +1544,7 @@ elif st.session_state.page == "Student Assignments":
         st.session_state.df = pd.read_csv("prenurseryass_df.csv")
 
         # Reset any assignment state if needed
-        st.session_state.assignments = {}
+        #st.session_state.assignments = {}
 
         # Reshuffle student names
         unique_student_names = st.session_state.get('student_names', [])
