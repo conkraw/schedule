@@ -1172,8 +1172,8 @@ elif st.session_state.page == "OPD Creator":
 elif st.session_state.page == "Student Nursery Assignment":
     st.title("PSHCH Nursery Assignment")
     if st.button("Next Step"):
-	st.session_state.page = "Student Assignments"
-	st.rerun()
+        st.session_state.page = "Student Assignments"
+        st.rerun()
 	
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
