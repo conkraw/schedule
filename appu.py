@@ -1159,44 +1159,19 @@ elif st.session_state.page == "OPD Creator":
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 	
-	# -----------------------------
-	# Load DataFrame from test.csv
-	# -----------------------------
 	df = pd.read_csv('final.csv')  
-	# (Assume that the "student" column is already blank)
 	
-	# -----------------------------
-	# Define week mapping (each week is a list of datecodes)
-	# -----------------------------
-	weeks = {
-	    "week1": ["T0", "T1", "T2", "T3", "T4"],
-	    "week2": ["T7", "T8", "T9", "T10", "T11"],
-	    "week3": ["T14", "T15", "T16", "T17", "T18"],
-	    "week4": ["T21", "T22", "T23", "T24", "T25"]
-	}
+	weeks = {"week1": ["T0", "T1", "T2", "T3", "T4"],"week2": ["T7", "T8", "T9", "T10", "T11"],"week3": ["T14", "T15", "T16", "T17", "T18"],"week4": ["T21", "T22", "T23", "T24", "T25"]}
 	
-	# -----------------------------
-	# Define room pairs for PSHCH_NURSERY
-	# Primary: ("H0", "H10"); Fallback: ("H1", "H11")
-	# -----------------------------
 	pshch_primary = ("H0", "H10")
 	pshch_fallback = ("H1", "H11")
 	
-	# -----------------------------
-	# Streamlit UI for Manual PSHCH_NURSERY Assignment
-	# -----------------------------
 	st.header("Manual PSHCH_NURSERY Assignment")
 	
 	# Let the user select the week for the manual assignment.
 	manual_week = st.selectbox("Select week for manual PSHCH_NURSERY assignment", list(weeks.keys()))
-	
-	master_student_list = st.text_area("Enter comma-separated student names (if not auto-loaded):").split(',')
-	if not master_student_list or master_student_list == ['']:
-	    # If left blank, use a default (or you can load your list from elsewhere)
-	    master_student_list = []  
-	st.write("Master Student List:", ", ".join(master_student_list))
 
-	manual_students = st.multiselect("Select student(s) to manually assign to PSHCH_NURSERY", options=master_student_list)
+	manual_students = st.multiselect("Select student(s) to manually assign to PSHCH_NURSERY", options=unique_student_names)
 	
 	manual_assignment = {}
 	
