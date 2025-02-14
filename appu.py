@@ -1540,8 +1540,8 @@ elif st.session_state.page == "Student Assignments":
     else:
         st.write("All students have been assigned to WARD_A.")
 	    
-    if st.button("Return to Student Assignments"):
-        st.session_state.page = "Student Assignments"
+    if st.button("Return to Student Nursery Assignment"):
+        st.session_state.page = "Student Nursery Assignment"
         df = df_prenurseryassignment
         st.rerun()    	
 
