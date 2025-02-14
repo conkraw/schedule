@@ -1166,7 +1166,7 @@ elif st.session_state.page == "OPD Creator":
         
 	if st.button("Next Step"):
             st.session_state.page = "Student Assignments"
-            st.experimental_rerun()  # Rerun to update the UI
+            st.rerun()  # Rerun to update the UI
 
 
 elif st.session_state.page == "Student Assignments":
