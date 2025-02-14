@@ -1424,7 +1424,7 @@ elif st.session_state.page == "Student Assignments":
     # End of Combined Assignments
     # -----------------------------
     # Final save to CSV
-    df.to_csv('final.csv', index=False)
+    df.to_csv('final.csv', index=False); st.dataframe(df)
     #st.dataframe(df) #DISPLAY ASSIGNMENTS. 
 
     ################################################################################################################################################################################################
