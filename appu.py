@@ -1263,11 +1263,12 @@ elif st.session_state.page == "Student Assignments":
             if target_week and assigned_room_pair:
                 ward_a_assignment[student] = (target_week, assigned_room_pair)
                 ward_a_counts[target_week] += 1
-    
+
     # --- Now assign WARD_A for students not already assigned ---
     for student in student_names:
         if student in ward_a_assignment:
             continue  # Skip if already assigned via pre-assignment.
+
         available_weeks = {wk: cnt for wk, cnt in ward_a_counts.items() if cnt < ward_a_capacity}
         if not available_weeks:
             break  # All weeks are full.
@@ -1280,26 +1281,19 @@ elif st.session_state.page == "Student Assignments":
                    (df["class"].isin(room_pair))
             current = df.loc[mask, "student"]
             unique_assigned = current.dropna().unique()
+
             if len(unique_assigned) == 0 or (len(unique_assigned) == 1 and unique_assigned[0] == student):
                 df.loc[mask & df["student"].isna(), "student"] = student
                 ward_a_counts[target_week] += 1
                 ward_a_assignment[student] = (target_week, room_pair)
                 slot_found = True
                 break
+
         if not slot_found:
             # Optionally, handle the case where no slot was found.
             pass
-    
-    # -----------------------------
-    # Set up capacities for extra assignments:
-    hampden_capacity = {"week1": 1, "week3": 1}
-    sjr_capacity    = {"week1": 2, "week2": 2, "week3": 2, "week4": 2}
-    pshch_capacity  = {"week1": 1, "week2": 1, "week3": 1, "week4": 1}
-    
-    # Record extra assignments as: student -> (clinic, week, room_pair)
-    extra_assignment = {}
-    
-    # --- Helper function to assign an extra slot, respecting any pre-assignment ---
+
+    # --- Helper function to assign an extra slot, respecting pre-assignments ---
     def assign_slot(student, clinic, week, room_pair):
         """
         Attempts to assign 'student' into a slot for 'clinic' in the given 'week'
@@ -1312,11 +1306,13 @@ elif st.session_state.page == "Student Assignments":
                (df["class"].isin(room_pair))
         current = df.loc[mask, "student"]
         unique_assigned = current.dropna().unique()
+
+        # Prevent double-booking by checking if the student is already assigned
         if len(unique_assigned) == 0 or (len(unique_assigned) == 1 and unique_assigned[0] == student):
             df.loc[mask & df["student"].isna(), "student"] = student
             return True
         return False
-    
+
     # --- Pre-check for pre-assigned extra slots (HAMPDEN_NURSERY, SJR_HOSP, PSHCH_NURSERY) ---
     extra_clinics = ["HAMPDEN_NURSERY", "SJR_HOSP", "PSHCH_NURSERY"]
     for student in student_names:
@@ -1331,7 +1327,6 @@ elif st.session_state.page == "Student Assignments":
             datecode = row["datecode"]
             target_week = next((wk for wk, codes in weeks.items() if datecode in codes), None)
             room = row["class"]
-            # Determine the room pair based on the clinic and the room.
             assigned_room_pair = None
             if clinic == "HAMPDEN_NURSERY":
                 assigned_room_pair = ("H3", "H13")
@@ -1341,14 +1336,14 @@ elif st.session_state.page == "Student Assignments":
                 assigned_room_pair = ("H0", "H10") if room in ("H0", "H10") else ("H1", "H11")
             if target_week and assigned_room_pair:
                 extra_assignment[student] = (clinic, target_week, assigned_room_pair)
-    
+
     # --- Now assign extra slots for students who lack one ---
     for student in student_names:
         if student not in ward_a_assignment or student in extra_assignment:
             continue  # Skip if no WARD_A slot or if an extra slot already exists.
         wa_week, _ = ward_a_assignment[student]
         assigned_extra = False
-    
+
         # --- Priority 1: HAMPDEN_NURSERY (allowed only in week1 and week3) ---
         if wa_week != "week1" and hampden_capacity.get("week1", 0) > 0:
             if assign_slot(student, "HAMPDEN_NURSERY", "week1", ("H3", "H13")):
@@ -1360,7 +1355,7 @@ elif st.session_state.page == "Student Assignments":
                 hampden_capacity["week3"] -= 1
                 extra_assignment[student] = ("HAMPDEN_NURSERY", "week3", ("H3", "H13"))
                 assigned_extra = True
-    
+
         # --- Priority 2: SJR_HOSP (allowed in any week except the student's WARD_A week) ---
         if not assigned_extra:
             for wk in ["week1", "week2", "week3", "week4"]:
@@ -1377,12 +1372,10 @@ elif st.session_state.page == "Student Assignments":
                         extra_assignment[student] = ("SJR_HOSP", wk, ("H3", "H13"))
                         assigned_extra = True
                         break
-    
-        # --- Priority 3: PSHCH_NURSERY (allowed in any week except the student's WARD_A week) ---
+
+        # --- Priority 3: PSHCH_NURSERY ---
         if not assigned_extra:
-            # Build a list of allowed weeks (all except the student's WARD_A week)
             allowed_weeks = [wk for wk in ["week1", "week2", "week3", "week4"] if wk != wa_week]
-            # First, try the preferred room pair ("H0", "H10")
             for wk in allowed_weeks:
                 if pshch_capacity[wk] > 0:
                     if assign_slot(student, "PSHCH_NURSERY", wk, ("H0", "H10")):
@@ -1390,29 +1383,8 @@ elif st.session_state.page == "Student Assignments":
                         extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H0", "H10"))
                         assigned_extra = True
                         break
-            # Only if no preferred slot was found, try the alternative room pair ("H1", "H11")
-            if not assigned_extra:
-                for wk in allowed_weeks:
-                    if pshch_capacity[wk] > 0:
-                        if assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
-                            pshch_capacity[wk] -= 1
-                            extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
-                            assigned_extra = True
-                            break
-        if not assigned_extra:
-            # As a last resort, force an assignment into PSHCH_NURSERY fallback.
-            for wk in ["week1", "week2", "week3", "week4"]:
-                if wk == wa_week:
-                    continue
-                if assign_slot(student, "PSHCH_NURSERY", wk, ("H1", "H11")):
-                    extra_assignment[student] = ("PSHCH_NURSERY", wk, ("H1", "H11"))
-                    break
-    
-    # -----------------------------
-    # End of Combined Assignments
-    # -----------------------------
-    
-    # ✅ Save and display the updated dataset
+
+    # Final save to CSV
     df.to_csv('final.csv', index=False)
     st.dataframe(df)
     
