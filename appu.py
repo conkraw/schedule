@@ -1485,7 +1485,7 @@ elif st.session_state.page == "Student Assignments":
     df = df[['date', 'type', 'provider', 'student', 'clinic', 'text', 'class', 'datecode', 'week_num', 'week_label']]
     
     df.to_excel('final.xlsx', index=False)
-    st.dataframe(df)
+    #st.dataframe(df)
     
     # Select relevant columns
     table_df = df[['student', 'clinic', 'date']]
@@ -1514,6 +1514,23 @@ elif st.session_state.page == "Student Assignments":
     pivot_df = pivot_df.rename_axis(None, axis=1)  # Ensure a clean dataframe
     
     st.dataframe(pivot_df)
+
+    # Get all unique student names (filter out any missing values).
+    all_students = df['student'].dropna().unique()
+
+    # Identify students assigned to either HAMPDEN_NURSERY or SJR_HOSP.
+    assigned_mask = df['clinic'].isin(['HAMPDEN_NURSERY', 'SJR_HOSP'])
+    assigned_students = df.loc[assigned_mask, 'student'].dropna().unique()
+
+    # Determine students not assigned to either clinic.
+    unassigned_students = [s for s in all_students if s not in assigned_students]
+
+    # Output the list in a horizontal, comma-separated format.
+    if unassigned_students:
+        st.write("Students not assigned to either HAMPDEN_NURSERY or SJR_HOSP:")
+        st.write(", ".join(unassigned_students))
+    else:
+        st.write("All students have been assigned to either HAMPDEN_NURSERY or SJR_HOSP.")
     
     ########################################################################################################################################################################
     import openpyxl
