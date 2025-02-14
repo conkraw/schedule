@@ -1165,43 +1165,61 @@ elif st.session_state.page == "OPD Creator":
 	    'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
 	    'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
 	    'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
-	}
-	
+}
+
 	# Streamlit UI elements
-	student = st.selectbox('Select Student:', unique_student_names)
-	week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
-	
-	# Store selected values in session state
 	if 'student' not in st.session_state:
-	    st.session_state.student = student
+	    st.session_state.student = None  # Placeholder until a student is selected
 	if 'week' not in st.session_state:
-	    st.session_state.week = week
+	    st.session_state.week = None  # Placeholder until a week is selected
+	if 'page' not in st.session_state:
+	    st.session_state.page = "Select Student"  # Initial page
+
+	# Control flow for pages
+	if st.session_state.page == "Select Student":
+	    student = st.selectbox('Select Student:', unique_student_names)
+	    week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
 	
-	# Update session state when selections change
-	st.session_state.student = student
-	st.session_state.week = week
-
-	# Function to assign student to the selected week
-	def assign_student_to_week(student, week):
-	    week_codes = week_dict.get(week, [])
-	    if week_codes:
-	        condition = (
-	            (df['clinic'] == 'PSHCH_NURSERY') &
-	            (df['class'].isin(['H0', 'H10'])) &
-	            (df['datecode'].isin(week_codes))
-	        )
-	        df.loc[condition, 'student'] = student
-	        return df
-	    return df
-
-	if st.button("Next Step"):
-            df = assign_student_to_week(st.session_state.student, st.session_state.week); df.to_csv('final.csv',index=False)
-            st.write("Student assignments updated:")
-            st.session_state.page = "Student Assignments"
-            #st.rerun()  # Rerun to update the UI
-
+	    # When user selects a student and week, store these in session state
+	    if student and week:
+	        st.session_state.student = student
+	        st.session_state.week = week
+	
+	    # Only show button once both are selected
+	    if st.session_state.student and st.session_state.week:
+	        if st.button("Next Step"):
+	            st.session_state.page = "Student Assignments"  # Change page
+	            st.rerun()  # Rerun the app to show updated data
 
 elif st.session_state.page == "Student Assignments":
+    # Get the student and week from session state
+    student = st.session_state.student
+    week = st.session_state.week
+
+    # Assign student to the selected week
+    def assign_student_to_week(student, week):
+        week_codes = week_dict.get(week, [])
+        if week_codes:
+            condition = (
+                (df['clinic'] == 'PSHCH_NURSERY') &
+                (df['class'].isin(['H0', 'H10'])) &
+                (df['datecode'].isin(week_codes))
+            )
+            df.loc[condition, 'student'] = student
+            return df
+        return df
+
+    # Update the dataframe and save to CSV
+    df = assign_student_to_week(student, week)
+    df.to_csv('final.csv', index=False)
+
+    # Show updated dataframe
+    st.write("Student assignments updated:")
+    st.dataframe(df)
+
+    # Optionally add more controls here for further navigation or actions
+
+#elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
     df = pd.read_csv('final.csv')	
     if "student_names" in st.session_state:
