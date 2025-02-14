@@ -1157,11 +1157,57 @@ elif st.session_state.page == "OPD Creator":
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names)); st.session_state.student_names = unique_student_names
 	
-	condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
+	#condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
 
 	# Assign the student's name where conditions are met
-	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
-	df.to_csv('final.csv',index=False)
+	#df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
+	
+	st.header("Assign Students to Weeks")
+	
+	# Step 1: Select one or more student names.
+	selected_students = st.multiselect("Select one or more students:", unique_student_names)
+	
+	# Step 2: For each selected student, choose the week assignment.
+	assignments = {}
+	if selected_students:
+	    st.write("#### Assign a week for each selected student:")
+	    for student in selected_students:
+	        week = st.selectbox(
+	            f"Select week for **{student}**:",
+	            ["Week 1", "Week 2", "Week 3", "Week 4"],
+	            key=f"week_{student}"
+	        )
+	        assignments[student] = week
+	
+	# Step 3: When the button is pressed, load the CSV, update the DataFrame, and save it.
+	if st.button("Run Assignment"):
+	    # Load the CSV into a DataFrame.
+	    df = pd.read_csv('final.csv')
+	    
+	    # Define the mapping from week to datecodes.
+	    week_datecode_map = {
+	        "Week 1": ['T0', 'T1', 'T2', 'T3', 'T4'],
+	        "Week 2": ['T7', 'T8', 'T9', 'T10', 'T11'],
+	        "Week 3": ['T14', 'T15', 'T16', 'T17', 'T18'],
+	        "Week 4": ['T21', 'T22', 'T23', 'T24', 'T25']
+	    }
+	    
+	    # For each selected student and their assigned week, update the DataFrame.
+	    for student, week in assignments.items():
+	        datecodes = week_datecode_map[week]
+	        condition = (
+	            (df['clinic'] == 'PSHCH_NURSERY') &
+	            (df['class'].isin(['H0', 'H10'])) &
+	            (df['datecode'].isin(datecodes))
+	        )
+	        df.loc[condition, 'student'] = student
+	    
+	    # Save the updated DataFrame back to CSV.
+	    df.to_csv('final.csv', index=False)
+	    
+	    st.success("Assignment complete and file saved!")
+
+	#df.to_csv('final.csv',index=False)
         
 	if st.button("Next Step"):
             st.session_state.page = "Student Assignments"
