@@ -1166,38 +1166,46 @@ elif st.session_state.page == "OPD Creator":
 	import openpyxl
 	from openpyxl.styles import Alignment
 	
-	# Ensure the key is set only once on first run.
-	if "selected_students" not in st.session_state:
-	    st.session_state.selected_students = []
+	# Assume unique_student_names is already defined.
+	options = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
 	
-	# The multi-select widget will store its value in st.session_state["selected_students"]
+	# Multi-select widget outside of any form, with a fixed key.
 	selected_students = st.multiselect(
 	    "Select one or more students to assign:",
 	    unique_student_names,
 	    key="selected_students"
 	)
 	
-	# Now, you can simply read the selected_students value from st.session_state.
+	assignments = {}
 	if selected_students:
 	    st.write("#### Choose the week for each selected student:")
-	    assignments = {}
-	    # Create a week select for each student.
+	    # Loop over the selected students
 	    for student in selected_students:
-	        assignments[student] = st.selectbox(
+	        # Create a unique session key for each student's week selection.
+	        session_key = f"week_{student}"
+	        # If there's no stored value, initialize it with a default (e.g. "Week 1")
+	        if session_key not in st.session_state:
+	            st.session_state[session_key] = "Week 1"
+	        # Determine the default index based on the stored value.
+	        default_index = options.index(st.session_state[session_key])
+	        # Create the selectbox and update the session state.
+	        selected_week = st.selectbox(
 	            f"Select week for **{student}**",
-	            ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-	            key=f"week_{student}"
+	            options,
+	            index=default_index,
+	            key=session_key  # this key will store the current value automatically
 	        )
-	    
+	        assignments[student] = selected_week
+	
+	    # When the button is pressed, process the assignments.
 	    if st.button("Assign Students"):
-	        # Mapping from week to datecodes.
 	        week_datecode_map = {
 	            'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],
 	            'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],
 	            'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],
 	            'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']
 	        }
-	        
+	        # Process each assignment.
 	        for student, week in assignments.items():
 	            condition = (
 	                (df['clinic'] == 'PSHCH_NURSERY') &
@@ -1205,7 +1213,7 @@ elif st.session_state.page == "OPD Creator":
 	                (df['datecode'].isin(week_datecode_map[week]))
 	            )
 	            df.loc[condition, 'student'] = student
-	        
+	
 	        st.success("Assignment complete!")
 	        st.write("#### Updated DataFrame:")
 	        st.dataframe(df)
