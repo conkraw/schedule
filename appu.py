@@ -1212,7 +1212,8 @@ if st.session_state.page == "Student Nursery Assignment":
 
 elif st.session_state.page == "Student Assignments":
     st.title("Create Student Schedule")
-    
+    if "student_names" in st.session_state:
+	    student_names = st.session_state.student_names
     # Read your CSV
     df = pd.read_csv('final.csv')
     
