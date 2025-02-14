@@ -1154,7 +1154,11 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Combine both DataFrames (stack rows)
 	df = pd.concat([df1, df2], ignore_index=True)
-	
+	condition = ((df['clinic'] == 'PSHCH_NURSERY') |(df['class'].isin(['H0', 'H10'])) |(df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
+
+	# Assign the student's name where conditions are met
+	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
+
 	# Save and display the combined dataset
 	#df_combined.to_csv('combined_resident_schedule.csv', index=False)
 
@@ -1162,13 +1166,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 
-	# -----------------------------
-	# PRE-REQUISITES:
-	# - df is your DataFrame containing rows for each clinic with columns "clinic", "datecode", "class", etc.
-	# - student_names is your master list (or Series) of student names.
-	# - Clear the "student" column before starting.
-	# -----------------------------
-	df["student"] = np.nan
+	#df["student"] = np.nan
 	
 	# -----------------------------
 	# Define week mapping (each week is a list of datecodes)
@@ -1217,20 +1215,6 @@ elif st.session_state.page == "OPD Creator":
 	    if not slot_found:
 	        # (Optionally, try another week if desired.)
 	        pass
-	
-	print("WARD_A assignments per week:", ward_a_counts)
-	# You can inspect ward_a_assignment to see each student's WARD_A week and room pair.
-	
-	# =============================================================================
-	# STEP 2: EXTRA ASSIGNMENT (Each student must also get one extra assignment from one of:)
-	#           HAMPDEN_NURSERY, SJR_HOSP, or PSHCH_NURSERY.
-	# The extra assignment must be in a week different from the student's WARD_A week.
-	# Priority order and per-week capacities:
-	#   Priority 1: HAMPDEN_NURSERY (only in week1 and week3; 1 student per allowed week)
-	#   Priority 2: SJR_HOSP (in any week except the student's WARD_A week; 2 per week)
-	#   Priority 3: PSHCH_NURSERY (in any week except the student's WARD_A week; 1 per week;
-	#                 primary slot: H0/H10, fallback: H1/H11)
-	# =============================================================================
 	
 	# Set up capacity dictionaries for extra assignments:
 	hampden_capacity = {"week1": 1, "week3": 1}
