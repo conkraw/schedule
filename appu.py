@@ -1171,7 +1171,14 @@ elif st.session_state.page == "OPD Creator":
 
 elif st.session_state.page == "Student Nursery Assignment":
     st.title("PSHCH Nursery Assignment")
-	
+    if 'student' not in st.session_state:
+        st.session_state.student = None  # Placeholder until a student is selected
+    if 'week' not in st.session_state:
+        st.session_state.week = None  # Placeholder until a week is selected
+    if 'page' not in st.session_state:
+        st.session_state.page = "Student Nursery Assignment"  # Initial page
+
+    week_dict = {'Week 1': ['T0', 'T1', 'T2', 'T3', 'T4'],'Week 2': ['T7', 'T8', 'T9', 'T10', 'T11'],'Week 3': ['T14', 'T15', 'T16', 'T17', 'T18'],'Week 4': ['T21', 'T22', 'T23', 'T24', 'T25']}; unique_student_names = st.session_state.student_names
     student = st.selectbox('Select Student:', unique_student_names)
     week = st.selectbox('Select Week:', ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
 
