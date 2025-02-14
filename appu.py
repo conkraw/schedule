@@ -1154,14 +1154,14 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Combine both DataFrames (stack rows)
 	df = pd.concat([df1, df2], ignore_index=True); st.dataframe(df)
-	condition = ((df['clinic'] == 'PSHCH_NURSERY') |(df['class'].isin(['H0', 'H10'])) |(df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
+	condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
 
 	# Assign the student's name where conditions are met
 	df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
 	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names))
 
-	df["student"] = np.nan
+	#df["student"] = np.nan
 	
 	# -----------------------------
 	# Define week mapping (each week is a list of datecodes)
