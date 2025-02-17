@@ -2752,12 +2752,9 @@ elif st.session_state.page == "Create List":
         # Compute the week number relative to start_date (which is assumed to be a Monday)
         provider_df['week'] = ((provider_df['date'] - start_date).dt.days // 7) + 1
 
-        # Filter for rows where formatted_name is all lowercase
-        filtered_df = provider_df[provider_df['formatted_name'].str.islower()]
-
         # Group by record_id and week, and aggregate unique lower-case names into a comma-separated string
         grouped = (
-            filtered_df.groupby(['record_id', 'week'])['formatted_name']
+            provider_df.groupby(['record_id', 'week'])['formatted_name']
             .apply(lambda names: ", ".join(names.drop_duplicates()))
             .reset_index()
         )
