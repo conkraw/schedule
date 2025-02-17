@@ -2755,10 +2755,18 @@ elif st.session_state.page == "Create List":
         # Group by record_id and week, and aggregate unique lower-case names into a comma-separated string
         grouped = (
             provider_df.groupby(['record_id', 'week'])['formatted_name']
-            .apply(lambda names: ", ".join(names.drop_duplicates()))
+            .apply(lambda names: "; ".join(names.drop_duplicates()))
             .reset_index()
         )
-		    
+
+        pivoted = grouped.pivot(index='record_id', columns='week', values='formatted_name').reset_index()
+
+        # Rename the week columns to "week1", "week2", etc.
+        pivoted = pivoted.rename(columns=lambda x: f"week{x}" if isinstance(x, int) else x)
+
+        # Optionally, fill NaN values with an empty string for display purposes
+        pivoted = pivoted.fillna("")
+	    
         #csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
         csv_bytes = save_to_bytes_csv(grouped); st.dataframe(grouped); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
 
