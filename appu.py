@@ -2754,6 +2754,7 @@ elif st.session_state.page == "Create List":
         # Filter for rows where formatted_name is all lowercase
         filtered_df = provider_df[provider_df['formatted_name'].str.islower()]
 
+
         # Group by record_id and week, and aggregate unique lower-case names into a comma-separated string
         grouped = (
             filtered_df.groupby(['record_id', 'week'])['formatted_name']
@@ -2761,13 +2762,21 @@ elif st.session_state.page == "Create List":
             .reset_index()
         )
 
-        # Display the results, grouping by record_id first
-        for record_id, group in grouped.groupby('record_id'):
-            st.write(f"Record ID: {record_id}")
-            for _, row in group.iterrows():
-                st.write(f"Week {row['week']}: {row['formatted_name']}")
+
+        # Pivot the table so that each week becomes its own column
+        pivoted = grouped.pivot(index='record_id', columns='week', values='formatted_name').reset_index()
+
+        # Rename the week columns to "week1", "week2", etc.
+        pivoted = pivoted.rename(columns=lambda x: f"week{x}" if isinstance(x, int) else x)
+
+        # Optionally, fill NaN values with an empty string for display purposes
+        pivoted = pivoted.fillna("")
+
+        # Display the resulting dataframe
+        #st.dataframe(pivoted)
 		    
-        csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
+        #csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
+        csv_bytes = save_to_bytes_csv(pivoted); st.dataframe(pivoted); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
 	    
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
