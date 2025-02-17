@@ -2768,7 +2768,7 @@ elif st.session_state.page == "Create List":
         pivoted = pivoted.fillna("")
 	    
         #csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
-        csv_bytes = save_to_bytes_csv(grouped); st.dataframe(grouped); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
+        csv_bytes = save_to_bytes_csv(pivoted); st.dataframe(pivoted); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
 
 	    
     except Exception as e:
