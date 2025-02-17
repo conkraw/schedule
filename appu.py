@@ -2758,8 +2758,7 @@ elif st.session_state.page == "Create List":
             lambda names: ("; ".join(names.drop_duplicates()) 
                            if names.name[1] == 1 
                            else ", ".join(names.drop_duplicates()))
-        ).reset_index()
-
+        ).reset_index(); st.dataframe (grouped)
         # Pivot the table so each week becomes its own column
         pivoted = grouped.pivot(index='record_id', columns='week', values='formatted_name').reset_index()
 
