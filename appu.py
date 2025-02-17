@@ -2746,6 +2746,7 @@ elif st.session_state.page == "Create List":
         
         provider_df = provider_df[['record_id','formatted_name','date', 'eval_due_date']]; lower_case_names_list = provider_df.loc[provider_df['formatted_name'].str.islower(), 'formatted_name'].drop_duplicates().tolist(); horizontal_string = ", ".join(lower_case_names_list); st.write('Unmatched:' + horizontal_string)  
 
+        # Ensure the date column is datetime type
         provider_df['date'] = pd.to_datetime(provider_df['date'])
 
         # Compute the week number relative to start_date (which is assumed to be a Monday)
@@ -2754,24 +2755,16 @@ elif st.session_state.page == "Create List":
         # Filter for rows where formatted_name is all lowercase
         filtered_df = provider_df[provider_df['formatted_name'].str.islower()]
 
-        grouped = filtered_df.groupby(['record_id', 'week'])['formatted_name'].apply(
-            lambda names: ("; ".join(names.drop_duplicates()) 
-                           if names.name[1] == 1 
-                           else ", ".join(names.drop_duplicates()))
-        ).reset_index(); st.dataframe (grouped)
-        # Pivot the table so each week becomes its own column
-        pivoted = grouped.pivot(index='record_id', columns='week', values='formatted_name').reset_index()
-
-        # Rename the week columns to "week1", "week2", etc.
-        pivoted = pivoted.rename(columns=lambda x: f"week{x}" if isinstance(x, int) else x)
-
-        # Optionally fill NaN values with an empty string for display
-        pivoted = pivoted.fillna("")
-
-        st.dataframe(pivoted)
+        # Group by record_id and week, and aggregate unique lower-case names into a comma-separated string
+        grouped = (
+            filtered_df.groupby(['record_id', 'week'])['formatted_name']
+            .apply(lambda names: ", ".join(names.drop_duplicates()))
+            .reset_index()
+        )
 		    
         #csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
-        csv_bytes = save_to_bytes_csv(pivoted); st.dataframe(pivoted); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
+        csv_bytes = save_to_bytes_csv(grouped); st.dataframe(grouped); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
+
 	    
     except Exception as e:
         st.error(f"Error processing the HOPE_DRIVE sheet: {e}")
