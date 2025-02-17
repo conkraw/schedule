@@ -2745,7 +2745,28 @@ elif st.session_state.page == "Create List":
         provider_df["record_id"] = provider_df["student"].map(mapping_dict)
         
         provider_df = provider_df[['record_id','formatted_name','date', 'eval_due_date']]; lower_case_names_list = provider_df.loc[provider_df['formatted_name'].str.islower(), 'formatted_name'].drop_duplicates().tolist(); horizontal_string = ", ".join(lower_case_names_list); st.write('Unmatched:' + horizontal_string)  
+
+	provider_df['date'] = pd.to_datetime(provider_df['date'])
 	
+	# Compute the week number relative to start_date (which is assumed to be a Monday)
+	provider_df['week'] = ((provider_df['date'] - start_date).dt.days // 7) + 1
+	
+	# Filter for rows where formatted_name is all lowercase
+	filtered_df = provider_df[provider_df['formatted_name'].str.islower()]
+	
+	# Group by record_id and week, and aggregate unique lower-case names into a comma-separated string
+	grouped = (
+	    filtered_df.groupby(['record_id', 'week'])['formatted_name']
+	    .apply(lambda names: ", ".join(names.drop_duplicates()))
+	    .reset_index()
+	)
+	
+	# Display the results, grouping by record_id first
+	for record_id, group in grouped.groupby('record_id'):
+	    st.write(f"Record ID: {record_id}")
+	    for _, row in group.iterrows():
+	        st.write(f"Week {row['week']}: {row['formatted_name']}")
+		    
         csv_bytes = save_to_bytes_csv(provider_df); st.dataframe(provider_df); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
 	    
     except Exception as e:
