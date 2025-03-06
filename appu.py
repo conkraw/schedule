@@ -715,7 +715,7 @@ elif st.session_state.page == "OPD Creator":
 	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
 	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
-	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "team3a", "Night Call 9p-7a": "night_float", "AM Pager 7a-12p": "consultsa", "PM Pager 12p-4p":"consultsp", "Evening Pager 4p-9p":"consultsp", "Overnight Pager 9p-7a":"consultsp", "APP-3rd team":"team3pa"}, #Assume Day Admitting is Consults
+	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "AM Pager 7a-12p": "consultsa", "PM Pager 12p-4p":"consultsp", "Evening Pager 4p-9p":"consultsp", "Overnight Pager 9p-7a":"consultsp", "APP-3rd team":"AM - Continuity"}, #Assume Day Admitting is Consults
 	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
