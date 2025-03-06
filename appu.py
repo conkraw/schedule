@@ -954,7 +954,9 @@ elif st.session_state.page == "OPD Creator":
 	    "provider": "Name",
 	    "clinic": "Rotation"
 	})
-	          
+
+	wardapa_df["Date"] = pd.to_datetime(wardapa_df["Date"], format="%B %d, %Y").dt.strftime("%Y-%m-%d")
+	
 	df = pd.concat([df,wardapa_df])
 	
 	
@@ -1000,8 +1002,6 @@ elif st.session_state.page == "OPD Creator":
 	})
 	
 	df['student'] = ""
-
-	st.dataframe(df)
 
 	# Define conditions for AM types
 	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "AM - ACUTES"), "class"] = "H0"
