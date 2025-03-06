@@ -947,7 +947,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	wardapa_df = warda_df.loc[warda_df['type'] == "team3pa "]
 
-	st.dataframe(wardapa_df)
+	st.dataframe(df)
 	
 	df["type"] = "AM - Continuity"
 	df["student"] = ""
