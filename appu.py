@@ -942,6 +942,9 @@ elif st.session_state.page == "OPD Creator":
 	df.to_csv('resident_schedule.csv', index=False)
 
 	df = pd.read_csv('resident_schedule.csv', dtype=str)
+
+	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
+	
 	wardapa_df = warda_df.loc[warda_df['type'] == "team3pa"]
 
 	st.dataframe(wardapa_df)
