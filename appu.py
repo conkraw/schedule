@@ -947,7 +947,17 @@ elif st.session_state.page == "OPD Creator":
 	
 	wardapa_df = warda_df.loc[warda_df['type'] == "team3pa "]
 
-	st.dataframe(wardapa_df);st.dataframe(df)
+	wardapa_df = wardapa_df[['clinic','date','provider']]
+
+	wardapa_df = wardapa_df.rename(columns={
+	    "date": "Date",
+	    "provider": "Name",
+	    "clinic": "Rotation"
+	})
+	          
+	df = pd.concat([df,wardapa_df])
+	
+	st.dataframe(df)
 	
 	df["type"] = "AM - Continuity"
 	df["student"] = ""
