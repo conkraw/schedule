@@ -715,7 +715,7 @@ elif st.session_state.page == "OPD Creator":
 	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
 	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
-	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "AM Pager 7a-12p": "consultsa", "PM Pager 12p-4p":"consultsp", "Evening Pager 4p-9p":"consultsp", "Overnight Pager 9p-7a":"consultsp", "APP-3rd team":"AM - Continuity"}, #Assume Day Admitting is Consults
+	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "team3a", "Night Call 9p-7a": "night_float", "AM Pager 7a-12p": "consultsa", "PM Pager 12p-4p":"consultsp", "Evening Pager 4p-9p":"consultsp", "Overnight Pager 9p-7a":"consultsp", "APP-3rd team":"team3pa"}, #Assume Day Admitting is Consults
 	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
@@ -1028,6 +1028,10 @@ elif st.session_state.page == "OPD Creator":
 	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS")
 	consults_df = consults_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity " in x.name else "/".join(x)})
 	consults_df["clinic"] = "ER_CONS"
+
+	wardateam3_df = warda_df[warda_df["type"].isin(["team3a ", "team3pa "])].assign(type=lambda df: df["type"].map({"team3a ": "AM - Continuity ", "team3pa ": "AM - Continuity "}), clinic="WARD_A")
+	wardateam3_df = wardateam3_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity " in x.name else "/".join(x)})
+	wardateam3_df["clinic"] = "WARD_A"
 	
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"] #Only Extract Jennifer Shook
@@ -1080,7 +1084,6 @@ elif st.session_state.page == "OPD Creator":
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
 	final2.to_csv('final2.csv',index=False)
 
-	st.dataframe(final2)
 	df=pd.read_csv('final2.csv',dtype=str) #MAP to Final2
 	
 	df['date'] = pd.to_datetime(df['date'])
