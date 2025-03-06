@@ -1073,6 +1073,7 @@ elif st.session_state.page == "OPD Creator":
 	process_continuity_classes(adolmed_df, "ADOLMED", "30.csv", "31.csv")
 	process_continuity_classes(wardc_df, "WARD_C", "32.csv", "33.csv")
 
+	st.dataframe(warda_df)
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 34)}
 	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31, t32, t33 = tables.values()
