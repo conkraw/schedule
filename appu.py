@@ -980,8 +980,6 @@ elif st.session_state.page == "OPD Creator":
 	          
 	
 	df_copy = df.copy()
-
-	st.dataframe(df_copy)
 	
 	# Change the 'Type' column to 'PM - Continuity' in the copied DataFrame
 	df_copy["type"] = "PM - Continuity"
@@ -1002,7 +1000,9 @@ elif st.session_state.page == "OPD Creator":
 	})
 	
 	df['student'] = ""
-	
+
+	st.dataframe(df)
+
 	# Define conditions for AM types
 	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "AM - ACUTES"), "class"] = "H0"
 	df.loc[(df["clinic"] == "WARD_A") & (df["type"] == "AM - Continuity"), "class"] = "H1"
