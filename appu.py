@@ -945,7 +945,7 @@ elif st.session_state.page == "OPD Creator":
 
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	
-	wardapa_df = warda_df.loc[warda_df['type'] == "team3pa"]
+	wardapa_df = warda_df.loc[warda_df['type'] == "team3pa "]
 
 	st.dataframe(wardapa_df)
 	
