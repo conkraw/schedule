@@ -957,7 +957,7 @@ elif st.session_state.page == "OPD Creator":
 	          
 	df = pd.concat([df,wardapa_df])
 	
-	st.dataframe(df)
+	
 	
 	df["type"] = "AM - Continuity"
 	df["student"] = ""
@@ -980,6 +980,8 @@ elif st.session_state.page == "OPD Creator":
 	          
 	
 	df_copy = df.copy()
+
+	st.dataframe(df_copy)
 	
 	# Change the 'Type' column to 'PM - Continuity' in the copied DataFrame
 	df_copy["type"] = "PM - Continuity"
