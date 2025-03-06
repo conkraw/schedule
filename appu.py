@@ -1028,10 +1028,6 @@ elif st.session_state.page == "OPD Creator":
 	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS")
 	consults_df = consults_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity " in x.name else "/".join(x)})
 	consults_df["clinic"] = "ER_CONS"
-
-	wardateam3_df = warda_df[warda_df["type"].isin(["team3a ", "team3pa "])].assign(type=lambda df: df["type"].map({"team3a ": "AM - Continuity ", "team3pa ": "AM - Continuity "}), clinic="WARD_A")
-	wardateam3_df = wardateam3_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity " in x.name else "/".join(x)})
-	wardateam3_df["clinic"] = "WARD_A"
 	
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"] #Only Extract Jennifer Shook
