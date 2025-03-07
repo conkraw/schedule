@@ -2738,7 +2738,7 @@ elif st.session_state.page == "Create List":
         df_sub['clinic'] = df_sub['clinic'].apply(map_clinic)
 
         # Optionally, drop rows that have None (i.e., clinic values we want to ignore)
-        df_mapped = df_sub[df_sub['clinic'].notna()]
+        df_mapped = df_sub[df_sub['clinic'].notna()]; df_mapped = df_mapped[df_mapped['student'].notna()];
         st.dataframe(df_mapped)
 
         mapping_df = st.secrets["dataset"]["data"]
