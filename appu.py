@@ -2768,8 +2768,7 @@ elif st.session_state.page == "Create List":
         pivoted = pivoted.rename(columns=lambda x: f"weeka{int(x)}" if isinstance(x, (int, float)) else x)
 
         # Optionally fill NaN values with an empty string for display purposes
-        pivoted = pivoted.fillna("")
-        st.dataframe(pivoted)
+        pivotedx = pivoted.fillna("")
 	    
         # Normalize 'type' for HOPE_DRIVE clinic
         df['type_adj'] = df['type']
@@ -2827,7 +2826,7 @@ elif st.session_state.page == "Create List":
                            else ", ".join(names.drop_duplicates()))
         ).reset_index()
 
-        # Pivot the table so that each week becomes its own column
+       # Pivot the table so that each week becomes its own column
         pivoted = grouped.pivot(index='record_id', columns='week', values='formatted_name').reset_index()
 
         # Rename the week columns: if the column is numeric, convert it to an integer and prefix with 'week'
@@ -2835,8 +2834,16 @@ elif st.session_state.page == "Create List":
 
         # Optionally fill NaN values with an empty string for display purposes
         pivoted = pivoted.fillna("")
-	    
-        csv_bytes = save_to_bytes_csv(pivoted); st.dataframe(pivoted); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
+
+        combined = pd.merge(pivoted, pivotedx, on='record_id', how='outer')
+        # Replace NaN values with blank strings
+        combined = combined.fillna("")
+
+        desired_order = ['record_id', 'week1', 'week2', 'week3', 'week4', 'weeka1', 'weeka2', 'weeka3', 'weeka4']
+        combined = combined[[col for col in desired_order if col in combined.columns]]
+
+        csv_bytes = save_to_bytes_csv(combined); st.dataframe(combined); st.download_button(label="Download Evaluation Due Dates",data=csv_bytes,file_name="evaluators.csv",mime="text/csv")
+
 
 	    
     except Exception as e:
