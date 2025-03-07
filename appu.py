@@ -2711,7 +2711,7 @@ elif st.session_state.page == "Create List":
 
         df = pd.read_csv('PALIST.csv', dtype=str)
         mapping_df = st.secrets["dataset"]["data"]
-        #st.dataframe(mapping_df)
+        st.dataframe(mapping_df)
         mapping_df = pd.DataFrame(mapping_df)
         mapping_df.to_csv('mapping_df.csv',index=False)
 
