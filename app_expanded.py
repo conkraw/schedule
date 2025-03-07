@@ -26,7 +26,11 @@ def generate_ranges(start_row, block_height, gap, num_blocks):
     return ranges
 
 def generate_row_ranges(start, count, step, block_size=2):
-    """Generate individual row ranges, e.g., 'A6:H6', 'A7:H7', etc."""
+    """
+    Generate individual row ranges.
+    For example, starting at 6 with step 24 and block_size 2 yields:
+    'A6:H6', 'A7:H7', then 30,31, etc.
+    """
     ranges = []
     for i in range(count):
         base = start + i * step
@@ -37,7 +41,7 @@ def generate_row_ranges(start, count, step, block_size=2):
 def generate_label_ranges(start, block_height, step, count, label, fmt):
     """
     Generate tuples for writing labels.
-    Each tuple is (start_row, end_row, label, fmt) where the block has block_height rows.
+    Each tuple is (start_row, end_row, label, fmt) for a block.
     """
     ranges = []
     for i in range(count):
@@ -45,6 +49,27 @@ def generate_label_ranges(start, block_height, step, count, label, fmt):
         block_end = block_start + block_height - 1
         ranges.append((block_start, block_end, label, fmt))
     return ranges
+
+# -------------------------------
+# Global Parameters for Sections
+# -------------------------------
+num_groups   = 4       # e.g., 4 groups/sections
+group_height = 24      # total rows per group (spacing between sections)
+
+# Offsets for various items (adjust these if the layout changes)
+day_label_offset   = 2   # day labels go on row 2, 26, 50, 74, etc.
+date_row_offset    = 3   # date formulas go on row 3, 27, 51, 75, etc.
+pink_bar_offset    = 5   # pink bars on row 5, 29, 53, 77, etc.
+black_bar_offset   = 2   # black bars on row 2, 26, 50, 74 plus an extra row at the end
+h_label_offset     = 6   # H labels in column I start at row 6, 30, 54, 78, etc.
+
+# Calculate dynamic row lists
+day_start_rows   = [day_label_offset + i * group_height for i in range(num_groups)]
+date_start_rows  = [date_row_offset + i * group_height for i in range(num_groups)]
+pink_bar_rows    = [pink_bar_offset + i * group_height for i in range(num_groups)]
+black_bar_rows   = [black_bar_offset + i * group_height for i in range(num_groups)] + [black_bar_offset + num_groups * group_height + 2]
+h_label_rows     = [h_label_offset + i * group_height for i in range(num_groups)]
+
 
 def format_date_with_suffix(date):
     """Formats a date as 'Month Day[st/nd/rd/th], Year' (e.g., 'February 3rd, 2025')."""
@@ -94,7 +119,7 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Initial row where the first week starts
     start_row = 4
     num_weeks = 5  # Define the number of weeks
-    week_height = 20 #Previously 13 # Number of rows per week (date row + names + custom_value rows)
+    week_height = 13  # Number of rows per week (date row + names + custom_value rows)
 
     for week in range(num_weeks):  
         current_date = start_date + datetime.timedelta(weeks=week)
@@ -319,6 +344,11 @@ elif st.session_state.page == "OPD Creator":
 	exec(open('dates.py').read())
 	import xlsxwriter
 
+	
+	# -------------------------------
+	# Create Workbook and Worksheets
+	# -------------------------------
+	
 	# Create workbook
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
@@ -353,218 +383,162 @@ elif st.session_state.page == "OPD Creator":
 	for ws, site in worksheet_sites.items():
 	    ws.write(0, 0, 'Site:', format1)
 	    ws.write(0, 1, site, format1)
-		
-	#Color Coding
-	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
-	format4a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#9fc5e8','border':1})    
-	format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
-	format5a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#d0e9ff','border':1})
-	format11 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
 	
-	#H codes
-	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
+	# -------------------------------
+	# Define Formats
+	# -------------------------------
+	format1  = workbook.add_format({'font_size': 18, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color': 'black',
+	                                 'bg_color': '#FEFFCC', 'border': 1})
+	format4  = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#8ccf6f', 'border':1})
+	format4a = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#9fc5e8', 'border':1})
+	format5  = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#FEFFCC', 'border':1})
+	format5a = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#d0e9ff', 'border':1})
+	format11 = workbook.add_format({'font_size':18, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#FEFFCC', 'border':1})
+	formate  = workbook.add_format({'font_size':12, 'bold': 0, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'white', 'border':0})
 	
-	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
-	#ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	#ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
-
+	# -------------------------------
+	# HOPE_DRIVE Specific Formatting
+	# -------------------------------
+	
+	# Generate ranges programmatically for conditional formatting
 	ranges_format1 = generate_ranges(start_row=8, block_height=15, gap=23, num_blocks=4)
 	ranges_format5a = generate_ranges(start_row=25, block_height=15, gap=23, num_blocks=4)
-	
 	for cell_range in ranges_format1:
 	    worksheet.conditional_format(cell_range, {
-	        'type': 'cell',
-	        'criteria': '>=',
-	        'value': 0,
-	        'format': format1
+	        'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1
 	    })
-	
 	for cell_range in ranges_format5a:
 	    worksheet.conditional_format(cell_range, {
-	        'type': 'cell',
-	        'criteria': '>=',
-	        'value': 0,
-	        'format': format5a
+	        'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a
 	    })
 	
-	# For HOPE_DRIVE conditional formatting on specific rows
-	# For example, rows 6,7,30,31,... can be generated as follows:
-	ranges_format4 = generate_row_ranges(start=6, count=4, step=24, block_size=2)
+	# Generate single-row ranges for specific conditional formatting rows
+	ranges_format4  = generate_row_ranges(start=6, count=4, step=24, block_size=2)
 	ranges_format4a = generate_row_ranges(start=16, count=4, step=24, block_size=2)
-	
 	for cell_range in ranges_format4:
 	    worksheet.conditional_format(cell_range, {
-	        'type': 'cell',
-	        'criteria': '>=',
-	        'value': 0,
-	        'format': format4
+	        'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4
 	    })
-	
 	for cell_range in ranges_format4a:
 	    worksheet.conditional_format(cell_range, {
-	        'type': 'cell',
-	        'criteria': '>=',
-	        'value': 0,
-	        'format': format4a
+	        'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a
 	    })
 	
-	# ------------------------------
-	# Writing Labels for Cells
-	# ------------------------------
-	
-	# For acute labels, notice the pattern:
-	# "AM - ACUTES" spans 2 rows starting at row 6 and then every 24 rows;
-	# "PM - ACUTES" spans 2 rows starting at row 16 and then every 24 rows.
+	# -------------------------------
+	# Writing Labels for Cells (HOPE_DRIVE)
+	# -------------------------------
+	# Acute labels:
 	acute_am_ranges = generate_label_ranges(start=6, block_height=2, step=24, count=4, label='AM - ACUTES', fmt=format4)
 	acute_pm_ranges = generate_label_ranges(start=16, block_height=2, step=24, count=4, label='PM - ACUTES', fmt=format4a)
 	acute_format_ranges = acute_am_ranges + acute_pm_ranges
-	
-	# For continuity labels:
-	# "AM - Continuity" spans 8 rows starting at row 8 every 24 rows;
-	# "PM - Continuity" spans 8 rows starting at row 18 every 24 rows.
-	continuity_am_ranges = generate_label_ranges(start=8, block_height=8, step=24, count=4, label='AM - Continuity', fmt=format5a)
-	continuity_pm_ranges = generate_label_ranges(start=18, block_height=8, step=24, count=4, label='PM - Continuity', fmt=format5a)
-	continuity_format_ranges = continuity_am_ranges + continuity_pm_ranges
-	
-	# Write Acute Labels
 	for start_row, end_row, label, fmt in acute_format_ranges:
 	    for row in range(start_row, end_row + 1):
 	        worksheet.write(f'A{row}', label, fmt)
 	
-	# Write Continuity Labels
+	# Continuity labels:
+	continuity_am_ranges = generate_label_ranges(start=8, block_height=8, step=24, count=4, label='AM - Continuity', fmt=format5a)
+	continuity_pm_ranges = generate_label_ranges(start=18, block_height=8, step=24, count=4, label='PM - Continuity', fmt=format5a)
+	continuity_format_ranges = continuity_am_ranges + continuity_pm_ranges
 	for start_row, end_row, label, fmt in continuity_format_ranges:
 	    for row in range(start_row, end_row + 1):
 	        worksheet.write(f'A{row}', label, fmt)
 	
-	# Additional labels if needed:
-	labels = [f"H{i}" for i in range(20)]
-		
-	# Define the starting rows for each group
-	start_rows = [6, 30, 54, 78]
-	
-	# Write the labels in each group
-	for start_row in start_rows:
-	    for i, label in enumerate(labels):
+	# Write H labels in column I using dynamic starting rows
+	h_labels = [f"H{i}" for i in range(20)]
+	for start_row in h_label_rows:
+	    for i, label in enumerate(h_labels):
 	        worksheet.write(f'I{start_row + i}', label, formate)
 	
-	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
+	# -------------------------------
+	# Days of the Week and Date Sections (All Worksheets)
+	# -------------------------------
+	# Define day names and date formats
+	format3 = workbook.add_format({
+	    'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
+	    'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
+	})
+	day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 	
-	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
-	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
-	specific_format_ranges = [
-	    ('B6:H6', format4), ('B16:H16', format4a),
-	    ('B30:H30', format4), ('B40:H40', format4a),
-	    ('B54:H54', format4), ('B64:H64', format4a),
-	    ('B78:H78', format4), ('B88:H88', format4a)
-	]
+	# For each worksheet, write days and dates using dynamic row calculations
+	for ws in workbook.worksheets():
+	    # Set zoom
+	    ws.set_zoom(80)
 	
-	am_pm_labels = ['AM'] * 10 + ['PM'] * 10
-	h_labels = ['H{}'.format(i) for i in range(20)]
-	
-	for worksheet in worksheets:
-	    # Apply conditional formatting
-	    for cell_range in ranges_format1:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
-	
-	    for cell_range in ranges_format5a:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
-	
-	    for cell_range, fmt in specific_format_ranges:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
-	
-	    # Write AM/PM labels
-	    sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
-	    for start_row, end_row in sections:
-	        for i, label in enumerate(am_pm_labels):
-	            worksheet.write(f'A{start_row + i}', label, format5a)
-	
-	    # Write H labels in column 'I'
-	    start_rows = [6, 30, 54, 78]
-	    for start_row in start_rows:
-	        for i, label in enumerate(h_labels):
-	            worksheet.write(f'I{start_row + i}', label, formate)
-	
-	# Loop through each worksheet in workbook
-	for worksheet in workbook.worksheets():
-	
-	    # Set Zoom for all sheets
-	    worksheet.set_zoom(80)
-	
-	    # Set Days
-	    format3 = workbook.add_format({
-	        'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
-	    })
-	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
-	    for start_row in start_rows:
+	    # Write day labels (e.g., on rows 2, 26, 50, 74)
+	    for start_row in day_start_rows:
 	        for i, day in enumerate(day_labels):
-	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
+	            ws.write(start_row, 1 + i, day, format3)
 	
-	    # Set Date Formats
-	    format_date = workbook.add_format({
-	        'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
+	    # Write date formulas
+	    format_date  = workbook.add_format({
+	        'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1,
+	        'align': 'center', 'valign': 'vcenter', 'font_color': 'black',
+	        'bg_color': '#FFC7CE', 'border': 1
 	    })
-	
 	    format_label = workbook.add_format({
 	        'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
 	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
+	    for start_row in date_start_rows:
+	        ws.write(f'A{start_row - 1}', "", format_label)
+	        ws.write_formula(f'A{start_row}', '=""', format_label)
+	        ws.write(f'A{start_row + 1}', "", format_label)
 	
-	    # Set Date Formulas
-	    date_rows = [3, 27, 51, 75] #[4, 28, 52, 76]
-	    for i, start_row in enumerate(date_rows):
-	        worksheet.write(f'A{start_row - 1}', "", format_label)
-	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
-	        worksheet.write_formula(f'A{start_row}', f'=""', format_label)
-	        worksheet.write(f'A{start_row + 1}', "", format_label)
-	
-	    # Set Pink Bars (Conditional Format)
-	    pink_bar_rows = [5, 29, 53, 77]
+	    # Set Pink Bars (conditional formatting on dynamic rows)
 	    for row in pink_bar_rows:
-	        worksheet.conditional_format(f'A{row}:H{row}', {
+	        ws.conditional_format(f'A{row}:H{row}', {
 	            'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label
 	        })
 	
-	    # Black Bars
+	    # Set Black Bars (merge cells for black bars)
 	    format2 = workbook.add_format({'bg_color': 'black'})
-	    black_bar_rows = [2, 26, 50, 74, 98]
 	    for row in black_bar_rows:
-	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
-	        
-	    # Write More Dates
+	        ws.merge_range(f'A{row}:H{row}', " ", format2)
+	
+	    # (Further code: writing more dates, setting column widths, merging ranges, etc.)
+	    # For example, writing the date values can use the date_start_rows list:
 	    date_values = [
 	        [y1, y2, y3, y4, y5, y6, y7],
 	        [y8, y9, y10, y11, y12, y13, y14],
 	        [y15, y16, y17, y18, y19, y20, y21],
 	        [y22, y23, y24, y25, y26, y27, y28]
 	    ]
-	    for i, start_row in enumerate(date_rows):
+	    for i, start_row in enumerate(date_start_rows):
 	        for j, value in enumerate(date_values[i]):
-	            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
+	            ws.write(start_row, 1 + j, value, format_date)
 	
-	    # Set Column Widths
-	    worksheet.set_column('A:A', 10)
-	    worksheet.set_column('B:H', 65)
-	    worksheet.set_row(0, 37.25)
+	    # Set Column Widths and other formatting
+	    ws.set_column('A:A', 10)
+	    ws.set_column('B:H', 65)
+	    ws.set_row(0, 37.25)
 	
-	    # Merge Format for Text
 	    merge_format = workbook.add_format({
 	        'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,
 	        'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1
 	    })
-	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
+	    text1 = ('Students are to alert their preceptors when they have a Clinical Reasoning '
+	             'Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes '
+	             'prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!')
+	    ws.merge_range('C1:F1', text1, merge_format)
+	    ws.write('G1', "", merge_format)
+	    ws.write('H1', "", merge_format)
 	
-	    # Merge and Write Important Message
-	    worksheet.merge_range('C1:F1', text1, merge_format)
-	    worksheet.write('G1', "", merge_format)
-	    worksheet.write('H1', "", merge_format)
-	
-	# Close Workbook
+	# -------------------------------
+	# Close the Workbook
+	# -------------------------------
 	workbook.close()
-	
 	####################################################################################################################################
 	import pandas as pd
 	import datetime
