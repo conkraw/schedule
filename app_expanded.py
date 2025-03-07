@@ -16,6 +16,36 @@ import random
 
 st.set_page_config(layout="wide")
 
+def generate_ranges(start_row, block_height, gap, num_blocks):
+    """Generate range strings like 'A{start_row}:H{end_row}' for blocks of rows."""
+    ranges = []
+    for _ in range(num_blocks):
+        end_row = start_row + block_height - 1
+        ranges.append(f"A{start_row}:H{end_row}")
+        start_row = end_row + gap + 1
+    return ranges
+
+def generate_row_ranges(start, count, step, block_size=2):
+    """Generate individual row ranges, e.g., 'A6:H6', 'A7:H7', etc."""
+    ranges = []
+    for i in range(count):
+        base = start + i * step
+        for j in range(block_size):
+            ranges.append(f"A{base + j}:H{base + j}")
+    return ranges
+
+def generate_label_ranges(start, block_height, step, count, label, fmt):
+    """
+    Generate tuples for writing labels.
+    Each tuple is (start_row, end_row, label, fmt) where the block has block_height rows.
+    """
+    ranges = []
+    for i in range(count):
+        block_start = start + i * step
+        block_end = block_start + block_height - 1
+        ranges.append((block_start, block_end, label, fmt))
+    return ranges
+
 def format_date_with_suffix(date):
     """Formats a date as 'Month Day[st/nd/rd/th], Year' (e.g., 'February 3rd, 2025')."""
     day = date.day
@@ -293,7 +323,7 @@ elif st.session_state.page == "OPD Creator":
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
 	# Define worksheet names
-	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C','W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED","RESIDENT"]
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', "ADOLMED", 'W_A', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', "RESIDENT", 'W_C','W_P', 'PICU','ER_CONS','NF']
 	
 	# Create worksheets and store them in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
@@ -335,39 +365,66 @@ elif st.session_state.page == "OPD Creator":
 	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
-	ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
+	#ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
+	#ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
+
+	ranges_format1 = generate_ranges(start_row=8, block_height=15, gap=23, num_blocks=4)
+	ranges_format5a = generate_ranges(start_row=25, block_height=15, gap=23, num_blocks=4)
 	
 	for cell_range in ranges_format1:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
+	    worksheet.conditional_format(cell_range, {
+	        'type': 'cell',
+	        'criteria': '>=',
+	        'value': 0,
+	        'format': format1
+	    })
 	
 	for cell_range in ranges_format5a:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
+	    worksheet.conditional_format(cell_range, {
+	        'type': 'cell',
+	        'criteria': '>=',
+	        'value': 0,
+	        'format': format5a
+	    })
 	
-	# HOPE_DRIVE CONDITIONAL FORMATTING
-	ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
-	ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
+	# For HOPE_DRIVE conditional formatting on specific rows
+	# For example, rows 6,7,30,31,... can be generated as follows:
+	ranges_format4 = generate_row_ranges(start=6, count=4, step=24, block_size=2)
+	ranges_format4a = generate_row_ranges(start=16, count=4, step=24, block_size=2)
 	
 	for cell_range in ranges_format4:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
+	    worksheet.conditional_format(cell_range, {
+	        'type': 'cell',
+	        'criteria': '>=',
+	        'value': 0,
+	        'format': format4
+	    })
 	
 	for cell_range in ranges_format4a:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
+	    worksheet.conditional_format(cell_range, {
+	        'type': 'cell',
+	        'criteria': '>=',
+	        'value': 0,
+	        'format': format4a
+	    })
 	
-	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
-	acute_format_ranges = [
-	    (6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), 
-	    (30, 31, 'AM - ACUTES', format4), (40, 41, 'PM - ACUTES', format4a),
-	    (54, 55, 'AM - ACUTES', format4), (64, 65, 'PM - ACUTES', format4a),
-	    (78, 79, 'AM - ACUTES', format4), (88, 89, 'PM - ACUTES', format4a)
-	]
+	# ------------------------------
+	# Writing Labels for Cells
+	# ------------------------------
 	
-	continuity_format_ranges = [
-	    (8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a),
-	    (32, 39, 'AM - Continuity', format5a), (42, 49, 'PM - Continuity', format5a),
-	    (56, 63, 'AM - Continuity', format5a), (66, 73, 'PM - Continuity', format5a),
-	    (80, 87, 'AM - Continuity', format5a), (90, 97, 'PM - Continuity', format5a)
-	]
+	# For acute labels, notice the pattern:
+	# "AM - ACUTES" spans 2 rows starting at row 6 and then every 24 rows;
+	# "PM - ACUTES" spans 2 rows starting at row 16 and then every 24 rows.
+	acute_am_ranges = generate_label_ranges(start=6, block_height=2, step=24, count=4, label='AM - ACUTES', fmt=format4)
+	acute_pm_ranges = generate_label_ranges(start=16, block_height=2, step=24, count=4, label='PM - ACUTES', fmt=format4a)
+	acute_format_ranges = acute_am_ranges + acute_pm_ranges
+	
+	# For continuity labels:
+	# "AM - Continuity" spans 8 rows starting at row 8 every 24 rows;
+	# "PM - Continuity" spans 8 rows starting at row 18 every 24 rows.
+	continuity_am_ranges = generate_label_ranges(start=8, block_height=8, step=24, count=4, label='AM - Continuity', fmt=format5a)
+	continuity_pm_ranges = generate_label_ranges(start=18, block_height=8, step=24, count=4, label='PM - Continuity', fmt=format5a)
+	continuity_format_ranges = continuity_am_ranges + continuity_pm_ranges
 	
 	# Write Acute Labels
 	for start_row, end_row, label, fmt in acute_format_ranges:
@@ -379,11 +436,9 @@ elif st.session_state.page == "OPD Creator":
 	    for row in range(start_row, end_row + 1):
 	        worksheet.write(f'A{row}', label, fmt)
 	
-	# Define the labels
-	#labels = ['HX1', 'HX2', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'HXX1', 'HXX2', 'H12', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19']
-	
-	labels = ['H{}'.format(i) for i in range(20)]
-	
+	# Additional labels if needed:
+	labels = [f"H{i}" for i in range(20)]
+		
 	# Define the starting rows for each group
 	start_rows = [6, 30, 54, 78]
 	
