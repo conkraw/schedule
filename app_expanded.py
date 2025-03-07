@@ -510,13 +510,12 @@ elif st.session_state.page == "OPD Creator":
 	    workbook.close()
 	    output = io.BytesIO()
 	    output.seek(0)
-	        st.download_button(
+	    st.download_button(
 	            label="Download Excel Workbook",
 	            data=output,
-	            file_name="OPD_pre.xlsx",
+	            file_name="OPD.xlsx",
 	            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	        )
-			
 	####################################################################################################################################
 	import pandas as pd
 	import datetime
