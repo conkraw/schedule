@@ -2765,7 +2765,7 @@ elif st.session_state.page == "Create List":
 
 
         # Rename the week columns: if the column is numeric, convert it to an integer and prefix with 'week'
-        pivoted = pivoted.rename(columns=lambda x: f"week{int(x)}" if isinstance(x, (int, float)) else x)
+        pivoted = pivoted.rename(columns=lambda x: f"weeka{int(x)}" if isinstance(x, (int, float)) else x)
 
         # Optionally fill NaN values with an empty string for display purposes
         pivoted = pivoted.fillna("")
