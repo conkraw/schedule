@@ -2768,7 +2768,7 @@ elif st.session_state.page == "Create List":
 
         # Optionally fill NaN values with an empty string for display purposes
         pivoted = pivoted.fillna("")
-        st.dataframe(df_mapped)
+        st.dataframe(pivoted)
 	    
         # Normalize 'type' for HOPE_DRIVE clinic
         df['type_adj'] = df['type']
