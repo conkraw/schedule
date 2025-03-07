@@ -2753,7 +2753,7 @@ elif st.session_state.page == "Create List":
         mapping_dict = dict(zip(records_df["legal_name"], records_df["record_id"]))
 
         # Map names
-        df_mapped["record_id"] = df_mapped["student"].map(mapping_dict); st.dataframe(df_mapped)
+        df_mapped["record_id"] = df_mapped["student"].map(mapping_dict); df_mapped = df_mapped[df_mapped['record_id'].notna()]; st.dataframe(df_mapped)
 	    
         # Normalize 'type' for HOPE_DRIVE clinic
         df['type_adj'] = df['type']
