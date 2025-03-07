@@ -508,8 +508,10 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.write('H1', "", merge_format)
 	
 	# Close Workbook
-	workbook.close()
-	
+	    workbook.close()
+	    with open(file_path, "rb") as file:
+	        st.download_button(label="Download Excel Workbook",data=file,file_name="OPD.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+		
 	####################################################################################################################################
 	import pandas as pd
 	import datetime
