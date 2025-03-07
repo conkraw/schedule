@@ -13,6 +13,7 @@ from io import StringIO
 import os
 import time 
 import random 
+import io
 
 st.set_page_config(layout="wide")
 
