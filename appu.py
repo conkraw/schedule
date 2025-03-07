@@ -2750,7 +2750,7 @@ elif st.session_state.page == "Create List":
         records_df = pd.DataFrame(records_df)
         records_df.to_csv('record_df.csv',index=False)
 
-	mapping_dict = dict(zip(records_df["legal_name"], records_df["record_id"]))
+        mapping_dict = dict(zip(records_df["legal_name"], records_df["record_id"]))
 
         # Map names
         df_mapped["record_id"] = df_mapped["student"].map(mapping_dict); st.dataframe(df_mapped)
