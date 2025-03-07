@@ -2741,7 +2741,7 @@ elif st.session_state.page == "Create List":
         df_mapped = df_sub[df_sub['clinic_category'].notna()]
         st.dataframe(df_mapped)
 
-	mapping_df = st.secrets["dataset"]["data"]
+        mapping_df = st.secrets["dataset"]["data"]
         
         mapping_df = pd.DataFrame(mapping_df)
         mapping_df.to_csv('mapping_df.csv',index=False)
