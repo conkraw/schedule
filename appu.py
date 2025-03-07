@@ -2711,34 +2711,34 @@ elif st.session_state.page == "Create List":
 
         df = pd.read_csv('PALIST.csv', dtype=str)
 
-	# Create a subset with only the required columns
-	df_sub = df[['student', 'date', 'clinic']].copy()
-	
-	# Define the sets for mapping
-	outpatient_set = {'HOPE_DRIVE', 'ETOWN', 'NYES', 'AAC', 'ADOLMED', 'COMPLEX'}
-	inpatient_set = {'WARD A', 'WARD C', 'WARD P', 'PICU', 'ER CONSULTS', 'NIGHT FLOAT',
-	                 'PSHCH NURSERY', 'HAMPDEN NURSERY', 'SJR HOSP'}
-	
-	def map_clinic(clinic):
-	    # Handle missing or ignorable values
-	    if pd.isna(clinic) or clinic.strip() == "":
-	        return None
-	    clinic_val = clinic.strip().upper()
-	    if clinic_val in {'RESIDENT', 'N/A'}:
-	        return None
-	    # Map to outpatient or inpatient
-	    if clinic_val in outpatient_set:
-	        return "OUTPATIENT"
-	    elif clinic_val in inpatient_set:
-	        return "INPATIENT"
-	    # Otherwise, you can either return the original value or handle it separately.
-	    return clinic
-	
-	# Apply the mapping function to create a new column
-	df_sub['clinic_category'] = df_sub['clinic'].apply(map_clinic)
-	
-	# Optionally, drop rows that have None (i.e., clinic values we want to ignore)
-	df_mapped = df_sub[df_sub['clinic_category'].notna()]
+        # Create a subset with only the required columns
+        df_sub = df[['student', 'date', 'clinic']].copy()
+
+        # Define the sets for mapping
+        outpatient_set = {'HOPE_DRIVE', 'ETOWN', 'NYES', 'AAC', 'ADOLMED', 'COMPLEX'}
+        inpatient_set = {'WARD A', 'WARD C', 'WARD P', 'PICU', 'ER CONSULTS', 'NIGHT FLOAT',
+                         'PSHCH NURSERY', 'HAMPDEN NURSERY', 'SJR HOSP'}
+
+        def map_clinic(clinic):
+            # Handle missing or ignorable values
+            if pd.isna(clinic) or clinic.strip() == "":
+                return None
+            clinic_val = clinic.strip().upper()
+            if clinic_val in {'RESIDENT', 'N/A'}:
+                return None
+            # Map to outpatient or inpatient
+            if clinic_val in outpatient_set:
+                return "OUTPATIENT"
+            elif clinic_val in inpatient_set:
+                return "INPATIENT"
+            # Otherwise, you can either return the original value or handle it separately.
+            return clinic
+
+        # Apply the mapping function to create a new column
+        df_sub['clinic_category'] = df_sub['clinic'].apply(map_clinic)
+
+        # Optionally, drop rows that have None (i.e., clinic values we want to ignore)
+        df_mapped = df_sub[df_sub['clinic_category'].notna()]
         st.dataframe(df_mapped)
 
 	mapping_df = st.secrets["dataset"]["data"]
