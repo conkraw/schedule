@@ -2735,10 +2735,10 @@ elif st.session_state.page == "Create List":
             return clinic
 
         # Apply the mapping function to create a new column
-        df_sub['clinic_category'] = df_sub['clinic'].apply(map_clinic)
+        df_sub['clinic'] = df_sub['clinic'].apply(map_clinic)
 
         # Optionally, drop rows that have None (i.e., clinic values we want to ignore)
-        df_mapped = df_sub[df_sub['clinic_category'].notna()]
+        df_mapped = df_sub[df_sub['clinic'].notna()]
         st.dataframe(df_mapped)
 
         mapping_df = st.secrets["dataset"]["data"]
