@@ -2756,7 +2756,8 @@ elif st.session_state.page == "Create List":
         df_mapped["record_id"] = df_mapped["student"].map(mapping_dict)
         df_mapped = df_mapped[df_mapped['record_id'].notna()]
         df_mapped = df_mapped[['record_id', 'date', 'clinic']].copy()
-        #df_mapped['week'] = ((df_mapped['date'] - start_date).dt.days // 7) + 1
+        df_mapped['date'] = pd.to_datetime(df_mapped['date'])
+        df_mapped['week'] = ((df_mapped['date'] - start_date).dt.days // 7) + 1
         st.dataframe(df_mapped)
 	    
         # Normalize 'type' for HOPE_DRIVE clinic
