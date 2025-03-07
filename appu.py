@@ -2758,6 +2758,16 @@ elif st.session_state.page == "Create List":
         df_mapped = df_mapped[['record_id', 'date', 'clinic']].copy()
         df_mapped['date'] = pd.to_datetime(df_mapped['date'])
         df_mapped['week'] = ((df_mapped['date'] - start_date).dt.days // 7) + 1
+	
+	grouped = df_mapped.groupby(['record_id', 'week'])['clinic'].apply(lambda names: ("; ".join(names.drop_duplicates()) if names.name[1] == 1 else ", ".join(names.drop_duplicates()))).reset_index()
+        # Pivot the table so that each week becomes its own column
+        pivoted = grouped.pivot(index='record_id', columns='week', values='clinic').reset_index()
+
+        # Rename the week columns: if the column is numeric, convert it to an integer and prefix with 'week'
+        pivoted = pivoted.rename(columns=lambda x: f"week{int(x)}" if isinstance(x, (int, float)) else x)
+
+        # Optionally fill NaN values with an empty string for display purposes
+        pivoted = pivoted.fillna("")
         st.dataframe(df_mapped)
 	    
         # Normalize 'type' for HOPE_DRIVE clinic
