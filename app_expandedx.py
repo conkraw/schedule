@@ -1670,8 +1670,8 @@ elif st.session_state.page == "Student Assignments":
     from io import BytesIO
     import streamlit as st
 
-    if st.button('Create OPD'):
-        file_path = 'OPD.xlsx'  # Path to your workbook
+	if st.button('Create OPD', key='create_opd_button'):
+	    file_path = 'OPD.xlsx'
 
         # Load the workbook using openpyxl
         wb = openpyxl.load_workbook(file_path)
