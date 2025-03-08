@@ -507,8 +507,8 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.write('G1', "", merge_format)
 	    worksheet.write('H1', "", merge_format)
 	
-	# Close Workbook
-	workbook.close()
+    # Close Workbook
+    workbook.close()
 
     import openpyxl
     from io import BytesIO
@@ -541,5 +541,4 @@ elif st.session_state.page == "OPD Creator":
             file_name="OPD.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-	
-	####################################################################################################################################
+
