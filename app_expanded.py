@@ -237,13 +237,16 @@ elif st.session_state.page == "Upload Files":
 elif st.session_state.page == "OPD Creator":
 	test_date = st.session_state.start_date
 	uploaded_files = st.session_state.uploaded_files
-	
-	test_date = st.session_state.start_date  
-	
+
 	K = 28
 	
-	# Create a dictionary mapping keys like 'y1', 'y2', etc. to formatted dates
-	date_vars = {f"y{i+1}": (test_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y") for i in range(K)}
+	# Generate a list of formatted date strings
+	date_list = [(test_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y") for i in range(K)]
+
+	(y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, y16, y17, y18, y19, y20, y21, y22, y23, y24, y25, y26, y27, y28) = date_list
+	
+	# Create a nested list of date values (each sub-list contains 7 dates)
+	#date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
 
 	import xlsxwriter
 
