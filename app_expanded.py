@@ -344,10 +344,10 @@ elif st.session_state.page == "OPD Creator":
 	# Define the starting rows for each group
 	start_rows = [6, 30, 54, 78]
 	
-	# Write the labels in each group
-	#for start_row in start_rows:
-	#    for i, label in enumerate(labels):
-	#        worksheet.write(f'I{start_row + i}', label, formate)
+	 Write the labels in each group
+	for start_row in start_rows:
+	    for i, label in enumerate(labels):
+	        worksheet.write(f'I{start_row + i}', label, formate)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
 	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
