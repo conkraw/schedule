@@ -437,10 +437,7 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.set_zoom(80)
 	
 	    # Set Days
-	    format3 = workbook.add_format({
-	        'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
-	    })
+	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 	    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
 	    for start_row in start_rows:
@@ -448,18 +445,10 @@ elif st.session_state.page == "OPD Creator":
 	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
 	
 	    # Set Date Formats
-	    format_date = workbook.add_format({
-	        'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
-	    })
-	
-	    format_label = workbook.add_format({
-	        'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
-	    })
-	
+	    format_date = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+	    format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
 	    # Set Date Formulas
-	    date_rows = [3, 27, 51, 75] #[4, 28, 52, 76]
+	    date_rows = [x + 1 for x in start_rows] 
 	    for i, start_row in enumerate(date_rows):
 	        worksheet.write(f'A{start_row - 1}', "", format_label)
 	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
@@ -467,25 +456,18 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'A{start_row + 1}', "", format_label)
 	
 	    # Set Pink Bars (Conditional Format)
-	    pink_bar_rows = [5, 29, 53, 77]
+	    pink_bar_rows = [x + 3 for x in start_rows] 
 	    for row in pink_bar_rows:
-	        worksheet.conditional_format(f'A{row}:H{row}', {
-	            'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label
-	        })
+	        worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
 	
 	    # Black Bars
 	    format2 = workbook.add_format({'bg_color': 'black'})
-	    black_bar_rows = [2, 26, 50, 74, 98]
+	    step = start_rows[1] - start_rows[0]; black_bar_rows = list(range(start_rows[0], end_row, step))
 	    for row in black_bar_rows:
 	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
 	        
 	    # Write More Dates
-	    date_values = [
-	        [y1, y2, y3, y4, y5, y6, y7],
-	        [y8, y9, y10, y11, y12, y13, y14],
-	        [y15, y16, y17, y18, y19, y20, y21],
-	        [y22, y23, y24, y25, y26, y27, y28]
-	    ]
+	    date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
 	    for i, start_row in enumerate(date_rows):
 	        for j, value in enumerate(date_values[i]):
 	            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
@@ -496,10 +478,7 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.set_row(0, 37.25)
 	
 	    # Merge Format for Text
-	    merge_format = workbook.add_format({
-	        'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,
-	        'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1
-	    })
+	    merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1})
 	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
 	
 	    # Merge and Write Important Message
