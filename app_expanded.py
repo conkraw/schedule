@@ -507,38 +507,38 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.write('G1', "", merge_format)
 	    worksheet.write('H1', "", merge_format)
 	
-    # Close Workbook
-    workbook.close()
-
-    import openpyxl
-    from io import BytesIO
-    import streamlit as st
-
-    if st.button('Create OPD'):
-        file_path = 'OPD.xlsx'  # Path to your workbook
-
-        # Load the workbook using openpyxl
-        wb = openpyxl.load_workbook(file_path)
-
-        # Iterate over all sheets and cells to replace '<NA>' with an empty string
-        for sheet in wb.worksheets:
-            for row in sheet.iter_rows():
-                for cell in row:
-                    if cell.value is not None and str(cell.value) == "<NA>":
-                        cell.value = ""
-
-        # Save the modified workbook to a BytesIO buffer
-        buffer = BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)  # Reset buffer position to the beginning
-
-        file_data = buffer.read()
-
-        # Provide a download button for the modified OPD.xlsx file
-        st.download_button(
-            label="Download OPD.xlsx",
-            data=file_data,
-            file_name="OPD.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
+	    # Close Workbook
+	    workbook.close()
+	
+	    import openpyxl
+	    from io import BytesIO
+	    import streamlit as st
+	
+	    if st.button('Create OPD'):
+	        file_path = 'OPD.xlsx'  # Path to your workbook
+	
+	        # Load the workbook using openpyxl
+	        wb = openpyxl.load_workbook(file_path)
+	
+	        # Iterate over all sheets and cells to replace '<NA>' with an empty string
+	        for sheet in wb.worksheets:
+	            for row in sheet.iter_rows():
+	                for cell in row:
+	                    if cell.value is not None and str(cell.value) == "<NA>":
+	                        cell.value = ""
+	
+	        # Save the modified workbook to a BytesIO buffer
+	        buffer = BytesIO()
+	        wb.save(buffer)
+	        buffer.seek(0)  # Reset buffer position to the beginning
+	
+	        file_data = buffer.read()
+	
+	        # Provide a download button for the modified OPD.xlsx file
+	        st.download_button(
+	            label="Download OPD.xlsx",
+	            data=file_data,
+	            file_name="OPD.xlsx",
+	            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	        )
+	
