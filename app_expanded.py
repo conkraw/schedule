@@ -380,9 +380,8 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'A{row}', label, fmt)
 	
 	# Define the labels
-	#labels = ['HX1', 'HX2', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'HXX1', 'HXX2', 'H12', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19']
 	
-	labels = ['H{}'.format(i) for i in range(20)]
+	labels = ['H{}'.format(i) for i in range(32)]
 	
 	# Define the starting rows for each group
 	start_rows = [6, 30, 54, 78]
