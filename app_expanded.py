@@ -475,7 +475,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # Black Bars
 	    format2 = workbook.add_format({'bg_color': 'black'})
-	    step = start_rows[1] - start_rows[0]; black_bar_rows = start_rows + [start_rows[-1]] + step
+	    step = start_rows[1] - start_rows[0]; black_bar_rows = list(range(start_rows[0], end_row, step))
 	    for row in black_bar_rows:
 	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
 	        
