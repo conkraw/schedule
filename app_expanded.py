@@ -100,23 +100,10 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Save the Excel file
     file_path = f"{file_name}"
     wb.save(file_path)
-
-    # ✅ **Display & Download Immediately**
-    st.success(f"✅ File '{file_name}' has been successfully created!")
-
-    #df_display = pd.read_excel(file_path, dtype=str)
-    #st.dataframe(df_display); #time.sleep(30); # Display file in Streamlit
-
-    with open(file_path, "rb") as f:
-        st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); return file_path  # Return file path for later use
 	
 # Initialize session state variables efficiently
-session_defaults = {
-    "page": "Home",
-    "start_date": None,
-    "uploaded_files": {},
-    "uploaded_book4_file": {},
-}
+session_defaults = {"page": "Home","start_date": None,"uploaded_files": {},"uploaded_book4_file": {},}
+
 for key, value in session_defaults.items():
     st.session_state.setdefault(key, value)
 
@@ -248,45 +235,16 @@ elif st.session_state.page == "Upload Files":
 
 		
 elif st.session_state.page == "OPD Creator":
-	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
 	uploaded_files = st.session_state.uploaded_files
 	
-	# initializing K
+	test_date = st.session_state.start_date  
+	
 	K = 28
-	 
-	res = []
-	 
-	for day in range(K):
-	    date = (test_date + datetime.timedelta(days = day)).strftime("%-m/%-d/%Y")
-	    res.append(date)
-	     
-	#res
 	
-	dates = pd.DataFrame(res, columns =['dates'])
-	
-	dates['x'] = "y"
-	
-	dates['i'] = dates.index+1
-	
-	dates['x'] = dates['x'].astype(str)+dates['i'].astype(str)
-	
-	dates['x'] = dates['x'].astype(str) + "=" + "'"+dates['dates'].astype(str) + "'"
-	
-	dates = dates[['x']]
-	
-	dates.to_csv('dates.csv',index=False)
-	
-	import numpy as np
-	
-	datesdf = pd.read_csv('dates.csv')
-	
-	dates = datesdf['x'].astype(str)
-	
-	numpy_array=dates.to_numpy()
-	np.savetxt("dates.py",numpy_array, fmt="%s")
-	
-	exec(open('dates.py').read())
+	# Create a dictionary mapping keys like 'y1', 'y2', etc. to formatted dates
+	date_vars = {f"y{i+1}": (test_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y") for i in range(K)}
+
 	import xlsxwriter
 
 	# Create workbook
