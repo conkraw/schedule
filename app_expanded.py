@@ -297,24 +297,44 @@ elif st.session_state.page == "OPD Creator":
 	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
-	ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
+	#ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
+	r1, r2 = "A8:H15", "A32:H39" #Must change this to ensure that the other sections are adjusted as well. 
+	s = int(r1.split(':')[0][1:])             # Starting row (8)
+	g = int(r1.split(':')[1][1:]) - s          # Row gap (15 - 8 = 7)
+	step = int(r2.split(':')[0][1:]) - s        # Step between ranges (32 - 8 = 24)
+	ranges_format1 = [f"A{s+i*step}:H{s+g+i*step}" for i in range(4)]
 	
-	#for cell_range in ranges_format1:
-	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
+	#ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
+	r1, r2 = "A18:H25", "A42:H49" #Must change this to ensure that the other sections are adjusted as well. 
+	s = int(r1.split(':')[0][1:])             # Starting row from r1 (18)
+	g = int(r1.split(':')[1][1:]) - s          # Gap within the range (25 - 18 = 7)
+	step = int(r2.split(':')[0][1:]) - s        # Difference between starting rows (42 - 18 = 24)
+	ranges_format5a = [f"A{s+i*step}:H{s+g+i*step}" for i in range(4)]
 	
-	#for cell_range in ranges_format5a:
-	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
+	for cell_range in ranges_format1:
+	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
 	
-	# HOPE_DRIVE CONDITIONAL FORMATTING
-	ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
-	ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
+	for cell_range in ranges_format5a:
+	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	
-	#for cell_range in ranges_format4:
-	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
+	 HOPE_DRIVE CONDITIONAL FORMATTING
+	#ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
+	p1, p2 = "A6:H6", "A30:H30"          # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
+	s = int(p1.split(':')[0][1:])          # Starting row (6)
+	step = int(p2.split(':')[0][1:]) - s    # Group step (30 - 6 = 24)
+	ranges_format4 = [f"A{s + i * step + j}:H{s + i * step + j}" for i in range(4) for j in (0, 1)]
+
+	#ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
+	p1, p2 = "A16:H16", "A40:H40"         # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
+	s = int(p1.split(':')[0][1:])          # Starting row (16)
+	step = int(p2.split(':')[0][1:]) - s    # Group step (40 - 16 = 24)
+	ranges_format4a = [f"A{s + i * step + j}:H{s + i * step + j}" for i in range(4) for j in (0, 1)]
+
+	for cell_range in ranges_format4:
+	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
 	
-	#for cell_range in ranges_format4a:
-	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
+	for cell_range in ranges_format4a:
+	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
 	
 	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
 	acute_format_ranges = [
@@ -332,14 +352,14 @@ elif st.session_state.page == "OPD Creator":
 	]
 	
 	# Write Acute Labels
-	#for start_row, end_row, label, fmt in acute_format_ranges:
-	#    for row in range(start_row, end_row + 1):
-	#        worksheet.write(f'A{row}', label, fmt)
+	for start_row, end_row, label, fmt in acute_format_ranges:
+	    for row in range(start_row, end_row + 1):
+	        worksheet.write(f'A{row}', label, fmt)
 	
 	# Write Continuity Labels
-	#for start_row, end_row, label, fmt in continuity_format_ranges:
-	#    for row in range(start_row, end_row + 1):
-	#        worksheet.write(f'A{row}', label, fmt)
+	for start_row, end_row, label, fmt in continuity_format_ranges:
+	    for row in range(start_row, end_row + 1):
+	        worksheet.write(f'A{row}', label, fmt)
 	
 	# Define the labels
 	
