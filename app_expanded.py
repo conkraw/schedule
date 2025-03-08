@@ -442,7 +442,7 @@ elif st.session_state.page == "OPD Creator":
 	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
+	    start_rows = [2, 40, 78, 116] #[2, 26, 50, 74] #[3, 27, 51, 75]
 	    for start_row in start_rows:
 	        for i, day in enumerate(day_labels):
 	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
@@ -459,7 +459,7 @@ elif st.session_state.page == "OPD Creator":
 	    })
 	
 	    # Set Date Formulas
-	    date_rows = [3, 27, 51, 75] #[4, 28, 52, 76]
+	    date_rows = [x + 1 for x in start_rows] 
 	    for i, start_row in enumerate(date_rows):
 	        worksheet.write(f'A{start_row - 1}', "", format_label)
 	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
@@ -467,7 +467,7 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'A{start_row + 1}', "", format_label)
 	
 	    # Set Pink Bars (Conditional Format)
-	    pink_bar_rows = [5, 29, 53, 77]
+	    pink_bar_rows = [x + 3 for x in start_rows] 
 	    for row in pink_bar_rows:
 	        worksheet.conditional_format(f'A{row}:H{row}', {
 	            'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label
@@ -475,7 +475,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # Black Bars
 	    format2 = workbook.add_format({'bg_color': 'black'})
-	    black_bar_rows = [2, 26, 50, 74, 98]
+	    step = start_rows[1] - start_rows[0]; black_bar_rows = start_rows + [start_rows[-1] + step
 	    for row in black_bar_rows:
 	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
 	        
