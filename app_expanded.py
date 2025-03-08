@@ -244,9 +244,6 @@ elif st.session_state.page == "OPD Creator":
 	date_list = [(test_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y") for i in range(K)]
 
 	(y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, y16, y17, y18, y19, y20, y21, y22, y23, y24, y25, y26, y27, y28) = date_list
-	
-	# Create a nested list of date values (each sub-list contains 7 dates)
-	#date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
 
 	import xlsxwriter
 
@@ -299,21 +296,21 @@ elif st.session_state.page == "OPD Creator":
 	ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
 	ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
 	
-	for cell_range in ranges_format1:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
+	#for cell_range in ranges_format1:
+	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
 	
-	for cell_range in ranges_format5a:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
+	#for cell_range in ranges_format5a:
+	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	
 	# HOPE_DRIVE CONDITIONAL FORMATTING
 	ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
 	ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
 	
-	for cell_range in ranges_format4:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
+	#for cell_range in ranges_format4:
+	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
 	
-	for cell_range in ranges_format4a:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
+	#for cell_range in ranges_format4a:
+	#    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
 	
 	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
 	acute_format_ranges = [
@@ -331,14 +328,14 @@ elif st.session_state.page == "OPD Creator":
 	]
 	
 	# Write Acute Labels
-	for start_row, end_row, label, fmt in acute_format_ranges:
-	    for row in range(start_row, end_row + 1):
-	        worksheet.write(f'A{row}', label, fmt)
+	#for start_row, end_row, label, fmt in acute_format_ranges:
+	#    for row in range(start_row, end_row + 1):
+	#        worksheet.write(f'A{row}', label, fmt)
 	
 	# Write Continuity Labels
-	for start_row, end_row, label, fmt in continuity_format_ranges:
-	    for row in range(start_row, end_row + 1):
-	        worksheet.write(f'A{row}', label, fmt)
+	#for start_row, end_row, label, fmt in continuity_format_ranges:
+	#    for row in range(start_row, end_row + 1):
+	#        worksheet.write(f'A{row}', label, fmt)
 	
 	# Define the labels
 	
@@ -348,9 +345,9 @@ elif st.session_state.page == "OPD Creator":
 	start_rows = [6, 30, 54, 78]
 	
 	# Write the labels in each group
-	for start_row in start_rows:
-	    for i, label in enumerate(labels):
-	        worksheet.write(f'I{start_row + i}', label, formate)
+	#for start_row in start_rows:
+	#    for i, label in enumerate(labels):
+	#        worksheet.write(f'I{start_row + i}', label, formate)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
 	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
