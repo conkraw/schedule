@@ -317,7 +317,7 @@ elif st.session_state.page == "OPD Creator":
 	for cell_range in ranges_format5a:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	
-	 HOPE_DRIVE CONDITIONAL FORMATTING
+	#HOPE_DRIVE CONDITIONAL FORMATTING
 	#ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
 	p1, p2 = "A6:H6", "A30:H30"          # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
 	s = int(p1.split(':')[0][1:])          # Starting row (6)
