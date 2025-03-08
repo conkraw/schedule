@@ -437,12 +437,10 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.set_zoom(80)
 	
 	    # Set Days
-	    format3 = workbook.add_format({
-	        'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter',
-	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
-	    })
+	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+	
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
+	    start_rows = [2, 40, 78, 116] #[2, 26, 50, 74] 
 	    for start_row in start_rows:
 	        for i, day in enumerate(day_labels):
 	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
@@ -459,7 +457,7 @@ elif st.session_state.page == "OPD Creator":
 	    })
 	
 	    # Set Date Formulas
-	    date_rows = [3, 27, 51, 75] #[4, 28, 52, 76]
+	    date_rows = [row + 1 for row in start_rows] #date_rows = [3, 41, 79, 117], # [3, 27, 51, 75] #[4, 28, 52, 76]
 	    for i, start_row in enumerate(date_rows):
 	        worksheet.write(f'A{start_row - 1}', "", format_label)
 	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
@@ -467,7 +465,7 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'A{start_row + 1}', "", format_label)
 	
 	    # Set Pink Bars (Conditional Format)
-	    pink_bar_rows = [5, 29, 53, 77]
+	    pink_bar_rows = [x + 2 for x in date_rows] #pink_bar_rows = [5, 29, 53, 77]
 	    for row in pink_bar_rows:
 	        worksheet.conditional_format(f'A{row}:H{row}', {
 	            'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label
@@ -475,7 +473,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # Black Bars
 	    format2 = workbook.add_format({'bg_color': 'black'})
-	    black_bar_rows = [2, 26, 50, 74, 98]
+	    increment = start_rows[1] - start_rows[0]; black_bar_rows = start_rows + [start_rows[-1] + increment]; #black_bar_rows = [2, 26, 50, 74, 98]
 	    for row in black_bar_rows:
 	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
 	        
