@@ -25,7 +25,7 @@ def format_date_with_suffix(date):
     day = date.day
     suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return date.strftime(f"%B {day}{suffix}, %Y")
-	
+
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
     "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_1", "SJR_2"]}, 
@@ -298,17 +298,17 @@ elif st.session_state.page == "OPD Creator":
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
 	#ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	r1, r2 = "A8:H15", "A32:H39" #Must change this to ensure that the other sections are adjusted as well. 
-	s = int(r1.split(':')[0][1:])             # Starting row (8)
-	g = int(r1.split(':')[1][1:]) - s          # Row gap (15 - 8 = 7)
-	step = int(r2.split(':')[0][1:]) - s        # Step between ranges (32 - 8 = 24)
+	ra1, ra2 = "A8:H15", "A32:H39" #Must change this to ensure that the other sections are adjusted as well. 
+	s = int(ra1.split(':')[0][1:])             # Starting row (8)
+	g = int(ra1.split(':')[1][1:]) - s          # Row gap (15 - 8 = 7)
+	step = int(ra2.split(':')[0][1:]) - s        # Step between ranges (32 - 8 = 24)
 	ranges_format1 = [f"A{s+i*step}:H{s+g+i*step}" for i in range(4)]
 	
 	#ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
-	r1, r2 = "A18:H25", "A42:H49" #Must change this to ensure that the other sections are adjusted as well. 
-	s = int(r1.split(':')[0][1:])             # Starting row from r1 (18)
-	g = int(r1.split(':')[1][1:]) - s          # Gap within the range (25 - 18 = 7)
-	step = int(r2.split(':')[0][1:]) - s        # Difference between starting rows (42 - 18 = 24)
+	rp1, rp2 = "A18:H25", "A42:H49" #Must change this to ensure that the other sections are adjusted as well. 
+	s = int(rp1.split(':')[0][1:])             # Starting row from r1 (18)
+	g = int(rp1.split(':')[1][1:]) - s          # Gap within the range (25 - 18 = 7)
+	step = int(rp2.split(':')[0][1:]) - s        # Difference between starting rows (42 - 18 = 24)
 	ranges_format5a = [f"A{s+i*step}:H{s+g+i*step}" for i in range(4)]
 	
 	for cell_range in ranges_format1:
@@ -319,15 +319,15 @@ elif st.session_state.page == "OPD Creator":
 	
 	#HOPE_DRIVE CONDITIONAL FORMATTING
 	#ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
-	p1, p2 = "A6:H6", "A30:H30"          # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
-	s = int(p1.split(':')[0][1:])          # Starting row (6)
-	step = int(p2.split(':')[0][1:]) - s    # Group step (30 - 6 = 24)
+	pa1, pa2 = "A6:H6", "A30:H30"          # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
+	s = int(pa1.split(':')[0][1:])          # Starting row (6)
+	step = int(pa2.split(':')[0][1:]) - s    # Group step (30 - 6 = 24)
 	ranges_format4 = [f"A{s + i * step + j}:H{s + i * step + j}" for i in range(4) for j in (0, 1)]
 
 	#ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
-	p1, p2 = "A16:H16", "A40:H40"         # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
-	s = int(p1.split(':')[0][1:])          # Starting row (16)
-	step = int(p2.split(':')[0][1:]) - s    # Group step (40 - 16 = 24)
+	pp1, pp2 = "A16:H16", "A40:H40"         # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
+	s = int(pp1.split(':')[0][1:])          # Starting row (16)
+	step = int(pp2.split(':')[0][1:]) - s    # Group step (40 - 16 = 24)
 	ranges_format4a = [f"A{s + i * step + j}:H{s + i * step + j}" for i in range(4) for j in (0, 1)]
 
 	for cell_range in ranges_format4:
@@ -336,21 +336,36 @@ elif st.session_state.page == "OPD Creator":
 	for cell_range in ranges_format4a:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
 	
-	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
-	acute_format_ranges = [
-	    (6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), 
-	    (30, 31, 'AM - ACUTES', format4), (40, 41, 'PM - ACUTES', format4a),
-	    (54, 55, 'AM - ACUTES', format4), (64, 65, 'PM - ACUTES', format4a),
-	    (78, 79, 'AM - ACUTES', format4), (88, 89, 'PM - ACUTES', format4a)
-	]
+	###HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
+	#acute_format_ranges = [(6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), (30, 31, 'AM - ACUTES', format4), (40, 41, 'PM - ACUTES', format4a),(54, 55, 'AM - ACUTES', format4), (64, 65, 'PM - ACUTES', format4a),(78, 79, 'AM - ACUTES', format4), (88, 89, 'PM - ACUTES', format4a)]
+	s_am = int(pa1.split(':')[0][1:])  # Starting row (6)
+	step_am = int(pa2.split(':')[0][1:]) - s_am  # Group step (30 - 6 = 24)
 	
-	continuity_format_ranges = [
-	    (8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a),
-	    (32, 39, 'AM - Continuity', format5a), (42, 49, 'PM - Continuity', format5a),
-	    (56, 63, 'AM - Continuity', format5a), (66, 73, 'PM - Continuity', format5a),
-	    (80, 87, 'AM - Continuity', format5a), (90, 97, 'PM - Continuity', format5a)
-	]
+	# Each group has two consecutive rows: starting row and starting row + 1.
+	am_ranges = [(s_am + i * step_am, s_am + i * step_am + 1, 'AM - ACUTES', format4) for i in range(4)]
 	
+	# For PM ranges:
+	s_pm = int(pp1.split(':')[0][1:])  # Starting row (16)
+	step_pm = int(pp2.split(':')[0][1:]) - s_pm  # Group step (40 - 16 = 24)
+	
+	pm_ranges = [(s_pm + i * step_pm, s_pm + i * step_pm + 1, 'PM - ACUTES', format4a) for i in range(4)]
+	
+	# Combine the two lists by interleaving: group0 AM, group0 PM, group1 AM, group1 PM, etc.
+	acute_format_ranges = [item for pair in zip(am_ranges, pm_ranges) for item in pair]
+	
+	#continuity_format_ranges = [(8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a),(32, 39, 'AM - Continuity', format5a), (42, 49, 'PM - Continuity', format5a),(56, 63, 'AM - Continuity', format5a), (66, 73, 'PM - Continuity', format5a),(80, 87, 'AM - Continuity', format5a), (90, 97, 'PM - Continuity', format5a)]
+	s_am = int(ra1.split(':')[0][1:])         # Starting row (8)
+	g_am = int(ra1.split(':')[1][1:]) - s_am    # Row gap (15 - 8 = 7)
+	step_am = int(ra2.split(':')[0][1:]) - s_am  # Step between groups (32 - 8 = 24)
+	am_cont_ranges = [(s_am + i * step_am, s_am + g_am + i * step_am, 'AM - Continuity', format5a) for i in range(4)]
+
+	s_pm = int(rp1.split(':')[0][1:])         # Starting row (18)
+	g_pm = int(rp1.split(':')[1][1:]) - s_pm    # Row gap (25 - 18 = 7)
+	step_pm = int(rp2.split(':')[0][1:]) - s_pm  # Step between groups (42 - 18 = 24)
+	pm_cont_ranges = [(s_pm + i * step_pm, s_pm + g_pm + i * step_pm, 'PM - Continuity', format5a) for i in range(4)]
+
+	continuity_format_ranges = [tup for pair in zip(am_cont_ranges, pm_cont_ranges) for tup in pair]
+
 	# Write Acute Labels
 	for start_row, end_row, label, fmt in acute_format_ranges:
 	    for row in range(start_row, end_row + 1):
@@ -423,7 +438,7 @@ elif st.session_state.page == "OPD Creator":
 	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = generate_rows(2, 26) # ENTER first two 2, 26... and th rest will be figured out using a function in the beginning of the code. 
+	    start_rows = generate_rows(2, 26) # ENTER first two 2, 26... and the rest will be figured out using a function in the beginning of the code. 
 	    for start_row in start_rows:
 	        for i, day in enumerate(day_labels):
 	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
