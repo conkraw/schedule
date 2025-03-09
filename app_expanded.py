@@ -23,6 +23,11 @@ st.set_page_config(layout="wide")
 #Change Line 330 Acute PM
 #Change Line 377 H Labels 
 
+#Change line 401 - AM Continuity
+#Change line 409 - PM Continuity
+#Change line 431 - H Labels
+#Change line 466 - Change Day labels... M, W, etc... it sets up the days for all tabs. 
+
 
 
 def generate_rows(first, second, total=4):
