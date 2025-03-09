@@ -388,7 +388,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Define the labels and write them into each group.
 	# Use the acute starting row and step (s_am_acute and step_am_acute) to get the correct rows.
-	labels = ['H{}'.format(i) for i in range(34)]
+	labels = ['H{}'.format(i) for i in range(44)]
 	groups = 4
 	start_rows = [s_am_acute + i * step_am_acute for i in range(groups)]  # This yields: [6, 30, 54, 78]
 
