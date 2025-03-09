@@ -1652,9 +1652,9 @@ elif st.session_state.page == "Student Assignments":
         """
         t_mappings = [
             (0, 6),  # T0 to T6 starts at 6
-            (7, 54),  # T7 to T13 starts at 30
-            (14, 102),  # T14 to T20 starts at 54
-            (21, 150)   # T21 to T27 starts at 78
+            (7, 54),  # T7 to T13 starts at 54
+            (14, 102),  # T14 to T20 starts at 102
+            (21, 150)   # T21 to T27 starts at 150
         ]
 
         combined_mapping = {}
