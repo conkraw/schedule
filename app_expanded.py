@@ -20,8 +20,8 @@ st.set_page_config(layout="wide")
 #FOR HOPE DRIVE
 #Change Line 301 Continuity AM
 #Change Line 308 Continuity PM
-#Change Line 323 Acute AM
-#Change Line 330 Acute PM
+#Change Line 323 Acute AM pa1,pa2
+#Change Line 330 Acute PM pp1, pp2
 #Change Line 377 H Labels 
 
 #FOR REST 
@@ -30,7 +30,7 @@ st.set_page_config(layout="wide")
 #Change line 431 - H Labels
 
 #FOR ALL 
-#Change line 466 - Change Day labels... M, W, etc... it sets up the days for all tabs. 
+#Change line 466 - Change day_labels... M, W, etc... it sets up the days for all tabs. 
 
 
 
