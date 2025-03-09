@@ -312,14 +312,14 @@ elif st.session_state.page == "OPD Creator":
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
 	#ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	ra1, ra2 = "A8:H15", "A32:H39" #Must change this to ensure that the other sections are adjusted as well. 
+	ra1, ra2 = "A8:H27", "A56:H75" #Must change this to ensure that the other sections are adjusted as well. 
 	s = int(ra1.split(':')[0][1:])             # Starting row (8)
 	g = int(ra1.split(':')[1][1:]) - s          # Row gap (15 - 8 = 7)
 	step = int(ra2.split(':')[0][1:]) - s        # Step between ranges (32 - 8 = 24)
 	ranges_format1 = [f"A{s+i*step}:H{s+g+i*step}" for i in range(4)]
 	
 	#ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
-	rp1, rp2 = "A18:H25", "A42:H49" #Must change this to ensure that the other sections are adjusted as well. 
+	rp1, rp2 = "A30:H49", "A78:H97" #Must change this to ensure that the other sections are adjusted as well. 
 	s = int(rp1.split(':')[0][1:])             # Starting row from r1 (18)
 	g = int(rp1.split(':')[1][1:]) - s          # Gap within the range (25 - 18 = 7)
 	step = int(rp2.split(':')[0][1:]) - s        # Difference between starting rows (42 - 18 = 24)
@@ -334,14 +334,14 @@ elif st.session_state.page == "OPD Creator":
 	# HOPE_DRIVE CONDITIONAL FORMATTING
 	
 	# For Acute Ranges Format (AM)
-	pa1, pa2 = "A6:H6", "A30:H30"          # pa1: first cell of first group; pa2: first cell of second group
+	pa1, pa2 = "A6:H6", "A54:H54"          # pa1: first cell of first group; pa2: first cell of second group
 	s_am_acute = int(pa1.split(':')[0][1:])  # s_am_acute = 6
 	step_am_acute = int(pa2.split(':')[0][1:]) - s_am_acute  # step_am_acute = 24
 	ranges_format4 = [f"A{s_am_acute + i * step_am_acute + j}:H{s_am_acute + i * step_am_acute + j}" 
 	                  for i in range(4) for j in (0, 1)]
 	
 	# For Acute Ranges Format (PM)
-	pp1, pp2 = "A16:H16", "A40:H40"         # pp1: first cell of first group; pp2: first cell of second group
+	pp1, pp2 = "A28:H28", "A76:H76"         # pp1: first cell of first group; pp2: first cell of second group
 	s_pm = int(pp1.split(':')[0][1:])         # s_pm = 16
 	step_pm = int(pp2.split(':')[0][1:]) - s_pm  # step_pm = 24
 	ranges_format4a = [f"A{s_pm + i * step_pm + j}:H{s_pm + i * step_pm + j}" 
@@ -388,7 +388,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Define the labels and write them into each group.
 	# Use the acute starting row and step (s_am_acute and step_am_acute) to get the correct rows.
-	labels = ['H{}'.format(i) for i in range(20)]
+	labels = ['H{}'.format(i) for i in range(34)]
 	groups = 4
 	start_rows = [s_am_acute + i * step_am_acute for i in range(groups)]  # This yields: [6, 30, 54, 78]
 
@@ -480,7 +480,7 @@ elif st.session_state.page == "OPD Creator":
 	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = generate_rows(2, 26) # ENTER first two 2, 26... and the rest will be figured out using a function in the beginning of the code. 
+	    start_rows = generate_rows(2, 50) # ENTER first two 2, 26... and the rest will be figured out using a function in the beginning of the code. 
 	    for start_row in start_rows:
 	        for i, day in enumerate(day_labels):
 	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
