@@ -1656,11 +1656,12 @@ elif st.session_state.page == "Student Assignments":
             (14, 102),  # T14 to T20 starts at 54
             (21, 150)   # T21 to T27 starts at 78
         ]
-    
+
 	combined_mapping = {}
 	for start_t, start_value in t_mappings:
-	    for i in range(start_t, start_t + 7):
-	        combined_mapping[f"T{i}"] = generate_mappingx(start_value)
+		for i in range(start_t, start_t + 7):
+		combined_mapping[f"T{i}"] = generate_mappingx(start_value)
+		
 	return combined_mapping
 	    
     def process_excel_mapping(location, sheet_name):
