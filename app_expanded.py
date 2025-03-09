@@ -484,7 +484,7 @@ elif st.session_state.page == "OPD Creator":
 	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = generate_rows(2, 26) # ENTER first two 2, 26... and the rest will be figured out using a function in the beginning of the code. 
+	    start_rows = generate_rows(2, 52) # ENTER first two 2, 26... and the rest will be figured out using a function in the beginning of the code. 
 	    for start_row in start_rows:
 	        for i, day in enumerate(day_labels):
 	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
