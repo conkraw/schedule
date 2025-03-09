@@ -431,6 +431,20 @@ elif st.session_state.page == "OPD Creator":
 	h_labels = ['H{}'.format(i) for i in range(20)]
 	groups = 4
 	start_rows = [s_am + i * step_am for i in range(groups)]  # This yields: [6, 30, 54, 78]
+
+	#Expected Output #sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
+	s_am_cont = int(ra1.split(':')[0][1:])               # starting row, e.g. 6
+	g_am = int(ra1.split(':')[1][1:]) - s_am_cont          # row gap, e.g. 15 - 6 = 9
+	step_am_cont = int(ra2.split(':')[0][1:]) - s_am_cont   # step between groups, e.g. 30 - 6 = 24
+	
+	# For PM continuity
+	s_pm_cont = int(rp1.split(':')[0][1:])                # starting row, e.g. 16
+	g_pm = int(rp1.split(':')[1][1:]) - s_pm_cont           # row gap, e.g. 25 - 16 = 9
+	step_pm_cont = int(rp2.split(':')[0][1:]) - s_pm_cont    # step between groups, e.g. 40 - 16 = 24
+	
+	# Create the sections list dynamically.
+	# Each section is a tuple: (AM_start, PM_end)
+	sections = [(s_am_cont + i * step_am_cont, s_pm_cont + i * step_pm_cont + g_pm) for i in range(4)]
 	
 	for worksheet in worksheets:
 	    # Apply conditional formatting
@@ -439,21 +453,6 @@ elif st.session_state.page == "OPD Creator":
 	
 	    for cell_range in ranges_format5a:
 	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
-
-	    # Write AM/PM labels
-	    #Expected Output #sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
-            s_am_cont = int(ra1.split(':')[0][1:])               # starting row, e.g. 6
-            g_am = int(ra1.split(':')[1][1:]) - s_am_cont          # row gap, e.g. 15 - 6 = 9
-            step_am_cont = int(ra2.split(':')[0][1:]) - s_am_cont   # step between groups, e.g. 30 - 6 = 24
-
-            # For PM continuity
-            s_pm_cont = int(rp1.split(':')[0][1:])                # starting row, e.g. 16
-            g_pm = int(rp1.split(':')[1][1:]) - s_pm_cont           # row gap, e.g. 25 - 16 = 9
-            step_pm_cont = int(rp2.split(':')[0][1:]) - s_pm_cont    # step between groups, e.g. 40 - 16 = 24
-
-            # Create the sections list dynamically.
-            # Each section is a tuple: (AM_start, PM_end)
-            sections = [(s_am_cont + i * step_am_cont, s_pm_cont + i * step_pm_cont + g_pm) for i in range(4)]
 
 	    for start_row, end_row in sections:
 	        for i, label in enumerate(am_pm_labels):
