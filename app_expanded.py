@@ -317,74 +317,88 @@ elif st.session_state.page == "OPD Creator":
 	for cell_range in ranges_format5a:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	
-	#HOPE_DRIVE CONDITIONAL FORMATTING
-	#ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
-	pa1, pa2 = "A6:H6", "A30:H30"          # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
-	s = int(pa1.split(':')[0][1:])          # Starting row (6)
-	step = int(pa2.split(':')[0][1:]) - s    # Group step (30 - 6 = 24)
-	ranges_format4 = [f"A{s + i * step + j}:H{s + i * step + j}" for i in range(4) for j in (0, 1)]
-
-	#ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
-	pp1, pp2 = "A16:H16", "A40:H40"         # p1 is first element of first group; p2 is first element of second group #MUST CHANGE THIS
-	s = int(pp1.split(':')[0][1:])          # Starting row (16)
-	step = int(pp2.split(':')[0][1:]) - s    # Group step (40 - 16 = 24)
-	ranges_format4a = [f"A{s + i * step + j}:H{s + i * step + j}" for i in range(4) for j in (0, 1)]
-
+	# HOPE_DRIVE CONDITIONAL FORMATTING
+	
+	# For Acute Ranges Format (AM)
+	# Expected ranges: ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
+	pa1, pa2 = "A6:H6", "A30:H30"          # pa1: first cell of first group; pa2: first cell of second group
+	s_am = int(pa1.split(':')[0][1:])       # s_am = 6
+	step_am = int(pa2.split(':')[0][1:]) - s_am  # step_am = 24
+	ranges_format4 = [f"A{s_am + i * step_am + j}:H{s_am + i * step_am + j}" 
+	                  for i in range(4) for j in (0, 1)]
+	# ranges_format4 now equals: ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
+	
+	# For Acute Ranges Format (PM)
+	# Expected ranges: ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
+	pp1, pp2 = "A16:H16", "A40:H40"        # pp1: first cell of first group; pp2: first cell of second group
+	s_pm = int(pp1.split(':')[0][1:])       # s_pm = 16
+	step_pm = int(pp2.split(':')[0][1:]) - s_pm  # step_pm = 24 (corrected: use s_pm instead of s)
+	ranges_format4a = [f"A{s_pm + i * step_pm + j}:H{s_pm + i * step_pm + j}" 
+	                   for i in range(4) for j in (0, 1)]
+	
+	# Apply conditional formatting for acute ranges:
 	for cell_range in ranges_format4:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
-	
 	for cell_range in ranges_format4a:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
 	
-	###HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
-	#acute_format_ranges = [(6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), (30, 31, 'AM - ACUTES', format4), (40, 41, 'PM - ACUTES', format4a),(54, 55, 'AM - ACUTES', format4), (64, 65, 'PM - ACUTES', format4a),(78, 79, 'AM - ACUTES', format4), (88, 89, 'PM - ACUTES', format4a)]
-	s_am = int(pa1.split(':')[0][1:])  # Starting row (6)
-	step_am = int(pa2.split(':')[0][1:]) - s_am  # Group step (30 - 6 = 24)
 	
-	# Each group has two consecutive rows: starting row and starting row + 1.
+	### HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
+	
+	# Acute Labels (AM and PM)
+	# Desired tuples: (6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), etc.
+	# Recalculate using pa1/pa2 and pp1/pp2
+	s_am = int(pa1.split(':')[0][1:])  # Starting row for AM (6)
+	step_am = int(pa2.split(':')[0][1:]) - s_am  # Group step (24)
 	am_ranges = [(s_am + i * step_am, s_am + i * step_am + 1, 'AM - ACUTES', format4) for i in range(4)]
 	
-	# For PM ranges:
-	s_pm = int(pp1.split(':')[0][1:])  # Starting row (16)
-	step_pm = int(pp2.split(':')[0][1:]) - s_pm  # Group step (40 - 16 = 24)
-	
+	s_pm = int(pp1.split(':')[0][1:])  # Starting row for PM (16)
+	step_pm = int(pp2.split(':')[0][1:]) - s_pm  # Group step (24)
 	pm_ranges = [(s_pm + i * step_pm, s_pm + i * step_pm + 1, 'PM - ACUTES', format4a) for i in range(4)]
 	
-	# Combine the two lists by interleaving: group0 AM, group0 PM, group1 AM, group1 PM, etc.
+	# Interleave AM and PM ranges: group0 AM, group0 PM, group1 AM, group1 PM, etc.
 	acute_format_ranges = [item for pair in zip(am_ranges, pm_ranges) for item in pair]
 	
-	#continuity_format_ranges = [(8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a),(32, 39, 'AM - Continuity', format5a), (42, 49, 'PM - Continuity', format5a),(56, 63, 'AM - Continuity', format5a), (66, 73, 'PM - Continuity', format5a),(80, 87, 'AM - Continuity', format5a), (90, 97, 'PM - Continuity', format5a)]
-	s_am = int(ra1.split(':')[0][1:])         # Starting row (8)
+	# Continuity Labels
+	# Expected tuples: (8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a), etc.
+	# The following variables need to be defined:
+	ra1, ra2 = "A8:H15", "A32:H39"      # For AM continuity: ra1 gives first range; ra2 gives second group's first range
+	rp1, rp2 = "A18:H25", "A42:H49"      # For PM continuity: rp1 gives first range; rp2 gives second group's first range
+	
+	s_am = int(ra1.split(':')[0][1:])         # Starting row for AM continuity (8)
 	g_am = int(ra1.split(':')[1][1:]) - s_am    # Row gap (15 - 8 = 7)
 	step_am = int(ra2.split(':')[0][1:]) - s_am  # Step between groups (32 - 8 = 24)
 	am_cont_ranges = [(s_am + i * step_am, s_am + g_am + i * step_am, 'AM - Continuity', format5a) for i in range(4)]
-
-	s_pm = int(rp1.split(':')[0][1:])         # Starting row (18)
+	
+	s_pm = int(rp1.split(':')[0][1:])         # Starting row for PM continuity (18)
 	g_pm = int(rp1.split(':')[1][1:]) - s_pm    # Row gap (25 - 18 = 7)
 	step_pm = int(rp2.split(':')[0][1:]) - s_pm  # Step between groups (42 - 18 = 24)
 	pm_cont_ranges = [(s_pm + i * step_pm, s_pm + g_pm + i * step_pm, 'PM - Continuity', format5a) for i in range(4)]
-
+	
 	continuity_format_ranges = [tup for pair in zip(am_cont_ranges, pm_cont_ranges) for tup in pair]
-
-	# Write Acute Labels
+	
+	# Write Acute Labels into the sheet
 	for start_row, end_row, label, fmt in acute_format_ranges:
 	    for row in range(start_row, end_row + 1):
 	        worksheet.write(f'A{row}', label, fmt)
 	
-	# Write Continuity Labels
+	# Write Continuity Labels into the sheet
 	for start_row, end_row, label, fmt in continuity_format_ranges:
 	    for row in range(start_row, end_row + 1):
 	        worksheet.write(f'A{row}', label, fmt)
 	
-	# Define the labels
+	
+	# Define the labels and write them into each group.
+	# Since the acute label groups start at row 6 and increment by 24, we use s_am and step_am.
 	labels = ['H{}'.format(i) for i in range(20)]
 	groups = 4
-	start_rows = [s + i * step for i in range(groups)] #start_rows = [6, 30, 54, 78]
+	start_rows = [s_am + i * step_am for i in range(groups)]  # This yields: [6, 30, 54, 78]
 	
-	#Write the labels in each group
+	# Write the labels in each group (in column I)
 	for start_row in start_rows:
 	    for i, label in enumerate(labels):
 	        worksheet.write(f'I{start_row + i}', label, formate)
+
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
 	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
