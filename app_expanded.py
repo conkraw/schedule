@@ -387,13 +387,41 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
 	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
+
+	#AM Continuity - Expected Output: ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
+	ra1, ra2 = "A6:H15", "A30:H39"  # User-entered ranges for the first two groups
+	s_am = int(ra1.split(':')[0][1:])        # starting row: 6
+	g_am = int(ra1.split(':')[1][1:]) - s_am     # gap: 15 - 6 = 9
+	step_am = int(ra2.split(':')[0][1:]) - s_am   # step: 30 - 6 = 24
 	
-	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
-	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
-	#specific_format_ranges = [('B6:H6', format4), ('B16:H16', format4a),('B30:H30', format4), ('B40:H40', format4a),('B54:H54', format4), ('B64:H64', format4a),('B78:H78', format4), ('B88:H88', format4a)]
+	ranges_format1 = [f"A{s_am + i * step}:H{s_am + g_am + i * step_am}" for i in range(4)]
+
+
+	#PM Continuity - Expected Output: ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
+	rp1, rp2 = "A16:H25", "A40:H49"  # rp1: first PM range, rp2: second PM range
+	s_pm = int(rp1.split(':')[0][1:])          # Starting row: 16
+	g_pm = int(rp1.split(':')[1][1:]) - s_pm     # Row gap: 25 - 16 = 9
+	step_pm = int(rp2.split(':')[0][1:]) - s_pm   # Step between groups: 40 - 16 = 24
 	
-	am_pm_labels = ['AM'] * 10 + ['PM'] * 10
+	ranges_format5a = [f"A{s_pm + i * step_pm}:H{s_pm + g_pm + i * step_pm}" for i in range(4)]
+
+	#AM_PM Labels Expected Output: "am_pm_labels = ['AM'] * 10 + ['PM'] * 10"
+	# For AM continuity:
+	s_am_cont = int(ra1.split(':')[0][1:])      # starting row = 8
+	e_am_cont = int(ra1.split(':')[1][1:])        # ending row = 15
+	num_rows_am = e_am_cont - s_am_cont + 1       # number of rows = 15 - 8 + 1 = 8
+	
+	# For PM continuity:
+	s_pm_cont = int(rp1.split(':')[0][1:])      # starting row = 18
+	e_pm_cont = int(rp1.split(':')[1][1:])        # ending row = 25
+	num_rows_pm = e_pm_cont - s_pm_cont + 1       # number of rows = 25 - 18 + 1 = 8
+	
+	# Create the label list dynamically:
+	am_pm_labels = ['AM'] * num_rows_am + ['PM'] * num_rows_pm
+	
 	h_labels = ['H{}'.format(i) for i in range(20)]
+	groups = 4
+	start_rows = [s_am + i * step_am for i in range(groups)]  # This yields: [6, 30, 54, 78]
 	
 	for worksheet in worksheets:
 	    # Apply conditional formatting
@@ -402,10 +430,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	    for cell_range in ranges_format5a:
 	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
-	
-	    #for cell_range, fmt in specific_format_ranges:
-	    #    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
-	
+
 	    # Write AM/PM labels
 	    sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
 	    for start_row, end_row in sections:
@@ -413,7 +438,6 @@ elif st.session_state.page == "OPD Creator":
 	            worksheet.write(f'A{start_row + i}', label, format5a)
 	
 	    # Write H labels in column 'I'
-	    start_rows = [6, 30, 54, 78]
 	    for start_row in start_rows:
 	        for i, label in enumerate(h_labels):
 	            worksheet.write(f'I{start_row + i}', label, formate)
