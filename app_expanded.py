@@ -720,7 +720,7 @@ elif st.session_state.page == "OPD Creator":
 	                elif "PM - ACUTES" in type_key:
 	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
 	                    subset_df['class'] = subset_df['count'].apply(
-	                        lambda count: "H10" if count == 0 else ("H11" if count == 1 else "H" + str(count + 12))
+	                        lambda count: "H22" if count == 0 else ("H23" if count == 1 else "H" + str(count + 12))
 	                    )
 	
 	                elif "AM - Continuity" in type_key:
@@ -1182,7 +1182,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	df['date'] = df.datecode.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
-	df.to_csv('final2.csv', index=False); st.dataframe(df)
+	df.to_csv('final2.csv', index=False)
 	
 	df = pd.read_csv('resident_schedule.csv')
 	df['date'] = pd.to_datetime(df['date'], errors='coerce')
