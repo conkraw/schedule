@@ -16,6 +16,15 @@ import random
 
 st.set_page_config(layout="wide")
 
+#INSTRUCTIONS FOR HOW TO RESET THE NUMBER OF ROWS
+#Change Line 301 Continuity AM
+#Change Line 308 Continuity PM
+#Change Line 323 Acute AM
+#Change Line 330 Acute PM
+#Change Line 377 H Labels 
+
+
+
 def generate_rows(first, second, total=4):
     step = second - first
     return [first + i * step for i in range(total)]
@@ -432,7 +441,20 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 
 	    # Write AM/PM labels
-	    sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
+	    #Expected Output #sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
+            s_am_cont = int(ra1.split(':')[0][1:])               # starting row, e.g. 6
+            g_am = int(ra1.split(':')[1][1:]) - s_am_cont          # row gap, e.g. 15 - 6 = 9
+            step_am_cont = int(ra2.split(':')[0][1:]) - s_am_cont   # step between groups, e.g. 30 - 6 = 24
+
+            # For PM continuity
+            s_pm_cont = int(rp1.split(':')[0][1:])                # starting row, e.g. 16
+            g_pm = int(rp1.split(':')[1][1:]) - s_pm_cont           # row gap, e.g. 25 - 16 = 9
+            step_pm_cont = int(rp2.split(':')[0][1:]) - s_pm_cont    # step between groups, e.g. 40 - 16 = 24
+
+            # Create the sections list dynamically.
+            # Each section is a tuple: (AM_start, PM_end)
+            sections = [(s_am_cont + i * step_am_cont, s_pm_cont + i * step_pm_cont + g_pm) for i in range(4)]
+
 	    for start_row, end_row in sections:
 	        for i, label in enumerate(am_pm_labels):
 	            worksheet.write(f'A{start_row + i}', label, format5a)
