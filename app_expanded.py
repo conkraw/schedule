@@ -1619,6 +1619,13 @@ elif st.session_state.page == "Student Assignments":
         Generates a mapping dictionary for H0 to H19 starting at a given start_value.
         """
         return {f"H{i}": start_value + i for i in range(20)}
+
+
+    def generate_mappingx(start_value):
+        """
+        Generates a mapping dictionary for H0 to H44 starting at a given start_value.
+        """
+        return {f"H{i}": start_value + i for i in range(44)}
     
     def create_t_mapping():
         """
@@ -1634,6 +1641,25 @@ elif st.session_state.page == "Student Assignments":
         combined_mapping = {}
         for start_t, start_value in t_mappings:
             common_mapping = generate_mapping(start_value)
+            combined_mapping.update({f"T{i}": common_mapping for i in range(start_t, start_t + 7)})
+    
+        return combined_mapping
+
+
+    def create_t_mappingx():
+        """
+        Creates the combined mapping for T0 to T27.
+        """
+        t_mappings = [
+            (0, 6),  # T0 to T6 starts at 6
+            (7, 54),  # T7 to T13 starts at 30
+            (14, 102),  # T14 to T20 starts at 54
+            (21, 150)   # T21 to T27 starts at 78
+        ]
+    
+        combined_mapping = {}
+        for start_t, start_value in t_mappings:
+            common_mapping = generate_mappingx(start_value)
             combined_mapping.update({f"T{i}": common_mapping for i in range(start_t, start_t + 7)})
     
         return combined_mapping
@@ -1666,9 +1692,39 @@ elif st.session_state.page == "Student Assignments":
     
         wb1.save('OPD.xlsx')
         print(f"Processed mapping for {location} in {sheet_name}.")
+
+
+    def process_excel_mappingx(location, sheet_name):
+        """
+        Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
+        """
+        wb = openpyxl.load_workbook('final.xlsx')
+        ws = wb['Sheet1']
+        
+        wb1 = openpyxl.load_workbook('OPD.xlsx')
+        ws1 = wb1[sheet_name]
+    
+        combined_t_mapping = create_t_mappingx()
+    
+        column_mapping = {f"T{i}": (i % 7) + 2 for i in range(28)}
+    
+        for row in ws.iter_rows():
+            t_value = row[7].value  # Column H (index 7)
+            h_value = row[6].value  # Column G (index 6)
+            row_location = row[4].value  # Column E (index 4)
+    
+            if row_location == location and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
+                target_row = combined_t_mapping[t_value][h_value]
+                target_column = column_mapping[t_value]
+    
+                ws1.cell(row=target_row, column=target_column).value = row[5].value  # Column F (index 5)
+                ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
+    
+        wb1.save('OPD.xlsx')
+        print(f"Processed mapping for {location} in {sheet_name}.")
     
     # Process HOPE_DRIVE
-    process_excel_mapping("HOPE_DRIVE", "HOPE_DRIVE")
+    process_excel_mappingx("HOPE_DRIVE", "HOPE_DRIVE")
     process_excel_mapping("ETOWN", "ETOWN")
     process_excel_mapping("NYES", "NYES")
     process_excel_mapping("COMPLEX", "COMPLEX")
@@ -1686,24 +1742,6 @@ elif st.session_state.page == "Student Assignments":
     process_excel_mapping("RESIDENT", "RESIDENT")
     
     ###############################################################################################
-    
-    # Button to trigger the download
-    #if st.button('Create OPD'):
-    #    # Path to the existing 'OPD.xlsx' workbook
-    #    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
-    
-        # Read the workbook into memory
-    #    with open(file_path, 'rb') as file:
-    #        file_data = file.read()
-    
-        # Provide a download button for the existing OPD.xlsx file
-    #    st.download_button(
-    #        label="Download OPD.xlsx",
-    #        data=file_data,
-    #        file_name="OPD.xlsx",
-    #        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    #    )
-
     import openpyxl
     from io import BytesIO
     import streamlit as st
@@ -1967,9 +2005,9 @@ elif st.session_state.page == "Create List":
 	    
         hope['H'] = "H"
         hopei = process_hope_data(hope, 'AM ', 2, '5.csv')       # AM Continuity starts at H2
-        hopeii = process_hope_data(hope, 'PM ', 12, '6.csv')     # PM Continuity starts at H12
+        hopeii = process_hope_data(hope, 'PM ', 24, '6.csv')     # PM Continuity starts at H12
         hopeiii = process_hope_data(hope, 'AM - ACUTES', 0, '7.csv')  # AM - ACUTES starts at H0
-        hopeiiii = process_hope_data(hope, 'PM - ACUTES', 10, '8.csv') # PM - ACUTES starts at H10
+        hopeiiii = process_hope_data(hope, 'PM - ACUTES', 22, '8.csv') # PM - ACUTES starts at H10
 
         # Combine all the data into one DataFrame
         hopes = pd.DataFrame(columns=hopei.columns)
