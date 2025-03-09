@@ -1618,7 +1618,7 @@ elif st.session_state.page == "Student Assignments":
         """
         Generates a mapping dictionary for H0 to H19 starting at a given start_value.
         """
-        return {f"H{i}": start_value + i for i in range(20)}
+        return {f"H{i}": start_value + i for i in range(44)}
     
     def create_t_mapping():
         """
