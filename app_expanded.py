@@ -312,14 +312,14 @@ elif st.session_state.page == "OPD Creator":
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
 	#ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	ra1, ra2 = "A8:H27", "A56:H75" #Must change this to ensure that the other sections are adjusted as well. 
+	ra1, ra2 = "A8:H15", "A32:H39" #Must change this to ensure that the other sections are adjusted as well. 
 	s = int(ra1.split(':')[0][1:])             # Starting row (8)
 	g = int(ra1.split(':')[1][1:]) - s          # Row gap (15 - 8 = 7)
 	step = int(ra2.split(':')[0][1:]) - s        # Step between ranges (32 - 8 = 24)
 	ranges_format1 = [f"A{s+i*step}:H{s+g+i*step}" for i in range(4)]
 	
 	#ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
-	rp1, rp2 = "A30:H49", "A78:H97" #Must change this to ensure that the other sections are adjusted as well. 
+	rp1, rp2 = "A18:H25", "A42:H49" #Must change this to ensure that the other sections are adjusted as well. 
 	s = int(rp1.split(':')[0][1:])             # Starting row from r1 (18)
 	g = int(rp1.split(':')[1][1:]) - s          # Gap within the range (25 - 18 = 7)
 	step = int(rp2.split(':')[0][1:]) - s        # Difference between starting rows (42 - 18 = 24)
@@ -334,14 +334,14 @@ elif st.session_state.page == "OPD Creator":
 	# HOPE_DRIVE CONDITIONAL FORMATTING
 	
 	# For Acute Ranges Format (AM)
-	pa1, pa2 = "A6:H6", "A54:H54"          # pa1: first cell of first group; pa2: first cell of second group
+	pa1, pa2 = "A6:H6", "A30:H30"          # pa1: first cell of first group; pa2: first cell of second group
 	s_am_acute = int(pa1.split(':')[0][1:])  # s_am_acute = 6
 	step_am_acute = int(pa2.split(':')[0][1:]) - s_am_acute  # step_am_acute = 24
 	ranges_format4 = [f"A{s_am_acute + i * step_am_acute + j}:H{s_am_acute + i * step_am_acute + j}" 
 	                  for i in range(4) for j in (0, 1)]
 	
 	# For Acute Ranges Format (PM)
-	pp1, pp2 = "A28:H28", "A76:H76"         # pp1: first cell of first group; pp2: first cell of second group
+	pp1, pp2 = "A16:H16", "A40:H40"         # pp1: first cell of first group; pp2: first cell of second group
 	s_pm = int(pp1.split(':')[0][1:])         # s_pm = 16
 	step_pm = int(pp2.split(':')[0][1:]) - s_pm  # step_pm = 24
 	ranges_format4a = [f"A{s_pm + i * step_pm + j}:H{s_pm + i * step_pm + j}" 
@@ -388,7 +388,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Define the labels and write them into each group.
 	# Use the acute starting row and step (s_am_acute and step_am_acute) to get the correct rows.
-	labels = ['H{}'.format(i) for i in range(44)]
+	labels = ['H{}'.format(i) for i in range(20)]
 	groups = 4
 	start_rows = [s_am_acute + i * step_am_acute for i in range(groups)]  # This yields: [6, 30, 54, 78]
 
@@ -480,7 +480,7 @@ elif st.session_state.page == "OPD Creator":
 	        'font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1
 	    })
 	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = generate_rows(2, 50) # ENTER first two 2, 26... and the rest will be figured out using a function in the beginning of the code. 
+	    start_rows = generate_rows(2, 26) # ENTER first two 2, 26... and the rest will be figured out using a function in the beginning of the code. 
 	    for start_row in start_rows:
 	        for i, day in enumerate(day_labels):
 	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
@@ -714,13 +714,13 @@ elif st.session_state.page == "OPD Creator":
 	                if "AM - ACUTES" in type_key:
 	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
 	                    subset_df['class'] = subset_df['count'].apply(
-	                        lambda count: "H0" if count == 0 else ("H1" if count == 1 else "H" + str(count + 2)) ########### Must change this. 
+	                        lambda count: "H0" if count == 0 else ("H1" if count == 1 else "H" + str(count + 2))
 	                    )
 	                
 	                elif "PM - ACUTES" in type_key:
 	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
 	                    subset_df['class'] = subset_df['count'].apply(
-	                        lambda count: "H22" if count == 0 else ("H23" if count == 1 else "H" + str(count + 12)) ########### Must change this. 
+	                        lambda count: "H10" if count == 0 else ("H11" if count == 1 else "H" + str(count + 12))
 	                    )
 	
 	                elif "AM - Continuity" in type_key:
@@ -728,7 +728,7 @@ elif st.session_state.page == "OPD Creator":
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                elif "PM - Continuity" in type_key:
-	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 22 ########### Must change this. 
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 12
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                # Keep only relevant columns
@@ -1619,13 +1619,6 @@ elif st.session_state.page == "Student Assignments":
         Generates a mapping dictionary for H0 to H19 starting at a given start_value.
         """
         return {f"H{i}": start_value + i for i in range(20)}
-
-
-    def generate_mappingx(start_value):
-        """
-        Generates a mapping dictionary for H0 to H44 starting at a given start_value.
-        """
-        return {f"H{i}": start_value + i for i in range(44)}
     
     def create_t_mapping():
         """
@@ -1644,26 +1637,7 @@ elif st.session_state.page == "Student Assignments":
             combined_mapping.update({f"T{i}": common_mapping for i in range(start_t, start_t + 7)})
     
         return combined_mapping
-
-
-    def create_t_mappingx():
-        """
-        Creates the combined mapping for T0 to T27.
-        """
-        t_mappings = [
-            (0, 6),  # T0 to T6 starts at 6
-            (7, 54),  # T7 to T13 starts at 54
-            (14, 102),  # T14 to T20 starts at 102
-            (21, 150)   # T21 to T27 starts at 150
-        ]
-
-        combined_mapping = {}
-        for start_t, start_value in t_mappings:
-            for i in range(start_t, start_t + 7):
-            	combined_mapping[f"T{i}"] = generate_mappingx(start_value)
-
-        return combined_mapping
-	    
+    
     def process_excel_mapping(location, sheet_name):
         """
         Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
@@ -1692,39 +1666,9 @@ elif st.session_state.page == "Student Assignments":
     
         wb1.save('OPD.xlsx')
         print(f"Processed mapping for {location} in {sheet_name}.")
-
-
-    def process_excel_mappingx(location, sheet_name):
-        """
-        Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
-        """
-        wb = openpyxl.load_workbook('final.xlsx')
-        ws = wb['Sheet1']
-        
-        wb1 = openpyxl.load_workbook('OPD.xlsx')
-        ws1 = wb1[sheet_name]
-    
-        combined_t_mapping = create_t_mappingx()
-    
-        column_mapping = {f"T{i}": (i % 7) + 2 for i in range(28)}
-    
-        for row in ws.iter_rows():
-            t_value = row[7].value  # Column H (index 7)
-            h_value = row[6].value  # Column G (index 6)
-            row_location = row[4].value  # Column E (index 4)
-    
-            if row_location == location and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
-                target_row = combined_t_mapping[t_value][h_value]
-                target_column = column_mapping[t_value]
-    
-                ws1.cell(row=target_row, column=target_column).value = row[5].value  # Column F (index 5)
-                ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
-    
-        wb1.save('OPD.xlsx')
-        print(f"Processed mapping for {location} in {sheet_name}.")
     
     # Process HOPE_DRIVE
-    process_excel_mappingx("HOPE_DRIVE", "HOPE_DRIVE")
+    process_excel_mapping("HOPE_DRIVE", "HOPE_DRIVE")
     process_excel_mapping("ETOWN", "ETOWN")
     process_excel_mapping("NYES", "NYES")
     process_excel_mapping("COMPLEX", "COMPLEX")
@@ -1742,6 +1686,24 @@ elif st.session_state.page == "Student Assignments":
     process_excel_mapping("RESIDENT", "RESIDENT")
     
     ###############################################################################################
+    
+    # Button to trigger the download
+    #if st.button('Create OPD'):
+    #    # Path to the existing 'OPD.xlsx' workbook
+    #    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
+    
+        # Read the workbook into memory
+    #    with open(file_path, 'rb') as file:
+    #        file_data = file.read()
+    
+        # Provide a download button for the existing OPD.xlsx file
+    #    st.download_button(
+    #        label="Download OPD.xlsx",
+    #        data=file_data,
+    #        file_name="OPD.xlsx",
+    #        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    #    )
+
     import openpyxl
     from io import BytesIO
     import streamlit as st
@@ -2005,9 +1967,9 @@ elif st.session_state.page == "Create List":
 	    
         hope['H'] = "H"
         hopei = process_hope_data(hope, 'AM ', 2, '5.csv')       # AM Continuity starts at H2
-        hopeii = process_hope_data(hope, 'PM ', 24, '6.csv')     # PM Continuity starts at H12
+        hopeii = process_hope_data(hope, 'PM ', 12, '6.csv')     # PM Continuity starts at H12
         hopeiii = process_hope_data(hope, 'AM - ACUTES', 0, '7.csv')  # AM - ACUTES starts at H0
-        hopeiiii = process_hope_data(hope, 'PM - ACUTES', 22, '8.csv') # PM - ACUTES starts at H10
+        hopeiiii = process_hope_data(hope, 'PM - ACUTES', 10, '8.csv') # PM - ACUTES starts at H10
 
         # Combine all the data into one DataFrame
         hopes = pd.DataFrame(columns=hopei.columns)
