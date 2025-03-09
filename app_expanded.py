@@ -1660,7 +1660,7 @@ elif st.session_state.page == "Student Assignments":
         combined_mapping = {}
         for start_t, start_value in t_mappings:
             for i in range(start_t, start_t + 7):
-            combined_mapping[f"T{i}"] = generate_mappingx(start_value)
+            	combined_mapping[f"T{i}"] = generate_mappingx(start_value)
 
         return combined_mapping
 	    
