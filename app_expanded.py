@@ -348,9 +348,6 @@ elif st.session_state.page == "OPD Creator":
 	acute_format_ranges = [item for pair in zip(am_ranges, pm_ranges) for item in pair]
 	
 	# Continuity Labels (using separate variables for continuity)
-	ra1, ra2 = "A8:H15", "A32:H39"      # For AM continuity
-	rp1, rp2 = "A18:H25", "A42:H49"      # For PM continuity
-	
 	s_am_cont = int(ra1.split(':')[0][1:])         # Starting row for AM continuity (8)
 	g_am = int(ra1.split(':')[1][1:]) - s_am_cont    # Row gap (15 - 8 = 7)
 	step_am_cont = int(ra2.split(':')[0][1:]) - s_am_cont  # Step between groups (32 - 8 = 24)
@@ -393,12 +390,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
-	specific_format_ranges = [
-	    ('B6:H6', format4), ('B16:H16', format4a),
-	    ('B30:H30', format4), ('B40:H40', format4a),
-	    ('B54:H54', format4), ('B64:H64', format4a),
-	    ('B78:H78', format4), ('B88:H88', format4a)
-	]
+	#specific_format_ranges = [('B6:H6', format4), ('B16:H16', format4a),('B30:H30', format4), ('B40:H40', format4a),('B54:H54', format4), ('B64:H64', format4a),('B78:H78', format4), ('B88:H88', format4a)]
 	
 	am_pm_labels = ['AM'] * 10 + ['PM'] * 10
 	h_labels = ['H{}'.format(i) for i in range(20)]
@@ -411,8 +403,8 @@ elif st.session_state.page == "OPD Creator":
 	    for cell_range in ranges_format5a:
 	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	
-	    for cell_range, fmt in specific_format_ranges:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
+	    #for cell_range, fmt in specific_format_ranges:
+	    #    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
 	
 	    # Write AM/PM labels
 	    sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
