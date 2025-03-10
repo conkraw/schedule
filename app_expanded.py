@@ -1881,11 +1881,24 @@ elif st.session_state.page == "Create List":
             week.to_csv(filename, index=False)
             return week
 
+	if sheet_name == "HOPE_DRIVE":
+	    # HOPE_DRIVE row offsets
+	    week1 = process_week(df, 3, 23, 1,   sheet_name, f"{file_prefix}_week1.csv")
+	    week2 = process_week(df, 27, 47, 49, sheet_name, f"{file_prefix}_week2.csv")
+	    week3 = process_week(df, 51, 71, 97, sheet_name, f"{file_prefix}_week3.csv")
+	    week4 = process_week(df, 75, 95, 145, sheet_name, f"{file_prefix}_week4.csv")
+	else:
+	    # Normal row offsets for other sheets
+	    week1 = process_week(df, 3, 23, 1,   sheet_name, f"{file_prefix}_week1.csv")
+	    week2 = process_week(df, 27, 47, 25, sheet_name, f"{file_prefix}_week2.csv")
+	    week3 = process_week(df, 51, 71, 49, sheet_name, f"{file_prefix}_week3.csv")
+	    week4 = process_week(df, 75, 95, 73, sheet_name, f"{file_prefix}_week4.csv")
+		
         # Process 4 weeks of clinic data
-        week1 = process_week(df, 3, 23, 1, sheet_name, f"{file_prefix}_week1.csv")
-        week2 = process_week(df, 27, 47, 25, sheet_name, f"{file_prefix}_week2.csv")
-        week3 = process_week(df, 51, 71, 49, sheet_name, f"{file_prefix}_week3.csv")
-        week4 = process_week(df, 75, 95, 73, sheet_name, f"{file_prefix}_week4.csv")
+        #week1 = process_week(df, 3, 23, 1, sheet_name, f"{file_prefix}_week1.csv")
+        #week2 = process_week(df, 27, 47, 25, sheet_name, f"{file_prefix}_week2.csv")
+        #week3 = process_week(df, 51, 71, 49, sheet_name, f"{file_prefix}_week3.csv")
+        #week4 = process_week(df, 75, 95, 73, sheet_name, f"{file_prefix}_week4.csv")
 
         # Combine weeks into a single DataFrame
         hope = pd.concat([week1, week2, week3, week4])
