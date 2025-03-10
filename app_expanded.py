@@ -2453,7 +2453,7 @@ elif st.session_state.page == "Create List":
 
         df = df.loc[df['student'] != "0"]
 
-        df.to_excel('Source1.xlsx', index=False)
+        df.to_excel('Source1.xlsx', index=False); st.dataframe(df)
 
         import openpyxl
         import numpy as np 
