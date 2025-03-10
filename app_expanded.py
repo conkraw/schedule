@@ -340,10 +340,8 @@ elif st.session_state.page == "OPD Creator":
 	# HOPE_DRIVE-specific ranges and label definitions
 	ranges_format1 = ['A8:H27', 'A56:H75', 'A104:H123', 'A152:H171']
 	ranges_format5a = ['A30:H49', 'A78:H97', 'A126:H145', 'A174:H193']
-	ranges_format4  = ['A6:H6', 'A7:H7', 'A54:H54', 'A55:H55',
-	                   'A102:H102', 'A103:H103', 'A150:H150', 'A151:H151']
-	ranges_format4a = ['A28:H28', 'A29:H29', 'A76:H76', 'A77:H77',
-	                   'A124:H124', 'A125:H125', 'A172:H172', 'A173:H173']
+	ranges_format4  = ['A6:H6', 'A7:H7', 'A54:H54', 'A55:H55', 'A102:H102', 'A103:H103', 'A150:H150', 'A151:H151']
+	ranges_format4a = ['A28:H28', 'A29:H29', 'A76:H76', 'A77:H77', 'A124:H124', 'A125:H125', 'A172:H172', 'A173:H173']
 	
 	acute_format_ranges = [
 	    (6, 7, 'AM - ACUTES', format4), (28, 29, 'PM - ACUTES', format4a),
@@ -500,7 +498,7 @@ elif st.session_state.page == "OPD Creator":
 	                                   'valign': 'vcenter', 'font_color': 'black',
 	                                   'bg_color': '#FFC7CE', 'border': 1})
 	    day_labels_common = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    day_rows_common = [2, 26, 50, 74]
+	    day_rows_common = [2, 26, 50, 74]; step = day_rows_common[1] - day_rows_common[0]; black_bar_rows_common = day_rows_common + [day_rows_common[-1] + step]; #Calculates to black_bar_rows_common = [2, 26, 50, 74, 98]
 	    for row in day_rows_common:
 	        for i, day in enumerate(day_labels_common):
 	            ws.write(row, 1 + i, day, format3)
@@ -526,7 +524,6 @@ elif st.session_state.page == "OPD Creator":
 	                              {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label_common})
 	    
 	    # Merge Black Bars for non-HOPE_DRIVE sheets
-	    black_bar_rows_common = [2, 26, 50, 74, 98]
 	    for row in black_bar_rows_common:
 	        ws.merge_range(f'A{row}:H{row}', " ", black_format)
 	    
