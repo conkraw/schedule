@@ -2010,10 +2010,10 @@ elif st.session_state.page == "Create List":
         read_file.to_csv ('hopedrive.csv', index = False, header=False)
         df=pd.read_csv('hopedrive.csv')
         
-        week1 = process_week(df, 3, 23, 1, "HOPE_DRIVE", "week1.csv")
-        week2 = process_week(df, 27, 47, 49, "HOPE_DRIVE", "week2.csv")
-        week3 = process_week(df, 51, 71, 97, "HOPE_DRIVE", "week3.csv")
-        week4 = process_week(df, 75, 95, 145, "HOPE_DRIVE", "week4.csv")
+        week1 = process_week(df, 3, 47, 1, "HOPE_DRIVE", "week1.csv")
+        week2 = process_week(df, 51, 95, 49, "HOPE_DRIVE", "week2.csv")
+        week3 = process_week(df, 99, 143, 97, "HOPE_DRIVE", "week3.csv")
+        week4 = process_week(df, 147, 191, 145, "HOPE_DRIVE", "week4.csv")
 
         #week1 = process_week(df, 3, 23, 1, "HOPE_DRIVE", "week1.csv")
         #week2 = process_week(df, 27, 47, 25, "HOPE_DRIVE", "week2.csv")
@@ -2036,7 +2036,7 @@ elif st.session_state.page == "Create List":
         hopes = pd.concat([hopei, hopeii, hopeiii, hopeiiii])
 
         # Save the combined DataFrame to CSV
-        hopes.to_csv('hopes.csv', index=False); #st.dataframe(hopes)
+        hopes.to_csv('hopes.csv', index=False); st.dataframe(hopes)
         #################################################################################################################
         # List of sheet names to process
         sheet_names = ['ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C', 'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSP', 'AAC', 'ER_CONS', 'NF', 'ADOLMED', 'RESIDENT']  # Add more as needed
@@ -2458,7 +2458,7 @@ elif st.session_state.page == "Create List":
 
         df = df.loc[df['student'] != "0"]
 
-        df.to_excel('Source1.xlsx', index=False); st.dataframe(df)
+        df.to_excel('Source1.xlsx', index=False)
 
         import openpyxl
         import numpy as np 
