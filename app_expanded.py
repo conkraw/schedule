@@ -270,6 +270,15 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Create worksheets in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
+
+	worksheet_sites = {'HOPE_DRIVE': 'Hope Drive','ETOWN': 'Elizabethtown','NYES': 'Nyes Road','COMPLEX': 'Complex Care',
+			   'W_A': 'WARD A','W_C': 'WARD C','W_P': 'WARD P','PICU': 'PICU','PSHCH_NURSERY': 'PSHCH NURSERY',
+			   'HAMPDEN_NURSERY': 'HAMPDEN NURSERY','SJR_HOSP': 'SJR HOSPITALIST','AAC': 'AAC',
+			   'ER_CONS': 'ER CONSULTS','NF': 'NIGHT FLOAT','ADOLMED': 'ADOLMED','RESIDENT': 'RESIDENT'}
+	
+	for name, ws in worksheets.items():
+	    ws.write(0, 0, 'Site:', format1)
+	    ws.write(0, 1, worksheet_sites[name], format1)
 	
 	# Separate HOPE_DRIVE from the rest
 	hope_drive_sheet = worksheets['HOPE_DRIVE']
@@ -366,10 +375,6 @@ elif st.session_state.page == "OPD Creator":
 	# ---------------------------
 	# Process HOPE_DRIVE Sheet Only
 	# ---------------------------
-	# Write the site name
-	hope_drive_sheet.write(0, 0, 'Site:', format1)
-	hope_drive_sheet.write(0, 1, 'Hope Drive', format1)
-	
 	# Apply HOPE_DRIVE-specific conditional formatting
 	for cell_range in ranges_format1:
 	    hope_drive_sheet.conditional_format(cell_range,
@@ -438,6 +443,8 @@ elif st.session_state.page == "OPD Creator":
 	# ---------------------------
 	# Process All Other Worksheets
 	# ---------------------------
+
+
 	# First, apply some common conditional formatting and labels
 	ranges_format1_common  = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a_common = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
