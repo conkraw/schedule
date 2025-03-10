@@ -365,8 +365,8 @@ elif st.session_state.page == "OPD Creator":
 	day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 	start_rows = [2, 52, 100, 148] #[3, 27, 51, 75]
 	for start_row in start_rows:
-	for i, day in enumerate(day_labels):
-	    worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
+		for i, day in enumerate(day_labels):
+		    worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
 	# Set Date Formats
 	
 	format_date = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
@@ -375,27 +375,27 @@ elif st.session_state.page == "OPD Creator":
 	
 	date_rows = [x + 1 for x in start_rows] 
 	for i, start_row in enumerate(date_rows):
-	worksheet.write(f'A{start_row - 1}', "", format_label)
-	#worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
-	worksheet.write_formula(f'A{start_row}', f'=""', format_label)
-	worksheet.write(f'A{start_row + 1}', "", format_label)
+		worksheet.write(f'A{start_row - 1}', "", format_label)
+		#worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
+		worksheet.write_formula(f'A{start_row}', f'=""', format_label)
+		worksheet.write(f'A{start_row + 1}', "", format_label)
 	
 	# Set Pink Bars (Conditional Format)
 	pink_bar_rows = [x + 3 for x in start_rows] 
 	for row in pink_bar_rows:
-	worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
+		worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
 	
 	# Black Bars
 	format2 = workbook.add_format({'bg_color': 'black'})
 	step = start_rows[1] - start_rows[0]; black_bar_rows = list(range(start_rows[0], end_row, step))
 	for row in black_bar_rows:
-	worksheet.merge_range(f'A{row}:H{row}', " ", format2)
+		worksheet.merge_range(f'A{row}:H{row}', " ", format2)
 	
 	# Write More Dates
 	date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
 	for i, start_row in enumerate(date_rows):
-	for j, value in enumerate(date_values[i]):
-	    worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
+		for j, value in enumerate(date_values[i]):
+	    		worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
 	
 	# Set Column Widths
 	worksheet.set_column('A:A', 10)
