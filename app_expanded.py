@@ -481,9 +481,9 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # Black Bars
 	    format2 = workbook.add_format({'bg_color': 'black'})
-	    step = start_rows[1] - start_rows[0]; black_bar_rows = list(range(start_rows[0], end_row, step))
-	    for row in black_bar_rows:
-	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
+	    black_bar_rows = [2, 26, 50, 74, 98]
+	    #for row in black_bar_rows:
+	    #    worksheet.merge_range(f'A{row}:H{row}', " ", format2)
 	        
 	    # Write More Dates
 	    date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
