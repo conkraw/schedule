@@ -501,7 +501,7 @@ elif st.session_state.page == "OPD Creator":
 	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
 	
 	    # Merge and Write Important Message
-	    worksheet.merge_range('C1:F1', text1, merge_format)
+	    #worksheet.merge_range('C1:F1', text1, merge_format)
 	    worksheet.write('G1', "", merge_format)
 	    worksheet.write('H1', "", merge_format)
 	
