@@ -257,255 +257,284 @@ elif st.session_state.page == "OPD Creator":
 	date_list = [(test_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y") for i in range(K)]
 
 	(y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, y16, y17, y18, y19, y20, y21, y22, y23, y24, y25, y26, y27, y28) = date_list
+	
 	import xlsxwriter
 
 	# Create workbook
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
-	# Define worksheet names
-	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C','W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED","RESIDENT"]
+	# List of worksheet names
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C',
+	                   'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY',
+	                   'SJR_HOSP', 'AAC', 'ER_CONS','NF', "ADOLMED", "RESIDENT"]
 	
-	# Create worksheets and store them in a dictionary
+	# Create worksheets in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
-	(worksheet, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14,worksheet15, worksheet16) = worksheets.values()
 	
-	# Define format
-	format1 = workbook.add_format({'font_size': 18, 'bold': 1, 'align': 'center','valign': 'vcenter', 'font_color': 'black','bg_color': '#FEFFCC', 'border': 1})
+	# Separate HOPE_DRIVE from the rest
+	hope_drive_sheet = worksheets['HOPE_DRIVE']
+	other_sheets = [ws for name, ws in worksheets.items() if name != 'HOPE_DRIVE']
 	
-	# Define site names corresponding to worksheet names
-	worksheet_sites = {worksheet: 'Hope Drive', 
-			   worksheet2: 'Elizabethtown', 
-			   worksheet3: 'Nyes Road', 
-			   worksheet4: 'Complex Care', 
-			   worksheet5: 'WARD A', 
-			   worksheet6: 'WARD C', 
-			   worksheet7: 'WARD P', 
-			   worksheet8: 'PICU', 
-			   worksheet9: 'PSHCH NURSERY', 
-			   worksheet10: 'HAMPDEN NURSERY',
-			   worksheet11: 'SJR HOSPITALIST', 
-			   worksheet12: 'AAC', 
-			   worksheet13: 'ER CONSULTS', 
-			   worksheet14: 'NIGHT FLOAT', 
-			   worksheet15: 'ADOLMED', worksheet16: 'RESIDENT'}
+	# ---------------------------
+	# Define Common Formats
+	# ---------------------------
+	format1   = workbook.add_format({'font_size': 18, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color': 'black',
+	                                 'bg_color': '#FEFFCC', 'border': 1})
+	format4   = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#8ccf6f', 'border':1})
+	format4a  = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#9fc5e8', 'border':1})
+	format5   = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#FEFFCC', 'border':1})
+	format5a  = workbook.add_format({'font_size':12, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#d0e9ff', 'border':1})
+	format11  = workbook.add_format({'font_size':18, 'bold': 1, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'black',
+	                                 'bg_color':'#FEFFCC', 'border':1})
+	formate   = workbook.add_format({'font_size':12, 'bold': 0, 'align': 'center',
+	                                 'valign': 'vcenter', 'font_color':'white', 'border':0})
 	
-	# Write "Site:" and corresponding site names in each worksheet
-	for ws, site in worksheet_sites.items():
-	    ws.write(0, 0, 'Site:', format1)
-	    ws.write(0, 1, site, format1)
-		
-	#Color Coding
-	format4 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
-	format4a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#9fc5e8','border':1})    
-	format5 = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
-	format5a = workbook.add_format({'font_size':12,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#d0e9ff','border':1})
-	format11 = workbook.add_format({'font_size':18,'bold': 1,'align': 'center','valign': 'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+	merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter',
+	                                    'text_wrap': True, 'font_color': 'red',
+	                                    'bg_color': '#FEFFCC', 'border': 1})
+	black_format = workbook.add_format({'bg_color': 'black'})
 	
-	#H codes
-	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
+	# Day label format (used in HOPE_DRIVE and common sections)
+	day_format = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center',
+	                                  'valign': 'vcenter', 'font_color': 'black',
+	                                  'bg_color': '#FFC7CE', 'border': 1})
 	
-	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
+	# Date formatting for cells and labels
+	format_date  = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1,
+	                                    'align': 'center', 'valign': 'vcenter', 'font_color': 'black',
+	                                    'bg_color': '#FFC7CE', 'border': 1})
+	format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center',
+	                                    'valign': 'vcenter', 'font_color': 'black',
+	                                    'bg_color': '#FFC7CE', 'border': 1})
+	
+	# ---------------------------
+	# Define Other Variables
+	# ---------------------------
+	# HOPE_DRIVE-specific ranges and label definitions
 	ranges_format1 = ['A8:H27', 'A56:H75', 'A104:H123', 'A152:H171']
 	ranges_format5a = ['A30:H49', 'A78:H97', 'A126:H145', 'A174:H193']
+	ranges_format4  = ['A6:H6', 'A7:H7', 'A54:H54', 'A55:H55',
+	                   'A102:H102', 'A103:H103', 'A150:H150', 'A151:H151']
+	ranges_format4a = ['A28:H28', 'A29:H29', 'A76:H76', 'A77:H77',
+	                   'A124:H124', 'A125:H125', 'A172:H172', 'A173:H173']
 	
-	for cell_range in ranges_format1:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
-	
-	for cell_range in ranges_format5a:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
-	
-	# HOPE_DRIVE CONDITIONAL FORMATTING
-	ranges_format4 = ['A6:H6', 'A7:H7', 'A54:H54', 'A55:H55', 'A102:H102', 'A103:H103', 'A150:H150', 'A151:H151']
-	ranges_format4a = ['A28:H28', 'A29:H29', 'A76:H76', 'A77:H77', 'A124:H124', 'A125:H125', 'A172:H172', 'A173:H173']
-	
-	for cell_range in ranges_format4:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
-	
-	for cell_range in ranges_format4a:
-	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
-	
-	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
 	acute_format_ranges = [
-	    (6, 7, 'AM - ACUTES', format4), (28, 29, 'PM - ACUTES', format4a), 
+	    (6, 7, 'AM - ACUTES', format4), (28, 29, 'PM - ACUTES', format4a),
 	    (54, 55, 'AM - ACUTES', format4), (76, 77, 'PM - ACUTES', format4a),
 	    (102, 103, 'AM - ACUTES', format4), (124, 125, 'PM - ACUTES', format4a),
 	    (150, 151, 'AM - ACUTES', format4), (172, 173, 'PM - ACUTES', format4a)
 	]
-	
 	continuity_format_ranges = [
 	    (8, 27, 'AM - Continuity', format5a), (30, 49, 'PM - Continuity', format5a),
 	    (56, 75, 'AM - Continuity', format5a), (78, 97, 'PM - Continuity', format5a),
 	    (104, 123, 'AM - Continuity', format5a), (126, 145, 'PM - Continuity', format5a),
 	    (152, 171, 'AM - Continuity', format5a), (174, 193, 'PM - Continuity', format5a)
 	]
+	
+	# For H labels on HOPE_DRIVE
+	labels      = ['H{}'.format(i) for i in range(44)]
+	start_rows_H = [6, 54, 102, 150]
+	
+	# Day labels for HOPE_DRIVE
+	day_labels  = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+	hd_day_rows = [2, 50, 98, 146]
+	date_rows_hd = [x + 1 for x in hd_day_rows]  # For example, [3, 51, 99, 147]
+	
+	# Define date values (replace y1...y28 with actual values)
+	date_values = [
+	    [y1, y2, y3, y4, y5, y6, y7],
+	    [y8, y9, y10, y11, y12, y13, y14],
+	    [y15, y16, y17, y18, y19, y20, y21],
+	    [y22, y23, y24, y25, y26, y27, y28]
+	]
+	
+	# Text for the merged important message
+	text1 = ('Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  '
+	         'Please allow the students to leave approximately 15 minutes prior to the start of their session so they can '
+	         'be prepared to actively participate.  ~ Thank you!')
+	
+	# ---------------------------
+	# Process HOPE_DRIVE Sheet Only
+	# ---------------------------
+	# Write the site name
+	hope_drive_sheet.write(0, 0, 'Site:', format1)
+	hope_drive_sheet.write(0, 1, 'Hope Drive', format1)
+	
+	# Apply HOPE_DRIVE-specific conditional formatting
+	for cell_range in ranges_format1:
+	    hope_drive_sheet.conditional_format(cell_range,
+	                                          {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
+	for cell_range in ranges_format5a:
+	    hope_drive_sheet.conditional_format(cell_range,
+	                                          {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
+	for cell_range in ranges_format4:
+	    hope_drive_sheet.conditional_format(cell_range,
+	                                          {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
+	for cell_range in ranges_format4a:
+	    hope_drive_sheet.conditional_format(cell_range,
+	                                          {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4a})
+	
 	# Write Acute Labels
 	for start_row, end_row, label, fmt in acute_format_ranges:
 	    for row in range(start_row, end_row + 1):
-	        worksheet.write(f'A{row}', label, fmt)
+	        hope_drive_sheet.write(f'A{row}', label, fmt)
 	
 	# Write Continuity Labels
 	for start_row, end_row, label, fmt in continuity_format_ranges:
 	    for row in range(start_row, end_row + 1):
-	        worksheet.write(f'A{row}', label, fmt)
+	        hope_drive_sheet.write(f'A{row}', label, fmt)
 	
-	# Define the labels
-	#labels = ['HX1', 'HX2', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'HXX1', 'HXX2', 'H12', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19']
+	# Write H labels in column I for HOPE_DRIVE
+	for start_row in start_rows_H:
+	    for i, lbl in enumerate(labels):
+	        hope_drive_sheet.write(f'I{start_row + i}', lbl, formate)
 	
-	labels = ['H{}'.format(i) for i in range(44)]
+	# Write Day Labels for HOPE_DRIVE
+	for row in hd_day_rows:
+	    for i, day in enumerate(day_labels):
+	        hope_drive_sheet.write(row, 1 + i, day, day_format)
 	
-	# Define the starting rows for each group
-	start_rows = [6, 54, 102, 150]
+	# Set Date Formats and Formulas for HOPE_DRIVE
+	for i, start_row in enumerate(date_rows_hd):
+	    hope_drive_sheet.write(f'A{start_row - 1}', "", format_label)
+	    hope_drive_sheet.write_formula(f'A{start_row}', '=""', format_label)
+	    hope_drive_sheet.write(f'A{start_row + 1}', "", format_label)
 	
-	# Write the labels in each group
-	for start_row in start_rows:
-	    for i, label in enumerate(labels):
-	        worksheet.write(f'I{start_row + i}', label, formate)
-
-	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1}); day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = [2,50,98,146] #[2, 26, 50, 74] #[3, 27, 51, 75]
-	    for start_row in start_rows:
-	        for i, day in enumerate(day_labels):
-	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
-
-		    # Set Date Formats
-	    format_date = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    # Set Date Formulas
-	    date_rows = [x + 1 for x in start_rows] 
-	    for i, start_row in enumerate(date_rows):
-	        worksheet.write(f'A{start_row - 1}', "", format_label)
-	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
-	        worksheet.write_formula(f'A{start_row}', f'=""', format_label)
-	        worksheet.write(f'A{start_row + 1}', "", format_label)
+	# Apply Pink Bars (via conditional formatting) for HOPE_DRIVE
+	for row in [x + 3 for x in hd_day_rows]:
+	    hope_drive_sheet.conditional_format(f'A{row}:H{row}',
+	                                        {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
 	
-	    # Set Pink Bars (Conditional Format)
-	    pink_bar_rows = [x + 3 for x in start_rows] 
-	    for row in pink_bar_rows:
-	        worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
+	# Merge Black Bars for HOPE_DRIVE
+	for row in [2, 50, 98, 146, 194]:
+	    hope_drive_sheet.merge_range(f'A{row}:H{row}', " ", black_format)
 	
-	    # Black Bars
-	    format2 = workbook.add_format({'bg_color': 'black'})
-	    black_bar_rows = [2, 50, 98, 146, 194]
-	    for row in black_bar_rows:
-	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
-	        
-	    # Write More Dates
-	    date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
-	    for i, start_row in enumerate(date_rows):
-	        for j, value in enumerate(date_values[i]):
-	            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
+	# Write More Dates for HOPE_DRIVE
+	for i, start_row in enumerate(date_rows_hd):
+	    for j, value in enumerate(date_values[i]):
+	        hope_drive_sheet.write(start_row, 1 + j, value, format_date)
 	
-	    # Set Column Widths
-	    worksheet.set_column('A:A', 10)
-	    worksheet.set_column('B:H', 65)
-	    worksheet.set_row(0, 37.25); worksheet.set_zoom(80)
+	# Set Column Widths, Row Heights, and Zoom for HOPE_DRIVE
+	hope_drive_sheet.set_column('A:A', 10)
+	hope_drive_sheet.set_column('B:H', 65)
+	hope_drive_sheet.set_row(0, 37.25)
+	hope_drive_sheet.set_zoom(80)
 	
-	    # Merge Format for Text
-	    merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1})
-	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
+	# Merge and Write Important Message for HOPE_DRIVE
+	hope_drive_sheet.merge_range('C1:F1', text1, merge_format)
+	hope_drive_sheet.write('G1', "", merge_format)
+	hope_drive_sheet.write('H1', "", merge_format)
 	
-	    # Merge and Write Important Message
-	    #worksheet.merge_range('C1:F1', text1, merge_format)
-	    worksheet.write('G1', "", merge_format)
-	    worksheet.write('H1', "", merge_format)
-		
-	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
-	
-	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
-	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
+	# ---------------------------
+	# Process All Other Worksheets
+	# ---------------------------
+	# First, apply some common conditional formatting and labels
+	ranges_format1_common  = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
+	ranges_format5a_common = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
 	specific_format_ranges = [
 	    ('B6:H6', format4), ('B16:H16', format4a),
 	    ('B30:H30', format4), ('B40:H40', format4a),
 	    ('B54:H54', format4), ('B64:H64', format4a),
 	    ('B78:H78', format4), ('B88:H88', format4a)
 	]
+	am_pm_labels   = ['AM'] * 10 + ['PM'] * 10
+	h_labels_common = ['H{}'.format(i) for i in range(20)]
 	
-	am_pm_labels = ['AM'] * 10 + ['PM'] * 10
-	h_labels = ['H{}'.format(i) for i in range(20)]
-	
-	for worksheet in worksheets:
+	for ws in other_sheets:
 	    # Apply conditional formatting
-	    for cell_range in ranges_format1:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
-	
-	    for cell_range in ranges_format5a:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
-	
+	    for cell_range in ranges_format1_common:
+	        ws.conditional_format(cell_range,
+	                              {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
+	    for cell_range in ranges_format5a_common:
+	        ws.conditional_format(cell_range,
+	                              {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	    for cell_range, fmt in specific_format_ranges:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
-	
-	    # Write AM/PM labels
+	        ws.conditional_format(cell_range,
+	                              {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
+	    
+	    # Write AM/PM labels in column A
 	    sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
-	    for start_row, end_row in sections:
-	        for i, label in enumerate(am_pm_labels):
-	            worksheet.write(f'A{start_row + i}', label, format5a)
+	    for start_row, _ in sections:
+	        for i, lbl in enumerate(am_pm_labels):
+	            ws.write(f'A{start_row + i}', lbl, format5a)
+	    
+	    # Write H labels in column I
+	    start_rows_common = [6, 30, 54, 78]
+	    for start_row in start_rows_common:
+	        for i, lbl in enumerate(h_labels_common):
+	            ws.write(f'I{start_row + i}', lbl, formate)
 	
-	    # Write H labels in column 'I'
-	    start_rows = [6, 30, 54, 78]
-	    for start_row in start_rows:
-	        for i, label in enumerate(h_labels):
-	            worksheet.write(f'I{start_row + i}', label, formate)
-	
-	# Loop through each worksheet in workbook
-	for worksheet in workbook.worksheets():
-	    if worksheet.name == "HOPE_DRIVE":
-        	continue  # Skip processing for this worksheet
-	    # Set Zoom for all sheets
-	    worksheet.set_zoom(80)
-	
-	    # Set Days
-	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
-	    for start_row in start_rows:
-	        for i, day in enumerate(day_labels):
-	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
-	
-	    # Set Date Formats
-	    format_date = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    # Set Date Formulas
-	    date_rows = [x + 1 for x in start_rows] 
-	    for i, start_row in enumerate(date_rows):
-	        worksheet.write(f'A{start_row - 1}', "", format_label)
-	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
-	        worksheet.write_formula(f'A{start_row}', f'=""', format_label)
-	        worksheet.write(f'A{start_row + 1}', "", format_label)
-	
-	    # Set Pink Bars (Conditional Format)
-	    pink_bar_rows = [x + 3 for x in start_rows] 
+	# Next, apply common formatting for all non-HOPE_DRIVE worksheets
+	for ws in workbook.worksheets():
+	    if ws.name == "HOPE_DRIVE":
+	        continue  # Already processed
+	    ws.set_zoom(80)
+	    
+	    # Set day labels
+	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center',
+	                                   'valign': 'vcenter', 'font_color': 'black',
+	                                   'bg_color': '#FFC7CE', 'border': 1})
+	    day_labels_common = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+	    day_rows_common = [2, 26, 50, 74]
+	    for row in day_rows_common:
+	        for i, day in enumerate(day_labels_common):
+	            ws.write(row, 1 + i, day, format3)
+	    
+	    # Set date formats and formulas
+	    format_date_common  = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1,
+	                                               'align': 'center', 'valign': 'vcenter',
+	                                               'font_color': 'black', 'bg_color': '#FFC7CE',
+	                                               'border': 1})
+	    format_label_common = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center',
+	                                               'valign': 'vcenter', 'font_color': 'black',
+	                                               'bg_color': '#FFC7CE', 'border': 1})
+	    date_rows_common = [x + 1 for x in day_rows_common]  # e.g., [3, 27, 51, 75]
+	    for i, start_row in enumerate(date_rows_common):
+	        ws.write(f'A{start_row - 1}', "", format_label_common)
+	        ws.write_formula(f'A{start_row}', '=""', format_label_common)
+	        ws.write(f'A{start_row + 1}', "", format_label_common)
+	    
+	    # Set pink bars (conditional formatting)
+	    pink_bar_rows = [x + 3 for x in day_rows_common]
 	    for row in pink_bar_rows:
-	        worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
-	
-	    # Black Bars
-	    format2 = workbook.add_format({'bg_color': 'black'})
-	    black_bar_rows = [2, 26, 50, 74, 98]
-	    for row in black_bar_rows:
-	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
-	        
-	    # Write More Dates
-	    date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
-	    for i, start_row in enumerate(date_rows):
+	        ws.conditional_format(f'A{row}:H{row}',
+	                              {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label_common})
+	    
+	    # Merge Black Bars for non-HOPE_DRIVE sheets
+	    black_bar_rows_common = [2, 26, 50, 74, 98]
+	    for row in black_bar_rows_common:
+	        ws.merge_range(f'A{row}:H{row}', " ", black_format)
+	    
+	    # Write More Dates for non-HOPE_DRIVE sheets
+	    for i, start_row in enumerate(date_rows_common):
 	        for j, value in enumerate(date_values[i]):
-	            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
+	            ws.write(start_row, 1 + j, value, format_date_common)
+	    
+	    # Set Column Widths and Row Height
+	    ws.set_column('A:A', 10)
+	    ws.set_column('B:H', 65)
+	    ws.set_row(0, 37.25)
+	    
+	    # Merge and write important message
+	    ws.merge_range('C1:F1', text1, merge_format)
+	    ws.write('G1', "", merge_format)
+	    ws.write('H1', "", merge_format)
 	
-	    # Set Column Widths
-	    worksheet.set_column('A:A', 10)
-	    worksheet.set_column('B:H', 65)
-	    worksheet.set_row(0, 37.25)
-	
-	    # Merge Format for Text
-	    merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1})
-	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
-	
-	    # Merge and Write Important Message
-	    worksheet.merge_range('C1:F1', text1, merge_format)
-	    worksheet.write('G1', "", merge_format)
-	    worksheet.write('H1', "", merge_format)
-	
-	# Close Workbook
+	# ---------------------------
+	# Finalize
+	# ---------------------------
 	workbook.close()
+
 	
 	####################################################################################################################################
 	import pandas as pd
