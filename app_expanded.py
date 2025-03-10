@@ -398,7 +398,13 @@ elif st.session_state.page == "OPD Creator":
 	    for start_row in start_rows:
 	        for i, label in enumerate(h_labels):
 	            worksheet.write(f'I{start_row + i}', label, formate)
-	
+			
+	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+	    start_rows = [2,50,98,146] #[2, 26, 50, 74] #[3, 27, 51, 75]
+	    for start_row in start_rows:
+	        for i, day in enumerate(day_labels):
+	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
 	# Loop through each worksheet in workbook
 	for worksheet in workbook.worksheets():
 	    if worksheet.name == "HOPE_DRIVE":
