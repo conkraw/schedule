@@ -364,7 +364,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Day labels for HOPE_DRIVE
 	day_labels  = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	hd_day_rows = [2, 50, 98, 146]
+	hd_day_rows = [2, 50, 98, 146]; step = hd_day_rows[1] - hd_day_rows[0]; rowsblack = hd_day_rows + [hd_day_rows[-1] + step] #Selects the days of the week and automatically calculates the black rows
 	date_rows_hd = [x + 1 for x in hd_day_rows]  # For example, [3, 51, 99, 147]
 	
 	# Define date values (replace y1...y28 with actual values)
@@ -429,7 +429,7 @@ elif st.session_state.page == "OPD Creator":
 	                                        {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
 	
 	# Merge Black Bars for HOPE_DRIVE
-	for row in [2, 50, 98, 146, 194]:
+	for row in rowsblack:
 	    hope_drive_sheet.merge_range(f'A{row}:H{row}', " ", black_format)
 	
 	# Write More Dates for HOPE_DRIVE
