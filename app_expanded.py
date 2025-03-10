@@ -276,13 +276,6 @@ elif st.session_state.page == "OPD Creator":
 			   'HAMPDEN_NURSERY': 'HAMPDEN NURSERY','SJR_HOSP': 'SJR HOSPITALIST','AAC': 'AAC',
 			   'ER_CONS': 'ER CONSULTS','NF': 'NIGHT FLOAT','ADOLMED': 'ADOLMED','RESIDENT': 'RESIDENT'}
 	
-	for name, ws in worksheets.items():
-	    ws.write(0, 0, 'Site:', format1)
-	    ws.write(0, 1, worksheet_sites[name], format1)
-	
-	# Separate HOPE_DRIVE from the rest
-	hope_drive_sheet = worksheets['HOPE_DRIVE']
-	other_sheets = [ws for name, ws in worksheets.items() if name != 'HOPE_DRIVE']
 	
 	# ---------------------------
 	# Define Common Formats
@@ -325,6 +318,21 @@ elif st.session_state.page == "OPD Creator":
 	format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center',
 	                                    'valign': 'vcenter', 'font_color': 'black',
 	                                    'bg_color': '#FFC7CE', 'border': 1})
+
+	
+	# ---------------------------
+	# Name Sites 
+	# ---------------------------
+	for name, ws in worksheets.items():
+	    ws.write(0, 0, 'Site:', format1)
+	    ws.write(0, 1, worksheet_sites[name], format1)
+
+	# ---------------------------
+	# Separate HOPE_DRIVE from the rest
+	# ---------------------------
+
+	hope_drive_sheet = worksheets['HOPE_DRIVE']
+	other_sheets = [ws for name, ws in worksheets.items() if name != 'HOPE_DRIVE']
 	
 	# ---------------------------
 	# Define Other Variables
