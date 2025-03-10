@@ -2022,9 +2022,9 @@ elif st.session_state.page == "Create List":
 	    
         hope['H'] = "H"
         hopei = process_hope_data(hope, 'AM ', 2, '5.csv')       # AM Continuity starts at H2
-        hopeii = process_hope_data(hope, 'PM ', 12, '6.csv')     # PM Continuity starts at H12
+        hopeii = process_hope_data(hope, 'PM ', 24, '6.csv')     # PM Continuity starts at H12
         hopeiii = process_hope_data(hope, 'AM - ACUTES', 0, '7.csv')  # AM - ACUTES starts at H0
-        hopeiiii = process_hope_data(hope, 'PM - ACUTES', 10, '8.csv') # PM - ACUTES starts at H10
+        hopeiiii = process_hope_data(hope, 'PM - ACUTES', 22, '8.csv') # PM - ACUTES starts at H22
 
         # Combine all the data into one DataFrame
         hopes = pd.DataFrame(columns=hopei.columns)
