@@ -398,7 +398,7 @@ elif st.session_state.page == "OPD Creator":
 	    # Set Column Widths
 	    worksheet.set_column('A:A', 10)
 	    worksheet.set_column('B:H', 65)
-	    worksheet.set_row(0, 37.25)
+	    worksheet.set_row(0, 37.25); worksheet.set_zoom(80)
 	
 	    # Merge Format for Text
 	    merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1})
@@ -408,7 +408,7 @@ elif st.session_state.page == "OPD Creator":
 	    #worksheet.merge_range('C1:F1', text1, merge_format)
 	    worksheet.write('G1', "", merge_format)
 	    worksheet.write('H1', "", merge_format)
-	
+		
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
 	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
 	
