@@ -360,47 +360,8 @@ elif st.session_state.page == "OPD Creator":
 	for start_row in start_rows:
 	    for i, label in enumerate(labels):
 	        worksheet.write(f'I{start_row + i}', label, formate)
-	
-	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
-	
-	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
-	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
-	specific_format_ranges = [
-	    ('B6:H6', format4), ('B16:H16', format4a),
-	    ('B30:H30', format4), ('B40:H40', format4a),
-	    ('B54:H54', format4), ('B64:H64', format4a),
-	    ('B78:H78', format4), ('B88:H88', format4a)
-	]
-	
-	am_pm_labels = ['AM'] * 10 + ['PM'] * 10
-	h_labels = ['H{}'.format(i) for i in range(20)]
-	
-	for worksheet in worksheets:
-	    # Apply conditional formatting
-	    for cell_range in ranges_format1:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
-	
-	    for cell_range in ranges_format5a:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
-	
-	    for cell_range, fmt in specific_format_ranges:
-	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
-	
-	    # Write AM/PM labels
-	    sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
-	    for start_row, end_row in sections:
-	        for i, label in enumerate(am_pm_labels):
-	            worksheet.write(f'A{start_row + i}', label, format5a)
-	
-	    # Write H labels in column 'I'
-	    start_rows = [6, 30, 54, 78]
-	    for start_row in start_rows:
-	        for i, label in enumerate(h_labels):
-	            worksheet.write(f'I{start_row + i}', label, formate)
-			
-	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1}); day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 	    start_rows = [2,50,98,146] #[2, 26, 50, 74] #[3, 27, 51, 75]
 	    for start_row in start_rows:
 	        for i, day in enumerate(day_labels):
@@ -448,6 +409,44 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.write('G1', "", merge_format)
 	    worksheet.write('H1', "", merge_format)
 	
+	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
+	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
+	
+	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
+	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
+	specific_format_ranges = [
+	    ('B6:H6', format4), ('B16:H16', format4a),
+	    ('B30:H30', format4), ('B40:H40', format4a),
+	    ('B54:H54', format4), ('B64:H64', format4a),
+	    ('B78:H78', format4), ('B88:H88', format4a)
+	]
+	
+	am_pm_labels = ['AM'] * 10 + ['PM'] * 10
+	h_labels = ['H{}'.format(i) for i in range(20)]
+	
+	for worksheet in worksheets:
+	    # Apply conditional formatting
+	    for cell_range in ranges_format1:
+	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
+	
+	    for cell_range in ranges_format5a:
+	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
+	
+	    for cell_range, fmt in specific_format_ranges:
+	        worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': fmt})
+	
+	    # Write AM/PM labels
+	    sections = [(6, 25), (30, 49), (54, 73), (78, 97)]
+	    for start_row, end_row in sections:
+	        for i, label in enumerate(am_pm_labels):
+	            worksheet.write(f'A{start_row + i}', label, format5a)
+	
+	    # Write H labels in column 'I'
+	    start_rows = [6, 30, 54, 78]
+	    for start_row in start_rows:
+	        for i, label in enumerate(h_labels):
+	            worksheet.write(f'I{start_row + i}', label, formate)
+	
 	# Loop through each worksheet in workbook
 	for worksheet in workbook.worksheets():
 	    if worksheet.name == "HOPE_DRIVE":
@@ -481,9 +480,9 @@ elif st.session_state.page == "OPD Creator":
 	
 	    # Black Bars
 	    format2 = workbook.add_format({'bg_color': 'black'})
-	    black_bar_rows = [2, 26, 50, 74, 98]
-	    #for row in black_bar_rows:
-	    #    worksheet.merge_range(f'A{row}:H{row}', " ", format2)
+	    #black_bar_rows = [2, 26, 50, 74, 98]
+	    for row in black_bar_rows:
+	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
 	        
 	    # Write More Dates
 	    date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
@@ -501,7 +500,7 @@ elif st.session_state.page == "OPD Creator":
 	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
 	
 	    # Merge and Write Important Message
-	    #worksheet.merge_range('C1:F1', text1, merge_format)
+	    worksheet.merge_range('C1:F1', text1, merge_format)
 	    worksheet.write('G1', "", merge_format)
 	    worksheet.write('H1', "", merge_format)
 	
