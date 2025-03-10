@@ -248,45 +248,15 @@ elif st.session_state.page == "Upload Files":
 
 		
 elif st.session_state.page == "OPD Creator":
-	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
 	uploaded_files = st.session_state.uploaded_files
-	
-	# initializing K
+
 	K = 28
-	 
-	res = []
-	 
-	for day in range(K):
-	    date = (test_date + datetime.timedelta(days = day)).strftime("%-m/%-d/%Y")
-	    res.append(date)
-	     
-	#res
 	
-	dates = pd.DataFrame(res, columns =['dates'])
-	
-	dates['x'] = "y"
-	
-	dates['i'] = dates.index+1
-	
-	dates['x'] = dates['x'].astype(str)+dates['i'].astype(str)
-	
-	dates['x'] = dates['x'].astype(str) + "=" + "'"+dates['dates'].astype(str) + "'"
-	
-	dates = dates[['x']]
-	
-	dates.to_csv('dates.csv',index=False)
-	
-	import numpy as np
-	
-	datesdf = pd.read_csv('dates.csv')
-	
-	dates = datesdf['x'].astype(str)
-	
-	numpy_array=dates.to_numpy()
-	np.savetxt("dates.py",numpy_array, fmt="%s")
-	
-	exec(open('dates.py').read())
+	# Generate a list of formatted date strings
+	date_list = [(test_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y") for i in range(K)]
+
+	(y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, y16, y17, y18, y19, y20, y21, y22, y23, y24, y25, y26, y27, y28) = date_list
 	import xlsxwriter
 
 	# Create workbook
@@ -335,8 +305,8 @@ elif st.session_state.page == "OPD Creator":
 	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
-	ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
+	ranges_format1 = ['A8:H27', 'A56:H75', 'A104:H123', 'A152:H171']
+	ranges_format5a = ['A30:H49', 'A78:H97', 'A126:H145', 'A174:H193']
 	
 	for cell_range in ranges_format1:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
@@ -345,8 +315,8 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	
 	# HOPE_DRIVE CONDITIONAL FORMATTING
-	ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
-	ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
+	ranges_format4 = ['A6:H6', 'A7:H7', 'A54:H54', 'A55:H55', 'A102:H102', 'A103:H103', 'A150:H150', 'A151:H151']
+	ranges_format4a = ['A28:H28', 'A29:H29', 'A76:H76', 'A77:H77', 'A124:H124', 'A125:H125', 'A172:H172', 'A173:H173']
 	
 	for cell_range in ranges_format4:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
@@ -356,19 +326,18 @@ elif st.session_state.page == "OPD Creator":
 	
 	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
 	acute_format_ranges = [
-	    (6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), 
-	    (30, 31, 'AM - ACUTES', format4), (40, 41, 'PM - ACUTES', format4a),
-	    (54, 55, 'AM - ACUTES', format4), (64, 65, 'PM - ACUTES', format4a),
-	    (78, 79, 'AM - ACUTES', format4), (88, 89, 'PM - ACUTES', format4a)
+	    (6, 7, 'AM - ACUTES', format4), (28, 29, 'PM - ACUTES', format4a), 
+	    (54, 55, 'AM - ACUTES', format4), (76, 77, 'PM - ACUTES', format4a),
+	    (102, 103, 'AM - ACUTES', format4), (124, 125, 'PM - ACUTES', format4a),
+	    (150, 151, 'AM - ACUTES', format4), (172, 173, 'PM - ACUTES', format4a)
 	]
 	
 	continuity_format_ranges = [
-	    (8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a),
-	    (32, 39, 'AM - Continuity', format5a), (42, 49, 'PM - Continuity', format5a),
-	    (56, 63, 'AM - Continuity', format5a), (66, 73, 'PM - Continuity', format5a),
-	    (80, 87, 'AM - Continuity', format5a), (90, 97, 'PM - Continuity', format5a)
+	    (8, 27, 'AM - Continuity', format5a), (30, 49, 'PM - Continuity', format5a),
+	    (56, 75, 'AM - Continuity', format5a), (78, 97, 'PM - Continuity', format5a),
+	    (104, 123, 'AM - Continuity', format5a), (126, 145, 'PM - Continuity', format5a),
+	    (152, 171, 'AM - Continuity', format5a), (174, 193, 'PM - Continuity', format5a)
 	]
-	
 	# Write Acute Labels
 	for start_row, end_row, label, fmt in acute_format_ranges:
 	    for row in range(start_row, end_row + 1):
@@ -382,10 +351,10 @@ elif st.session_state.page == "OPD Creator":
 	# Define the labels
 	#labels = ['HX1', 'HX2', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'HXX1', 'HXX2', 'H12', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19']
 	
-	labels = ['H{}'.format(i) for i in range(20)]
+	labels = ['H{}'.format(i) for i in range(44)]
 	
 	# Define the starting rows for each group
-	start_rows = [6, 30, 54, 78]
+	start_rows = [6, 54, 102, 150]
 	
 	# Write the labels in each group
 	for start_row in start_rows:
