@@ -248,45 +248,15 @@ elif st.session_state.page == "Upload Files":
 
 		
 elif st.session_state.page == "OPD Creator":
-	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
 	uploaded_files = st.session_state.uploaded_files
-	
-	# initializing K
+
 	K = 28
-	 
-	res = []
-	 
-	for day in range(K):
-	    date = (test_date + datetime.timedelta(days = day)).strftime("%-m/%-d/%Y")
-	    res.append(date)
-	     
-	#res
 	
-	dates = pd.DataFrame(res, columns =['dates'])
-	
-	dates['x'] = "y"
-	
-	dates['i'] = dates.index+1
-	
-	dates['x'] = dates['x'].astype(str)+dates['i'].astype(str)
-	
-	dates['x'] = dates['x'].astype(str) + "=" + "'"+dates['dates'].astype(str) + "'"
-	
-	dates = dates[['x']]
-	
-	dates.to_csv('dates.csv',index=False)
-	
-	import numpy as np
-	
-	datesdf = pd.read_csv('dates.csv')
-	
-	dates = datesdf['x'].astype(str)
-	
-	numpy_array=dates.to_numpy()
-	np.savetxt("dates.py",numpy_array, fmt="%s")
-	
-	exec(open('dates.py').read())
+	# Generate a list of formatted date strings
+	date_list = [(test_date + datetime.timedelta(days=i)).strftime("%-m/%-d/%Y") for i in range(K)]
+
+	(y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, y16, y17, y18, y19, y20, y21, y22, y23, y24, y25, y26, y27, y28) = date_list
 	import xlsxwriter
 
 	# Create workbook
@@ -335,8 +305,8 @@ elif st.session_state.page == "OPD Creator":
 	formate = workbook.add_format({'font_size':12,'bold': 0,'align': 'center','valign': 'vcenter','font_color':'white','border':0})
 	
 	# HOPE_DRIVE COLOR CODING AND IDENTIFYING ACUTE VERSUS CONTINUITY
-	ranges_format1 = ['A8:H15', 'A32:H39', 'A56:H63', 'A80:H87']
-	ranges_format5a = ['A18:H25', 'A42:H49', 'A66:H73', 'A90:H97']
+	ranges_format1 = ['A8:H27', 'A56:H75', 'A104:H123', 'A152:H171']
+	ranges_format5a = ['A30:H49', 'A78:H97', 'A126:H145', 'A174:H193']
 	
 	for cell_range in ranges_format1:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format1})
@@ -345,8 +315,8 @@ elif st.session_state.page == "OPD Creator":
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format5a})
 	
 	# HOPE_DRIVE CONDITIONAL FORMATTING
-	ranges_format4 = ['A6:H6', 'A7:H7', 'A30:H30', 'A31:H31', 'A54:H54', 'A55:H55', 'A78:H78', 'A79:H79']
-	ranges_format4a = ['A16:H16', 'A17:H17', 'A40:H40', 'A41:H41', 'A64:H64', 'A65:H65', 'A88:H88', 'A89:H89']
+	ranges_format4 = ['A6:H6', 'A7:H7', 'A54:H54', 'A55:H55', 'A102:H102', 'A103:H103', 'A150:H150', 'A151:H151']
+	ranges_format4a = ['A28:H28', 'A29:H29', 'A76:H76', 'A77:H77', 'A124:H124', 'A125:H125', 'A172:H172', 'A173:H173']
 	
 	for cell_range in ranges_format4:
 	    worksheet.conditional_format(cell_range, {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format4})
@@ -356,17 +326,17 @@ elif st.session_state.page == "OPD Creator":
 	
 	# HOPE_DRIVE WRITING ACUTE AND CONTINUITY LABELS
 	acute_format_ranges = [
-	    (6, 7, 'AM - ACUTES', format4), (16, 17, 'PM - ACUTES', format4a), 
-	    (30, 31, 'AM - ACUTES', format4), (40, 41, 'PM - ACUTES', format4a),
-	    (54, 55, 'AM - ACUTES', format4), (64, 65, 'PM - ACUTES', format4a),
-	    (78, 79, 'AM - ACUTES', format4), (88, 89, 'PM - ACUTES', format4a)
+	    (6, 7, 'AM - ACUTES', format4), (28, 29, 'PM - ACUTES', format4a), 
+	    (54, 55, 'AM - ACUTES', format4), (76, 77, 'PM - ACUTES', format4a),
+	    (102, 103, 'AM - ACUTES', format4), (124, 125, 'PM - ACUTES', format4a),
+	    (150, 151, 'AM - ACUTES', format4), (172, 173, 'PM - ACUTES', format4a)
 	]
 	
 	continuity_format_ranges = [
-	    (8, 15, 'AM - Continuity', format5a), (18, 25, 'PM - Continuity', format5a),
-	    (32, 39, 'AM - Continuity', format5a), (42, 49, 'PM - Continuity', format5a),
-	    (56, 63, 'AM - Continuity', format5a), (66, 73, 'PM - Continuity', format5a),
-	    (80, 87, 'AM - Continuity', format5a), (90, 97, 'PM - Continuity', format5a)
+	    (8, 27, 'AM - Continuity', format5a), (30, 49, 'PM - Continuity', format5a),
+	    (56, 75, 'AM - Continuity', format5a), (78, 97, 'PM - Continuity', format5a),
+	    (104, 123, 'AM - Continuity', format5a), (126, 145, 'PM - Continuity', format5a),
+	    (152, 171, 'AM - Continuity', format5a), (174, 193, 'PM - Continuity', format5a)
 	]
 	
 	# Write Acute Labels
@@ -380,17 +350,66 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'A{row}', label, fmt)
 	
 	# Define the labels
-	#labels = ['HX1', 'HX2', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9', 'HXX1', 'HXX2', 'H12', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19']
-	
-	labels = ['H{}'.format(i) for i in range(20)]
+	labels = ['H{}'.format(i) for i in range(44)]
 	
 	# Define the starting rows for each group
-	start_rows = [6, 30, 54, 78]
+	start_rows = [6, 54, 102, 150]
 	
 	# Write the labels in each group
 	for start_row in start_rows:
 	    for i, label in enumerate(labels):
 	        worksheet.write(f'I{start_row + i}', label, formate)
+	
+	# Set Days for HOPE_DRIVE
+	format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+	day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+	start_rows = [2, 52, 100, 148] #[3, 27, 51, 75]
+	for start_row in start_rows:
+	for i, day in enumerate(day_labels):
+	    worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
+	# Set Date Formats
+	
+	format_date = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+	format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+	# Set Date Formulas
+	
+	date_rows = [x + 1 for x in start_rows] 
+	for i, start_row in enumerate(date_rows):
+	worksheet.write(f'A{start_row - 1}', "", format_label)
+	#worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
+	worksheet.write_formula(f'A{start_row}', f'=""', format_label)
+	worksheet.write(f'A{start_row + 1}', "", format_label)
+	
+	# Set Pink Bars (Conditional Format)
+	pink_bar_rows = [x + 3 for x in start_rows] 
+	for row in pink_bar_rows:
+	worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
+	
+	# Black Bars
+	format2 = workbook.add_format({'bg_color': 'black'})
+	step = start_rows[1] - start_rows[0]; black_bar_rows = list(range(start_rows[0], end_row, step))
+	for row in black_bar_rows:
+	worksheet.merge_range(f'A{row}:H{row}', " ", format2)
+	
+	# Write More Dates
+	date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
+	for i, start_row in enumerate(date_rows):
+	for j, value in enumerate(date_values[i]):
+	    worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
+	
+	# Set Column Widths
+	worksheet.set_column('A:A', 10)
+	worksheet.set_column('B:H', 65)
+	worksheet.set_row(0, 37.25)
+	
+	# Merge Format for Text
+	merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1})
+	text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
+	
+	# Merge and Write Important Message
+	worksheet.merge_range('C1:F1', text1, merge_format)
+	worksheet.write('G1', "", merge_format)
+	worksheet.write('H1', "", merge_format)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
 	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
@@ -429,62 +448,63 @@ elif st.session_state.page == "OPD Creator":
 	    for start_row in start_rows:
 	        for i, label in enumerate(h_labels):
 	            worksheet.write(f'I{start_row + i}', label, formate)
-	
+
 	# Loop through each worksheet in workbook
 	for worksheet in workbook.worksheets():
-	
-	    # Set Zoom for all sheets
-	    worksheet.set_zoom(80)
-	
-	    # Set Days
-	    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
-	    for start_row in start_rows:
-	        for i, day in enumerate(day_labels):
-	            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
-	
-	    # Set Date Formats
-	    format_date = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
-	    # Set Date Formulas
-	    date_rows = [x + 1 for x in start_rows] 
-	    for i, start_row in enumerate(date_rows):
-	        worksheet.write(f'A{start_row - 1}', "", format_label)
-	        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
-	        worksheet.write_formula(f'A{start_row}', f'=""', format_label)
-	        worksheet.write(f'A{start_row + 1}', "", format_label)
-	
-	    # Set Pink Bars (Conditional Format)
-	    pink_bar_rows = [x + 3 for x in start_rows] 
-	    for row in pink_bar_rows:
-	        worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
-	
-	    # Black Bars
-	    format2 = workbook.add_format({'bg_color': 'black'})
-	    step = start_rows[1] - start_rows[0]; black_bar_rows = list(range(start_rows[0], end_row, step))
-	    for row in black_bar_rows:
-	        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
-	        
-	    # Write More Dates
-	    date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
-	    for i, start_row in enumerate(date_rows):
-	        for j, value in enumerate(date_values[i]):
-	            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
-	
-	    # Set Column Widths
-	    worksheet.set_column('A:A', 10)
-	    worksheet.set_column('B:H', 65)
-	    worksheet.set_row(0, 37.25)
-	
-	    # Merge Format for Text
-	    merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1})
-	    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
-	
-	    # Merge and Write Important Message
-	    worksheet.merge_range('C1:F1', text1, merge_format)
-	    worksheet.write('G1', "", merge_format)
-	    worksheet.write('H1', "", merge_format)
+		if worksheet.title == 'worksheet':
+		    continue
+		    # Set Zoom for all sheets
+		    worksheet.set_zoom(80)
+			
+		    # Set Days
+		    format3 = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+		    day_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+		    start_rows = [2, 26, 50, 74] #[3, 27, 51, 75]
+		    for start_row in start_rows:
+		        for i, day in enumerate(day_labels):
+		            worksheet.write(start_row, 1 + i, day, format3)  # B=1, C=2, etc.
+		
+		    # Set Date Formats
+		    format_date = workbook.add_format({'num_format': 'm/d/yyyy', 'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+		    format_label = workbook.add_format({'font_size': 12, 'bold': 1, 'align': 'center', 'valign': 'vcenter','font_color': 'black', 'bg_color': '#FFC7CE', 'border': 1})
+		    # Set Date Formulas
+		    date_rows = [x + 1 for x in start_rows] 
+		    for i, start_row in enumerate(date_rows):
+		        worksheet.write(f'A{start_row - 1}', "", format_label)
+		        #worksheet.write_formula(f'A{start_row}', f'="Week of:"&" "&TEXT(B{start_row},"m/d/yy")', format_label) #If want to place Week of Date in
+		        worksheet.write_formula(f'A{start_row}', f'=""', format_label)
+		        worksheet.write(f'A{start_row + 1}', "", format_label)
+		
+		    # Set Pink Bars (Conditional Format)
+		    pink_bar_rows = [x + 3 for x in start_rows] 
+		    for row in pink_bar_rows:
+		        worksheet.conditional_format(f'A{row}:H{row}', {'type': 'cell', 'criteria': '>=', 'value': 0, 'format': format_label})
+		
+		    # Black Bars
+		    format2 = workbook.add_format({'bg_color': 'black'})
+		    step = start_rows[1] - start_rows[0]; black_bar_rows = list(range(start_rows[0], end_row, step))
+		    for row in black_bar_rows:
+		        worksheet.merge_range(f'A{row}:H{row}', " ", format2)
+		        
+		    # Write More Dates
+		    date_values = [[y1, y2, y3, y4, y5, y6, y7],[y8, y9, y10, y11, y12, y13, y14],[y15, y16, y17, y18, y19, y20, y21],[y22, y23, y24, y25, y26, y27, y28]]
+		    for i, start_row in enumerate(date_rows):
+		        for j, value in enumerate(date_values[i]):
+		            worksheet.write(start_row, 1 + j, value, format_date)  # B=1, C=2, etc.
+		
+		    # Set Column Widths
+		    worksheet.set_column('A:A', 10)
+		    worksheet.set_column('B:H', 65)
+		    worksheet.set_row(0, 37.25)
+		
+		    # Merge Format for Text
+		    merge_format = workbook.add_format({'bold': 1, 'align': 'center', 'valign': 'vcenter', 'text_wrap': True,'font_color': 'red', 'bg_color': '#FEFFCC', 'border': 1})
+		    text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
+		
+		    # Merge and Write Important Message
+		    worksheet.merge_range('C1:F1', text1, merge_format)
+		    worksheet.write('G1', "", merge_format)
+		    worksheet.write('H1', "", merge_format)
 	
 	# Close Workbook
 	workbook.close()
