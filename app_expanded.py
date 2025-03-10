@@ -2095,7 +2095,7 @@ elif st.session_state.page == "Create List":
 
         df['clinic'] = df['clinic'].replace({"ETOWN": "ETOWN", "NYES": "NYES", "COMPLEX": "COMPLEX", "W_A": "WARD A", "W_C": "WARD C", "W_P": "WARD P", "PICU": "PICU", "PSHCH_NURSERY": "PSHCH NURSERY", "HAMPDEN_NURSERY": "HAMPDEN NURSERY", "SJR_HOSP": "SJR HOSP", "AAC": "AAC", "ER_CONS": "ER CONSULTS", "NF": "NIGHT FLOAT", "ADOLMED": "ADOLMED", "HOPE DRIVE": "HOPE_DRIVE"}); df.to_csv('PALIST.csv',index=False)
 
-        df = pd.read_excel('Book4.xlsx'); st.dataframe(df)
+        df = pd.read_excel('Book4.xlsx')
 
         # Keep the first NaN in the first row as it is for the first column
         df.iloc[0, 0] = np.nan  # Ensure the first cell is NaN (or leave it as it is)
@@ -2458,7 +2458,7 @@ elif st.session_state.page == "Create List":
 
         df = df.loc[df['student'] != "0"]
 
-        df.to_excel('Source1.xlsx', index=False); st.dataframe(df)
+        df.to_excel('Source1.xlsx', index=False)
 
         import openpyxl
         import numpy as np 
