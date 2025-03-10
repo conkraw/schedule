@@ -723,7 +723,7 @@ elif st.session_state.page == "OPD Creator":
 	                elif "PM - ACUTES" in type_key:
 	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
 	                    subset_df['class'] = subset_df['count'].apply(
-	                        lambda count: "H22" if count == 0 else ("H23" if count == 1 else "H" + str(count + 12)) 
+	                        lambda count: "H22" if count == 0 else ("H23" if count == 1 else "H" + str(count + 24)) 
 	                    )
 	
 	                elif "AM - Continuity" in type_key:
@@ -731,7 +731,7 @@ elif st.session_state.page == "OPD Creator":
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                elif "PM - Continuity" in type_key:
-	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 12
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 24
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                # Keep only relevant columns
@@ -1622,6 +1622,13 @@ elif st.session_state.page == "Student Assignments":
         Generates a mapping dictionary for H0 to H19 starting at a given start_value.
         """
         return {f"H{i}": start_value + i for i in range(20)}
+
+
+    def generate_mappingx(start_value):
+        """
+        Generates a mapping dictionary for H0 to H44 starting at a given start_value.
+        """
+        return {f"H{i}": start_value + i for i in range(44)}
     
     def create_t_mapping():
         """
@@ -1640,7 +1647,24 @@ elif st.session_state.page == "Student Assignments":
             combined_mapping.update({f"T{i}": common_mapping for i in range(start_t, start_t + 7)})
     
         return combined_mapping
-    
+    def create_t_mappingx():
+        """
+        Creates the combined mapping for T0 to T27.
+        """
+        t_mappings = [
+            (0, 6),  # T0 to T6 starts at 6
+            (7, 54),  # T7 to T13 starts at 30
+            (14, 102),  # T14 to T20 starts at 54
+            (21, 150)   # T21 to T27 starts at 78
+        ]
+
+        combined_mapping = {}
+        for start_t, start_value in t_mappings:
+            for i in range(start_t, start_t + 7):
+            combined_mapping[f"T{i}"] = generate_mappingx(start_value)
+
+        return combined_mapping
+  
     def process_excel_mapping(location, sheet_name):
         """
         Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
@@ -1669,9 +1693,37 @@ elif st.session_state.page == "Student Assignments":
     
         wb1.save('OPD.xlsx')
         print(f"Processed mapping for {location} in {sheet_name}.")
+
+    def process_excel_mappingx(location, sheet_name):
+        """
+        Processes an Excel sheet for a given location and writes data to the corresponding OPD sheet.
+        """
+        wb = openpyxl.load_workbook('final.xlsx')
+        ws = wb['Sheet1']
+        
+        wb1 = openpyxl.load_workbook('OPD.xlsx')
+        ws1 = wb1[sheet_name]
     
+        combined_t_mapping = create_t_mappingx()
+    
+        column_mapping = {f"T{i}": (i % 7) + 2 for i in range(28)}
+    
+        for row in ws.iter_rows():
+            t_value = row[7].value  # Column H (index 7)
+            h_value = row[6].value  # Column G (index 6)
+            row_location = row[4].value  # Column E (index 4)
+    
+            if row_location == location and t_value in combined_t_mapping and h_value in combined_t_mapping[t_value]:
+                target_row = combined_t_mapping[t_value][h_value]
+                target_column = column_mapping[t_value]
+    
+                ws1.cell(row=target_row, column=target_column).value = row[5].value  # Column F (index 5)
+                ws1.cell(row=target_row, column=target_column).alignment = Alignment(horizontal='center')
+    
+        wb1.save('OPD.xlsx')
+        print(f"Processed mapping for {location} in {sheet_name}.")
     # Process HOPE_DRIVE
-    process_excel_mapping("HOPE_DRIVE", "HOPE_DRIVE")
+    process_excel_mappingx("HOPE_DRIVE", "HOPE_DRIVE")
     process_excel_mapping("ETOWN", "ETOWN")
     process_excel_mapping("NYES", "NYES")
     process_excel_mapping("COMPLEX", "COMPLEX")
