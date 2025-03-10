@@ -731,7 +731,7 @@ elif st.session_state.page == "OPD Creator":
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                elif "PM - Continuity" in type_key:
-	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 22 #Start of H22 
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 12
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                # Keep only relevant columns
