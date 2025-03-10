@@ -451,7 +451,7 @@ elif st.session_state.page == "OPD Creator":
 
 	# Loop through each worksheet in workbook
 	for worksheet in workbook.worksheets():
-		if worksheet.title == 'worksheet':
+		if worksheet.title == worksheet:
 		    continue
 		    # Set Zoom for all sheets
 		    worksheet.set_zoom(80)
