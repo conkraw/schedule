@@ -412,7 +412,7 @@ elif st.session_state.page == "OPD Creator":
 	worksheet.write('H1', "", merge_format)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
+	worksheets = [worksheet, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
 	
 	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
