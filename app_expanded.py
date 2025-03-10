@@ -630,7 +630,7 @@ elif st.session_state.page == "OPD Creator":
 	                elif "PM - ACUTES" in type_key:
 	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
 	                    subset_df['class'] = subset_df['count'].apply(
-	                        lambda count: "H10" if count == 0 else ("H11" if count == 1 else "H" + str(count + 12))
+	                        lambda count: "H22" if count == 0 else ("H23" if count == 1 else "H" + str(count + 24)) #Start of H24 for Continuity
 	                    )
 	
 	                elif "AM - Continuity" in type_key:
@@ -638,7 +638,7 @@ elif st.session_state.page == "OPD Creator":
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                elif "PM - Continuity" in type_key:
-	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 12
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 24 #Start of H24 for Continuity
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                # Keep only relevant columns
