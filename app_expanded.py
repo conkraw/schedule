@@ -2011,10 +2011,15 @@ elif st.session_state.page == "Create List":
         df=pd.read_csv('hopedrive.csv'); st.dataframe(df)
         
         week1 = process_week(df, 3, 23, 1, "HOPE_DRIVE", "week1.csv")
-        week2 = process_week(df, 27, 47, 25, "HOPE_DRIVE", "week2.csv")
-        week3 = process_week(df, 51, 71, 49, "HOPE_DRIVE", "week3.csv")
-        week4 = process_week(df, 75, 95, 73, "HOPE_DRIVE", "week4.csv")
+        week2 = process_week(df, 27, 47, 49, "HOPE_DRIVE", "week2.csv")
+        week3 = process_week(df, 51, 71, 97, "HOPE_DRIVE", "week3.csv")
+        week4 = process_week(df, 75, 95, 145, "HOPE_DRIVE", "week4.csv")
 
+        #week1 = process_week(df, 3, 23, 1, "HOPE_DRIVE", "week1.csv")
+        #week2 = process_week(df, 27, 47, 25, "HOPE_DRIVE", "week2.csv")
+        #week3 = process_week(df, 51, 71, 49, "HOPE_DRIVE", "week3.csv")
+        #week4 = process_week(df, 75, 95, 73, "HOPE_DRIVE", "week4.csv")
+	    
         hope=pd.DataFrame(columns=week1.columns)
         hope=pd.concat([hope,week1,week2,week3,week4])
 
