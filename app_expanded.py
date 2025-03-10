@@ -720,7 +720,7 @@ elif st.session_state.page == "OPD Creator":
 	                elif "PM - ACUTES" in type_key:
 	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
 	                    subset_df['class'] = subset_df['count'].apply(
-	                        lambda count: "H22" if count == 0 else ("H23" if count == 1 else "H" + str(count + 24)) 
+	                        lambda count: "H22" if count == 0 else ("H23" if count == 1 else "H" + str(count + 24)) #Starts at H24
 	                    )
 	
 	                elif "AM - Continuity" in type_key:
@@ -728,7 +728,7 @@ elif st.session_state.page == "OPD Creator":
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                elif "PM - Continuity" in type_key:
-	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 24
+	                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 24 #Starts at H24
 	                    subset_df['class'] = "H" + subset_df['count'].astype(str)
 	
 	                # Keep only relevant columns
@@ -1737,25 +1737,7 @@ elif st.session_state.page == "Student Assignments":
     process_excel_mapping("WARD_C", "W_C")
     process_excel_mapping("RESIDENT", "RESIDENT")
     
-    ###############################################################################################
-    
-    # Button to trigger the download
-    #if st.button('Create OPD'):
-    #    # Path to the existing 'OPD.xlsx' workbook
-    #    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
-    
-        # Read the workbook into memory
-    #    with open(file_path, 'rb') as file:
-    #        file_data = file.read()
-    
-        # Provide a download button for the existing OPD.xlsx file
-    #    st.download_button(
-    #        label="Download OPD.xlsx",
-    #        data=file_data,
-    #        file_name="OPD.xlsx",
-    #        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    #    )
-
+    ##############################################################################################
     import openpyxl
     from io import BytesIO
     import streamlit as st
@@ -2024,7 +2006,7 @@ elif st.session_state.page == "Create List":
 	    
         hope['H'] = "H"
         hopei = process_hope_data(hope, 'AM ', 2, '5.csv')       # AM Continuity starts at H2
-        hopeii = process_hope_data(hope, 'PM ', 24, '6.csv')     # PM Continuity starts at H12
+        hopeii = process_hope_data(hope, 'PM ', 24, '6.csv')     # PM Continuity starts at H24
         hopeiii = process_hope_data(hope, 'AM - ACUTES', 0, '7.csv')  # AM - ACUTES starts at H0
         hopeiiii = process_hope_data(hope, 'PM - ACUTES', 22, '8.csv') # PM - ACUTES starts at H22
 
