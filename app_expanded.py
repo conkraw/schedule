@@ -401,7 +401,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Loop through each worksheet in workbook
 	for worksheet in workbook.worksheets():
-	
+	    if worksheet.name == "HOPE_DRIVE":
+        	continue  # Skip processing for this worksheet
 	    # Set Zoom for all sheets
 	    worksheet.set_zoom(80)
 	
