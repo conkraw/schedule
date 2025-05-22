@@ -211,7 +211,7 @@ elif st.session_state.page == "Upload Files":
 
             # 1️⃣ If it's the CSV we want to turn into Book4.xlsx
             if name.endswith(".csv"):
-                df_csv = pd.read_csv(file, parse_dates=["Start Date"])
+                df_csv = pd.read_csv(file, parse_dates=["rotationstart"])
                 # --- build your Book4.xlsx in memory ---
                 wb = Workbook()
                 ws = wb.active
@@ -233,7 +233,7 @@ elif st.session_state.page == "Upload Files":
                         cell.alignment = Alignment(horizontal="center")
 
                 # fill dates
-                start_date = df_csv["Start Date"].min()
+                start_date = df_csv["rotationstart"].min()
                 ws["C2"].value = start_date
                 ws["C2"].number_format = "M/D/YYYY"
                 ws["D2"].value = "=C2+4"
