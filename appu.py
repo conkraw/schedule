@@ -182,11 +182,11 @@ elif st.session_state.page == "Upload Files":
         "GI Daytime Service": ["WARD_GI.xlsx"],
         "Complex": ["COMPLEX.xlsx"],
         "Adol Med": ["ADOLMED.xlsx"], 
-        "cl5rks1p": ["Book4.xlsx"], 
+        #"cl5rks1p": ["Book4.xlsx"], 
         "Rotation": ["RESIDENT.xlsx"], 
     }
     # Required files for validation
-    required_files = set(file for filenames in file_identifiers.values() for file in filenames)
+    required_files = set(f for names in file_identifiers.values() for f in names) | {"Book4.xlsx"}
 
     # Streamlit UI
     st.title("File Upload Section")
@@ -199,40 +199,98 @@ elif st.session_state.page == "Upload Files":
     else:
         st.error("❌ No valid date found. Please enter a start date first.")
 
-    # File uploader
-    uploaded_files = st.file_uploader("Choose your files", type="xlsx", accept_multiple_files=True)
-
+    uploaded_files = st.file_uploader(
+        "Choose your files", type=["xlsx","csv"], accept_multiple_files=True
+    )
     if uploaded_files:
         uploaded_files_dict = {}
         detected_files = set()
 
         for file in uploaded_files:
+            name = file.name.lower()
+
+            # 1️⃣ If it's the CSV we want to turn into Book4.xlsx
+            if name.endswith(".csv"):
+                df_csv = pd.read_csv(file, parse_dates=["Start Date"])
+                # --- build your Book4.xlsx in memory ---
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Schedule"
+                ws.sheet_view.zoomScale = 80
+
+                # headers + merges + styling (same as before)...
+                headers = ["Student Name:", "cl5rks1p", "Week 1", "", "Week 2", "", "Week 3", "", "Week 4", ""]
+                ws.append(headers)
+                for coord in ["C1:D1","E1:F1","G1:H1","I1:J1"]:
+                    ws.merge_cells(coord)
+                bold_underline = Font(bold=True, underline="single")
+                for col in ["A","B","C","E","G","I"]:
+                    ws[f"{col}1"].font = bold_underline
+                    if col in ["C","E","G","I"]:
+                        ws[f"{col}1"].alignment = Alignment(horizontal="center")
+                for col_cells in ws.iter_cols(min_col=2, max_col=10, min_row=1, max_row=ws.max_row):
+                    for cell in col_cells:
+                        cell.alignment = Alignment(horizontal="center")
+
+                # fill dates
+                start_date = df_csv["Start Date"].min()
+                ws["C2"].value = start_date
+                ws["C2"].number_format = "M/D/YYYY"
+                ws["D2"].value = "=C2+4"
+                ws["E2"].value = "=C2+7"
+                ws["F2"].value = "=D2+7"
+                ws["G2"].value = "=C2+14"
+                ws["H2"].value = "=D2+14"
+                ws["I2"].value = "=C2+21"
+                ws["J2"].value = "=D2+21"
+                for c in list("DEFGHIJ"):
+                    ws[f"{c}2"].number_format = "M/D/YYYY"
+
+                # col widths
+                ws.column_dimensions["A"].width = 30
+                for c in "BCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    ws.column_dimensions[c].width = 20
+
+                # student rows + asynchronous slots
+                for idx, row in enumerate(df_csv.itertuples(), start=3):
+                    ws[f"A{idx}"].value = row.Legal_Name
+                    for c in list("CDEFGHIJ"):
+                        ws[f"{c}{idx}"].value = "Asynchronous Time"
+
+                # dump into BytesIO
+                buf = io.BytesIO()
+                wb.save(buf)
+                buf.seek(0)
+                uploaded_files_dict["Book4.xlsx"] = buf
+                detected_files.add("Book4.xlsx")
+                st.success("✅ Converted CSV → Book4.xlsx")
+
+                continue  # skip the rest of detection
+
+            # 2️⃣ Otherwise, try your old keyword‐in‐sheet detection
             try:
-                # Read the first few rows of the Excel file
-                df = pd.read_excel(file, dtype=str, nrows=10)  
-
-                # Normalize text: strip spaces, handle line breaks, convert to lowercase
-                df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
-
-                # Convert all values into a single string for better search
-                full_text = " ".join(df_clean.to_string().split()).lower()
-
-                # Assign multiple filenames for "Academic General Pediatrics"
-                found_files = []
-                for key, expected_filenames in file_identifiers.items():
-                    if key.lower() in full_text:
-                        found_files.extend(expected_filenames)
-
-                if found_files:
-                    for expected_filename in found_files:
-                        uploaded_files_dict[expected_filename] = file  # Assign the same file to multiple expected filenames
-                        detected_files.add(expected_filename)
-
+                df = pd.read_excel(file, dtype=str, nrows=10)
+                clean = df.astype(str).apply(lambda col: col.str.strip().str.replace("\n"," ").str.lower())
+                text = " ".join(clean.to_string().split())
+                found = []
+                for key, names in file_identifiers.items():
+                    if key.lower() in text:
+                        found += names
+                if found:
+                    for fname in found:
+                        uploaded_files_dict[fname] = file
+                        detected_files.add(fname)
                 else:
-                    st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
-
+                    st.warning(f"⚠️ Could not detect type for {file.name}")
             except Exception as e:
-                st.error(f"❌ Error reading {file.name}: {str(e)}")
+                st.error(f"❌ Error reading {file.name}: {e}")
+
+        # 3️⃣ Final validation
+        missing = required_files - detected_files
+        if missing:
+            st.error(f"Missing required files: {', '.join(missing)}")
+        else:
+            st.success("All required files uploaded and recognized.")
 
         # Save detected files to session state
         st.session_state.uploaded_files = uploaded_files_dict
