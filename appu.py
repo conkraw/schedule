@@ -301,10 +301,10 @@ elif st.session_state.page == "Upload Files":
             st.error(f"❌ Error reading {file.name}: {e}")
 
 
-		
+
         # 3️⃣ Final validation
-       
-	missing = required_files - detected_files
+
+    missing = required_files - detected_files
         if missing:
             st.error(f"Missing required files: {', '.join(missing)}")
         else:
