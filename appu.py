@@ -271,34 +271,36 @@ elif st.session_state.page == "Upload Files":
 
             # 2️⃣ Otherwise, try your old keyword‐in‐sheet detection
 
-	try:
-	    # Read a sample of the sheet
-	    df = pd.read_excel(file, dtype=str, nrows=10)
+	    try:
+	        # Read a sample of the sheet
+	        df = pd.read_excel(file, dtype=str, nrows=10)
 	
-	    # Normalize: strip, collapse newlines, lowercase
-	    df_clean = df.astype(str).apply(
-	        lambda col: col.str.strip().str.replace("\n", " ").str.lower()
-	    )
+	        # Normalize: strip, collapse newlines, lowercase
+	        df_clean = df.astype(str).apply(
+	            lambda col: col.str.strip().str.replace("\n", " ").str.lower()
+	        )
 	
-	    # Dump to one big string
-	    full_text = " ".join(df_clean.to_string().split())
+	        # Dump to one big string
+	        full_text = " ".join(df_clean.to_string().split())
 	
-	    # Look for each key in that text
-	    found_files = []
-	    for key, expected_filenames in file_identifiers.items():
-	        if key.lower() in full_text:
-	            found_files.extend(expected_filenames)
+	        # Look for each key in that text
+	        found_files = []
+	        for key, expected_filenames in file_identifiers.items():
+	            if key.lower() in full_text:
+	                found_files.extend(expected_filenames)
 	
-	    if found_files:
-	        for fname in found_files:
-	            uploaded_files_dict[fname] = file
-	            detected_files.add(fname)
-	        st.success(f"✅ Detected: {', '.join(found_files)}")
-	    else:
-	        st.warning(f"⚠️ Could not detect file type for: {file.name}")
+	        if found_files:
+	            for fname in found_files:
+	                uploaded_files_dict[fname] = file
+	                detected_files.add(fname)
+	            st.success(f"✅ Detected: {', '.join(found_files)}")
+	        else:
+	            st.warning(f"⚠️ Could not detect file type for: {file.name}")
 	
-	except Exception as e:
-	    st.error(f"❌ Error reading {file.name}: {e}")
+	    except Exception as e:
+	        st.error(f"❌ Error reading {file.name}: {e}")
+
+		
         # 3️⃣ Final validation
        
 	missing = required_files - detected_files
