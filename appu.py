@@ -254,7 +254,7 @@ elif st.session_state.page == "Upload Files":
 
                 # student rows + asynchronous slots
                 for idx, row in enumerate(df_csv.itertuples(), start=3):
-                    ws[f"A{idx}"].value = row.Legal_Name
+                    ws[f"A{idx}"].value = row.legal_name
                     for c in list("CDEFGHIJ"):
                         ws[f"{c}{idx}"].value = "Asynchronous Time"
 
