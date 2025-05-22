@@ -12,7 +12,8 @@ from io import BytesIO
 from io import StringIO
 import os
 import time 
-import random 
+import random
+from openpyxl.styles import Font, Alignment
 
 st.set_page_config(layout="wide")
 
