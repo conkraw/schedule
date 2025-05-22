@@ -269,46 +269,33 @@ elif st.session_state.page == "Upload Files":
 
                 continue  # skip the rest of detection
 
-            # 2️⃣ Otherwise, try your old keyword‐in‐sheet detection
+        for file in uploaded_files:
+            try:
+                # Read the first few rows of the Excel file
+                df = pd.read_excel(file, dtype=str, nrows=10)  
 
-        try:
-            # Read a sample of the sheet
-            df = pd.read_excel(file, dtype=str, nrows=10)
+                # Normalize text: strip spaces, handle line breaks, convert to lowercase
+                df_clean = df.astype(str).apply(lambda x: x.str.strip().str.replace("\n", " ").str.lower())
 
-            # Normalize: strip, collapse newlines, lowercase
-            df_clean = df.astype(str).apply(
-                lambda col: col.str.strip().str.replace("\n", " ").str.lower()
-            )
+                # Convert all values into a single string for better search
+                full_text = " ".join(df_clean.to_string().split()).lower()
 
-            # Dump to one big string
-            full_text = " ".join(df_clean.to_string().split())
+                # Assign multiple filenames for "Academic General Pediatrics"
+                found_files = []
+                for key, expected_filenames in file_identifiers.items():
+                    if key.lower() in full_text:
+                        found_files.extend(expected_filenames)
 
-            # Look for each key in that text
-            found_files = []
-            for key, expected_filenames in file_identifiers.items():
-                if key.lower() in full_text:
-                    found_files.extend(expected_filenames)
+                if found_files:
+                    for expected_filename in found_files:
+                        uploaded_files_dict[expected_filename] = file  # Assign the same file to multiple expected filenames
+                        detected_files.add(expected_filename)
 
-            if found_files:
-                for fname in found_files:
-                    uploaded_files_dict[fname] = file
-                    detected_files.add(fname)
-                st.success(f"✅ Detected: {', '.join(found_files)}")
-            else:
-                st.warning(f"⚠️ Could not detect file type for: {file.name}")
+                else:
+                    st.warning(f"⚠️ Could not automatically detect file type for: {file.name}")
 
-        except Exception as e:
-            st.error(f"❌ Error reading {file.name}: {e}")
-
-
-
-        # 3️⃣ Final validation
-
-    missing = required_files - detected_files
-        if missing:
-            st.error(f"Missing required files: {', '.join(missing)}")
-        else:
-            st.success("All required files uploaded and recognized.")
+            except Exception as e:
+                st.error(f"❌ Error reading {file.name}: {str(e)}")
 
         # Save detected files to session state
         st.session_state.uploaded_files = uploaded_files_dict
@@ -321,7 +308,6 @@ elif st.session_state.page == "Upload Files":
             navigate_to("OPD Creator")
         else:
             st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
-
 		
 elif st.session_state.page == "OPD Creator":
 	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
