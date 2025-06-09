@@ -808,6 +808,8 @@ elif st.session_state.page == "OPD Creator":
 	filtered_df.to_csv('test.csv',index=False)
 	
 	df = pd.read_csv('test.csv')
+	st.dataframe(df)
+	st.stop()
 	# Define block columns (columns that contain the block names)
 	block_columns = [
 	    "Block 1 (07/01/2025 - 07/27/2025)", "Block 2 (07/28/2025 - 08/24/2025)",
