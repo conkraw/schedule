@@ -881,7 +881,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Save and display the final expanded dataset
 	expanded_df.to_csv("expanded_schedule.csv", index=False)
-	
+	st.dataframe(expanded_df)
+	st.stop()
 	import pandas as pd
 	import re
 	from datetime import datetime
@@ -930,8 +931,6 @@ elif st.session_state.page == "OPD Creator":
 	# Save and display the updated dataset
 	filtered_df.to_csv("filtered_schedule.csv", index=False)
 	
-	st.dataframe(filtered_df)
-	st.stop()
 	import pandas as pd
 	import re
 	
