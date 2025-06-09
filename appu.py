@@ -930,7 +930,8 @@ elif st.session_state.page == "OPD Creator":
 	# Save and display the updated dataset
 	filtered_df.to_csv("filtered_schedule.csv", index=False)
 	
-	
+	st.dataframe(filtered_df)
+	st.stop()
 	import pandas as pd
 	import re
 	
