@@ -847,10 +847,11 @@ elif st.session_state.page == "OPD Creator":
 	
 	# List to store expanded rows
 	expanded_rows = []
-	
+
+	#######################WATCH HOW COLUMNS ARE NAMED IN THE RESIDENT.XLSX FILE########################################################OTHERWISE IT WON'T MATCH
 	# Function to extract dates from block names
 	def extract_dates(block_name):
-	    match = re.search(r"\((\d{2}/\d{2}/\d{4}) - (\d{2}/\d{2}/\d{4})\)", block_name)
+	    match = re.search(r"\((\d{2}/\d{2}/\d{4})- (\d{2}/\d{2}/\d{4})\)", block_name)
 	    if match:
 	        return datetime.strptime(match.group(1), "%m/%d/%Y"), datetime.strptime(match.group(2), "%m/%d/%Y")
 	    return None, None
@@ -881,8 +882,7 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Save and display the final expanded dataset
 	expanded_df.to_csv("expanded_schedule.csv", index=False)
-	st.dataframe(expanded_df)
-	st.stop()
+
 	import pandas as pd
 	import re
 	from datetime import datetime
