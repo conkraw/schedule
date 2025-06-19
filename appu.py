@@ -2058,8 +2058,8 @@ elif st.session_state.page == "Create List":
             process_clinic_schedule(sheet, sheet.lower(), uploaded_opd_file)	
 	############################################################################
         summary_files = [f"{sheet.lower()}_summary.csv" for sheet in sheet_names]
-        dfx = pd.concat([pd.read_csv(file) for file in summary_files] + [pd.read_csv('hopes.csv')], ignore_index=True)
-	st.dataframe(dfx)
+        dfx = pd.concat([pd.read_csv(file) for file in summary_files] + [pd.read_csv('hopes.csv')], ignore_index=True);	st.dataframe(dfx)
+
         dfx['providers'] = dfx['provider'].str.split('~').str[0]
         dfx['student'] = dfx['provider'].str.split('~').str[1]
         dfx1 = dfx[['date', 'type', 'providers', 'student', 'clinic', 'provider', 'class']]
