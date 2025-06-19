@@ -2064,7 +2064,7 @@ elif st.session_state.page == "Create List":
         dfx['student'] = dfx['provider'].str.split('~').str[1]
         dfx1 = dfx[['date', 'type', 'providers', 'student', 'clinic', 'provider', 'class']]
 
-        dfx1['date'] = pd.to_datetime(dfx1['date'])
+        dfx1['date'] = pd.to_datetime(dfx1['date'].astype(str).str.replace(r"\s*\(.*\)$", "", regex=True),format="mixed",errors="coerce",dayfirst=False); #dfx1['date'] = pd.to_datetime(dfx1['date']); 
         dfx1['date'] = dfx1['date'].dt.strftime('%m/%d/%Y'); st.dataframe(dfx1)
 
         mydict = {}
