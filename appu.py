@@ -2048,7 +2048,7 @@ elif st.session_state.page == "Create List":
         hopes = pd.concat([hopei, hopeii, hopeiii, hopeiiii])
 
         # Save the combined DataFrame to CSV
-        hopes.to_csv('hopes.csv', index=False); st.dataframe(hopes)
+        hopes.to_csv('hopes.csv', index=False); #st.dataframe(hopes)
         #################################################################################################################
         # List of sheet names to process
         sheet_names = ['ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C', 'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSP', 'AAC', 'ER_CONS', 'NF', 'ADOLMED', 'RESIDENT']  # Add more as needed
@@ -2059,7 +2059,7 @@ elif st.session_state.page == "Create List":
 	############################################################################
         summary_files = [f"{sheet.lower()}_summary.csv" for sheet in sheet_names]
         dfx = pd.concat([pd.read_csv(file) for file in summary_files] + [pd.read_csv('hopes.csv')], ignore_index=True)
-
+	st.dataframe(dfx)
         dfx['providers'] = dfx['provider'].str.split('~').str[0]
         dfx['student'] = dfx['provider'].str.split('~').str[1]
         dfx1 = dfx[['date', 'type', 'providers', 'student', 'clinic', 'provider', 'class']]
