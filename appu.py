@@ -2023,11 +2023,11 @@ elif st.session_state.page == "Create List":
         dateMAP.to_csv('xxxDATEMAP.csv', index=False)
 
 	####################################HOPE_DRIVE#############################################################################
-        #read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
-	#read_file.to_csv ('hopedrive.csv', index = False, header=False)
-        #df=pd.read_csv('hopedrive.csv')
+        read_file = pd.read_excel(uploaded_opd_file, sheet_name='HOPE_DRIVE')
+	read_file.to_csv ('hopedrive.csv', index = False, header=False)
+        df=pd.read_csv('hopedrive.csv')
         
-        df = pd.read_excel(uploaded_opd_file, sheet_name="HOPE_DRIVE", header=None); week1 = process_week(df, 3, 23, 1, "HOPE_DRIVE", "week1.csv")
+        week1 = process_week(df, 3, 23, 1, "HOPE_DRIVE", "week1.csv")
 
         week2 = process_week(df, 27, 47, 25, "HOPE_DRIVE", "week2.csv")
         week3 = process_week(df, 51, 71, 49, "HOPE_DRIVE", "week3.csv")
@@ -2049,7 +2049,7 @@ elif st.session_state.page == "Create List":
         hopes = pd.concat([hopei, hopeii, hopeiii, hopeiiii])
 
         # Save the combined DataFrame to CSV
-        hopes.to_csv('hopes.csv', index=False); #st.dataframe(hopes)
+        hopes.to_csv('hopes.csv', index=False); st.dataframe(hopes)
         #################################################################################################################
         # List of sheet names to process
         sheet_names = ['ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C', 'W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY', 'SJR_HOSP', 'AAC', 'ER_CONS', 'NF', 'ADOLMED', 'RESIDENT']  # Add more as needed
