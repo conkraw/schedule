@@ -2058,7 +2058,7 @@ elif st.session_state.page == "Create List":
             process_clinic_schedule(sheet, sheet.lower(), uploaded_opd_file)	
 	############################################################################
         summary_files = [f"{sheet.lower()}_summary.csv" for sheet in sheet_names]
-        dfx = pd.concat([pd.read_csv(file) for file in summary_files] + [pd.read_csv('hopes.csv')], ignore_index=True);	st.dataframe(dfx)
+        dfx = pd.concat([pd.read_csv(file) for file in summary_files] + [pd.read_csv('hopes.csv')], ignore_index=True);	#st.dataframe(dfx)
 
         dfx['providers'] = dfx['provider'].str.split('~').str[0]
         dfx['student'] = dfx['provider'].str.split('~').str[1]
@@ -2074,7 +2074,7 @@ elif st.session_state.page == "Create List":
         dfx1['datecode'] = dfx1.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
         dfx1.to_excel('STUDENTLIST.xlsx',index=False)
-        dfx1.to_csv('STUDENTLIST.csv',index=False)
+        dfx1.to_csv('STUDENTLIST.csv',index=False); st.dataframe(dfx1)
 
         dfx1['type'] = dfx1['type'].str.lstrip()
         dfx1['type'] = dfx1['type'].str.rstrip()
