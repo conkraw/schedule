@@ -1745,7 +1745,7 @@ elif st.session_state.page == "Create Student Schedule":
     st.title("Create Student Schedule")
     # Upload the OPD.xlsx file
     uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
-    uploaded_file = st.file_uploader("Upload Book4 file (.xlsx or .csv)", type=["xlsx", "csv"])
+    uploaded_book4_file = st.file_uploader("Upload Book4 file (.xlsx or .csv)", type=["xlsx", "csv"])
 
     
     if uploaded_opd_file:
