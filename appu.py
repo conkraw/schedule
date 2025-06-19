@@ -2065,7 +2065,7 @@ elif st.session_state.page == "Create List":
         dfx1 = dfx[['date', 'type', 'providers', 'student', 'clinic', 'provider', 'class']]
 
         dfx1['date'] = pd.to_datetime(dfx1['date'])
-        dfx1['date'] = dfx1['date'].dt.strftime('%m/%d/%Y')
+        dfx1['date'] = dfx1['date'].dt.strftime('%m/%d/%Y'); st.dataframe(dfx1)
 
         mydict = {}
         with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
@@ -2074,7 +2074,7 @@ elif st.session_state.page == "Create List":
         dfx1['datecode'] = dfx1.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
 
         dfx1.to_excel('STUDENTLIST.xlsx',index=False)
-        dfx1.to_csv('STUDENTLIST.csv',index=False); st.dataframe(dfx1)
+        dfx1.to_csv('STUDENTLIST.csv',index=False); 
 
         dfx1['type'] = dfx1['type'].str.lstrip()
         dfx1['type'] = dfx1['type'].str.rstrip()
