@@ -1745,7 +1745,8 @@ elif st.session_state.page == "Create Student Schedule":
     st.title("Create Student Schedule")
     # Upload the OPD.xlsx file
     uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
-    uploaded_book4_file = st.file_uploader("Upload Book4.xlsx file", type="xlsx")
+    uploaded_file = st.file_uploader("Upload Book4 file (.xlsx or .csv)", type=["xlsx", "csv"])
+
     
     if uploaded_opd_file:
         try:
@@ -1763,17 +1764,83 @@ elif st.session_state.page == "Create Student Schedule":
 
     if uploaded_book4_file:
         try:
-            # Read the uploaded OPD file into a pandas dataframe
-            df_opd = pd.read_excel(uploaded_book4_file)
-            st.write("File successfully uploaded and loaded.")
-            
-            # Store the uploaded file in session state for use later
-            st.session_state.uploaded_book4_file['Book4.xlsx'] = uploaded_book4_file
-                
+            # ───── Detect & Convert if CSV ─────
+            name = uploaded_book4_file.name.lower()
+            if name.endswith(".csv"):
+                # 1️⃣ read CSV
+                df_csv = pd.read_csv(uploaded_book4_file, parse_dates=["rotationstart"])
+                df_csv.rename(columns={"rotationstart": "Start Date"}, inplace=True)
+
+                # 2️⃣ build Book4.xlsx in memory
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Schedule"
+                ws.sheet_view.zoomScale = 80
+
+                headers = [
+                    "Student Name:", "cl5rks1p",
+                    "Week 1", "", "Week 2", "",
+                    "Week 3", "", "Week 4", ""
+                ]
+                ws.append(headers)
+                for coord in ["C1:D1", "E1:F1", "G1:H1", "I1:J1"]:
+                    ws.merge_cells(coord)
+
+                b_u = Font(bold=True, underline="single")
+                for col in ["A", "B", "C", "E", "G", "I"]:
+                    ws[f"{col}1"].font = b_u
+                    if col in ["C", "E", "G", "I"]:
+                        ws[f"{col}1"].alignment = Alignment(horizontal="center")
+                for col_cells in ws.iter_cols(min_col=2, max_col=10, min_row=1, max_row=ws.max_row):
+                    for cell in col_cells:
+                        cell.alignment = Alignment(horizontal="center")
+
+                start_date = df_csv["Start Date"].min()
+                ws["C2"].value = start_date; ws["C2"].number_format = "M/D/YYYY"
+                ws["D2"].value = "=C2+4"
+                ws["E2"].value = "=C2+7"; ws["F2"].value = "=D2+7"
+                ws["G2"].value = "=C2+14"; ws["H2"].value = "=D2+14"
+                ws["I2"].value = "=C2+21"; ws["J2"].value = "=D2+21"
+                for c in "DEFGHIJ":
+                    ws[f"{c}2"].number_format = "M/D/YYYY"
+
+                ws.column_dimensions["A"].width = 30
+                for c in "BCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    ws.column_dimensions[c].width = 20
+
+                for idx, row in enumerate(df_csv.itertuples(), start=3):
+                    ws[f"A{idx}"].value = row.legal_name
+                    for c in "CDEFGHIJ":
+                        ws[f"{c}{idx}"].value = "Asynchronous Time"
+
+                buf = io.BytesIO()
+                wb.save(buf)
+                buf.seek(0)
+                excel_buffer = buf
+                st.success("✅ CSV converted to Book4.xlsx")
+
+            else:
+                # already an .xlsx → just wrap in BytesIO
+                buf = io.BytesIO(uploaded_book4_file.read())
+                excel_buffer = buf
+                st.success("✅ Book4.xlsx uploaded")
+
+            # ───── Load it and stash in state ─────
+            df_opd = pd.read_excel(excel_buffer, sheet_name="Schedule")
+            st.write("File successfully loaded:")
+            st.dataframe(df_opd.head())
+
+            # ensure session_state key exists
+            if "uploaded_book4_file" not in st.session_state:
+                st.session_state.uploaded_book4_file = {}
+            st.session_state.uploaded_book4_file["Book4.xlsx"] = excel_buffer
+
         except Exception as e:
-            st.error(f"Error reading the uploaded file: {e}")
+            st.error(f"Error processing file: {e}")
     else:
-        st.write("Please upload the Book4.xlsx file to proceed.")
+        st.info("Please upload a Book4.xlsx or a CSV to convert.")
+
+
 
     # Button to go to the next page
     if st.button("Load Student Schedule"):
