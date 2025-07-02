@@ -778,14 +778,16 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Reload the CSV to ensure clean reading
 	df = pd.read_csv("test.csv", dtype=str)
-	
-	# Fix encoding issues and remove non-breaking spaces
-	df["Rotation"] = df["Rotation"].str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True)
 
+	
 	st.dataframe(df)
 
 	st.stop()
 	
+	
+	# Fix encoding issues and remove non-breaking spaces
+	df["Rotation"] = df["Rotation"].str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True)
+
 	df.to_csv('test.csv', index=False)
 	
 	df = pd.read_csv('test.csv')
