@@ -781,6 +781,8 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Fix encoding issues and remove non-breaking spaces
 	df["Rotation"] = df["Rotation"].str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True)
+
+	st.dataframe(df)
 	
 	df.to_csv('test.csv', index=False)
 	
