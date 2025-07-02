@@ -783,6 +783,8 @@ elif st.session_state.page == "OPD Creator":
 	df["Rotation"] = df["Rotation"].str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True)
 
 	st.dataframe(df)
+
+	st.stop()
 	
 	df.to_csv('test.csv', index=False)
 	
