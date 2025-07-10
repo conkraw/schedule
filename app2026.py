@@ -831,16 +831,14 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
-	
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
-	ahouloukpe_df = process_file("AHOULOUKPE.xlsx", "AHOULOUKPE", replacement_rules.get("AHOULOUKPE.xlsx")) 
 	
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"] #Only Extract Jennifer Shook
 	
-	special_clinics = {"AAC","HAMPDEN_NURSERY","SJR_HOSP", "AHOULOUKPE"}
+	special_clinics = {"AAC","HAMPDEN_NURSERY","SJR_HOSP"}
 	
 	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
@@ -850,7 +848,7 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
-	ahouloukpe_df = duplicate_am_continuity(ahouloukpe_df, "AHOULOUKPE", special_clinics)
+	ahouloukpe_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
 
 	dfs_and_labels = [(etown_df, "ETOWN"),(nyes_df, "NYES"),(complex_df, "COMPLEX"),(warda_df, "WARD_A"),(pshchnursery_df, "PSHCH_NURSERY"),(hampdennursery_df, "HAMPDEN_NURSERY"),
 			  (sjrhosp_df, "SJR_HOSP"),(aac_df, "AAC"),(ahouloukpe_df, "AHOULOUKPE"),(adolmed_df, "ADOLMED")]
