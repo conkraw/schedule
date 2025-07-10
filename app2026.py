@@ -207,7 +207,7 @@ elif st.session_state.page == "Upload Files":
 
             # 1️⃣ If it's the CSV we want to turn into Book4.xlsx
             if name.endswith(".csv"):
-                df_csv = pd.read_csv(file, parse_dates=["rotationstart"]); df_csv.rename(columns={"rotationstart": "Start Date"}, inplace=True)
+                df_csv = pd.read_csv(file, parse_dates=["rotationstart"]); df_csv.rename(columns={"start_date": "Start Date"}, inplace=True)
                 # --- build your Book4.xlsx in memory ---
                 wb = Workbook()
                 ws = wb.active
