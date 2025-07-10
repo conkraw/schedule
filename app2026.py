@@ -869,7 +869,6 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Read into dictionary
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, num_csvs + 1)}
-	st.dataframe(tables) 
 	
 	# Unpack tables.values() into dynamic variables t1, t2, ...
 	for i, df in enumerate(tables.values(), start=1):
