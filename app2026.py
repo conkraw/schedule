@@ -927,40 +927,8 @@ elif st.session_state.page == "OPD Creator":
 
 	df.to_csv('final2.csv', index=False)
 	
-	df = pd.read_csv('resident_schedule.csv')
-	df['date'] = pd.to_datetime(df['date'], errors='coerce')
-	
-	start_date = pd.to_datetime(st.session_state.start_date, format='%Y-%m-%d', errors='coerce')
-	end_date = start_date + pd.Timedelta(days=34)
-
-	df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
-	df['date'] = df['date'].dt.strftime('%m/%d/%Y')
-	
-	mydict = {}
-	with open('xxxDATEMAP.csv', mode='r')as inp:     #file is the objects you want to map. I want to map the IMP in this file to diagnosis.csv
-		reader = csv.reader(inp)
-		df1 = {rows[0]:rows[1] for rows in reader} 
-	
-	df['datecode'] = df.date.map(df1)               #'type' is the new column in the diagnosis file. 'encounter_id' is the key you are using to MAP 
-
-	df = df[["date", "type", "provider", "clinic", "class", "datecode", "student"]]
-
-	df.to_csv('resident_schedule.csv', index=False)
-
-	df1 = pd.read_csv('resident_schedule.csv', dtype=str); exclude_datecodes = ["T29", "T30", "T31", "T32", "T33", "T34"]; df1 = df1[~df1['datecode'].isin(exclude_datecodes)] #exclude these datecodes because it is accidentally making a week 5. 
-	df2 = pd.read_csv('final2.csv', dtype=str)
-	
-	# Combine both DataFrames (stack rows)
-	df = pd.concat([df1, df2], ignore_index=True); st.dataframe(df)
-	
 	list_df = pd.read_excel(uploaded_files['Book4.xlsx']); student_names = list_df["Student Name:"].dropna().astype(str).str.strip(); student_names = student_names[student_names != ""]; unique_student_names = sorted(student_names.unique()); random.shuffle(unique_student_names); st.write(", ".join(unique_student_names)); st.session_state.student_names = unique_student_names
 	
-	#condition = ((df['clinic'] == 'PSHCH_NURSERY') & (df['class'].isin(['H0', 'H10'])) & (df['datecode'].isin(['T0', 'T1', 'T2', 'T3', 'T4'])))
-
-	# Assign the student's name where conditions are met
-	#df.loc[condition, 'student'] = 'Dhinojwala, Maria (MD)'
-	#df.loc[condition, 'student'] = 'Conrad'
-
 	df.to_csv('final.csv',index=False); df.to_csv('prenurseryass_df.csv',index=False)
         
 	if st.button("Next Step"):
