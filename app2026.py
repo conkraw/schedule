@@ -848,21 +848,33 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
+	ahouloukpe_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
 
-	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
-	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
-	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
+	dfs_and_labels = [(etown_df, "ETOWN"),(nyes_df, "NYES"),(complex_df, "COMPLEX"),(warda_df, "WARD_A"),(pshchnursery_df, "PSHCH_NURSERY"),(hampdennursery_df, "HAMPDEN_NURSERY"),
+			  (sjrhosp_df, "SJR_HOSP"),(aac_df, "AAC"),(ahouloukpe_df, "AHOULOUKPE"),(adolmed_df, "ADOLMED")]
+
 	
-	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
-	process_continuity_classes(pshchnursery_df, "PSHCH_NURSERY", "18.csv", "19.csv")
-	process_continuity_classes(hampdennursery_df, "HAMPDEN_NURSERY", "20.csv", "21.csv")
-	process_continuity_classes(sjrhosp_df, "SJR_HOSP", "22.csv", "23.csv")
-	process_continuity_classes(aac_df, "AAC", "24.csv", "25.csv")
-	process_continuity_classes(adolmed_df, "ADOLMED", "30.csv", "31.csv")
+	counter = 1
+	for df, label in dfs_and_labels:
+	    file1 = f"{counter}.csv"
+	    file2 = f"{counter + 1}.csv"
+	    process_continuity_classes(df, label, file1, file2)
+	    counter += 2
+
 	############################################################################################################################
-	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 34)}
-	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31, t32, t33 = tables.values()
+	#tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 34)}
+	#t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31, t32, t33 = tables.values()
+
+	# Dynamically calculate number of CSVs
+	num_csvs = len(dfs_and_labels) * 2
 	
+	# Read into dictionary
+	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, num_csvs + 1)}
+	
+	# Unpack tables.values() into dynamic variables t1, t2, ...
+	for i, df in enumerate(tables.values(), start=1):
+	    globals()[f"t{i}"] = df
+		
 	final2 = pd.DataFrame(columns=t1.columns)
 	final2 = pd.concat([final2] + list(tables.values()), ignore_index=True)
 	final2.to_csv('final2.csv',index=False)
