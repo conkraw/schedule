@@ -766,7 +766,7 @@ elif st.session_state.page == "OPD Creator":
 
 	wardapa_df["Date"] = pd.to_datetime(wardapa_df["Date"], format="%B %d, %Y").dt.strftime("%Y-%m-%d")
 	
-	df = pd.concat([df,wardapa_df])
+	df = wardapa_df
 	
 	df["type"] = "AM - Continuity"
 	df["student"] = ""
