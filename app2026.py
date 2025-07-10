@@ -27,7 +27,8 @@ def format_date_with_suffix(date):
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
     "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_1", "SJR_2"]}, 
-    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]} #LIST ALL NAMES
+    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]}, #LIST ALL NAMES
+	"AHOLOUKPE.xlsx": {"title": "AHOLOUKPE","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}, 
 }
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
@@ -176,16 +177,9 @@ elif st.session_state.page == "Upload Files":
     # Define file name mappings based on content identifiers
     file_identifiers = {
         "Academic General Pediatrics": ["NYES.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "PSHCH_NURSERY.xlsx"],
-        "Pulmonary": ["WARD_P.xlsx"],
         "Hospitalists": ["WARD_A.xlsx"],
-        "Cardiology": ["WARD_CARDIOLOGY.xlsx"],
-        "Neph": ["WARD_NEPHRO.xlsx"],
-        "PICU": ["PICU.xlsx"],
-        "GI Daytime Service": ["WARD_GI.xlsx"],
         "Complex": ["COMPLEX.xlsx"],
         "Adol Med": ["ADOLMED.xlsx"], 
-        #"cl5rks1p": ["Book4.xlsx"], 
-        "Rotation": ["RESIDENT.xlsx"], 
     }
     # Required files for validation
     required_files = set(f for names in file_identifiers.values() for f in names) | {"Book4.xlsx"}
@@ -310,7 +304,6 @@ elif st.session_state.page == "Upload Files":
             st.error(f"❌ Missing files: {', '.join(missing_files)}. Please upload all required files.")
 		
 elif st.session_state.page == "OPD Creator":
-	#test_date = datetime.datetime.strptime(x, "%m/%d/%Y")
 	test_date = st.session_state.start_date
 	uploaded_files = st.session_state.uploaded_files
 	
@@ -355,7 +348,7 @@ elif st.session_state.page == "OPD Creator":
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
 	# Define worksheet names
-	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'W_C','W_P', 'PICU', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'ER_CONS','NF',"ADOLMED","RESIDENT"]
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'AHOLOUKPE', 'ADOLMED']
 	
 	# Create worksheets and store them in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
@@ -370,16 +363,11 @@ elif st.session_state.page == "OPD Creator":
 			   worksheet3: 'Nyes Road', 
 			   worksheet4: 'Complex Care', 
 			   worksheet5: 'WARD A', 
-			   worksheet6: 'WARD C', 
-			   worksheet7: 'WARD P', 
-			   worksheet8: 'PICU', 
-			   worksheet9: 'PSHCH NURSERY', 
-			   worksheet10: 'HAMPDEN NURSERY',
-			   worksheet11: 'SJR HOSPITALIST', 
-			   worksheet12: 'AAC', 
-			   worksheet13: 'ER CONSULTS', 
-			   worksheet14: 'NIGHT FLOAT', 
-			   worksheet15: 'ADOLMED', worksheet16: 'RESIDENT'}
+			   worksheet6: 'PSHCH NURSERY', 
+			   worksheet7: 'HAMPDEN NURSERY',
+			   worksheet8: 'SJR HOSPITALIST', 
+			   worksheet9: 'AAC', 
+			   worksheet10: 'ADOLMED'}
 	
 	# Write "Site:" and corresponding site names in each worksheet
 	for ws, site in worksheet_sites.items():
@@ -455,7 +443,7 @@ elif st.session_state.page == "OPD Creator":
 	        worksheet.write(f'I{start_row + i}', label, formate)
 	
 	# Simplify common formatting and label assignment for worksheets 2, 3, 4, 5
-	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10, worksheet11, worksheet12, worksheet13, worksheet14, worksheet15,worksheet16]
+	worksheets = [worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8, worksheet9, worksheet10]
 	
 	ranges_format1 = ['A6:H15', 'A30:H39', 'A54:H63', 'A78:H87']
 	ranges_format5a = ['A16:H25', 'A40:H49', 'A64:H73', 'A88:H97']
@@ -752,240 +740,17 @@ elif st.session_state.page == "OPD Creator":
 	        "Hope Drive Weekend Acute 1": "AM - ACUTES",
 	        "Hope Drive Weekend Acute 2": "AM - ACUTES"
 	    },
-	    "PICU.xlsx": {"2nd PICU Attending 7:45a-4p": "AM - Continuity", "1st PICU Attending 7:30a-5p": "AM - Continuity"},
 	    "ETOWN.xlsx": {"Etown AM Continuity": "AM - Continuity", "Etown PM Continuity": "PM - Continuity"},
 	    "NYES.xlsx": {"Nyes Rd AM Continuity": "AM - Continuity", "Nyes Rd PM Continuity": "PM - Continuity"},
 	    "COMPLEX.xlsx": {"Hope Drive Clinic AM": "AM - Continuity", "Hope Drive Clinic PM": "PM - Continuity"},
 	    "WARD_A.xlsx": {"Rounder 1 7a-7p": "AM - Continuity", "Rounder 2 7a-7p": "AM - Continuity", "Rounder 3 7a-7p": "AM - Continuity", "Night Call 9p-7a": "night_float", "AM Pager 7a-12p": "consultsa", "PM Pager 12p-4p":"consultsp", "Evening Pager 4p-9p":"consultsp", "Overnight Pager 9p-7a":"consultsp", "APP-3rd team":"team3pa"}, #Assume Day Admitting is Consults
-	    "WARD_P.xlsx": {"On-Call 8a-8a": "AM - Continuity", "On-Call": "AM - Continuity"},
 	    "PSHCH_NURSERY.xlsx": {"Nursery Weekday 8a-6p": "AM - Continuity", "Nursery Weekend": "AM - Continuity"},
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
 	    "SJR_HOSP.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
 	    "AAC.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
-	    "WARD_CARDIOLOGY.xlsx": {"Wards 8a-5p": "AM - Continuity", "Wards 8a-8a": "AM - Continuity"},  
-	    "WARD_GI.xlsx": {"GI Daytime Service 7:30a-5p": "AM - Continuity", "GI Daytime Service 7:30a-3p": "AM - Continuity", "GI Weekend Call 7:30a-7:30a": "AM - Continuity"},  
-	    "WARD_NEPHRO.xlsx": {"Neph On Call 8a-8a": "AM - Continuity"},  
 	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
 	    "Book4.xlsx": {"": "", "": ""},  
 	}	
-
-	import pandas as pd
-	
-	df = pd.read_excel(uploaded_files["RESIDENT.xlsx"], dtype=str)
-	
-	# Save to CSV
-	df.to_csv("test.csv", index=False)
-	
-	# Reload the CSV to ensure clean reading
-	df = pd.read_csv("test.csv", dtype=str)
-	
-	# Fix encoding issues and remove non-breaking spaces
-	#df["Rotation"] = df["Rotation"].str.encode('latin1').str.decode('utf-8').str.replace('\xa0', ' ', regex=True)
-	df["Rotation"] = df["Rotation"].str.replace('\xa0', ' ', regex=False).str.strip()
-
-	df.to_csv('test.csv', index=False)
-	
-	df = pd.read_csv('test.csv')
-	
-	# Fill down the 'Rotation' column to propagate values forward
-	df["Rotation"] = df["Rotation"].fillna(method="ffill")
-	
-	# Define the list of rotations to keep
-	new_list = [
-	    'Acutes Intern', 'Acute Sr', 'ED Consults', 'NBN Intern', 'NBN Sr', 
-	    'PICU', 'Ward A Intern', 'Ward A Sr', 
-	    'Ward C Intern', 'Ward C Sr', 'Ward P Intern', 'Ward P Sr'
-	]
-	
-	#Ensure clean text formatting for filtering
-	df["Rotation"] = df["Rotation"].astype(str).str.strip()
-	
-	#Filter dataset based on the Rotation column
-	filtered_df = df[df["Rotation"].isin(new_list)]
-	
-	# Drop fully empty rows
-	filtered_df = filtered_df.dropna(how="all")
-	
-	filtered_df.to_csv('test.csv',index=False)
-	
-	df = pd.read_csv('test.csv')
-
-	# Define block columns (columns that contain the block names)
-	block_columns = [
-	    "Block 1 (07/01/2025- 07/27/2025)", "Block 2 (07/28/2025- 08/24/2025)",
-	    "Block 3 (08/25/2025- 09/21/2025)", "Block 4 (09/22/2025- 10/19/2025)",
-	    "Block 5 (10/20/2025- 11/16/2025)", "Block 6 (11/17/2025- 12/14/2025)",
-	    "Block 7 (12/15/2025- 01/11/2026)", "Block 8 (01/12/2026- 02/08/2026)",
-	    "Block 9 (02/09/2026- 03/08/2026)", "Block 10 (03/09/2026- 04/05/2026)",
-	    "Block 11 (04/06/2026- 05/03/2026)", "Block 12 (05/04/2026- 05/31/2026)",
-	    "Block 13 (06/01/2026- 06/30/2026)"
-	]
-	
-		
-	# Remove any values that are "R1", "R2", "R3", or "R4" in the block columns
-	df[block_columns] = df[block_columns].applymap(lambda x: "" if x in ["R1", "R2", "R3", "R4"] else x)
-	
-	# Save and display the cleaned dataset
-	df.to_csv("test.csv", index=False)
-	
-	df = pd.read_csv('test.csv')
-	
-	# Trim and strip all white spaces from all columns
-	df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-	
-	# Save the cleaned dataset
-	df.to_csv("trimmed_test.csv", index=False, encoding="utf-8")
-	
-	import pandas as pd
-	import re
-	from datetime import datetime, timedelta
-	
-	# Load dataset
-	df = pd.read_csv("trimmed_test.csv", dtype=str)  # Replace with actual filename
-	
-	# Identify block columns
-	block_columns = [col for col in df.columns if "Block" in col]
-	
-	# List to store expanded rows
-	expanded_rows = []
-
-	#######################WATCH HOW COLUMNS ARE NAMED IN THE RESIDENT.XLSX FILE########################################################OTHERWISE IT WON'T MATCH
-	# Function to extract dates from block names
-	def extract_dates(block_name):
-	    match = re.search(r"\((\d{2}/\d{2}/\d{4})- (\d{2}/\d{2}/\d{4})\)", block_name)
-	    if match:
-	        return datetime.strptime(match.group(1), "%m/%d/%Y"), datetime.strptime(match.group(2), "%m/%d/%Y")
-	    return None, None
-	
-	# Loop through each row in the dataset
-	for _, row in df.iterrows():
-	    rotation = row["Rotation"]  # Keep track of rotation type
-	
-	    for block in block_columns:
-	        block_start, block_end = extract_dates(block)  # Extract block start/end dates
-	        
-	        if not block_start or not block_end:  # Skip if block dates not found
-	            continue
-	
-	        if pd.notna(row[block]):  # If there is an assigned person
-	            names = [row[block].strip()]  # Keep the full name string as one item in a list
-	
-	
-	            for name in names:
-	                # Generate rows for each day within the assigned range
-	                current_date = block_start
-	                while current_date <= block_end:
-	                    expanded_rows.append([rotation, current_date.strftime("%m/%d/%Y"), name])
-	                    current_date += timedelta(days=1)
-	
-	# Create final expanded DataFrame
-	expanded_df = pd.DataFrame(expanded_rows, columns=["Rotation", "Date", "Name"])
-	
-	# Save and display the final expanded dataset
-	expanded_df.to_csv("expanded_schedule.csv", index=False)
-
-	import pandas as pd
-	import re
-	from datetime import datetime
-	
-	# Load dataset (replace with actual filename)
-	df = pd.read_csv("expanded_schedule.csv", dtype=str)
-	
-	# Convert Date column to datetime
-	df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y")
-	
-	# Function to extract valid date range from name
-	def extract_valid_dates(name, reference_year):
-	    match = re.search(r"\((\d{1,2}/\d{1,2}) - (\d{1,2}/\d{1,2})\)", name)
-	    if match:
-	        start_month, start_day = map(int, match.group(1).split("/"))
-	        end_month, end_day = map(int, match.group(2).split("/"))
-	        
-	        # Use the year from the dataset (assumes all dates in the same year)
-	        start_date = datetime(reference_year, start_month, start_day)
-	        end_date = datetime(reference_year, end_month, end_day)
-	        
-	        return start_date, end_date
-	    return None, None
-	
-	
-	# Filter rows based on extracted date ranges
-	filtered_rows = []
-	for _, row in df.iterrows():
-	    name = row["Name"]
-	    date = row["Date"]
-	    
-	    # Extract the reference year directly from the Date column
-	    reference_year = date.year
-	
-	    start_date, end_date = extract_valid_dates(name, reference_year)
-	
-	    if start_date and end_date:
-	        if start_date <= date <= end_date:
-	            filtered_rows.append(row)  # Keep only rows within the valid range
-	    else:
-	        filtered_rows.append(row)  # If no date range in name, keep as is
-	
-	# Convert filtered rows back into a DataFrame
-	filtered_df = pd.DataFrame(filtered_rows)
-	
-	# Save and display the updated dataset
-	filtered_df.to_csv("filtered_schedule.csv", index=False)
-	
-	import pandas as pd
-	import re
-	
-	# Load dataset
-	df = pd.read_csv("filtered_schedule.csv", dtype=str)  # Replace with actual filename
-	
-	# Function to remove parentheses and their contents
-	def clean_name(name):
-	    return re.sub(r"\s*\(.*?\)", "", name).strip()  # Removes anything inside parentheses
-	
-	# Apply the function to the "Name" column
-	df["Name"] = df["Name"].apply(lambda x: clean_name(x) if pd.notna(x) else x)
-	
-	# Save the cleaned dataset
-	df.to_csv("cleaned_names.csv", index=False)
-	
-	import pandas as pd
-	
-	# Load data
-	df = pd.read_csv("cleaned_names.csv")
-	
-	# Mapping dictionary
-	mapping = {
-	    'Acutes Intern': 'HOPE_DRIVE',
-	    'Acute Sr': 'HOPE_DRIVE',
-	    'ED Consults': 'ED_CONSULTS',
-	    'NBN Intern': 'PSHCH_NURSERY',
-	    'NBN Sr': 'PSHCH_NURSERY',
-	    'PICU': 'PICU',
-	    'Ward A Intern': 'WARD_A',
-	    'Ward A Sr': 'WARD_A',
-	    'Ward C Intern': 'WARD_C',
-	    'Ward C Sr': 'WARD_C',
-	    'Ward P Intern': 'WARD_P',
-	    'Ward P Sr': 'WARD_P'
-	}
-	
-	# Apply mapping
-	df['Rotation'] = df['Rotation'].map(mapping)
-	
-	# List of rotations to remove
-	remove_list = [
-	    'Anesthesia', 
-	    'Family & Community Medicine @ State College', 
-	    'Family & Community Medicine'
-	]
-	
-	# Remove unwanted rows
-	df = df[~df['Name'].isin(remove_list)]
-	
-	# Save to CSV
-	df.to_csv('resident_schedule.csv', index=False)
-
-	df = pd.read_csv('resident_schedule.csv', dtype=str)
 
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	
@@ -1003,8 +768,6 @@ elif st.session_state.page == "OPD Creator":
 	
 	df = pd.concat([df,wardapa_df])
 	
-	
-	
 	df["type"] = "AM - Continuity"
 	df["student"] = ""
 	df["text"] = ""
@@ -1018,13 +781,8 @@ elif st.session_state.page == "OPD Creator":
 	df = df[new_column_order]
 	
 	# Rename columns
-	df = df.rename(columns={
-	    "Date": "date",
-	    "Name": "provider",
-	    "Rotation": "clinic"
-	})
+	df = df.rename(columns={"Date": "date","Name": "provider","Rotation": "clinic"})
 	          
-	
 	df_copy = df.copy()
 	
 	# Change the 'Type' column to 'PM - Continuity' in the copied DataFrame
@@ -1051,19 +809,11 @@ elif st.session_state.page == "OPD Creator":
 	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "AM - ACUTES"), "class"] = "H0"
 	df.loc[(df["clinic"] == "WARD_A") & (df["type"] == "AM - Continuity"), "class"] = "H1"
 	df.loc[(df["clinic"] == "PSHCH_NURSERY") & (df["type"] == "AM - Continuity"), "class"] = "H2"
-	df.loc[(df["clinic"] == "WARD_P") & (df["type"] == "AM - Continuity"), "class"] = "H3"
-	df.loc[(df["clinic"] == "WARD_C") & (df["type"] == "AM - Continuity"), "class"] = "H4"
-	df.loc[(df["clinic"] == "ED_CONSULTS") & (df["type"] == "AM - Continuity"), "class"] = "H5"
-	df.loc[(df["clinic"] == "PICU") & (df["type"] == "AM - Continuity"), "class"] = "H6"
 	
 	# Define conditions for PM types (incrementing H numbers)
 	df.loc[(df["clinic"] == "HOPE_DRIVE") & (df["type"] == "PM - ACUTES"), "class"] = "H10"
 	df.loc[(df["clinic"] == "WARD_A") & (df["type"] == "PM - Continuity"), "class"] = "H11"
 	df.loc[(df["clinic"] == "PSHCH_NURSERY") & (df["type"] == "PM - Continuity"), "class"] = "H12"
-	df.loc[(df["clinic"] == "WARD_P") & (df["type"] == "PM - Continuity"), "class"] = "H13"
-	df.loc[(df["clinic"] == "WARD_C") & (df["type"] == "PM - Continuity"), "class"] = "H14"
-	df.loc[(df["clinic"] == "ED_CONSULTS") & (df["type"] == "PM - Continuity"), "class"] = "H15"
-	df.loc[(df["clinic"] == "PICU") & (df["type"] == "PM - Continuity"), "class"] = "H16"
 	
 	# Save and display the updated DataFrame
 	
@@ -1085,23 +835,8 @@ elif st.session_state.page == "OPD Creator":
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
 	
-	nf_df = warda_df[warda_df["type"] == "night_float "].assign(type="PM - Continuity ", clinic="NF")
-	
-	consults_df = warda_df[warda_df["type"].isin(["consultsp ", "consultsa "])].assign(type=lambda df: df["type"].map({"consultsp ": "PM - Continuity ", "consultsa ": "AM - Continuity "}), clinic="ER_CONS")
-	consults_df = consults_df.groupby(["date", "type"], as_index=False).agg({"provider": lambda x: "/".join(x) + " ~" if "PM - Continuity " in x.name else "/".join(x)})
-	consults_df["clinic"] = "ER_CONS"
-	
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"] #Only Extract Jennifer Shook
-
-	#Combine Ward C Together
-	wcard_df = process_file("WARD_CARDIOLOGY.xlsx", "WARD_CARDIOLOGY", replacement_rules.get("WARD_CARDIOLOGY.xlsx"))
-	wgi_df = process_file("WARD_GI.xlsx", "WARD_GI", replacement_rules.get("WARD_GI.xlsx"))
-	wnephro_df = process_file("WARD_NEPHRO.xlsx", "WARD_NEPHRO", replacement_rules.get("WARD_NEPHRO.xlsx"))
-	
-	wardc_df = (pd.concat([wcard_df, wgi_df, wnephro_df], ignore_index=True).query("type == 'AM - Continuity '").assign(clinic="WARD_C").groupby(["date", "clinic"], as_index=False).agg({"type": "first", "provider": lambda x: "/".join(x)}))
-
-	picu_df = process_file("PICU.xlsx", "PICU", replacement_rules.get("PICU.xlsx"))
 	
 	special_clinics = {"AAC","HAMPDEN_NURSERY","SJR_HOSP"}
 	
@@ -1109,31 +844,21 @@ elif st.session_state.page == "OPD Creator":
 	
 	# Apply AM → PM Continuity Transformation... df and the name
 	warda_df = duplicate_am_continuity(warda_df, "WARD_A")
-	wardp_df = duplicate_am_continuity(wardp_df, "WARD_P")
-	picu_df = duplicate_am_continuity(picu_df, "PICU")
 	pshchnursery_df = duplicate_am_continuity(pshchnursery_df, "PSHCH_NURSERY")
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
-	nf_df = duplicate_am_continuity(nf_df, "NF")
-	
-	wardc_df = duplicate_am_continuity(wardc_df, "WARD_C") 
 
 	process_continuity_classes(etown_df, "ETOWN", "1.csv", "2.csv")
 	process_continuity_classes(nyes_df, "NYES", "3.csv", "4.csv")
 	process_continuity_classes(complex_df, "COMPLEX", "10.csv", "11.csv")
 	
 	process_continuity_classes(warda_df, "WARD_A", "12.csv", "13.csv")
-	process_continuity_classes(wardp_df, "WARD_P", "14.csv", "15.csv")
-	process_continuity_classes(picu_df, "PICU", "16.csv", "17.csv")
 	process_continuity_classes(pshchnursery_df, "PSHCH_NURSERY", "18.csv", "19.csv")
 	process_continuity_classes(hampdennursery_df, "HAMPDEN_NURSERY", "20.csv", "21.csv")
 	process_continuity_classes(sjrhosp_df, "SJR_HOSP", "22.csv", "23.csv")
 	process_continuity_classes(aac_df, "AAC", "24.csv", "25.csv")
-	process_continuity_classes(nf_df, "NF", "26.csv", "27.csv")
-	process_continuity_classes(consults_df, "ER_CONS", "28.csv", "29.csv")
 	process_continuity_classes(adolmed_df, "ADOLMED", "30.csv", "31.csv")
-	process_continuity_classes(wardc_df, "WARD_C", "32.csv", "33.csv")
 	############################################################################################################################
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 34)}
 	t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31, t32, t33 = tables.values()
@@ -1679,37 +1404,12 @@ elif st.session_state.page == "Student Assignments":
     process_excel_mapping("NYES", "NYES")
     process_excel_mapping("COMPLEX", "COMPLEX")
     process_excel_mapping("WARD_A", "W_A")
-    process_excel_mapping("WARD_P", "W_P")
-    process_excel_mapping("PICU", "PICU")
     process_excel_mapping("PSHCH_NURSERY", "PSHCH_NURSERY")
     process_excel_mapping("HAMPDEN_NURSERY", "HAMPDEN_NURSERY")
     process_excel_mapping("SJR_HOSP", "SJR_HOSP")
     process_excel_mapping("AAC", "AAC")
-    process_excel_mapping("NF", "NF")
-    process_excel_mapping("ER_CONS", "ER_CONS")
-    process_excel_mapping("ADOLMED", "ADOLMED")
-    process_excel_mapping("WARD_C", "W_C")
-    process_excel_mapping("RESIDENT", "RESIDENT")
+    process_excel_mapping("ADOLMED", "ADOLMED"); process_excel_mapping("AHOLOUKPE", "AHOLOUKPE")
     
-    ###############################################################################################
-    
-    # Button to trigger the download
-    #if st.button('Create OPD'):
-    #    # Path to the existing 'OPD.xlsx' workbook
-    #    file_path = 'OPD.xlsx'  # Replace with your file path if it's stored somewhere else
-    
-        # Read the workbook into memory
-    #    with open(file_path, 'rb') as file:
-    #        file_data = file.read()
-    
-        # Provide a download button for the existing OPD.xlsx file
-    #    st.download_button(
-    #        label="Download OPD.xlsx",
-    #        data=file_data,
-    #        file_name="OPD.xlsx",
-    #        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    #    )
-
     import openpyxl
     from io import BytesIO
     import streamlit as st
@@ -1735,12 +1435,7 @@ elif st.session_state.page == "Student Assignments":
         file_data = buffer.read()
 
         # Provide a download button for the modified OPD.xlsx file
-        st.download_button(
-            label="Download OPD.xlsx",
-            data=file_data,
-            file_name="OPD.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        st.download_button(label="Download OPD.xlsx",data=file_data,file_name="OPD.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 elif st.session_state.page == "Create Student Schedule":
     st.title("Create Student Schedule")
