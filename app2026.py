@@ -831,14 +831,16 @@ elif st.session_state.page == "OPD Creator":
 	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
+	
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
+	ahouloukpe_df = process_file("AHOULOUKPE.xlsx", "AHOULOUKPE", replacement_rules.get("AHOULOUKPE.xlsx"))
 	
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"] #Only Extract Jennifer Shook
 	
-	special_clinics = {"AAC","HAMPDEN_NURSERY","SJR_HOSP"}
+	special_clinics = {"AAC","HAMPDEN_NURSERY","SJR_HOSP","AHOULOUKPE"}
 	
 	process_hope_classes(hope_drive_df, "HOPE_DRIVE")
 	
@@ -862,14 +864,12 @@ elif st.session_state.page == "OPD Creator":
 	    counter += 2
 
 	############################################################################################################################
-	#tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, 34)}
-	#t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31, t32, t33 = tables.values()
-
 	# Dynamically calculate number of CSVs
 	num_csvs = len(dfs_and_labels) * 2
 	
 	# Read into dictionary
 	tables = {f"t{i}": pd.read_csv(f"{i}.csv") for i in range(1, num_csvs + 1)}
+	st.dataframe(tables) 
 	
 	# Unpack tables.values() into dynamic variables t1, t2, ...
 	for i, df in enumerate(tables.values(), start=1):
