@@ -851,7 +851,7 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
-	ahouloukpe_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
+	ahouloukpe_df = duplicate_am_continuity(ahouloukpe_df, "AHOULOUKPE", special_clinics)
 
 	dfs_and_labels = [(hope_drive_df, "HOPE_DRIVE"),(etown_df, "ETOWN"),(nyes_df, "NYES"),(complex_df, "COMPLEX"),(warda_df, "WARD_A"),(pshchnursery_df, "PSHCH_NURSERY"),(hampdennursery_df, "HAMPDEN_NURSERY"),
 			  (sjrhosp_df, "SJR_HOSP"),(aac_df, "AAC"),(ahouloukpe_df, "AHOULOUKPE"),(adolmed_df, "ADOLMED")]
