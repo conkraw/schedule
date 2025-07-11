@@ -856,9 +856,9 @@ elif st.session_state.page == "OPD Creator":
 	st.dataframe(al_df)
 
 	dfs_and_labels = [(hope_drive_df, "HOPE_DRIVE"),(etown_df, "ETOWN"),(nyes_df, "NYES"),(complex_df, "COMPLEX"),(warda_df, "WARD_A"),(pshchnursery_df, "PSHCH_NURSERY"),(hampdennursery_df, "HAMPDEN_NURSERY"),
-			  (sjrhosp_df, "SJR_HOSP"),(aac_df, "AAC"),(adolmed_df, "ADOLMED")]
+			  (sjrhosp_df, "SJR_HOSP"),(aac_df, "AAC"),(al_df, "AL"), (adolmed_df, "ADOLMED")]
 
-	#(al_df, "AL")
+
 	
 	counter = 1
 	for df, label in dfs_and_labels:
