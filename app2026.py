@@ -851,7 +851,7 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
-	al_df = duplicate_am_continuity(ahouloukpe_df, "AL", special_clinics)
+	al_df = duplicate_am_continuity(al_df, "AL", special_clinics)
 
 	st.dataframe(al_df)
 
