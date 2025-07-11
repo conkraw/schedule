@@ -1391,7 +1391,7 @@ elif st.session_state.page == "Student Assignments":
     process_excel_mapping("HAMPDEN_NURSERY", "HAMPDEN_NURSERY")
     process_excel_mapping("SJR_HOSP", "SJR_HOSP")
     process_excel_mapping("AAC", "AAC")
-    process_excel_mapping("ADOLMED", "ADOLMED"); process_excel_mapping("AHOLOUKPE", "AHOLOUKPE")
+    process_excel_mapping("ADOLMED", "ADOLMED"); process_excel_mapping("AL", "AL")
     
     import openpyxl
     from io import BytesIO
