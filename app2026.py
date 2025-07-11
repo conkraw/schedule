@@ -28,7 +28,7 @@ file_configs = {
     "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
     "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_1", "SJR_2"]}, 
     "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]}, #LIST ALL NAMES
-	"AHOLOUKPE.xlsx": {"title": "AHOLOUKPE","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}, 
+	"AL.xlsx": {"title": "AL","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}, 
 }
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
@@ -348,7 +348,7 @@ elif st.session_state.page == "OPD Creator":
 	workbook = xlsxwriter.Workbook('OPD.xlsx')
 	
 	# Define worksheet names
-	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'AHOLOUKPE', 'ADOLMED']
+	worksheet_names = ['HOPE_DRIVE', 'ETOWN', 'NYES', 'COMPLEX', 'W_A', 'PSHCH_NURSERY', 'HAMPDEN_NURSERY','SJR_HOSP', 'AAC', 'AL', 'ADOLMED']
 	
 	# Create worksheets and store them in a dictionary
 	worksheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
@@ -367,7 +367,7 @@ elif st.session_state.page == "OPD Creator":
 			   worksheet7: 'HAMPDEN NURSERY',
 			   worksheet8: 'SJR HOSPITALIST', 
 			   worksheet9: 'AAC', 
-			   worksheet10: 'AHOLOUKPE', worksheet11: 'ADOLMED'}
+			   worksheet10: 'AL', worksheet11: 'ADOLMED'}
 	
 	# Write "Site:" and corresponding site names in each worksheet
 	for ws, site in worksheet_sites.items():
@@ -748,7 +748,7 @@ elif st.session_state.page == "OPD Creator":
 	    "HAMPDEN_NURSERY.xlsx": {"custom_value": "AM - Continuity "},  # Replace "custom_value" with "AM - Continuity" (must add space!)
 	    "SJR_HOSP.xlsx": {"custom_value": "AM - Continuity "},  # Same format as HAMPDEN_NURSERY.xlsx
 	    "AAC.xlsx": {"custom_value": "AM - Continuity "},
-		"AHOULOUKPE.xlsx": {"custom_value": "AM - Continuity "},  
+		"AL.xlsx": {"custom_value": "AM - Continuity "},  
 	    "ADOLMED.xlsx": {"Briarcrest Clinic AM": "AM - Continuity", "Briarcrest Clinic PM": "PM - Continuity"},  
 	    "Book4.xlsx": {"": "", "": ""},  
 	}	
@@ -836,7 +836,7 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = process_file("HAMPDEN_NURSERY.xlsx", "HAMPDEN_NURSERY", replacement_rules.get("HAMPDEN_NURSERY.xlsx"))
 	sjrhosp_df = process_file("SJR_HOSP.xlsx", "SJR_HOSP", replacement_rules.get("SJR_HOSP.xlsx"))
 	aac_df = process_file("AAC.xlsx", "AAC", replacement_rules.get("AAC.xlsx"))
-	ahouloukpe_df = process_file("AHOULOUKPE.xlsx", "AHOULOUKPE", replacement_rules.get("AHOULOUKPE.xlsx"))
+	ahouloukpe_df = process_file("AL.xlsx", "AL", replacement_rules.get("AL.xlsx"))
 	
 	adolmed_df = process_file("ADOLMED.xlsx", "ADOLMED", replacement_rules.get("ADOLMED.xlsx"))
 	adolmed_df = adolmed_df[adolmed_df["provider"] == "Shook, Jennifer"] #Only Extract Jennifer Shook
@@ -851,14 +851,14 @@ elif st.session_state.page == "OPD Creator":
 	hampdennursery_df = duplicate_am_continuity(hampdennursery_df, "HAMPDEN_NURSERY", special_clinics)
 	sjrhosp_df = duplicate_am_continuity(sjrhosp_df, "SJR_HOSP")
 	aac_df = duplicate_am_continuity(aac_df, "AAC", special_clinics)
-	ahouloukpe_df = duplicate_am_continuity(ahouloukpe_df, "AHOULOUKPE", special_clinics)
+	al_df = duplicate_am_continuity(ahouloukpe_df, "AL", special_clinics)
 
-	st.dataframe(ahouloukpe_df)
+	st.dataframe(al_df)
 
 	dfs_and_labels = [(hope_drive_df, "HOPE_DRIVE"),(etown_df, "ETOWN"),(nyes_df, "NYES"),(complex_df, "COMPLEX"),(warda_df, "WARD_A"),(pshchnursery_df, "PSHCH_NURSERY"),(hampdennursery_df, "HAMPDEN_NURSERY"),
 			  (sjrhosp_df, "SJR_HOSP"),(aac_df, "AAC"),(adolmed_df, "ADOLMED")]
 
-	#(ahouloukpe_df, "AHOULOUKPE")
+	#(al_df, "AL")
 	
 	counter = 1
 	for df, label in dfs_and_labels:
