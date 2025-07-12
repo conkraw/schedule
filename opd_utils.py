@@ -88,3 +88,12 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Save the Excel file
     file_path = f"{file_name}"
     wb.save(file_path)
+
+
+# Function to change page and trigger rerun
+def navigate_to(page):
+    st.session_state.page = page
+    st.rerun()
+
+
+
