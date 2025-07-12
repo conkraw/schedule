@@ -21,8 +21,8 @@ st.set_page_config(layout="wide")
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
     "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_1", "SJR_2"]}, 
-    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]}, #LIST ALL NAMES
-	"AL.xlsx": {"title": "AL","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}, 
+    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]},
+    "AL.xlsx": {"title": "AL","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}, 
 }
 
 def generate_excel_file(start_date, title, custom_text, file_name, names):
@@ -97,23 +97,10 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
     # Save the Excel file
     file_path = f"{file_name}"
     wb.save(file_path)
-
-    # ✅ **Display & Download Immediately**
-    st.success(f"✅ File '{file_name}' has been successfully created!")
-
-    #df_display = pd.read_excel(file_path, dtype=str)
-    #st.dataframe(df_display); #time.sleep(30); # Display file in Streamlit
-
-    with open(file_path, "rb") as f:
-        st.download_button("Download Generated Excel File", f, file_name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); return file_path  # Return file path for later use
 	
 # Initialize session state variables efficiently
-session_defaults = {
-    "page": "Home",
-    "start_date": None,
-    "uploaded_files": {},
-    "uploaded_book4_file": {},
-}
+session_defaults = {"page": "Home","start_date": None,"uploaded_files": {},"uploaded_book4_file": {},}
+
 for key, value in session_defaults.items():
     st.session_state.setdefault(key, value)
 
