@@ -119,6 +119,25 @@ if page == "Home":
     st.write("👋 Welcome! Use the sidebar to navigate through the app.")
 # … after your sidebar radio and imports …
 
+import streamlit as st
+import datetime
+# … your other imports …
+
+st.set_page_config(page_title="OPD Creator", layout="wide")
+
+# 1️⃣ Ensure a default page in session_state
+if "page" not in st.session_state:
+    st.session_state.page = "Home"
+
+# 2️⃣ Bind the sidebar radio to that same session_state key
+page = st.sidebar.radio(
+    "Go to:",
+    ["Home", "Create OPD", "Upload Files", "Generate Schedule", "Download OPD"],
+    key="page"
+)
+
+# … handle other pages …
+
 elif page == "Create OPD":
     st.header("Date Input for OPD")
     st.write("Enter start date in **m/d/yyyy** (no leading zeros, e.g. 7/6/2021):")
@@ -127,7 +146,6 @@ elif page == "Create OPD":
 
     if st.button("Submit Date") and date_input:
         try:
-            # parse and store in session
             start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
             end_date   = start_date + datetime.timedelta(days=34)
             st.session_state.start_date = start_date
@@ -149,15 +167,15 @@ elif page == "Create OPD":
                     cfg["names"]
                 )
                 generated[fname] = path
-
             st.session_state.generated_files = generated
 
-            # move on
-            st.query_params(page="Upload Files")
+            # ➡️ Navigate to the next page
+            st.session_state.page = "Upload Files"
             st.rerun()
 
         except ValueError:
             st.error("❌ Invalid format. Please use m/d/yyyy.")
+
 
 elif page == "Upload Files":
     st.write("⬆️ Upload your Excel/CSV files to be processed.")
