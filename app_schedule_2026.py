@@ -129,7 +129,7 @@ elif page == "Create OPD":
 
             # move to next step
             st.session_state.page = "Upload Files"
-            st.experimental_rerun()
+            st.rerun()
 
         except ValueError:
             st.error("❌ Invalid format. Please use m/d/yyyy.")
