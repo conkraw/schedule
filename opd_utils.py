@@ -97,3 +97,167 @@ def navigate_to(page):
 
 
 
+def process_file(file_key, clinic_name, replacements=None, df=None):
+    """Process a file (either uploaded or generated) and return a cleaned DataFrame."""
+    
+    # 1️⃣ **Use the provided DataFrame if already passed**
+    if df is not None:
+        print(f"Processing provided DataFrame for {clinic_name}...")
+    
+    else:
+        # 2️⃣ **Check if the locally generated file exists**
+        local_file_path = f"{file_key}"
+        if os.path.exists(local_file_path):
+            print(f"Found locally generated file: {local_file_path}. Using it for {clinic_name}...")
+            df = pd.read_excel(local_file_path, dtype=str)
+        
+        # 3️⃣ **Otherwise, fall back to uploaded file**
+        elif file_key in uploaded_files:
+            print(f"Using uploaded file for {clinic_name}...")
+            df = pd.read_excel(uploaded_files[file_key], dtype=str)
+        
+        else:
+            print(f"❌ ERROR: No file found for {clinic_name} ({file_key}). Skipping...")
+            return None  # Handle missing file case
+    
+    # ✅ **Continue normal processing**
+    df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
+
+    D_dict = {}
+    for i in range(28):
+        col_idx = column_pairs[i % len(column_pairs)]
+        start_day = days[i]
+        end_day = days[i + 7]
+
+        start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
+        end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
+
+        extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
+        extracted_data.columns = ['type', 'provider']
+        extracted_data.insert(0, 'date', start_day)
+        extracted_data = extracted_data[:-1]
+
+        D_dict[f"D{i}"] = extracted_data
+
+    dfx = pd.concat(D_dict.values(), ignore_index=True)
+    dfx['clinic'] = clinic_name
+
+    # ✅ **Apply replacements if provided**
+    if replacements:
+        dfx = dfx.replace(replacements, regex=True)
+
+    # ✅ **Save the cleaned file**
+    filename = f"{clinic_name.lower()}.csv"
+    dfx.to_csv(filename, index=False)
+
+    print(f"✅ Processed {clinic_name} and saved to {filename}")
+    return dfx  # Return DataFrame for further processing
+
+def duplicate_am_continuity(df, clinic_name, special_cases=None):
+    """
+    Duplicates "AM - Continuity" rows as "PM - Continuity" for normal cases.
+    If the clinic is in `special_cases`, only duplicates AM - Continuity and renames it to PM - Continuity.
+    """
+    if df is not None and not df.empty:
+        # Ensure special_cases is a set for fast lookup
+        special_cases = special_cases or set()
+
+        if clinic_name in special_cases:
+            # Special handling: Only copy AM - Continuity and rename it
+            am_continuity_rows = df[df.eq("AM - Continuity ").any(axis=1)].copy()
+
+            if am_continuity_rows.empty:
+                print(f"⚠️ No AM - Continuity rows found in {clinic_name}. Skipping special processing.")
+                return df  # No modifications needed
+            
+            # Replace AM -> PM
+            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
+
+            # Only append the PM version, no double duplication
+            df = pd.concat([df, pm_continuity_rows], ignore_index=True).reset_index(drop=True); #df = pd.concat([df, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
+
+            print(f"✅ Special processing for {clinic_name}: Only duplicated AM - Continuity as PM - Continuity.")
+
+        else:
+            # Default behavior (original functionality)
+            am_continuity_rows = df[df.eq("AM - Continuity ").any(axis=1)].copy()
+            pm_continuity_rows = am_continuity_rows.replace("AM - Continuity ", "PM - Continuity ")
+
+            df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).reset_index(drop=True); #df = pd.concat([df, df, pm_continuity_rows, pm_continuity_rows], ignore_index=True).sort_values(by=["date", "provider"]).reset_index(drop=True)
+
+            print(f"✅ Standard processing for {clinic_name}: Fully duplicated AM - Continuity.")
+
+        # Save the updated data
+        filename = f"{clinic_name.lower()}.csv"
+        df.to_csv(filename, index=False)
+
+    return df  # Return modified DataFrame
+
+def process_continuity_classes(df, clinic_name, am_csv, pm_csv):
+    if df is not None:
+        # Process AM - Continuity
+        am_df = df[df['type'] == 'AM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount()).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']]
+        
+        # Process PM - Continuity
+        pm_df = df[df['type'] == 'PM - Continuity '].assign(count=lambda x: x.groupby(['date'])['provider'].cumcount()+10).assign(**{"class": lambda x: "H" + x['count'].astype(str)})[['date', 'type', 'provider', 'clinic', 'class']]
+        
+        # Save to CSV
+        am_df.to_csv(am_csv, index=False)
+        pm_df.to_csv(pm_csv, index=False)
+
+        # Display in Streamlit
+        #st.write(f"### {clinic_name} - AM Continuity Assignments")
+        #st.dataframe(am_df)  # Display AM - Continuity table
+
+        #st.write(f"### {clinic_name} - PM Continuity Assignments")
+        #st.dataframe(pm_df)  # Display PM - Continuity table
+
+        return am_df, pm_df  # Return processed DataFrames for further use if needed
+        
+def process_hope_classes(df, clinic_name):
+    """
+    Processes Hope Drive's different continuity and acute types by assigning a count and class.
+    Saves the resulting DataFrame to separate CSV files based on type.
+    """
+    if df is not None:
+        hope_files = {
+            "AM - ACUTES": "5.csv",
+            "AM - ACUTES ": "6.csv",  # Handles potential trailing space issue
+            "PM - ACUTES ": "7.csv",
+            "AM - Continuity ": "8.csv",
+            "PM - Continuity ": "9.csv"
+        }
+
+        for type_key, filename in hope_files.items():
+            if type_key in df['type'].values:
+                subset_df = df[df['type'] == type_key].copy()
+
+                # Assign custom count logic based on type
+                if "AM - ACUTES" in type_key:
+                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
+                    subset_df['class'] = subset_df['count'].apply(
+                        lambda count: "H0" if count == 0 else ("H1" if count == 1 else "H" + str(count + 2))
+                    )
+                
+                elif "PM - ACUTES" in type_key:
+                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount()
+                    subset_df['class'] = subset_df['count'].apply(
+                        lambda count: "H10" if count == 0 else ("H11" if count == 1 else "H" + str(count + 12))
+                    )
+
+                elif "AM - Continuity" in type_key:
+                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 2
+                    subset_df['class'] = "H" + subset_df['count'].astype(str)
+
+                elif "PM - Continuity" in type_key:
+                    subset_df['count'] = subset_df.groupby(['date'])['provider'].cumcount() + 12
+                    subset_df['class'] = "H" + subset_df['count'].astype(str)
+
+                # Keep only relevant columns
+                subset_df = subset_df[['date', 'type', 'provider', 'clinic', 'class']]
+
+                # Save to CSV
+                subset_df.to_csv(filename, index=False)
+                print(f"{clinic_name} {type_key} saved to {filename}.")
+
+
