@@ -118,11 +118,6 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
 if page == "Home":
     st.write("👋 Welcome! Use the sidebar to navigate through the app.")
 # … after your sidebar radio and imports …
-
-import streamlit as st
-import datetime
-# … your other imports …
-
 st.set_page_config(page_title="OPD Creator", layout="wide")
 
 # 1️⃣ Ensure a default page in session_state
@@ -135,8 +130,6 @@ page = st.sidebar.radio(
     ["Home", "Create OPD", "Upload Files", "Generate Schedule", "Download OPD"],
     key="page"
 )
-
-# … handle other pages …
 
 elif page == "Create OPD":
     st.header("Date Input for OPD")
