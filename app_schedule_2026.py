@@ -10,12 +10,8 @@ from io import BytesIO, StringIO
 import os
 import random
 
-# ── Page setup ──
-st.set_page_config(
-    page_title="OPD Creator",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# 1) Page config
+st.set_page_config(page_title="OPD Creator",layout="wide",initial_sidebar_state="expanded")
 
 # ── Configuration ──
 DEFAULT_CUSTOM_TEXT = "CUSTOM_PRINT"
@@ -90,11 +86,19 @@ def generate_excel_file(start_date, title, custom_text, file_name, names):
 
 # ── Sidebar Navigation ──
 st.title("Outpatient Department (OPD) Schedule Creator")
-page = st.sidebar.radio(
-    "Go to:",
-    ["Home","Create OPD","Upload Files","Generate Schedule","Download OPD"],
-    index=0
-)
+
+# 2) State defaults
+if "page" not in st.session_state:
+    st.session_state.page = "Home"
+
+# 3) Sidebar radio *bound* to session_state.page
+page = st.sidebar.radio("Go to:",["Home","Create OPD","Upload Files","Generate Schedule","Download OPD"],index=0)
+
+# 4) Always show date range once set
+if "start_date" in st.session_state and "end_date" in st.session_state:
+    sd, ed = st.session_state.start_date, st.session_state.end_date
+    st.sidebar.markdown(f"**Date Range**  \n{sd:%B %d, %Y} → {ed:%B %d, %Y}")
+
 
 # ── Page Logic ──
 if page == "Home":
@@ -137,6 +141,8 @@ elif page == "Create OPD":
 elif page == "Upload Files":
     st.header("Upload Files")
     st.write("⬆️ Upload your Excel/CSV files to be processed here.")
+    sd, ed = st.session_state.start_date, st.session_state.end_date
+    st.write(f"**Using date range:** {sd:%B %d, %Y} → {ed:%B %d, %Y}")
 
 elif page == "Generate Schedule":
     st.header("Generate Schedule")
