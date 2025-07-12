@@ -1,3 +1,21 @@
+import streamlit as st
+import csv
+import datetime
+import pandas as pd
+import numpy as np
+import datetime
+from datetime import timedelta
+import xlsxwriter
+import openpyxl
+from openpyxl import Workbook
+import io
+from io import BytesIO
+from io import StringIO
+import os
+import time 
+import random
+from openpyxl.styles import Font, Alignment
+
 def generate_excel_file(start_date, title, custom_text, file_name, names):
     """
     Generates an Excel file where each week's structure aligns properly.
