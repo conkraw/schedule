@@ -17,12 +17,6 @@ import random
 from openpyxl.styles import Font, Alignment
 
 st.set_page_config(layout="wide")
-
-def format_date_with_suffix(date):
-    """Formats a date as 'Month Day[st/nd/rd/th], Year' (e.g., 'February 3rd, 2025')."""
-    day = date.day
-    suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-    return date.strftime(f"%B {day}{suffix}, %Y")
 	
 file_configs = {
     "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
