@@ -153,8 +153,8 @@ elif page == "Create OPD":
             st.session_state.generated_files = generated
 
             # move on
-            st.experimental_set_query_params(page="Upload Files")
-            st.experimental_rerun()
+            st.query_params(page="Upload Files")
+            st.rerun()
 
         except ValueError:
             st.error("❌ Invalid format. Please use m/d/yyyy.")
