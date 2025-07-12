@@ -34,6 +34,13 @@ page = st.sidebar.radio("Go to:", [
     "Download OPD"
 ])
 
+file_configs = {
+    "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
+    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_1", "SJR_2"]}, 
+    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]},
+    "AL.xlsx": {"title": "AL","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}, 
+}
+
 # Example of reacting to the sidebar choice
 if page == "Home":
     st.write("👋 Welcome! Use the sidebar to navigate through the app.")
