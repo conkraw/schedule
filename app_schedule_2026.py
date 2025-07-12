@@ -37,8 +37,48 @@ page = st.sidebar.radio("Go to:", [
 # Example of reacting to the sidebar choice
 if page == "Home":
     st.write("👋 Welcome! Use the sidebar to navigate through the app.")
+# … after your sidebar radio and imports …
+
 elif page == "Create OPD":
-    st.write("➡️ Here you’ll enter your start date and generate blank OPD templates.")
+    st.header("Date Input for OPD")
+    st.write("Enter start date in **m/d/yyyy** (no leading zeros, e.g. 7/6/2021):")
+
+    date_input = st.text_input("Start Date")
+
+    if st.button("Submit Date") and date_input:
+        try:
+            # parse and store in session
+            start_date = datetime.datetime.strptime(date_input, "%m/%d/%Y")
+            end_date   = start_date + datetime.timedelta(days=34)
+            st.session_state.start_date = start_date
+            st.session_state.end_date   = end_date
+
+            st.success(
+                f"✅ Valid date: {start_date:%B %d, %Y}  |  "
+                f"Range: {start_date:%B %d, %Y} ➝ {end_date:%B %d, %Y}"
+            )
+
+            # generate all clinic workbooks
+            generated = {}
+            for fname, cfg in file_configs.items():
+                path = generate_excel_file(
+                    start_date,
+                    cfg["title"],
+                    cfg["custom_text"],
+                    fname,
+                    cfg["names"]
+                )
+                generated[fname] = path
+
+            st.session_state.generated_files = generated
+
+            # move on
+            st.experimental_set_query_params(page="Upload Files")
+            st.experimental_rerun()
+
+        except ValueError:
+            st.error("❌ Invalid format. Please use m/d/yyyy.")
+
 elif page == "Upload Files":
     st.write("⬆️ Upload your Excel/CSV files to be processed.")
 elif page == "Generate Schedule":
