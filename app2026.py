@@ -16,6 +16,12 @@ import time
 import random
 from openpyxl.styles import Font, Alignment
 from opd_utils import generate_excel_file
+from opd_utils import navigate_to
+from opd_utils import process_file
+from opd_utils import duplicate_am_continuity
+from opd_utils import process_continuity_classes
+from opd_utils import process_hope_classes
+
 
 st.set_page_config(layout="wide")
 	
