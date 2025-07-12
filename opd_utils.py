@@ -97,61 +97,64 @@ def navigate_to(page):
 
 
 
-def process_file(file_key, clinic_name, replacements=None, df=None):
-    """Process a file (either uploaded or generated) and return a cleaned DataFrame."""
-    
-    # 1️⃣ **Use the provided DataFrame if already passed**
-    if df is not None:
-        print(f"Processing provided DataFrame for {clinic_name}...")
-    
-    else:
-        # 2️⃣ **Check if the locally generated file exists**
-        local_file_path = f"{file_key}"
-        if os.path.exists(local_file_path):
-            print(f"Found locally generated file: {local_file_path}. Using it for {clinic_name}...")
-            df = pd.read_excel(local_file_path, dtype=str)
+
+def process_file(file_key, sheet_name, rules=None, uploaded_files=None):
+    if uploaded_files is None:
+        return None
+    elif file_key in uploaded_files:
         
-        # 3️⃣ **Otherwise, fall back to uploaded file**
-        elif file_key in uploaded_files:
-            print(f"Using uploaded file for {clinic_name}...")
-            df = pd.read_excel(uploaded_files[file_key], dtype=str)
+        # 1️⃣ **Use the provided DataFrame if already passed**
+        if df is not None:
+            print(f"Processing provided DataFrame for {clinic_name}...")
         
         else:
-            print(f"❌ ERROR: No file found for {clinic_name} ({file_key}). Skipping...")
-            return None  # Handle missing file case
+            # 2️⃣ **Check if the locally generated file exists**
+            local_file_path = f"{file_key}"
+            if os.path.exists(local_file_path):
+                print(f"Found locally generated file: {local_file_path}. Using it for {clinic_name}...")
+                df = pd.read_excel(local_file_path, dtype=str)
+            
+            # 3️⃣ **Otherwise, fall back to uploaded file**
+            elif file_key in uploaded_files:
+                print(f"Using uploaded file for {clinic_name}...")
+                df = pd.read_excel(uploaded_files[file_key], dtype=str)
+            
+            else:
+                print(f"❌ ERROR: No file found for {clinic_name} ({file_key}). Skipping...")
+                return None  # Handle missing file case
+        
+        # ✅ **Continue normal processing**
+        df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
     
-    # ✅ **Continue normal processing**
-    df.rename(columns={col: str(i) for i, col in enumerate(df.columns)}, inplace=True)
-
-    D_dict = {}
-    for i in range(28):
-        col_idx = column_pairs[i % len(column_pairs)]
-        start_day = days[i]
-        end_day = days[i + 7]
-
-        start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
-        end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
-
-        extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
-        extracted_data.columns = ['type', 'provider']
-        extracted_data.insert(0, 'date', start_day)
-        extracted_data = extracted_data[:-1]
-
-        D_dict[f"D{i}"] = extracted_data
-
-    dfx = pd.concat(D_dict.values(), ignore_index=True)
-    dfx['clinic'] = clinic_name
-
-    # ✅ **Apply replacements if provided**
-    if replacements:
-        dfx = dfx.replace(replacements, regex=True)
-
-    # ✅ **Save the cleaned file**
-    filename = f"{clinic_name.lower()}.csv"
-    dfx.to_csv(filename, index=False)
-
-    print(f"✅ Processed {clinic_name} and saved to {filename}")
-    return dfx  # Return DataFrame for further processing
+        D_dict = {}
+        for i in range(28):
+            col_idx = column_pairs[i % len(column_pairs)]
+            start_day = days[i]
+            end_day = days[i + 7]
+    
+            start_idx = df.loc[df[str(col_idx[0])] == start_day].index[0]
+            end_idx = df.loc[df[str(col_idx[0])] == end_day].index[0]
+    
+            extracted_data = df.iloc[start_idx + 1:end_idx, list(col_idx)].copy()
+            extracted_data.columns = ['type', 'provider']
+            extracted_data.insert(0, 'date', start_day)
+            extracted_data = extracted_data[:-1]
+    
+            D_dict[f"D{i}"] = extracted_data
+    
+        dfx = pd.concat(D_dict.values(), ignore_index=True)
+        dfx['clinic'] = clinic_name
+    
+        # ✅ **Apply replacements if provided**
+        if replacements:
+            dfx = dfx.replace(replacements, regex=True)
+    
+        # ✅ **Save the cleaned file**
+        filename = f"{clinic_name.lower()}.csv"
+        dfx.to_csv(filename, index=False)
+    
+        print(f"✅ Processed {clinic_name} and saved to {filename}")
+        return dfx  # Return DataFrame for further processing
 
 def duplicate_am_continuity(df, clinic_name, special_cases=None):
     """
