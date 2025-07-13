@@ -41,19 +41,27 @@ if uploaded_file and record_id:
         st.dataframe(col0.to_frame(name="column_A_cleaned").head(50))
         st.stop()
 
-    # 4. Scan between those rows for "Hope Drive AM Continuity"
-    providers = []
+    # 4. Scan between those rows for "Hope Drive AM Continuity" and show them with date
+    rows = []
     for r in range(start_row + 1, end_row):
         for c in range(df.shape[1] - 1):
-            cell = str(df.iat[r, c]).replace("\xa0", " ").strip()
-            if cell == "Hope Drive AM Continuity":
-                prov = str(df.iat[r, c + 1]).replace("\xa0", " ").strip()
-                if prov:
-                    providers.append(prov)
+            designation = str(df.iat[r, c]).replace("\xa0", " ").strip()
+            if designation == "Hope Drive AM Continuity":
+                provider = str(df.iat[r, c + 1]).replace("\xa0", " ").strip()
+                if provider:
+                    rows.append({
+                        "date": hd_day_date.strftime('%Y-%m-%d'),
+                        "designation": designation,
+                        "provider": provider
+                    })
 
-    if not providers:
+    if not rows:
         st.error("⚠️ No 'Hope Drive AM Continuity' entries found in that date block.")
         st.stop()
+
+    df_preview = pd.DataFrame(rows)
+    st.subheader("🧾 Hope Drive Assignments")
+    st.dataframe(df_preview)
 
     # 5. Build the REDCap import row
     data = {"record_id": record_id, "hd_day_date": hd_day_date}
