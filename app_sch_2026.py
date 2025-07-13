@@ -19,27 +19,34 @@ if uploaded_file and record_id:
         st.error("⚠️ Could not parse a valid date from cell A5.")
         st.stop()
 
-    # 2. Build formatted day0 and day7 strings (e.g., "July 7, 2025")
-    day0_str = hd_day_date.strftime('%B %-d, %Y')
-    day7_str = (hd_day_date + timedelta(days=7)).strftime('%B %-d, %Y')
-    
-    # 3. Find row indices of day0_str and day7_str in column 0
-    col0 = df.iloc[:, 0].fillna("").str.strip()
-    try:
-        start_row = col0[col0 == day0_str].index[0]
-        end_row = col0[col0 == day7_str].index[0]
-        
-    except IndexError:
-        st.error(f"Could not find '{day0_str}' or '{day7_str}' in column A.")
+    day0_str = hd_day_date.strftime('%B %-d, %Y').lower()
+    day7_str = (hd_day_date + timedelta(days=7)).strftime('%B %-d, %Y').lower()
+
+    # 2. Normalize and inspect column A
+    col0_raw = df.iloc[:, 0].fillna("").astype(str)
+    col0_clean = col0_raw.str.replace("\xa0", " ", regex=False).str.strip().str.lower()
+
+    st.subheader("🔍 Preview of cleaned column A")
+    st.write(col0_clean.head(50).to_frame())
+
+    # 3. Locate start and end rows by substring match
+    start_matches = col0_clean[col0_clean.str.contains(day0_str, na=False)]
+    end_matches   = col0_clean[col0_clean.str.contains(day7_str, na=False)]
+
+    if start_matches.empty or end_matches.empty:
+        st.error(f"Could not locate rows containing '{day0_str}' or '{day7_str}'.")
         st.stop()
 
-    # 4. Scan between start_row+1 and end_row for "Hope Drive AM Continuity"
+    start_row = start_matches.index[0]
+    end_row   = end_matches.index[0]
+
+    # 4. Scan rows in that window for "Hope Drive AM Continuity"
     providers = []
     for r in range(start_row + 1, end_row):
         for c in range(df.shape[1] - 1):
-            cell = str(df.iat[r, c]).strip()
+            cell = str(df.iat[r, c]).replace("\xa0", " ").strip()
             if cell == "Hope Drive AM Continuity":
-                prov = str(df.iat[r, c + 1]).strip()
+                prov = str(df.iat[r, c + 1]).replace("\xa0", " ").strip()
                 if prov:
                     providers.append(prov)
 
@@ -47,7 +54,7 @@ if uploaded_file and record_id:
         st.error("⚠️ No 'Hope Drive AM Continuity' entries found between date blocks.")
         st.stop()
 
-    # 5. Build REDCap import row
+    # 5. Build the REDCap import row
     data = {"record_id": record_id, "hd_day_date": hd_day_date}
     for i, name in enumerate(providers, start=1):
         data[f"hd_am_d1_{i}"] = name
