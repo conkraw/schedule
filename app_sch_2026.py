@@ -33,8 +33,8 @@ if uploaded_file and record_id:
     )
 
     try:
-        start_row = col0[col0 == day0_str].index[1]
-        end_row   = col0[col0 == day7_str].index[1]
+        start_row = col0[col0 == day0_str].index[0]
+        end_row   = col0[col0 == day7_str].index[0]
         
     except IndexError:
         st.error(f"❌ Could not find '{day0_str}' or '{day7_str}' in column A.")
