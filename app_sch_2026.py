@@ -10,6 +10,7 @@ record_id = st.text_input("Enter REDCap record_id for this session", "")
 
 if uploaded_file and record_id:
     df = pd.read_excel(uploaded_file, header=None, dtype=str)
+    st.dataframe(df)
 
     # 1. Parse the session date from A5
     try:
