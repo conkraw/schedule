@@ -36,14 +36,26 @@ if uploaded_file and record_id:
     # pick the first next‐date row that’s after start_row
     stop_row = next((r for r in next_rows if r > start_row), len(df))
 
-    # 5️⃣ Scan **only** between start_row+1 and stop_row
-    providers = []
+    providers = []    
     for r in range(start_row + 1, stop_row):
         for c in range(df.shape[1] - 1):
-            if str(df.iat[r, c]).strip() == "Hope Drive AM Continuity":
-                val = df.iat[r, c + 1]
-                if pd.notna(val):
-                    providers.append(str(val).strip())
+            cell = df.iat[r, c]
+            text = str(cell).replace("\xa0", " ")  # normalize NBSP → space
+            if "hope drive am continuity" in text.lower():
+                prov = df.iat[r, c + 1]
+                prov_text = str(prov).replace("\xa0", " ")
+                
+                # DEBUG: show you exactly what was matched
+                st.write(f"Matched at row {r+1}, col {c+1}:")
+                st.write(f"  header repr: {repr(cell)}")
+                st.write(f"  prov   repr: {repr(prov)}")
+                
+                if pd.notna(prov_text) and prov_text.strip():
+                    providers.append(prov_text.strip())
+
+if not providers:
+    st.error("⚠️ No ‘Hope Drive AM Continuity’ entries found in that date block.")
+    st.stop()
 
     if not providers:
         st.error("⚠️ No 'Hope Drive AM Continuity' entries found in that date block.")
