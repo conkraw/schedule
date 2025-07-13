@@ -12,6 +12,8 @@ record_id = st.text_input("Enter REDCap record_id for this session", "")
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file, header=None)
+    st.subheader("📊 Sheet Preview (First 50 Rows)")
+    st.dataframe(df.head(50))
 
     # 1. Extract date from A5
     try:
