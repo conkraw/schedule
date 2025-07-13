@@ -53,10 +53,6 @@ if uploaded_file and record_id:
 
     providers = sorted(providers)
 
-    if not rows:
-        st.error("⚠️ No 'Hope Drive AM Continuity' entries found in that date block.")
-        st.stop()
-
     df_preview = pd.DataFrame(rows)
     st.subheader("🧾 Hope Drive Assignments")
     st.dataframe(df_preview)
