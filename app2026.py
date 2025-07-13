@@ -671,7 +671,7 @@ elif st.session_state.page == "OPD Creator":
 	nyes_df = process_file("NYES.xlsx", "NYES", replacement_rules.get("NYES.xlsx"))
 	complex_df = process_file("COMPLEX.xlsx", "COMPLEX", replacement_rules.get("COMPLEX.xlsx"))
 	
-	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"))
+	warda_df = process_file("WARD_A.xlsx", "WARD_A", replacement_rules.get("WARD_A.xlsx"), uploaded_files)
 	wardp_df = process_file("WARD_P.xlsx", "WARD_P", replacement_rules.get("WARD_P.xlsx"))
 	pshchnursery_df = process_file("PSHCH_NURSERY.xlsx", "PSHCH_NURSERY", replacement_rules.get("PSHCH_NURSERY.xlsx"))
 	
