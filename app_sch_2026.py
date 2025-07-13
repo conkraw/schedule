@@ -1,50 +1,61 @@
 import streamlit as st
 import pandas as pd
+from datetime import timedelta
 
 st.set_page_config(page_title="Hope Drive → REDCap Import", layout="wide")
 st.title("Hope Drive Preceptors → REDCap Import Template")
 
-uploaded_file = st.file_uploader(
-    "Upload your AGP calendar (Excel)", 
-    type=["xlsx", "xls"]
-)
-record_id = st.text_input("Enter REDCap record_id for this session", "")
+uploaded_file = st.file_uploader("Upload your AGP calendar (Excel)", type=["xlsx","xls"])
+record_id    = st.text_input("Enter REDCap record_id for this session", "")
 
-if uploaded_file:
+if uploaded_file and record_id:
+    # 1️⃣ Read raw sheet
     df = pd.read_excel(uploaded_file, header=None)
 
-    # 1. Extract date from A5
+    # 2️⃣ Parse your session date from A5
     try:
         hd_day_date = pd.to_datetime(df.iat[4, 0]).date()
     except Exception:
         st.error("⚠️ Could not parse a valid date from cell A5.")
         st.stop()
 
-    # 2. Scan for every "Hope Drive AM Continuity" in rows 0–19
-    providers = []
-    max_rows = min(20, df.shape[0])
-    for r in range(max_rows):
-        for c in range(df.shape[1] - 1):
-            if str(df.iat[r, c]).strip() == "Hope Drive AM Continuity":
-                prov = df.iat[r, c + 1]
-                if pd.notna(prov):
-                    providers.append(str(prov).strip())
+    # 3️⃣ Compute the 7-day cutoff
+    hd_end_date = hd_day_date + timedelta(days=7)
 
-    if not providers:
-        st.error("⚠️ No 'Hope Drive AM Continuity' rows found in the first 20 rows.")
+    # 4️⃣ Vectorize column A → dates (NaT on non-dates)
+    col_dates = pd.to_datetime(df.iloc[:, 0], errors="coerce").dt.date
+
+    # 5️⃣ Find all row indices where date is between start and end (inclusive)
+    valid_rows = col_dates.dropna()
+    mask = (valid_rows >= hd_day_date) & (valid_rows <= hd_end_date)
+    rows_to_scan = mask[mask].index.tolist()
+
+    if not rows_to_scan:
+        st.error("⚠️ No rows in the 7‑day date range were found in column A.")
         st.stop()
 
-    # 3. Build single‐row REDCap import
-    row = {
-        "record_id": record_id,
-        "hd_day_date": hd_day_date
-    }
-    for idx, name in enumerate(providers, start=1):
-        row[f"hd_am_d1_{idx}"] = name
+    # 6️⃣ Within those rows, collect every provider to the right of "Hope Drive AM Continuity"
+    providers = []
+    for r in rows_to_scan:
+        # scan all columns except the last
+        for c in range(df.shape[1] - 1):
+            if str(df.iat[r, c]).strip() == "Hope Drive AM Continuity":
+                nxt = df.iat[r, c + 1]
+                if pd.notna(nxt):
+                    providers.append(str(nxt).strip())
 
-    out_df = pd.DataFrame([row])
+    if not providers:
+        st.error("⚠️ No 'Hope Drive AM Continuity' entries found in the 7‑day window.")
+        st.stop()
 
-    # 4. Display & download
+    # 7️⃣ Build a single‑row REDCap import
+    data = {"record_id": record_id, "hd_day_date": hd_day_date}
+    for i, name in enumerate(providers, start=1):
+        data[f"hd_am_d1_{i}"] = name
+
+    out_df = pd.DataFrame([data])
+
+    # 8️⃣ Display & download
     st.subheader("📋 REDCap Import Preview")
     st.dataframe(out_df)
 
@@ -59,7 +70,7 @@ if uploaded_file:
     st.markdown(
         """
         **Next steps:**  
-        1. In REDCap, define a repeating form/instrument called `hope_drive`.  
+        1. In REDCap, define a repeating form/instrument named `hope_drive`.  
         2. Add fields:  
            - `hd_day_date` (Date Y‑M‑D)  
            - `hd_am_d1_1`, `hd_am_d1_2`, … (Text)  
@@ -67,8 +78,8 @@ if uploaded_file:
         """
     )
 
-elif not record_id:
-    st.info("Enter a record_id so I can build the import row for you.")
+elif uploaded_file and not record_id:
+    st.info("Please enter a record_id so I can build the import row for you.")
 else:
-    st.info("Upload an Excel file to get started.")
+    st.info("Upload an Excel file and enter a record_id to get started.")
 
