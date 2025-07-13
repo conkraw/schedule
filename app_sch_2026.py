@@ -11,35 +11,36 @@ uploaded_file = st.file_uploader(
     type=["xlsx", "xls"]
 )
 
-if uploaded_file:
-    # 2. Read sheet without headers
+    # 1. Read raw, no headers
     df_raw = pd.read_excel(uploaded_file, header=None)
 
-    # 3. Extract the first date from cell A5 (row 4, col 0)
-    try:
-        hd_day_date = pd.to_datetime(df_raw.iat[4, 0]).date()
-    except Exception as e:
-        st.error(f"Could not parse date in A5: {e}")
+    # 2. Date cell (A5)
+    hd_day_date = pd.to_datetime(df_raw.iat[4, 0]).date()
+
+    # 3. Locate header row and columns
+    header_row = None
+    hm_cols = []
+    for i in range(min(20, df_raw.shape[0])):  # look in first 20 rows
+        row_vals = df_raw.iloc[i].astype(str)
+        if row_vals.str.contains("Hope Drive AM Continuity", na=False).any():
+            header_row = i
+            hm_cols = [
+                col for col, val in row_vals.items()
+                if "Hope Drive AM Continuity" in val
+            ]
+            break
+
+    if header_row is None:
+        st.error("Could not find any 'Hope Drive AM Continuity' header.")
         st.stop()
 
-    # 4. Identify "Hope Drive AM Continuity" columns (assume header on row 4)
-    header_row = 3
-    hm_cols = [
-        col
-        for col, val in df_raw.iloc[header_row].items()
-        if isinstance(val, str) and "Hope Drive AM Continuity" in val
-    ]
-
-    if not hm_cols:
-        st.warning("No columns found with 'Hope Drive AM Continuity' in row 4.")
-        st.stop()
-
-    # 5. Parse providers from each column on day 1 (row 5)
+    # 4. Parse Day 1 providers from row header_row + 1
     assignments = []
     for col in hm_cols:
-        cell = df_raw.iat[4, col]
+        cell = df_raw.iat[header_row + 1, col]
         providers = [p.strip() for p in str(cell).split(",") if p.strip()]
         assignments.append(providers)
+
 
     # 6. Build REDCap import DataFrame
     rows = []
