@@ -19,20 +19,11 @@ from opd_utils import generate_excel_file
 from opd_utils import navigate_to
 
 st.set_page_config(layout="wide")
-	
-file_configs = {
-    "HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
-    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_1", "SJR_2"]}, 
-    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]},
-    "AL.xlsx": {"title": "AL","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}, 
-}
 
-# Initialize session state variables efficiently
 session_defaults = {"page": "Home","start_date": None,"uploaded_files": {},"uploaded_book4_file": {},}
 
 for key, value in session_defaults.items():
     st.session_state.setdefault(key, value)
-
 
 # Home Page
 if st.session_state.page == "Home":
@@ -51,8 +42,7 @@ elif st.session_state.page == "Create OPD":
 
     # User Input for Start Date
     date_input = st.text_input('Start Date')
-
-
+	
     if st.button('Submit Date') and date_input:
         try:
             start_date, end_date = datetime.datetime.strptime(date_input, "%m/%d/%Y"), datetime.datetime.strptime(date_input, "%m/%d/%Y") + datetime.timedelta(days=34)
@@ -62,6 +52,11 @@ elif st.session_state.page == "Create OPD":
 
             # Generate all predefined Excel files
             generated_files = {}
+            file_configs = {"HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda", "Alur, Pradeep", "Nanda, Sharmilarani", "HAMPDEN_NURSERY"]},
+			    "SJR_HOSP.xlsx": {"title": "SJR HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley", "Gubitosi, Terry", "SJR_1", "SJR_2"]}, 
+			    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding", "Abimbola Ajayi", "Shilu Joshi", "Desiree Webb", "Amy Zisa", "Abdullah Sakarcan", "Anna Karasik", "AAC_1", "AAC_2", "AAC_3"]},
+			    "AL.xlsx": {"title": "AL","custom_text": "CUSTOM_PRINT","names": ["Aholoukpe, Mahoussi"]}}
+	
             for file_name, config in file_configs.items():
                 file_path = generate_excel_file(start_date, config["title"], config["custom_text"], file_name, config["names"])
                 generated_files[file_name] = file_path
@@ -81,12 +76,8 @@ elif st.session_state.page == "Upload Files":
     st.write("Upload the required Excel files:")
 
     # Define file name mappings based on content identifiers
-    file_identifiers = {
-        "Academic General Pediatrics": ["NYES.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "PSHCH_NURSERY.xlsx"],
-        "Hospitalists": ["WARD_A.xlsx"],
-        "Complex": ["COMPLEX.xlsx"],
-        "Adol Med": ["ADOLMED.xlsx"], 
-    }
+    file_identifiers = {"Academic General Pediatrics": ["NYES.xlsx", "HOPE_DRIVE.xlsx", "ETOWN.xlsx", "PSHCH_NURSERY.xlsx"],"Hospitalists": ["WARD_A.xlsx"],"Complex": ["COMPLEX.xlsx"],"Adol Med": ["ADOLMED.xlsx"]}
+
     # Required files for validation
     required_files = set(f for names in file_identifiers.values() for f in names) | {"Book4.xlsx"}
 
@@ -166,7 +157,7 @@ elif st.session_state.page == "Upload Files":
                 uploaded_files_dict["Book4.xlsx"] = buf
                 detected_files.add("Book4.xlsx")
                 st.success("✅ Converted CSV → Book4.xlsx")
-
+		    
                 continue  # skip the rest of detection
 
         for file in uploaded_files:
