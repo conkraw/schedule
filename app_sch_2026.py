@@ -23,6 +23,8 @@ if uploaded_file and record_id:
     day0_str = hd_day_date.strftime('%B %-d, %Y')
     day7_str = (hd_day_date + timedelta(days=7)).strftime('%B %-d, %Y')
 
+    st.write(day7_str)
+    
     # 3. Find row indices of day0_str and day7_str in column 0
     col0 = df.iloc[:, 0].fillna("").str.strip()
     try:
