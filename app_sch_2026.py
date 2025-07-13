@@ -41,22 +41,17 @@ if uploaded_file and record_id:
         st.dataframe(col0.to_frame(name="column_A_cleaned").head(50))
         st.stop()
 
-    # 4. Scan column 2 only (col = 2), provider is in column 3 (col = 3)
-    designation_col = 2
-    provider_col = 3
-    rows = []
+    # 4. Scan column pairs (0+1, 2+3, 4+5, ...)
+    providers = set()  # use set to avoid duplicates
+    for c in range(0, df.shape[1] - 1, 2):
+        for r in range(start_row + 1, end_row):
+            designation = str(df.iat[r, c]).replace("\xa0", " ").strip()
+            if designation == "Hope Drive AM Continuity":
+                provider = str(df.iat[r, c + 1]).replace("\xa0", " ").strip()
+                if provider:
+                    providers.add(provider)
 
-    for r in range(start_row + 1, end_row):
-        designation = str(df.iat[r, designation_col]).replace("\xa0", " ").strip()
-        if designation == "Hope Drive AM Continuity":
-            provider = str(df.iat[r, provider_col]).replace("\xa0", " ").strip()
-            if provider:
-                rows.append({
-                    "date": hd_day_date.strftime('%Y-%m-%d'),
-                    "designation": designation,
-                    "provider": provider
-                })
-
+    providers = sorted(providers)
 
     if not rows:
         st.error("⚠️ No 'Hope Drive AM Continuity' entries found in that date block.")
