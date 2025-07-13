@@ -10,7 +10,7 @@ uploaded_file = st.file_uploader(
     "Upload your Academic General Pediatrics calendar (Excel)", 
     type=["xlsx", "xls"]
 )
-
+if uploaded_file:
     # 1. Read raw, no headers
     df_raw = pd.read_excel(uploaded_file, header=None)
 
