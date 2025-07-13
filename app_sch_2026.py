@@ -26,7 +26,7 @@ if uploaded_file and record_id:
     }
 
     # 3. Initialize result dictionary
-    redcap_row = {"record_id": record_id, "hd_day_date": session_date}
+    redcap_row = {"record_id": record_id, "hd_day_date1": session_date}
     field_counters = {prefix: 1 for prefix in designation_map.values()}
 
     # 4. Loop through rows starting at row 5 until we hit the next "Monday"
