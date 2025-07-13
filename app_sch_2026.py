@@ -27,8 +27,7 @@ if uploaded_file and record_id:
     col0 = df.iloc[:, 0].fillna("").str.strip()
     try:
         start_row = col0[col0 == day0_str].index[0]
-        end_row = col0[col0 == day7_str].index[0]
-        st.write(end_row)
+        end_row = col0[col0 == day7_str].index[0] + 1
         
     except IndexError:
         st.error(f"Could not find '{day0_str}' or '{day7_str}' in column A.")
