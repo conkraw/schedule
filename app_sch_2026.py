@@ -10,7 +10,30 @@ record_id = st.text_input("Enter REDCap record_id for this session", "")
 
 if uploaded_file and record_id:
     df = pd.read_excel(uploaded_file, header=None, dtype=str)
-    st.dataframe(df)
+    
+    # Add diagnostic preview
+    st.subheader("🔍 Full Sheet Preview (first 150 rows)")
+    st.dataframe(df.head(150))
+    
+    # Clean column A
+    col0_clean = (
+        df.iloc[:, 0].fillna("")
+        .astype(str)
+        .str.replace("\xa0", " ", regex=False)
+        .str.strip()
+        .str.lower()
+    )
+    
+    # Show cleaned column A
+    st.subheader("🧼 Cleaned Column A (first 150 rows)")
+    st.dataframe(pd.DataFrame({"row": col0_clean.index, "cleaned_A": col0_clean}).head(150))
+    
+    # Optional: search box to help debug content
+    search_term = st.text_input("Search for a keyword in column A (e.g. 'july', 'hope drive')").strip().lower()
+    if search_term:
+        matched_rows = col0_clean[col0_clean.str.contains(search_term, na=False)]
+        st.write(f"Found {len(matched_rows)} rows matching '{search_term}':")
+        st.dataframe(matched_rows.to_frame(name="matched_cleaned_A"))
 
     # 1. Parse the session date from A5
     try:
