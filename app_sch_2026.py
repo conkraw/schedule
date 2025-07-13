@@ -42,6 +42,7 @@ if uploaded_file and record_id:
         st.stop()
 
     # 4. Scan column pairs (0+1, 2+3, 4+5, ...)
+    
     providers = set()  # use set to avoid duplicates
     for c in range(0, df.shape[1] - 1, 2):
         for r in range(start_row + 1, end_row):
@@ -52,10 +53,6 @@ if uploaded_file and record_id:
                     providers.add(provider)
 
     providers = sorted(providers)
-
-    df_preview = pd.DataFrame(rows)
-    st.subheader("🧾 Hope Drive Assignments")
-    st.dataframe(df_preview)
 
     # 5. Build the REDCap import row
     data = {"record_id": record_id, "hd_day_date": hd_day_date}
