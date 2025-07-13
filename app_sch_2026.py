@@ -11,7 +11,7 @@ record_id = st.text_input("Enter REDCap record_id for this session", "")
 if uploaded_file and record_id:
     df = pd.read_excel(uploaded_file, header=None, dtype=str)
 
-    # 1. Extract and format session date from A5
+    # 1. Parse the session date from A5
     try:
         raw_date = pd.to_datetime(df.iat[4, 0])
         hd_day_date = raw_date.date()
@@ -19,28 +19,28 @@ if uploaded_file and record_id:
         st.error("⚠️ Could not parse a valid date from cell A5.")
         st.stop()
 
-    day0_str = hd_day_date.strftime('%B %-d, %Y').lower()
+    # 2. Format dates to match cleaned column A
+    day0_str = hd_day_date.strftime('%B %-d, %Y').lower()   # e.g. "july 7, 2025"
     day7_str = (hd_day_date + timedelta(days=7)).strftime('%B %-d, %Y').lower()
 
-    # 2. Normalize and inspect column A
-    col0_raw = df.iloc[:, 0].fillna("").astype(str)
-    col0_clean = col0_raw.str.replace("\xa0", " ", regex=False).str.strip().str.lower()
+    # 3. Clean column A (normalize spaces, lowercase)
+    col0 = (
+        df.iloc[:, 0].fillna("")
+        .astype(str)
+        .str.replace("\xa0", " ", regex=False)
+        .str.strip()
+        .str.lower()
+    )
 
-    st.subheader("🔍 Preview of cleaned column A")
-    st.write(col0_clean.head(50).to_frame())
-
-    # 3. Locate start and end rows by substring match
-    start_matches = col0_clean[col0_clean.str.contains(day0_str, na=False)]
-    end_matches   = col0_clean[col0_clean.str.contains(day7_str, na=False)]
-
-    if start_matches.empty or end_matches.empty:
-        st.error(f"Could not locate rows containing '{day0_str}' or '{day7_str}'.")
+    try:
+        start_row = col0[col0 == day0_str].index[0]
+        end_row   = col0[col0 == day7_str].index[0]
+    except IndexError:
+        st.error(f"❌ Could not find '{day0_str}' or '{day7_str}' in column A.")
+        st.dataframe(col0.to_frame(name="column_A_cleaned").head(50))
         st.stop()
 
-    start_row = start_matches.index[0]
-    end_row   = end_matches.index[0]
-
-    # 4. Scan rows in that window for "Hope Drive AM Continuity"
+    # 4. Scan between those rows for "Hope Drive AM Continuity"
     providers = []
     for r in range(start_row + 1, end_row):
         for c in range(df.shape[1] - 1):
@@ -51,7 +51,7 @@ if uploaded_file and record_id:
                     providers.append(prov)
 
     if not providers:
-        st.error("⚠️ No 'Hope Drive AM Continuity' entries found between date blocks.")
+        st.error("⚠️ No 'Hope Drive AM Continuity' entries found in that date block.")
         st.stop()
 
     # 5. Build the REDCap import row
@@ -61,7 +61,7 @@ if uploaded_file and record_id:
 
     out_df = pd.DataFrame([data])
 
-    # 6. Display and download
+    # 6. Display & download
     st.subheader("📋 REDCap Import Preview")
     st.dataframe(out_df)
 
