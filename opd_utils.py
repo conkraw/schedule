@@ -96,6 +96,8 @@ def navigate_to(page):
 
 def process_file(file_key, clinic_name, replacements=None, df=None):
     """Process a file (either uploaded or generated) and return a cleaned DataFrame."""
+
+    uploaded_files = st.session_state.uploaded_files
     
     # 1️⃣ **Use the provided DataFrame if already passed**
     if df is not None:
