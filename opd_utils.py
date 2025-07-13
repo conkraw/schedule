@@ -98,6 +98,8 @@ def process_file(file_key, clinic_name, replacements=None, df=None):
     """Process a file (either uploaded or generated) and return a cleaned DataFrame."""
 
     uploaded_files = st.session_state.uploaded_files
+
+    column_pairs = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)]
     
     # 1️⃣ **Use the provided DataFrame if already passed**
     if df is not None:
