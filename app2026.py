@@ -441,6 +441,8 @@ elif st.session_state.page == "OPD Creator":
 	import datetime
 	from datetime import timedelta
 	from opd_utils import process_file
+
+	uploaded_files = st.session_state.uploaded_files
 	
 	# Disable chained assignment warning
 	pd.options.mode.chained_assignment = None
