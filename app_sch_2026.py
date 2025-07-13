@@ -22,14 +22,14 @@ if uploaded_file and record_id:
     # 2. Build formatted day0 and day7 strings (e.g., "July 7, 2025")
     day0_str = hd_day_date.strftime('%B %-d, %Y')
     day7_str = (hd_day_date + timedelta(days=7)).strftime('%B %-d, %Y')
-
-    st.write(day7_str)
     
     # 3. Find row indices of day0_str and day7_str in column 0
     col0 = df.iloc[:, 0].fillna("").str.strip()
     try:
         start_row = col0[col0 == day0_str].index[0]
         end_row = col0[col0 == day7_str].index[0]
+        st.write(end_row)
+        
     except IndexError:
         st.error(f"Could not find '{day0_str}' or '{day7_str}' in column A.")
         st.stop()
