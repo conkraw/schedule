@@ -6,11 +6,8 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # 1️⃣ Multi‑file upload + single record_id
-uploaded_files = st.file_uploader(
-    "Upload one or more AGP calendar Excels",
-    type=["xlsx","xls"],
-    accept_multiple_files=True
-)
+uploaded_files = st.file_uploader("Upload one or more AGP calendar Excels",type=["xlsx","xls"],accept_multiple_files=True)
+
 record_id = st.text_input("Enter the REDCap record_id for this batch", "")
 
 if uploaded_files and record_id:
@@ -21,16 +18,28 @@ if uploaded_files and record_id:
     base_map = {
         "hope drive am continuity":    "hd_am_",
         "hope drive pm continuity":    "hd_pm_",
+        
         "hope drive am acute precept": "hd_am_acute_",
         "hope drive pm acute precept": "hd_pm_acute_",
+        
         "etown am continuity":         "etown_am_",
         "etown pm continuity":         "etown_pm_",
+        
         "nyes rd am continuity":       "nyes_am_",
         "nyes rd pm continuity":       "nyes_pm_",
+        
         "nursery weekday 8a-6p":       ["nursery_am_", "nursery_pm_"],
+        
         "rounder 1 7a-7p":             ["ward_a_am_team_1_","ward_a_pm_team_1_"],
         "rounder 2 7a-7p":             ["ward_a_am_team_2_","ward_a_pm_team_2_"],
         "rounder 3 7a-7p":             ["ward_a_am_team_3_","ward_a_pm_team_3_"],
+
+        "hope drive clinic am":        "complex_am_1_",
+        "hope drive clinic pm":        "complex_pm_1_",
+        
+        "briarcrest clinic am ":       "adol_am_1_",
+        "briarcrest clinic pm ":       "adol_pm_1_",
+        
     }
 
     # Which groups need at least 2 providers?
