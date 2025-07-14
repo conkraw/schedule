@@ -143,7 +143,7 @@ if uploaded_files and record_id:
     am_acute_cols  = [f"hd_am_acute_d1_{i}" for i in (1, 2)]
     
     # 2️⃣ Subset
-    subset_cols = date_cols + am_cont_cols + am_acute_cols
+    subset_cols = ["record_id"] + date_cols + am_cont_cols + am_acute_cols
     dates_am_df = out_df.loc[:, [c for c in subset_cols if c in out_df.columns]]
     
     # 3️⃣ Display
