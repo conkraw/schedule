@@ -26,42 +26,42 @@ if not schedule_files or not student_file or not record_id:
 
 # ─── Prep: Date regex & maps ───────────────────────────────────────────────────
 date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
-    base_map = {
-        "hope drive am continuity":    "hd_am_",
-        "hope drive pm continuity":    "hd_pm_",
-        
-        "hope drive am acute precept": "hd_am_acute_",
-        "hope drive pm acute precept": "hd_pm_acute_",
-        
-        "etown am continuity":         "etown_am_",
-        "etown pm continuity":         "etown_pm_",
-        
-        "nyes rd am continuity":       "nyes_am_",
-        "nyes rd pm continuity":       "nyes_pm_",
-        
-        "nursery weekday 8a-6p":       ["nursery_am_", "nursery_pm_"],
-        
-        "rounder 1 7a-7p":             ["ward_a_am_team_1_","ward_a_pm_team_1_"],
-        "rounder 2 7a-7p":             ["ward_a_am_team_2_","ward_a_pm_team_2_"],
-        "rounder 3 7a-7p":             ["ward_a_am_team_3_","ward_a_pm_team_3_"],
+base_map = {
+    "hope drive am continuity":    "hd_am_",
+    "hope drive pm continuity":    "hd_pm_",
+    
+    "hope drive am acute precept": "hd_am_acute_",
+    "hope drive pm acute precept": "hd_pm_acute_",
+    
+    "etown am continuity":         "etown_am_",
+    "etown pm continuity":         "etown_pm_",
+    
+    "nyes rd am continuity":       "nyes_am_",
+    "nyes rd pm continuity":       "nyes_pm_",
+    
+    "nursery weekday 8a-6p":       ["nursery_am_", "nursery_pm_"],
+    
+    "rounder 1 7a-7p":             ["ward_a_am_team_1_","ward_a_pm_team_1_"],
+    "rounder 2 7a-7p":             ["ward_a_am_team_2_","ward_a_pm_team_2_"],
+    "rounder 3 7a-7p":             ["ward_a_am_team_3_","ward_a_pm_team_3_"],
 
-        "hope drive clinic am":        "complex_am_1_",
-        "hope drive clinic pm":        "complex_pm_1_",
-        
-        "briarcrest clinic am":       "adol_med_am_1_",
-        "briarcrest clinic pm":       "adol_med_pm_1_",
-        
-    }
+    "hope drive clinic am":        "complex_am_1_",
+    "hope drive clinic pm":        "complex_pm_1_",
+    
+    "briarcrest clinic am":       "adol_med_am_1_",
+    "briarcrest clinic pm":       "adol_med_pm_1_",
+    
+}
 
-    # Which groups need at least 2 providers?
-    min_required = {
-        "hope drive am acute precept": 2,
-        "hope drive pm acute precept": 2,
-        "nursery weekday 8a-6p":       2,
-        "rounder 1 7a-7p":             2,
-        "rounder 2 7a-7p":             2,
-        "rounder 3 7a-7p":             2,
-    }
+# Which groups need at least 2 providers?
+min_required = {
+    "hope drive am acute precept": 2,
+    "hope drive pm acute precept": 2,
+    "nursery weekday 8a-6p":       2,
+    "rounder 1 7a-7p":             2,
+    "rounder 2 7a-7p":             2,
+    "rounder 3 7a-7p":             2,
+}
 
 
 # ─── 1. Aggregate schedule assignments by date ────────────────────────────────
