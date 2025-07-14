@@ -87,13 +87,20 @@ for file in schedule_files:
         if d not in unique or r < unique[d][0]:
             unique[d] = (r,c)
 
+    # before the loop, define:
+    day_names = {"monday","tuesday","wednesday","thursday","friday","saturday","sunday"}
+    
     # collect providers under each date
     for d, (row0,col0) in unique.items():
         grp = assignments_by_date.setdefault(d, {des:[] for des in base_map})
+        
         for r in range(row0+1, df.shape[0]):
-            cell = str(df.iat[r,col0]).replace("\xa0"," ").strip().lower()
-            if "monday" in cell:
+            raw = str(df.iat[r, col0]).replace("\xa0", " ").strip()
+            cell = raw.lower()
+            
+            if cell in day_names:
                 break
+                
             prov = str(df.iat[r,col0+1]).strip()
             if cell in grp and prov:
                 grp[cell].append(prov)
