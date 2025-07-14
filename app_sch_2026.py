@@ -26,6 +26,7 @@ if not schedule_files or not student_file or not record_id:
 
 # ─── Prep: Date regex & maps ───────────────────────────────────────────────────
 date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
+
 base_map = {
     "hope drive am continuity":    "hd_am_",
     "hope drive pm continuity":    "hd_pm_",
