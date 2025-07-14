@@ -124,7 +124,7 @@ if uploaded_files and record_id:
     # Format all hd_day_dateN columns as MM-DD-YYYY
     for col in out_df.columns:
         if col.startswith("hd_day_date"):
-        out_df[col] = pd.to_datetime(out_df[col]).dt.strftime("%m-%d-%Y")
+            out_df[col] = pd.to_datetime(out_df[col]).dt.strftime("%m-%d-%Y")
         
     # 4️⃣ Display & download
     out_df = pd.DataFrame([redcap_row])
