@@ -5,16 +5,27 @@ import re
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
 
-# 1️⃣ Multi‑file upload + single record_id
-uploaded_files = st.file_uploader("Upload one or more AGP calendar Excels",type=["xlsx","xls"],accept_multiple_files=True)
+# ─── Inputs ────────────────────────────────────────────────────────────────────
+schedule_files = st.file_uploader(
+    "1) Upload one or more AGP calendar Excel(s)",
+    type=["xlsx","xls"],
+    accept_multiple_files=True
+)
 
-record_id = st.text_input("Enter the REDCap record_id for this batch", "")
+student_file = st.file_uploader(
+    "2) Upload student list CSV (must have a 'legal_name' column)",
+    type=["csv"]
+)
 
-if uploaded_files and record_id:
-    # Regex to detect “Month D, YYYY”
-    date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
+record_id = st.text_input("3) Enter the REDCap record_id for this batch", "")
 
-    # Base designation → prefix map
+# ─── Guard ─────────────────────────────────────────────────────────────────────
+if not schedule_files or not student_file or not record_id:
+    st.info("Please upload schedule Excel(s), student CSV, and enter a record_id.")
+    st.stop()
+
+# ─── Prep: Date regex & maps ───────────────────────────────────────────────────
+date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
     base_map = {
         "hope drive am continuity":    "hd_am_",
         "hope drive pm continuity":    "hd_pm_",
@@ -52,117 +63,103 @@ if uploaded_files and record_id:
         "rounder 3 7a-7p":             2,
     }
 
-    # 2️⃣ Aggregate assignments by date → designation → [providers]
-    assignments_by_date = {}
 
-    for file in uploaded_files:
-        df = pd.read_excel(file, header=None, dtype=str)
+# ─── 1. Aggregate schedule assignments by date ────────────────────────────────
+assignments_by_date = {}
+for file in schedule_files:
+    df = pd.read_excel(file, header=None, dtype=str)
 
-        # a) find all date cells anywhere
-        date_positions = []
-        for r in range(df.shape[0]):
-            for c in range(df.shape[1]):
-                val = str(df.iat[r, c]).replace("\xa0"," ").strip()
-                if date_pat.match(val):
-                    try:
-                        d = pd.to_datetime(val).date()
-                        date_positions.append((d, r, c))
-                    except:
-                        pass
+    # find all date cells
+    date_positions = []
+    for r in range(df.shape[0]):
+        for c in range(df.shape[1]):
+            val = str(df.iat[r,c]).replace("\xa0"," ").strip()
+            if date_pat.match(val):
+                try:
+                    d = pd.to_datetime(val).date()
+                    date_positions.append((d,r,c))
+                except:
+                    pass
 
-        # b) dedupe lowest‐row position for each date
-        unique = {}
-        for d, r, c in date_positions:
-            if d not in unique or r < unique[d][0]:
-                unique[d] = (r, c)
+    # dedupe to the topmost row per date
+    unique = {}
+    for d,r,c in date_positions:
+        if d not in unique or r < unique[d][0]:
+            unique[d] = (r,c)
 
-        # c) process each date in this file
-        for d, (row0, col0) in unique.items():
-            # ensure we have a dict for this date
-            assignments_by_date.setdefault(d, {des: [] for des in base_map})
+    # collect providers under each date
+    for d, (row0,col0) in unique.items():
+        grp = assignments_by_date.setdefault(d, {des:[] for des in base_map})
+        for r in range(row0+1, df.shape[0]):
+            cell = str(df.iat[r,col0]).replace("\xa0"," ").strip().lower()
+            if "monday" in cell:
+                break
+            prov = str(df.iat[r,col0+1]).strip()
+            if cell in grp and prov:
+                grp[cell].append(prov)
 
-            # scan downward until next "Monday"
-            for r in range(row0 + 1, df.shape[0]):
-                cell = str(df.iat[r, col0]).replace("\xa0"," ").strip().lower()
-                if "monday" in cell:
-                    break
-                prov = str(df.iat[r, col0 + 1]).strip()
-                if cell in assignments_by_date[d] and prov:
-                    assignments_by_date[d][cell].append(prov)
+# ─── 2. Read student list and prepare s1, s2, … ───────────────────────────────
+students_df = pd.read_csv(student_file, dtype=str)
+legal_names = students_df["legal_name"].dropna().tolist()
 
-    if not assignments_by_date:
-        st.error("No valid session dates or assignments found across your files.")
-        st.stop()
+# ─── 3. Build the single REDCap row ───────────────────────────────────────────
+redcap_row = {"record_id": record_id}
 
-    # 3️⃣ Build the single REDCap row
-    redcap_row = {"record_id": record_id}
+# sort dates chronologically
+sorted_dates = sorted(assignments_by_date.keys())
 
-    # sort dates chronologically
-    sorted_dates = sorted(assignments_by_date.keys())
+# loop days for schedule fields
+for idx, date in enumerate(sorted_dates, start=1):
+    # date
+    redcap_row[f"hd_day_date{idx}"] = date
+    suffix = f"d{idx}_"
+    # designation→ day-specific prefixes
+    des_map = {
+        des: ([p+suffix for p in prefs] if isinstance(prefs,list) else [prefs+suffix])
+        for des,prefs in base_map.items()
+    }
+    # providers for this date
+    for des, provs in assignments_by_date[date].items():
+        req = min_required.get(des, len(provs))
+        while len(provs) < req and provs:
+            provs.append(provs[0])
+        for i,name in enumerate(provs, start=1):
+            for prefix in des_map[des]:
+                redcap_row[f"{prefix}{i}"] = name
 
-    for idx, date in enumerate(sorted_dates, start=1):
-        # a) date field
-        redcap_row[f"hd_day_date{idx}"] = date
+# append student slots s1,s2,...
+for i,name in enumerate(legal_names, start=1):
+    redcap_row[f"s{i}"] = name
 
-        # b) day‐specific prefixes
-        suffix = f"d{idx}_"
-        desig_map = {
-            des: ([p + suffix for p in prefs] if isinstance(prefs, list)
-                  else [prefs + suffix])
-            for des, prefs in base_map.items()
-        }
+# ─── 4. Display & slice out dates/am/acute and students ─────────────────────
+out_df = pd.DataFrame([redcap_row])
 
-        # c) get providers, pad as needed, populate fields
-        for des, providers in assignments_by_date[date].items():
-            req = min_required.get(des, len(providers))
-            while len(providers) < req and providers:
-                providers.append(providers[0])
-            for i, name in enumerate(providers, start=1):
-                for prefix in desig_map[des]:
-                    redcap_row[f"{prefix}{i}"] = name
-        
-    # 4️⃣ Display & download
-    out_df = pd.DataFrame([redcap_row])
+# format date columns
+for c in out_df.columns:
+    if c.startswith("hd_day_date"):
+        out_df[c] = pd.to_datetime(out_df[c]).dt.strftime("%m-%d-%Y")
 
-    # Format all hd_day_dateN columns as MM-DD-YYYY
-    for col in out_df.columns:
-        if col.startswith("hd_day_date"):
-            out_df[col] = pd.to_datetime(out_df[col]).dt.strftime("%m-%d-%Y")
-            
-    st.subheader("✅ REDCap Import Preview")
-    st.dataframe(out_df)
+st.subheader("✅ Full REDCap Import Preview")
+st.dataframe(out_df)
 
-    csv = out_df.to_csv(index=False).encode("utf-8")
-    st.download_button("⬇️ Download Combined CSV", csv, "batch_import.csv", "text/csv")
+# subset columns
+date_cols     = [c for c in out_df.columns if c.startswith("hd_day_date")]
+am_cont_cols  = [f"hd_am_d1_{i}" for i in range(1, 19)]
+am_acute_cols = [f"hd_am_acute_d1_{i}" for i in (1,2)]
+student_cols  = [f"s{i}" for i in range(1, len(legal_names)+1)]
 
-    # After you've created and formatted out_df...
+subset = ["record_id"] + date_cols + am_cont_cols + am_acute_cols + student_cols
+subset = [c for c in subset if c in out_df.columns]
 
-    # 1️⃣ Identify columns
-    date_cols      = [c for c in out_df.columns if c.startswith("hd_day_date")]
-    am_cont_cols   = [f"hd_am_d1_{i}" for i in range(1, 19)]
-    am_acute_cols  = [f"hd_am_acute_d1_{i}" for i in (1, 2)]
-    
-    # 2️⃣ Subset
-    subset_cols = ["record_id"] + date_cols + am_cont_cols + am_acute_cols
-    dates_am_df = out_df.loc[:, [c for c in subset_cols if c in out_df.columns]]
-    
-    # 3️⃣ Display
-    st.subheader("📅 Dates & AM Continuity/Acute Preview")
-    st.dataframe(dates_am_df)
-    
-    # 4️⃣ Download
-    csv = dates_am_df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "⬇️ Download Dates + AM Continuity/Acute CSV",
-        data=csv,
-        file_name="dates_and_am_only.csv",
-        mime="text/csv"
-    )
+st.subheader("📅 Dates, AM Continuity/Acute & Students")
+st.dataframe(out_df[subset])
 
-elif uploaded_files and not record_id:
-    st.info("Enter a record_id to generate the import row.")
-else:
-    st.info("Upload at least one Excel file and enter a record_id to begin.")
+# downloads
+csv_full = out_df.to_csv(index=False).encode("utf-8")
+st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv", "text/csv")
+
+csv_sub  = out_df[subset].to_csv(index=False).encode("utf-8")
+st.download_button("⬇️ Download Dates+AM+Students CSV", csv_sub, "dates_am_students.csv", "text/csv")
 
 
 
