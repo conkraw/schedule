@@ -37,8 +37,8 @@ if uploaded_files and record_id:
         "hope drive clinic am":        "complex_am_1_",
         "hope drive clinic pm":        "complex_pm_1_",
         
-        "briarcrest clinic am ":       "adol_am_1_",
-        "briarcrest clinic pm ":       "adol_pm_1_",
+        "briarcrest clinic am":       "adol_med_am_1_",
+        "briarcrest clinic pm":       "adol_med_pm_1_",
         
     }
 
