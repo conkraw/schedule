@@ -5,16 +5,16 @@ import re
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
 
-# 1️⃣ Multiple files + single record_id
+# 1️⃣ Multi‑file upload + single record_id
 uploaded_files = st.file_uploader(
     "Upload one or more AGP calendar Excels",
     type=["xlsx","xls"],
     accept_multiple_files=True
 )
-record_id = st.text_input("Enter the REDCap record_id for all these sessions", "")
+record_id = st.text_input("Enter the REDCap record_id for this batch", "")
 
 if uploaded_files and record_id:
-    # Regex for Month D, YYYY
+    # Regex to detect “Month D, YYYY”
     date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
 
     # Base designation → prefix map
@@ -43,78 +43,88 @@ if uploaded_files and record_id:
         "rounder 3 7a-7p":             2,
     }
 
-    # 2️⃣ Create a single output row dict
-    redcap_row = {"record_id": record_id}
+    # 2️⃣ Aggregate assignments by date → designation → [providers]
+    assignments_by_date = {}
 
-    # 3️⃣ Process each file, layering fields onto the same row
-    session_counter = 0
     for file in uploaded_files:
         df = pd.read_excel(file, header=None, dtype=str)
 
-        # a) Find all date cells anywhere
-        positions = [
-            (r, c, pd.to_datetime(df.iat[r, c]).date())
-            for r in range(df.shape[0]) for c in range(df.shape[1])
-            if isinstance(df.iat[r, c], str)
-            and date_pat.match(df.iat[r, c].replace("\xa0"," ").strip())
-        ]
-        if not positions:
-            st.warning(f"No dates in {file.name}; skipping.")
-            continue
+        # a) find all date cells anywhere
+        date_positions = []
+        for r in range(df.shape[0]):
+            for c in range(df.shape[1]):
+                val = str(df.iat[r, c]).replace("\xa0"," ").strip()
+                if date_pat.match(val):
+                    try:
+                        d = pd.to_datetime(val).date()
+                        date_positions.append((d, r, c))
+                    except:
+                        pass
 
-        # b) Dedupe/sort by date → this file’s sessions
+        # b) dedupe lowest‐row position for each date
         unique = {}
-        for r, c, d in positions:
+        for d, r, c in date_positions:
             if d not in unique or r < unique[d][0]:
                 unique[d] = (r, c)
-        sessions = sorted((d, rc[0], rc[1]) for d, rc in unique.items())
 
-        # c) Loop through sessions in this file
-        for session_date, row0, col0 in sessions:
-            session_counter += 1
-            suffix = f"d{session_counter}_"
+        # c) process each date in this file
+        for d, (row0, col0) in unique.items():
+            # ensure we have a dict for this date
+            assignments_by_date.setdefault(d, {des: [] for des in base_map})
 
-            # store the date
-            redcap_row[f"hd_day_date{session_counter}"] = session_date
-
-            # build this day’s prefix map
-            desig_map = {
-                des: ([p + suffix for p in prefs] if isinstance(prefs, list)
-                      else [prefs + suffix])
-                for des, prefs in base_map.items()
-            }
-
-            # collect down until next Monday
-            grouped = {des: [] for des in desig_map}
+            # scan downward until next "Monday"
             for r in range(row0 + 1, df.shape[0]):
                 cell = str(df.iat[r, col0]).replace("\xa0"," ").strip().lower()
                 if "monday" in cell:
                     break
                 prov = str(df.iat[r, col0 + 1]).strip()
-                if cell in grouped and prov:
-                    grouped[cell].append(prov)
+                if cell in assignments_by_date[d] and prov:
+                    assignments_by_date[d][cell].append(prov)
 
-            # pad & write fields
-            for des, provs in grouped.items():
-                req = min_required.get(des, len(provs))
-                while len(provs) < req and provs:
-                    provs.append(provs[0])
-                for idx, name in enumerate(provs, start=1):
-                    for prefix in desig_map[des]:
-                        redcap_row[f"{prefix}{idx}"] = name
+    if not assignments_by_date:
+        st.error("No valid session dates or assignments found across your files.")
+        st.stop()
 
-    # 4️⃣ Show & download
+    # 3️⃣ Build the single REDCap row
+    redcap_row = {"record_id": record_id}
+
+    # sort dates chronologically
+    sorted_dates = sorted(assignments_by_date.keys())
+
+    for idx, date in enumerate(sorted_dates, start=1):
+        # a) date field
+        redcap_row[f"hd_day_date{idx}"] = date
+
+        # b) day‐specific prefixes
+        suffix = f"d{idx}_"
+        desig_map = {
+            des: ([p + suffix for p in prefs] if isinstance(prefs, list)
+                  else [prefs + suffix])
+            for des, prefs in base_map.items()
+        }
+
+        # c) get providers, pad as needed, populate fields
+        for des, providers in assignments_by_date[date].items():
+            req = min_required.get(des, len(providers))
+            while len(providers) < req and providers:
+                providers.append(providers[0])
+            for i, name in enumerate(providers, start=1):
+                for prefix in desig_map[des]:
+                    redcap_row[f"{prefix}{i}"] = name
+
+    # 4️⃣ Display & download
     out_df = pd.DataFrame([redcap_row])
-    st.subheader("✅ Combined REDCap Import Preview")
+    st.subheader("✅ REDCap Import Preview")
     st.dataframe(out_df)
 
     csv = out_df.to_csv(index=False).encode("utf-8")
-    st.download_button("⬇️ Download CSV", csv, "batch_import.csv", "text/csv")
+    st.download_button("⬇️ Download Combined CSV", csv, "batch_import.csv", "text/csv")
 
 elif uploaded_files and not record_id:
-    st.info("Enter a record_id to use for all uploaded files.")
+    st.info("Enter a record_id to generate the import row.")
 else:
-    st.info("Upload AGP calendar Excel(s) and enter a REDCap record_id to begin.")
+    st.info("Upload at least one Excel file and enter a record_id to begin.")
+
 
 
 
