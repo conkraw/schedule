@@ -28,6 +28,9 @@ if uploaded_files and record_id:
         "nyes rd am continuity":       "nyes_am_",
         "nyes rd pm continuity":       "nyes_pm_",
         "nursery weekday 8a-6p":       ["nursery_am_", "nursery_pm_"],
+        "rounder 1 7a-7p":             ["ward_a_am_team_1_","ward_a_pm_team_1_"],
+        "rounder 2 7a-7p":             ["ward_a_am_team_2_","ward_a_pm_team_2_"],
+        "rounder 3 7a-7p":             ["ward_a_am_team_3_","ward_a_pm_team_3_"],
     }
 
     # Which groups need at least 2 providers?
@@ -35,6 +38,9 @@ if uploaded_files and record_id:
         "hope drive am acute precept": 2,
         "hope drive pm acute precept": 2,
         "nursery weekday 8a-6p":       2,
+        "rounder 1 7a-7p":             2,
+        "rounder 2 7a-7p":             2,
+        "rounder 3 7a-7p":             2,
     }
 
     # 2️⃣ Create a single output row dict
