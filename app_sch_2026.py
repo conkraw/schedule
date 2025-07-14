@@ -144,8 +144,8 @@ st.dataframe(out_df)
 
 # subset columns
 date_cols     = [c for c in out_df.columns if c.startswith("hd_day_date")]
-am_cont_cols  = [f"hd_am_d1_{i}" for i in range(1, 19)]
-am_acute_cols = [f"hd_am_acute_d1_{i}" for i in (1,2)]
+am_cont_cols  = [f"hd_am_d1_{i}" for i in range(1, 19)] + [f"hd_am_d2_{i}" for i in range(1, 19)]
+am_acute_cols = [f"hd_am_acute_d1_{i}" for i in (1,2)] + [f"hd_am_acute_d2_{i}" for i in (1,2)]
 student_cols  = [f"s{i}" for i in range(1, len(legal_names)+1)]
 
 subset = ["record_id"] + date_cols + am_cont_cols + am_acute_cols + student_cols
