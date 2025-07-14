@@ -135,6 +135,23 @@ if uploaded_files and record_id:
     csv = out_df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇️ Download Combined CSV", csv, "batch_import.csv", "text/csv")
 
+    # 1️⃣ Pull only the date columns
+    date_cols = [c for c in out_df.columns if c.startswith("hd_day_date")]
+    dates_df  = out_df[date_cols]
+    
+    # 2️⃣ Show the dates-only table
+    st.subheader("📅 Session Dates Preview")
+    st.dataframe(dates_df)
+    
+    # 3️⃣ Download button for the dates CSV
+    csv_dates = dates_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "⬇️ Download Dates CSV",
+        data=csv_dates,
+        file_name="session_dates_only.csv",
+        mime="text/csv"
+    )
+
 elif uploaded_files and not record_id:
     st.info("Enter a record_id to generate the import row.")
 else:
