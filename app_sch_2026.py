@@ -1,107 +1,141 @@
 import streamlit as st
 import pandas as pd
 import re
+from pathlib import Path
 
-st.set_page_config(page_title="Hope Drive → Multi‑Day Import", layout="wide")
-st.title("Auto‑Detect Multi‑Day Preceptor → REDCap Import")
+st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
+st.title("Batch Preceptor → REDCap Import Generator")
 
-uploaded_file = st.file_uploader("Upload your AGP calendar (Excel)", type=["xlsx","xls"])
-record_id     = st.text_input("Enter REDCap record_id for this session", "")
+# 1️⃣ Allow multiple Excel uploads
+uploaded_files = st.file_uploader(
+    "Upload one or more AGP calendar Excels",
+    type=["xlsx", "xls"],
+    accept_multiple_files=True
+)
+record_prefix = st.text_input(
+    "Enter a REDCap record_id prefix (e.g. 'B1R')", ""
+)
 
-if uploaded_file and record_id:
-    # 1️⃣ Read once
-    df = pd.read_excel(uploaded_file, header=None, dtype=str)
+if uploaded_files and record_prefix:
+    all_rows = []
 
-    # 2️⃣ Find all “Month D, YYYY” cells anywhere
+    # Regex for Month D, YYYY
     date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
-    date_positions = []
-    for r in range(df.shape[0]):
-        for c in range(df.shape[1]):
-            val = str(df.iat[r, c]).replace("\xa0", " ").strip()
-            if date_pat.match(val):
-                d = pd.to_datetime(val).date()
-                date_positions.append((r, c, d))
 
-    if not date_positions:
-        st.error("No Month‑Day‑Year headers found. Check your sheet.")
-        st.stop()
-
-    # 3️⃣ De‑dup & sort by date
-    unique = {}
-    for r, c, d in date_positions:
-        unique.setdefault(d, (r, c))
-    sessions = sorted((d, rc[0], rc[1]) for d, rc in unique.items())
-
-    # 4️⃣ Base designation → prefix map
+    # Base designation → prefix map (no day suffix yet)
     base_map = {
         "hope drive am continuity":    "hd_am_",
         "hope drive pm continuity":    "hd_pm_",
         "hope drive am acute precept": "hd_am_acute_",
         "hope drive pm acute precept": "hd_pm_acute_",
+        "etown am continuity":         "etown_am_",
+        "etown pm continuity":         "etown_pm_",
+        "nyes rd am continuity":       "nyes_am_",
+        "nyes rd pm continuity":       "nyes_pm_",
+        "nursery weekday 8a-6p":       ["nursery_am_", "nursery_pm_"],
+        "rounder 1 7a-7p":             ["ward_a_am_team_1_","ward_a_pm_team_1_"],
+        "rounder 2 7a-7p":             ["ward_a_am_team_2_","ward_a_pm_team_2_"],
+        "rounder 3 7a-7p":             ["ward_a_am_team_3_","ward_a_pm_team_3_"],
     }
-    # nursery gets two prefixes
-    base_map["nursery weekday 8a-6p"] = ["nursery_am_", "nursery_pm_"]
 
-    # 5️⃣ Which need at least 2 slots?
+    # Which groups need at least 2 providers?
     min_required = {
         "hope drive am acute precept": 2,
         "hope drive pm acute precept": 2,
         "nursery weekday 8a-6p":       2,
+        "rounder 1 7a-7p":             2,
+        "rounder 2 7a-7p":             2,
+        "rounder 3 7a-7p":             2,
     }
 
-    # 6️⃣ Build one REDCap row
-    redcap_row = {"record_id": record_id}
+    for file in uploaded_files:
+        df = pd.read_excel(file, header=None, dtype=str)
 
-    for day_idx, (session_date, row0, col0) in enumerate(sessions, start=1):
-        # a) Store the date
-        redcap_row[f"hd_day_date{day_idx}"] = session_date
+        # 2️⃣ Find all date cells anywhere
+        date_positions = []
+        for r in range(df.shape[0]):
+            for c in range(df.shape[1]):
+                val = str(df.iat[r, c]).replace("\xa0"," ").strip()
+                if date_pat.match(val):
+                    try:
+                        d = pd.to_datetime(val).date()
+                        date_positions.append((r, c, d))
+                    except:
+                        pass
 
-        # b) Build day‑specific prefixes
-        suffix = f"d{day_idx}_"
-        designation_map = {}
-        for des, pref in base_map.items():
-            if isinstance(pref, list):
-                designation_map[des] = [p + suffix for p in pref]
-            else:
-                designation_map[des] = [pref + suffix]
+        if not date_positions:
+            st.warning(f"No session dates in {file.name}; skipping.")
+            continue
 
-        # c) Collect designations/providers down the column
-        grouped = {des: [] for des in designation_map}
-        for r in range(row0 + 1, df.shape[0]):
-            cell = str(df.iat[r, col0]).replace("\xa0", " ").strip().lower()
-            if "monday" in cell:  # hit next week
-                break
-            prov = str(df.iat[r, col0 + 1]).strip()
-            if cell in grouped and prov:
-                grouped[cell].append(prov)
+        # 3️⃣ Deduplicate and sort by date
+        unique = {}
+        for r, c, d in date_positions:
+            if d not in unique or r < unique[d][0]:
+                unique[d] = (r, c)
+        sessions = sorted((d, rc[0], rc[1]) for d, rc in unique.items())
 
-        # d) Pad groups
-        for des, provs in grouped.items():
-            req = min_required.get(des, len(provs))
-            while len(provs) < req and provs:
-                provs.append(provs[0])
+        # 4️⃣ Prepare one row per file
+        row = {}
+        # Derive a record_id from prefix + filename
+        stem = Path(file.name).stem.replace(" ", "_")
+        row["record_id"] = f"{record_prefix}_{stem}"
 
-            # e) Populate fields
-            for idx, name in enumerate(provs, start=1):
-                for prefix in designation_map[des]:
-                    redcap_row[f"{prefix}{idx}"] = name
+        # 5️⃣ Loop through each detected session date
+        for day_idx, (session_date, row0, col0) in enumerate(sessions, start=1):
+            # a) date field
+            row[f"hd_day_date{day_idx}"] = session_date
 
-    # 7️⃣ Output & download
-    out_df = pd.DataFrame([redcap_row])
-    st.subheader("✅ REDCap Import Preview")
+            # b) build day‑specific prefixes
+            suffix = f"d{day_idx}_"
+            desig_map = {}
+            for des, pref in base_map.items():
+                if isinstance(pref, list):
+                    desig_map[des] = [p + suffix for p in pref]
+                else:
+                    desig_map[des] = [pref + suffix]
+
+            # c) collect under that date until next "Monday"
+            grouped = {des: [] for des in desig_map}
+            for r in range(row0 + 1, df.shape[0]):
+                cell = str(df.iat[r, col0]).replace("\xa0"," ").strip().lower()
+                if cell == "":
+                    continue
+                if "monday" in cell:
+                    break
+                prov = str(df.iat[r, col0 + 1]).strip()
+                if cell in grouped and prov:
+                    grouped[cell].append(prov)
+
+            # d) pad to min if needed
+            for des, provs in grouped.items():
+                req = min_required.get(des, len(provs))
+                while len(provs) < req and provs:
+                    provs.append(provs[0])
+                # e) populate fields
+                for idx, name in enumerate(provs, start=1):
+                    for prefix in desig_map[des]:
+                        row[f"{prefix}{idx}"] = name
+
+        all_rows.append(row)
+
+    # 6️⃣ Combine & display
+    out_df = pd.DataFrame(all_rows)
+    st.subheader("✅ Combined REDCap Import Preview")
     st.dataframe(out_df)
 
+    csv = out_df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        "⬇️ Download full CSV",
-        data=out_df.to_csv(index=False).encode("utf-8"),
-        file_name="multi_day_import.csv",
-        mime="text/csv"
+        "⬇️ Download CSV",
+        csv,
+        "batch_redcap_import.csv",
+        "text/csv"
     )
 
-elif uploaded_file and not record_id:
-    st.info("Please enter a record_id so I can build the import row for this session.")
+elif uploaded_files and not record_prefix:
+    st.info("Enter a record_id prefix so I can build rows for each file.")
 else:
-    st.info("Upload your AGP calendar and enter a record_id to begin.")
+    st.info("Upload one or more Excel files and enter a record_id prefix to begin.")
+
 
 
 
