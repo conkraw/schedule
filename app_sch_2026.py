@@ -135,20 +135,27 @@ if uploaded_files and record_id:
     csv = out_df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇️ Download Combined CSV", csv, "batch_import.csv", "text/csv")
 
-    # 1️⃣ Pull only the date columns
-    date_cols = [c for c in out_df.columns if c.startswith("hd_day_date")]
-    dates_df  = out_df[date_cols]
+    # After you've created and formatted out_df...
+
+    # 1️⃣ Identify columns
+    date_cols      = [c for c in out_df.columns if c.startswith("hd_day_date")]
+    am_cont_cols   = [f"hd_am_d1_{i}" for i in range(1, 19)]
+    am_acute_cols  = [f"hd_am_acute_d1_{i}" for i in (1, 2)]
     
-    # 2️⃣ Show the dates-only table
-    st.subheader("📅 Session Dates Preview")
-    st.dataframe(dates_df)
+    # 2️⃣ Subset
+    subset_cols = date_cols + am_cont_cols + am_acute_cols
+    dates_am_df = out_df.loc[:, [c for c in subset_cols if c in out_df.columns]]
     
-    # 3️⃣ Download button for the dates CSV
-    csv_dates = dates_df.to_csv(index=False).encode("utf-8")
+    # 3️⃣ Display
+    st.subheader("📅 Dates & AM Continuity/Acute Preview")
+    st.dataframe(dates_am_df)
+    
+    # 4️⃣ Download
+    csv = dates_am_df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        "⬇️ Download Dates CSV",
-        data=csv_dates,
-        file_name="session_dates_only.csv",
+        "⬇️ Download Dates + AM Continuity/Acute CSV",
+        data=csv,
+        file_name="dates_and_am_only.csv",
         mime="text/csv"
     )
 
