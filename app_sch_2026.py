@@ -354,6 +354,10 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         ws.merge_range('C1:F1', text1, merge_format)
         ws.write('G1', '', merge_format)
         ws.write('H1', '', merge_format)
+        # paint A3 and A4 pink
+        ws.write('A3', '', format_date)
+        ws.write('A4', '', format_date)
+
 
     workbook.close()
     output.seek(0)
