@@ -296,12 +296,11 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
 
         # 2) Write exactly 10 AM then 10 PM in column A
         for start in BLOCK_STARTS:
-            # rows start … start+9  will be 'AM'
             for i in range(AM_COUNT):
-                ws.write(f'A{start + i}', 'AM', format5a)
-            # rows start+10 … start+19 will be 'PM'
+                ws.write(start + i, 0, 'AM', format5a)
             for i in range(PM_COUNT):
-                ws.write(f'A{start + AM_COUNT + i}', 'PM', format5a)
+                ws.write(start + AM_COUNT + i, 0, 'PM', format5a)
+
 
             ws.write(f'A{start + AM_COUNT + PM_COUNT - 1}', 'PM', format5a)
 
