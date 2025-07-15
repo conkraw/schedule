@@ -354,16 +354,11 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         ws.merge_range('C1:F1', text1, merge_format)
         ws.write('G1', '', merge_format)
         ws.write('H1', '', merge_format)
-        # paint A3 and A4 pink
-        ws.write('A3', '', format_date)
-        ws.write('A4', '', format_date)
-        ws.write('A27', '', format_date)
-        ws.write('A28', '', format_date)
-        ws.write('A51', '', format_date)
-        ws.write('A52', '', format_date)
-        ws.write('A75', '', format_date)
-        ws.write('A76', '', format_date)
 
+        PINK_STARTS = [2, 26, 50, 74]   # your header rows
+        for start in PINK_STARTS:
+            for off in (1, 2): 
+                ws.write(f'A{start + off}', '', format_date)
 
     workbook.close()
     output.seek(0)
