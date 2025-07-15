@@ -303,6 +303,8 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
             for i in range(PM_COUNT):
                 ws.write(f'A{start + AM_COUNT + i}', 'PM', format5a)
 
+            ws.write(f'A{start + AM_COUNT + PM_COUNT - 1}', 'PM', format5a)
+
         # 3) Write H0…H19 in column I
         for start in BLOCK_STARTS:
             for i, lab in enumerate(labels):
