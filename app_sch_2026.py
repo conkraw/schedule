@@ -219,9 +219,9 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     others = [s for n,s in sheets.items() if n!='HOPE_DRIVE']
     
     # define your H‑labels and derive AM/PM counts
-    labels        = [f'H{i}' for i in range(20)]   # 20 rows/block
-    rows_per_block= len(labels)                    # →20
-    half          = rows_per_block // 2            # →10
+    am_pm_labels = ['AM'] * 10 + ['PM'] * 10
+    h_labels     = [f'H{i}' for i in range(20)]
+    sections     = [(6, 25), (30, 49), (54, 73), (78, 97)]
     
     for ws in others:
         for cell_range in ['A6:H15','A30:H39','A54:H63','A78:H87']:
@@ -231,17 +231,15 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         for cell_range,fmt in zip(['B6:H6','B16:H16','B30:H30','B40:H40','B54:H54','B64:H64','B78:H78','B88:H88'],[format4,format4a]*4):
             ws.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':fmt})
 
-        # write AM/PM down column A
-        for start in (6, 30, 54, 78):
-            for i in range(rows_per_block):
-                cell = f'A{start + i}'
-                tag  = 'AM' if i < half else 'PM'
-                ws.write(cell, tag, format5a)
+        # Write AM/PM labels
+        for start_row, end_row in sections:
+            for i, label in enumerate(am_pm_labels):
+                ws.write(f'A{start_row + i}', label, format5a)
 
-        # write H‑labels down column I
-        for start in (6, 30, 54, 78):
-            for i, lab in enumerate(labels):
-                ws.write(f'I{start + i}', lab, formate)
+        # Write H labels in column I
+        for start_row, end_row in sections:
+            for i, label in enumerate(h_labels):
+                ws.write(f'I{start_row + i}', label, formate)
                 
     # Universal formatting & dates
     date_cols = [f"hd_day_date{i}" for i in range(1,29)]
