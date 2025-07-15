@@ -169,101 +169,185 @@ csv_sub  = out_df[subset].to_csv(index=False).encode("utf-8")
 st.download_button("⬇️ Download Dates+AM+Students CSV", csv_sub, "dates_am_students.csv", "text/csv")
 
 def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
+    import io
+    import xlsxwriter
+
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-    # Formats
-    format1 = workbook.add_format({'font_size':18,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
-    format4 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
-    format4a= workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#9fc5e8','border':1})
-    format5 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
-    format5a= workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#d0e9ff','border':1})
-    format11= workbook.add_format({'font_size':18,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
-    formate= workbook.add_format({'font_size':12,'bold':0,'align':'center','valign':'vcenter','font_color':'white','border':0})
-    format3 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
-    format2 = workbook.add_format({'bg_color':'black'})
-    format_date = workbook.add_format({'num_format':'m/d/yyyy','font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
-    format_label= workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
-    merge_format = workbook.add_format({'bold':1,'align':'center','valign':'vcenter','text_wrap':True,'font_color':'red','bg_color':'#FEFFCC','border':1})
 
-    # Worksheets
-    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC']
+    # ─── Formats ─────────────────────────────────────────────────────────────────
+    format1     = workbook.add_format({
+        'font_size':18,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#FEFFCC','border':1
+    })
+    format4     = workbook.add_format({
+        'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#8ccf6f','border':1
+    })
+    format4a    = workbook.add_format({
+        'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#9fc5e8','border':1
+    })
+    format5     = workbook.add_format({
+        'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#FEFFCC','border':1
+    })
+    format5a    = workbook.add_format({
+        'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#d0e9ff','border':1
+    })
+    format11    = workbook.add_format({
+        'font_size':18,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#FEFFCC','border':1
+    })
+    formate     = workbook.add_format({
+        'font_size':12,'bold':0,'align':'center','valign':'vcenter',
+        'font_color':'white','border':0
+    })
+    format3     = workbook.add_format({
+        'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#FFC7CE','border':1
+    })
+    format2     = workbook.add_format({'bg_color':'black'})
+    format_date = workbook.add_format({
+        'num_format':'m/d/yyyy','font_size':12,'bold':1,
+        'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#FFC7CE','border':1
+    })
+    format_label= workbook.add_format({
+        'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+        'font_color':'black','bg_color':'#FFC7CE','border':1
+    })
+    merge_format= workbook.add_format({
+        'bold':1,'align':'center','valign':'vcenter','text_wrap':True,
+        'font_color':'red','bg_color':'#FEFFCC','border':1
+    })
+
+    # ─── Worksheets ─────────────────────────────────────────────────────────────
+    worksheet_names = [
+        'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
+        'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC'
+    ]
     sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
 
-    # Site headers
-    site_map = dict(zip(sheets.values(), ['Hope Drive','Elizabethtown','Nyes Road','Complex Care','WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC']))
-    for ws, site in site_map.items():
-        ws.write(0,0,'Site:',format1)
-        ws.write(0,1,site,format1)
+    # ─── Site headers ────────────────────────────────────────────────────────────
+    site_list = [
+        'Hope Drive','Elizabethtown','Nyes Road','Complex Care',
+        'WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC'
+    ]
+    for ws, site in zip(sheets.values(), site_list):
+        ws.write(0, 0, 'Site:', format1)
+        ws.write(0, 1, site,   format1)
 
-    # HOPE_DRIVE specific
+    # ─── HOPE_DRIVE specific ────────────────────────────────────────────────────
     hd = sheets['HOPE_DRIVE']
-    for cell_range in ['A8:H15','A32:H39','A56:H63','A80:H87']:
-        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format1})
-    for cell_range in ['A18:H25','A42:H49','A66:H73','A90:H97']:
-        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format5a})
-    for cell_range in ['A6:H6','A7:H7','A30:H30','A31:H31','A54:H54','A55:H55','A78:H78','A79:H79']:
-        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format4})
-    for cell_range in ['A16:H16','A17:H17','A40:H40','A41:H41','A64:H64','A65:H65','A88:H88','A89:H89']:
-        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format4a})
+    for cr in ['A8:H15','A32:H39','A56:H63','A80:H87']:
+        hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format1})
+    for cr in ['A18:H25','A42:H49','A66:H73','A90:H97']:
+        hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format5a})
+    for cr in ['A6:H6','A7:H7','A30:H30','A31:H31','A54:H54','A55:H55','A78:H78','A79:H79']:
+        hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format4})
+    for cr in ['A16:H16','A17:H17','A40:H40','A41:H41','A64:H64','A65:H65','A88:H88','A89:H89']:
+        hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format4a})
     acute_ranges = [(6,7),(16,17),(30,31),(40,41),(54,55),(64,65),(78,79),(88,89)]
-    for r1,r2 in acute_ranges:
-        for r in range(r1,r2+1): hd.write(f'A{r}', 'AM - ACUTES' if r1%2==0 else 'PM - ACUTES', format4 if r1%2==0 else format4a)
+    for r1, r2 in acute_ranges:
+        fmt   = format4 if r1 % 2 == 0 else format4a
+        label = 'AM - ACUTES' if r1 % 2 == 0 else 'PM - ACUTES'
+        for r in range(r1, r2+1):
+            hd.write(f'A{r}', label, fmt)
     cont_ranges = [(8,15),(18,25),(32,39),(42,49),(56,63),(66,73),(80,87),(90,97)]
-    for r1,r2 in cont_ranges:
-        for r in range(r1,r2+1): hd.write(f'A{r}', 'AM - Continuity' if r1%2==0 else 'PM - Continuity', format5a)
+    for r1, r2 in cont_ranges:
+        for r in range(r1, r2+1):
+            hd.write(
+                f'A{r}',
+                'AM - Continuity' if r1 % 2 == 0 else 'PM - Continuity',
+                format5a
+            )
     labels = [f'H{i}' for i in range(20)]
-    for start in [6,30,54,78]:
-        for i,lab in enumerate(labels): hd.write(f'I{start+i}', lab, formate)
+    for start in [6, 30, 54, 78]:
+        for i, lab in enumerate(labels):
+            hd.write(f'I{start+i}', lab, formate)
 
-    # Generic sheets
-    others = [s for n,s in sheets.items() if n!='HOPE_DRIVE']
-    
-    # define your H‑labels and derive AM/PM counts
-    am_pm_labels = ['AM'] * 10 + ['PM'] * 10
-    h_labels     = [f'H{i}' for i in range(20)]
-    sections     = [(6, 25), (30, 49), (54, 73), (78, 97)]
-    
+    # ─── GENERIC SHEETS ─────────────────────────────────────────────────────────
+    others       = [ws for name, ws in sheets.items() if name != 'HOPE_DRIVE']
+    AM_COUNT     = 10
+    PM_COUNT     = 10
+    BLOCK_STARTS = [6, 30, 54, 78]
+
     for ws in others:
-        for cell_range in ['A6:H15','A30:H39','A54:H63','A78:H87']:
-            ws.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format1})
-        for cell_range in ['A16:H25','A40:H49','A64:H73','A88:H97']:
-            ws.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format5a})
-        for cell_range,fmt in zip(['B6:H6','B16:H16','B30:H30','B40:H40','B54:H54','B64:H64','B78:H78','B88:H88'],[format4,format4a]*4):
-            ws.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':fmt})
+        # same conditional formats as above
+        for cr in ['A6:H15','A30:H39','A54:H63','A78:H87']:
+            ws.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format1})
+        for cr in ['A16:H25','A40:H49','A64:H73','A88:H97']:
+            ws.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format5a})
+        specific_ranges = [
+            ('B6:H6',   format4), ('B16:H16', format4a),
+            ('B30:H30', format4), ('B40:H40', format4a),
+            ('B54:H54', format4), ('B64:H64', format4a),
+            ('B78:H78', format4), ('B88:H88', format4a)
+        ]
+        for cr, fmt in specific_ranges:
+            ws.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':fmt})
 
-        # Write AM/PM labels
-        for start_row, end_row in sections:
-            for i, label in enumerate(am_pm_labels):
-                ws.write(f'A{start_row + i}', label, format5a)
+        # write exactly 10 AM then 10 PM in column A
+        for start in BLOCK_STARTS:
+            zero_row = start - 1
+            # AM block
+            for i in range(AM_COUNT):
+                ws.write(zero_row + i, 0, 'AM', format5a)
+            # PM block
+            for i in range(PM_COUNT):
+                ws.write(zero_row + AM_COUNT + i, 0, 'PM', format5a)
 
-        # Write H labels in column I
-        for start_row, end_row in sections:
-            for i, label in enumerate(h_labels):
-                ws.write(f'I{start_row + i}', label, formate)
-                
-    # Universal formatting & dates
+        # write H0…H19 in column I
+        for start in BLOCK_STARTS:
+            zero_row = start - 1
+            for i, lab in enumerate(labels):
+                ws.write(zero_row + i, 8, lab, formate)
+
+    # ─── Universal formatting & dates ────────────────────────────────────────────
     date_cols = [f"hd_day_date{i}" for i in range(1,29)]
-    dates = pd.to_datetime(full_df[date_cols].iloc[0]).tolist()
-    weeks = [dates[i*7:(i+1)*7] for i in range(4)]
+    dates     = pd.to_datetime(full_df[date_cols].iloc[0]).tolist()
+    weeks     = [dates[i*7:(i+1)*7] for i in range(4)]
+    days      = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+
     for ws in workbook.worksheets():
         ws.set_zoom(80)
-        ws.set_column('A:A',10)
-        ws.set_column('B:H',65)
-        ws.set_row(0,37.25)
+        ws.set_column('A:A', 10)
+        ws.set_column('B:H', 65)
+        ws.set_row(0, 37.25)
+
         for idx, start in enumerate([2,26,50,74]):
-            days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-            for c,d in enumerate(days): ws.write(start,1+c,d,format3)
-            for c,val in enumerate(weeks[idx]): ws.write(start+1,1+c,val,format_date)
-            ws.write_formula(f'A{start}', '""', format_label)
-            ws.write(f'A{start-1}', "", format_label)
-            ws.write(f'A{start+1}', "", format_label)
-            ws.conditional_format(f'A{start+3}:H{start+3}',{'type':'cell','criteria':'>=','value':0,'format':format_label})
-        # black bars
+            # day names
+            for c, d in enumerate(days):
+                ws.write(start, 1+c, d, format3)
+            # dates
+            for c, val in enumerate(weeks[idx]):
+                ws.write(start+1, 1+c, val, format_date)
+            # padding formula bars
+            ws.write_formula(f'A{start}',   '""', format_label)
+            ws.write(f'A{start-1}',        "",   format_label)
+            ws.write(f'A{start+1}',        "",   format_label)
+            ws.conditional_format(
+                f'A{start+3}:H{start+3}',
+                {'type':'cell','criteria':'>=','value':0,'format':format_label}
+            )
+
+        # black bars every 24 rows
         step = 24
-        for row in range(2,98,step): ws.merge_range(f'A{row}:H{row}', ' ', format2)
-        text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
+        for row in range(2, 98, step):
+            ws.merge_range(f'A{row}:H{row}', ' ', format2)
+
+        # merge CRTS message on every sheet
+        text1 = (
+            'Students are to alert their preceptors when they have a Clinical '
+            'Reasoning Teaching Session (CRTS).  Please allow the students to '
+            'leave approximately 15 minutes prior to the start of their session '
+            'so they can be prepared to actively participate.  ~ Thank you!'
+        )
         ws.merge_range('C1:F1', text1, merge_format)
-        ws.write('G1','',merge_format); ws.write('H1','',merge_format)
+        ws.write('G1', '', merge_format)
+        ws.write('H1', '', merge_format)
 
     workbook.close()
     output.seek(0)
