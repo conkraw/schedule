@@ -234,13 +234,13 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         # write AM/PM down column A for each 20‑row block
         for start in (6, 30, 54, 78):
             for offset, tag in enumerate(am_pm):
-                ws.write(start + offset, 0, tag, format5a)
+                ws.write(f'A{start + offset}', tag, format5a)
 
         # write H‑labels down column I (index 8) for each block
         for start in (6, 30, 54, 78):
             for offset, lab in enumerate(labels):
-                ws.write(start + offset, 8, lab, formate)
-
+                ws.write(f'I{start + offset}', lab, formate)
+                
     # Universal formatting & dates
     date_cols = [f"hd_day_date{i}" for i in range(1,29)]
     dates = pd.to_datetime(full_df[date_cols].iloc[0]).tolist()
