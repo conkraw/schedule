@@ -8,11 +8,7 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Inputs ────────────────────────────────────────────────────────────────────
-schedule_files = st.file_uploader(
-    "1) Upload one or more AGP calendar Excel(s)",
-    type=["xlsx","xls"],
-    accept_multiple_files=True
-)
+schedule_files = st.file_uploader("1) Upload one or more AGP calendar Excel(s)",type=["xlsx","xls"],accept_multiple_files=True)
 
 student_file = st.file_uploader(
     "2) Upload student list CSV (must have a 'legal_name' column)",
@@ -173,77 +169,98 @@ csv_sub  = out_df[subset].to_csv(index=False).encode("utf-8")
 st.download_button("⬇️ Download Dates+AM+Students CSV", csv_sub, "dates_am_students.csv", "text/csv")
 
 def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
-    """
-    Build the OPD.xlsx exactly as in your standalone script,
-    but using the full_df DataFrame for all the y1..y28 dates
-    (and any other cells you want to pull later from the CSV).
-    Returns the raw bytes of the .xlsx file.
-    """
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    # Formats
+    format1 = workbook.add_format({'font_size':18,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+    format4 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
+    format4a= workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#9fc5e8','border':1})
+    format5 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+    format5a= workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#d0e9ff','border':1})
+    format11= workbook.add_format({'font_size':18,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+    formate= workbook.add_format({'font_size':12,'bold':0,'align':'center','valign':'vcenter','font_color':'white','border':0})
+    format3 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
+    format2 = workbook.add_format({'bg_color':'black'})
+    format_date = workbook.add_format({'num_format':'m/d/yyyy','font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
+    format_label= workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
+    merge_format = workbook.add_format({'bold':1,'align':'center','valign':'vcenter','text_wrap':True,'font_color':'red','bg_color':'#FEFFCC','border':1})
 
-    # —––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––—
-    # 1) Define your formats once:
-    hdr_fmt = workbook.add_format({
-        'font_size': 18, 'bold': True,
-        'align': 'center','valign': 'vcenter',
-        'font_color': 'black','bg_color': '#FEFFCC','border': 1
-    })
-    date_fmt = workbook.add_format({
-        'num_format': 'm/d/yyyy','font_size': 12,'bold': True,
-        'align': 'center','valign': 'vcenter',
-        'font_color': 'black','bg_color': '#FFC7CE','border': 1
-    })
-    # (…and all your other formats: format4, format5a, formate, etc. – copy from your script…)
+    # Worksheets
+    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','W_C','W_P','PICU','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','ER_CONS','NF','ADOLMED','RESIDENT']
+    sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
 
-    # —–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+    # Site headers
+    site_map = dict(zip(sheets.values(), ['Hope Drive','Elizabethtown','Nyes Road','Complex Care','WARD A','WARD C','WARD P','PICU','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','ER CONSULTS','NIGHT FLOAT','ADOLMED','RESIDENT']))
+    for ws, site in site_map.items():
+        ws.write(0,0,'Site:',format1)
+        ws.write(0,1,site,format1)
 
-    # 2) Create your sheets
-    sheet_names = [
-        'HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','W_C','W_P',
-        'PICU','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC',
-        'ER_CONS','NF','ADOLMED','RESIDENT'
-    ]
-    sheets = {name: workbook.add_worksheet(name) for name in sheet_names}
+    # HOPE_DRIVE specific
+    hd = sheets['HOPE_DRIVE']
+    for cell_range in ['A8:H15','A32:H39','A56:H63','A80:H87']:
+        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format1})
+    for cell_range in ['A18:H25','A42:H49','A66:H73','A90:H97']:
+        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format5a})
+    for cell_range in ['A6:H6','A7:H7','A30:H30','A31:H31','A54:H54','A55:H55','A78:H78','A79:H79']:
+        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format4})
+    for cell_range in ['A16:H16','A17:H17','A40:H40','A41:H41','A64:H64','A65:H65','A88:H88','A89:H89']:
+        hd.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format4a})
+    acute_ranges = [(6,7),(16,17),(30,31),(40,41),(54,55),(64,65),(78,79),(88,89)]
+    for r1,r2 in acute_ranges:
+        for r in range(r1,r2+1): hd.write(f'A{r}', 'AM - ACUTES' if r1%2==0 else 'PM - ACUTES', format4 if r1%2==0 else format4a)
+    cont_ranges = [(8,15),(18,25),(32,39),(42,49),(56,63),(66,73),(80,87),(90,97)]
+    for r1,r2 in cont_ranges:
+        for r in range(r1,r2+1): hd.write(f'A{r}', 'AM - Continuity' if r1%2==0 else 'PM - Continuity', format5a)
+    labels = [f'H{i}' for i in range(20)]
+    for start in [6,30,54,78]:
+        for i,lab in enumerate(labels): hd.write(f'I{start+i}', lab, formate)
 
-    # 3) Grab your 28 dates out of the full_df:
+    # Generic sheets
+    others = [s for n,s in sheets.items() if n!='HOPE_DRIVE']
+    for ws in others:
+        for cell_range in ['A6:H15','A30:H39','A54:H63','A78:H87']:
+            ws.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format1})
+        for cell_range in ['A16:H25','A40:H49','A64:H73','A88:H97']:
+            ws.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':format5a})
+        for cell_range,fmt in zip(['B6:H6','B16:H16','B30:H30','B40:H40','B54:H54','B64:H64','B78:H78','B88:H88'],[format4,format4a]*4):
+            ws.conditional_format(cell_range,{'type':'cell','criteria':'>=','value':0,'format':fmt})
+        am_pm = ['AM']*10+['PM']*10
+        for block,start in enumerate([6,30,54,78]):
+            for i,lab in enumerate(am_pm): ws.write(f'A{start+i}', lab, format5a)
+        for start in [6,30,54,78]:
+            for i,lab in enumerate(labels): ws.write(f'I{start+i}', lab, formate)
+
+    # Universal formatting & dates
     date_cols = [f"hd_day_date{i}" for i in range(1,29)]
-    all_dates = full_df[date_cols].iloc[0].tolist()
-    # split into four weeks of seven
-    weeks = [all_dates[i*7:(i+1)*7] for i in range(4)]
-
-    # 4) Loop each worksheet and write headers + week‐of dates
-    for ws in sheets.values():
-        # e.g. Site: … (you can still pull site names from your dict if you like)
-        ws.write(0, 0, 'Site:', hdr_fmt)
-        # … write the rest of your Site header here …
-
-        # write day names
-        days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-        for w, start_row in enumerate([2, 26, 50, 74]):
-            # day names
-            for c, d in enumerate(days):
-                ws.write(start_row, c+1, d, hdr_fmt)
-            # dates from CSV
-            for c, dt in enumerate(weeks[w]):
-                ws.write(start_row+1, c+1, pd.to_datetime(dt).date(), date_fmt)
-
-        # (…now copy in all of your conditional_format calls,
-        #  your AM/PM labels, your H‐labels, etc. …)
-
+    dates = pd.to_datetime(full_df[date_cols].iloc[0]).tolist()
+    weeks = [dates[i*7:(i+1)*7] for i in range(4)]
+    for ws in workbook.worksheets():
         ws.set_zoom(80)
-        ws.set_column('A:A', 10)
-        ws.set_column('B:H', 65)
-        ws.set_row(0, 37.25)
+        ws.set_column('A:A',10)
+        ws.set_column('B:H',65)
+        ws.set_row(0,37.25)
+        for idx, start in enumerate([2,26,50,74]):
+            days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+            for c,d in enumerate(days): ws.write(start,1+c,d,format3)
+            for c,val in enumerate(weeks[idx]): ws.write(start+1,1+c,val,format_date)
+            ws.write_formula(f'A{start}', '""', format_label)
+            ws.write(f'A{start-1}', "", format_label)
+            ws.write(f'A{start+1}', "", format_label)
+            ws.conditional_format(f'A{start+3}:H{start+3}',{'type':'cell','criteria':'>=','value':0,'format':format_label})
+        # black bars
+        step = 24
+        for row in range(2,98,step): ws.merge_range(f'A{row}:H{row}', ' ', format2)
+        # merge message on HOPE_DRIVE only
+        if ws.get_name()=='HOPE_DRIVE':
+            text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
+            ws.merge_range('C1:F1', text1, merge_format)
+            ws.write('G1','',merge_format); ws.write('H1','',merge_format)
 
     workbook.close()
     output.seek(0)
     return output.read()
 
-# generate the in‐memory .xlsx
 excel_bytes = generate_opd_workbook(out_df)
-
-# allow the user to grab it
 st.download_button(
     label="⬇️ Download OPD.xlsx",
     data=excel_bytes,
