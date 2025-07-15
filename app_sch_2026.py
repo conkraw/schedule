@@ -186,11 +186,11 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     merge_format = workbook.add_format({'bold':1,'align':'center','valign':'vcenter','text_wrap':True,'font_color':'red','bg_color':'#FEFFCC','border':1})
 
     # Worksheets
-    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','W_C','W_P','PICU','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','ER_CONS','NF','ADOLMED','RESIDENT']
+    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC']
     sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
 
     # Site headers
-    site_map = dict(zip(sheets.values(), ['Hope Drive','Elizabethtown','Nyes Road','Complex Care','WARD A','WARD C','WARD P','PICU','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','ER CONSULTS','NIGHT FLOAT','ADOLMED','RESIDENT']))
+    site_map = dict(zip(sheets.values(), ['Hope Drive','Elizabethtown','Nyes Road','Complex Care','WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC']))
     for ws, site in site_map.items():
         ws.write(0,0,'Site:',format1)
         ws.write(0,1,site,format1)
