@@ -323,24 +323,20 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         ws.set_row(0, 37.25)
 
     for idx, start in enumerate([2,26,50,74]):
-        # day names in row 2,26,50,74
-        for c, d in enumerate(days):
-            ws.write(start, 1+c, d, format3)
-    
-        # dates in row 3,27,51,75 columns B–H
-        for c, val in enumerate(weeks[idx]):
-            ws.write(start+1, 1+c, val, format_date)
-    
-        # <— add this to color A3/H3 pink too
-        ws.write(start+1, 0, "", format_date)
-    
-        # padding formula bars
-        ws.write_formula(f'A{start}', '""', format_label)
-        ws.conditional_format(
-            f'A{start+3}:H{start+3}',
-            {'type':'cell','criteria':'>=','value':0,'format':format_label}
-        )
-
+                # day names
+                for c, d in enumerate(days):
+                    ws.write(start, 1+c, d, format3)
+                # dates
+                for c, val in enumerate(weeks[idx]):
+                    ws.write(start+1, 1+c, val, format_date)
+                    
+                # padding formula bars
+                ws.write_formula(f'A{start}',   '""', format_label)
+                
+                ws.conditional_format(
+                    f'A{start+3}:H{start+3}',
+                    {'type':'cell','criteria':'>=','value':0,'format':format_label}
+                )
 
 
         # black bars every 24 rows
