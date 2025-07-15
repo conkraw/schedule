@@ -359,10 +359,10 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         ws.write('A4', '', format_date)
         ws.write('A27', '', format_date)
         ws.write('A28', '', format_date)
-        ws.write('A41', '', format_date)
-        ws.write('A42', '', format_date)
-        ws.write('A55', '', format_date)
-        ws.write('A56', '', format_date)
+        ws.write('A51', '', format_date)
+        ws.write('A52', '', format_date)
+        ws.write('A75', '', format_date)
+        ws.write('A76', '', format_date)
 
 
     workbook.close()
