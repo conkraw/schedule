@@ -1,6 +1,8 @@
+import io
 import streamlit as st
 import pandas as pd
 import re
+import xlsxwriter
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -170,7 +172,83 @@ st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv"
 csv_sub  = out_df[subset].to_csv(index=False).encode("utf-8")
 st.download_button("⬇️ Download Dates+AM+Students CSV", csv_sub, "dates_am_students.csv", "text/csv")
 
+def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
+    """
+    Build the OPD.xlsx exactly as in your standalone script,
+    but using the full_df DataFrame for all the y1..y28 dates
+    (and any other cells you want to pull later from the CSV).
+    Returns the raw bytes of the .xlsx file.
+    """
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
 
+    # —––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––—
+    # 1) Define your formats once:
+    hdr_fmt = workbook.add_format({
+        'font_size': 18, 'bold': True,
+        'align': 'center','valign': 'vcenter',
+        'font_color': 'black','bg_color': '#FEFFCC','border': 1
+    })
+    date_fmt = workbook.add_format({
+        'num_format': 'm/d/yyyy','font_size': 12,'bold': True,
+        'align': 'center','valign': 'vcenter',
+        'font_color': 'black','bg_color': '#FFC7CE','border': 1
+    })
+    # (…and all your other formats: format4, format5a, formate, etc. – copy from your script…)
 
+    # —–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+    # 2) Create your sheets
+    sheet_names = [
+        'HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','W_C','W_P',
+        'PICU','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC',
+        'ER_CONS','NF','ADOLMED','RESIDENT'
+    ]
+    sheets = {name: workbook.add_worksheet(name) for name in sheet_names}
+
+    # 3) Grab your 28 dates out of the full_df:
+    date_cols = [f"hd_day_date{i}" for i in range(1,29)]
+    all_dates = full_df[date_cols].iloc[0].tolist()
+    # split into four weeks of seven
+    weeks = [all_dates[i*7:(i+1)*7] for i in range(4)]
+
+    # 4) Loop each worksheet and write headers + week‐of dates
+    for ws in sheets.values():
+        # e.g. Site: … (you can still pull site names from your dict if you like)
+        ws.write(0, 0, 'Site:', hdr_fmt)
+        # … write the rest of your Site header here …
+
+        # write day names
+        days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        for w, start_row in enumerate([2, 26, 50, 74]):
+            # day names
+            for c, d in enumerate(days):
+                ws.write(start_row, c+1, d, hdr_fmt)
+            # dates from CSV
+            for c, dt in enumerate(weeks[w]):
+                ws.write(start_row+1, c+1, pd.to_datetime(dt).date(), date_fmt)
+
+        # (…now copy in all of your conditional_format calls,
+        #  your AM/PM labels, your H‐labels, etc. …)
+
+        ws.set_zoom(80)
+        ws.set_column('A:A', 10)
+        ws.set_column('B:H', 65)
+        ws.set_row(0, 37.25)
+
+    workbook.close()
+    output.seek(0)
+    return output.read()
+
+# generate the in‐memory .xlsx
+excel_bytes = generate_opd_workbook(out_df)
+
+# allow the user to grab it
+st.download_button(
+    label="⬇️ Download OPD.xlsx",
+    data=excel_bytes,
+    file_name="OPD.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
 
 
