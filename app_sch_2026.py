@@ -275,35 +275,39 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     BLOCK_STARTS = [6, 30, 54, 78]
 
     for ws in others:
-        # same conditional formats as above
+        # 1) conditional formats
         for cr in ['A6:H15','A30:H39','A54:H63','A78:H87']:
-            ws.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format1})
+            ws.conditional_format(cr, {
+                'type':'cell','criteria':'>=','value':0,'format':format1
+            })
         for cr in ['A16:H25','A40:H49','A64:H73','A88:H97']:
-            ws.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format5a})
-        specific_ranges = [
+            ws.conditional_format(cr, {
+                'type':'cell','criteria':'>=','value':0,'format':format5a
+            })
+        for cr, fmt in [
             ('B6:H6',   format4), ('B16:H16', format4a),
             ('B30:H30', format4), ('B40:H40', format4a),
             ('B54:H54', format4), ('B64:H64', format4a),
             ('B78:H78', format4), ('B88:H88', format4a)
-        ]
-        for cr, fmt in specific_ranges:
-            ws.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':fmt})
+        ]:
+            ws.conditional_format(cr, {
+                'type':'cell','criteria':'>=','value':0,'format':fmt
+            })
 
-        # write exactly 10 AM then 10 PM in column A
+        # 2) Write exactly 10 AM then 10 PM in column A
         for start in BLOCK_STARTS:
-            zero_row = start - 1
-            # AM block
+            # rows start … start+9  will be 'AM'
             for i in range(AM_COUNT):
-                ws.write(zero_row + i, 0, 'AM', format5a)
-            # PM block
+                ws.write(f'A{start + i}', 'AM', format5a)
+            # rows start+10 … start+19 will be 'PM'
             for i in range(PM_COUNT):
-                ws.write(zero_row + AM_COUNT + i, 0, 'PM', format5a)
+                ws.write(f'A{start + AM_COUNT + i}', 'PM', format5a)
 
-        # write H0…H19 in column I
+        # 3) Write H0…H19 in column I
         for start in BLOCK_STARTS:
-            zero_row = start - 1
             for i, lab in enumerate(labels):
-                ws.write(zero_row + i, 8, lab, formate)
+                ws.write(f'I{start + i}', lab, formate)
+
 
     # ─── Universal formatting & dates ────────────────────────────────────────────
     date_cols = [f"hd_day_date{i}" for i in range(1,29)]
