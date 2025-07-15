@@ -299,6 +299,8 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
             zero_row = start - 1
             for i in range(AM_COUNT):
                 ws.write(zero_row + i, 0, 'AM', format5a)
+            
+            zero_row = start + 1
             for i in range(PM_COUNT):
                 ws.write(zero_row + AM_COUNT + i, 0, 'PM', format5a)
 
