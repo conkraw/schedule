@@ -330,7 +330,11 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
             for c, val in enumerate(weeks[idx]):
                 ws.write(start+1, 1+c, val, format_date)
             # padding formula bars
+            ws.write(start+1, 0, "", format_date)
+
             ws.write_formula(f'A{start}',   '""', format_label)
+            
+            
             #ws.write(f'A{start-1}',        "",   format_label)
             #ws.write(f'A{start+1}',        "",   format_label)
             ws.conditional_format(
