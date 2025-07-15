@@ -330,8 +330,8 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
                 ws.write(start+1, 1+c, val, format_date)
             # padding formula bars
             ws.write_formula(f'A{start}',   '""', format_label)
-            ws.write(f'A{start-1}',        "",   format_label)
-            ws.write(f'A{start+1}',        "",   format_label)
+            #ws.write(f'A{start-1}',        "",   format_label)
+            #ws.write(f'A{start+1}',        "",   format_label)
             ws.conditional_format(
                 f'A{start+3}:H{start+3}',
                 {'type':'cell','criteria':'>=','value':0,'format':format_label}
