@@ -250,22 +250,15 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         # black bars
         step = 24
         for row in range(2,98,step): ws.merge_range(f'A{row}:H{row}', ' ', format2)
-        # merge message on HOPE_DRIVE only
-        if ws.get_name()=='HOPE_DRIVE':
-            text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
-            ws.merge_range('C1:F1', text1, merge_format)
-            ws.write('G1','',merge_format); ws.write('H1','',merge_format)
+        text1 = 'Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  ~ Thank you!'
+        ws.merge_range('C1:F1', text1, merge_format)
+        ws.write('G1','',merge_format); ws.write('H1','',merge_format)
 
     workbook.close()
     output.seek(0)
     return output.read()
 
 excel_bytes = generate_opd_workbook(out_df)
-st.download_button(
-    label="⬇️ Download OPD.xlsx",
-    data=excel_bytes,
-    file_name="OPD.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+st.download_button(label="⬇️ Download OPD.xlsx",data=excel_bytes,file_name="OPD.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
