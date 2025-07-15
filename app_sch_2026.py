@@ -357,6 +357,12 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         # paint A3 and A4 pink
         ws.write('A3', '', format_date)
         ws.write('A4', '', format_date)
+        ws.write('A27', '', format_date)
+        ws.write('A28', '', format_date)
+        ws.write('A41', '', format_date)
+        ws.write('A42', '', format_date)
+        ws.write('A55', '', format_date)
+        ws.write('A56', '', format_date)
 
 
     workbook.close()
