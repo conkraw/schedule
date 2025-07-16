@@ -491,7 +491,6 @@ for day_idx in range(1, 6): # day_idx will go from 1 to 5
         })
 
 excel_column_letters = ['G','H']
-data_mappings = [] # Ensure data_mappings is initialized if not done already
 
 # --- Mappings for 'hd_wknd_am_dX_Y' (continuity) ---
 for day_idx in range(6, 8): # day_idx will go from 6 to 7
@@ -506,31 +505,34 @@ for day_idx in range(6, 8): # day_idx will go from 6 to 7
             'excel_cell': f'{current_excel_column}{7 + provider_idx}' # G8 to G15, H8 to H15
         })
 
-# --- Mappings for 'hd_wknd_acute_1_dX_Y' (acute precept) ---
-for day_idx in range(6, 8):
-    current_excel_column = excel_column_letters[day_idx - 6] # Corrected offset
 
-    # This inner loop handles acute provider slots _1 through _2
-    for provider_idx in range(1, 3):
+# --- Mappings for 'hd_wknd_acute_1_dX_Y' (acute precept) ---
+# This remains the same, mapping to G6-G7, H6-H7
+for day_idx in range(6, 8):
+    current_excel_column = excel_column_letters[day_idx - 6]
+
+    for provider_idx in range(1, 3): # provider_idx will go from 1 to 2
         data_mappings.append({
             'csv_column': f'hd_wknd_acute_1_d{day_idx}_{provider_idx}',
             'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{current_excel_column}{5 + provider_idx}' # G6 to G7, H6 to H7
+            'excel_cell': f'{current_excel_column}{5 + provider_idx}' # G6, G7 for d6; H6, H7 for d7
         })
 
 # --- Mappings for 'hd_wknd_acute_2_dX_Y' (acute precept for acute 2) ---
+# We will shift these to start at a different row.
+# If acute_1 uses rows 6 and 7, acute_2 can use rows 8 and 9.
 for day_idx in range(6, 8):
-    current_excel_column = excel_column_letters[day_idx - 6] # Corrected offset
+    current_excel_column = excel_column_letters[day_idx - 6]
 
-    # This inner loop handles acute provider slots _1 through _2
-    for provider_idx in range(1, 3):
+    for provider_idx in range(1, 3): # provider_idx will go from 1 to 2
+        # Adjust the starting row offset.
+        # If acute_1 started at 5 + provider_idx (rows 6, 7),
+        # acute_2 can start at 7 + provider_idx (rows 8, 9)
         data_mappings.append({
             'csv_column': f'hd_wknd_acute_2_d{day_idx}_{provider_idx}',
             'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{current_excel_column}{5 + provider_idx}' # G6 to G7, H6 to H7
+            'excel_cell': f'{current_excel_column}{7 + provider_idx}' # G8, G9 for d6; H8, H9 for d7
         })
-
-# Main execution flow (not modified)
 
 # --- Main execution flow for generating and then updating the workbook ---
 
