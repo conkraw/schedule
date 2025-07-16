@@ -500,7 +500,7 @@ for day_idx in range(6, 8): # day_idx will go from 7 to 8
     # This inner loop handles provider slots _1 through _8
     for provider_idx in range(1, 9):
         data_mappings.append({
-            'csv_column': f'hd_am_d{day_idx}_{provider_idx}',
+            'csv_column': f'hd_wknd_am_d{day_idx}_{provider_idx}',
             'excel_sheet': 'HOPE_DRIVE',
             'excel_cell': f'{current_excel_column}{7 + provider_idx}' # G8 to G15, H8 to H15
         })
