@@ -32,6 +32,11 @@ base_map = {
     
     "hope drive am acute precept": "hd_am_acute_",
     "hope drive pm acute precept": "hd_pm_acute_",
+
+    "hope drive weekend acute 1": "hd_am_acute_",
+    "hope drive weekend acute 2": "hd_am_acute_",
+
+    "hope drive weekend continuity": "hd_am_",
     
     "etown am continuity":         "etown_am_",
     "etown pm continuity":         "etown_pm_",
