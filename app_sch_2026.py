@@ -494,7 +494,7 @@ for day_idx, col in enumerate(excel_column_letters, start=1):
             row    = 5 + acute_type
         
             data_mappings.append({
-                'csv_column':  f'{prefix}{acute_type}',      # now: hd_wknd_acute_1_d6_1, hd_wknd_acute_2_d6_2, etc.
+                'csv_column':  f'{prefix}1',      # now: hd_wknd_acute_1_d6_1, hd_wknd_acute_2_d6_2, etc.
                 'excel_sheet': 'HOPE_DRIVE',
                 'excel_cell':  f'{col}{row}'
             })
