@@ -33,10 +33,10 @@ base_map = {
     "hope drive am acute precept": "hd_am_acute_",
     "hope drive pm acute precept": "hd_pm_acute_",
 
-    "hope drive weekend acute 1": "hd_am_acute_",
-    "hope drive weekend acute 2": "hd_am_acute_",
+    "hope drive weekend acute 1": "hd_wknd_acute_1_", # Changed prefix
+    "hope drive weekend acute 2": "hd_wknd_acute_2_", # Changed prefix
 
-    "hope drive weekend continuity": "hd_am_",
+    "hope drive weekend continuity": "hd_wknd_am_",
     
     "etown am continuity":         "etown_am_",
     "etown pm continuity":         "etown_pm_",
@@ -462,11 +462,11 @@ def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, ma
 data_mappings = []
 
 # Define the Excel column letters corresponding to d1, d2, ..., d7
-excel_column_letters = ['B', 'C', 'D', 'E', 'F', 'G', 'H']
+excel_column_letters = ['B', 'C', 'D', 'E', 'F']
 
 # --- Mappings for 'hd_am_dX_Y' (continuity) ---
 # This loop handles d1 through d7
-for day_idx in range(1, 8): # day_idx will go from 1 to 7
+for day_idx in range(1, 6): # day_idx will go from 1 to 5
     current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
 
     # This inner loop handles provider slots _1 through _8
@@ -479,7 +479,7 @@ for day_idx in range(1, 8): # day_idx will go from 1 to 7
 
 # --- Mappings for 'hd_am_acute_dX_Y' (acute precept) ---
 # This loop handles d1 through d7
-for day_idx in range(1, 8): # day_idx will go from 1 to 7
+for day_idx in range(1, 6): # day_idx will go from 1 to 5
     current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
 
     # This inner loop handles acute provider slots _1 through _2
