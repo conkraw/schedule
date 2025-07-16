@@ -491,30 +491,35 @@ for day_idx in range(1, 6): # day_idx will go from 1 to 5
         })
 
 excel_column_letters = ['G','H']
+
 # --- Mappings for 'hd_wknd_am_dX_Y' (continuity) ---
-for day_idx in range(7, 8): 
-    current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
+# Assuming you want to map d7 and possibly d8
+for day_idx in range(7, 9): # This range will include 7 and 8
+    # Corrected: day_idx - 7 will give 0 for day_idx=7, 1 for day_idx=8
+    current_excel_column = excel_column_letters[day_idx - 7]
 
     # This inner loop handles provider slots _1 through _8
-    for provider_idx in range(1, 9): # provider_idx will go from 1 to 8
+    for provider_idx in range(1, 9):
         data_mappings.append({
             'csv_column': f'hd_am_d{day_idx}_{provider_idx}',
             'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{current_excel_column}{7 + provider_idx}' # B8 to B15, C8 to C15, etc.
+            'excel_cell': f'{current_excel_column}{7 + provider_idx}'
         })
 
 # --- Mappings for 'hd_wknd_acute_1_' (acute precept) ---
-# This loop handles d1 through d7
-for day_idx in range(7, 8): 
-    current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
+# This loop handles d7 and possibly d8
+for day_idx in range(7, 9):
+    # Corrected: day_idx - 7 will give 0 for day_idx=7, 1 for day_idx=8
+    current_excel_column = excel_column_letters[day_idx - 7]
 
     # This inner loop handles acute provider slots _1 through _2
-    for provider_idx in range(1, 3): # provider_idx will go from 1 to 2
+    for provider_idx in range(1, 3):
         data_mappings.append({
             'csv_column': f'hd_wknd_acute_1_d{day_idx}_{provider_idx}',
             'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{current_excel_column}{5 + provider_idx}' # B6 to B7, C6 to C7, etc.
+            'excel_cell': f'{current_excel_column}{5 + provider_idx}'
         })
+
 
 # --- Main execution flow for generating and then updating the workbook ---
 
