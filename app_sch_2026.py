@@ -488,23 +488,27 @@ for day_idx, col in enumerate(excel_column_letters, start=1):
     else:
         # ─── weekends d6–d7 ───
         # acute: two separate prefixes, one slot each per day
-        for acute_type in [1, 2]:
-            prefix = f'hd_wknd_acute_{acute_type}_'  # ends with underscore
-            # row 6 if acute_type==1, row 7 if acute_type==2
-            row = 5 + acute_type
+        for acute_type in (1, 2):
+            # build prefix with day embedded
+            prefix = f'hd_wknd_acute_{acute_type}_d{day_idx}_'
+            row    = 5 + acute_type
+        
             data_mappings.append({
-                'csv_column':  f'{prefix}{day_idx}',
+                'csv_column':  f'{prefix}{acute_type}',      # now: hd_wknd_acute_1_d6_1, hd_wknd_acute_2_d6_2, etc.
                 'excel_sheet': 'HOPE_DRIVE',
                 'excel_cell':  f'{col}{row}'
             })
 
+
         # continuity (_1–_8) → rows 8–15
         for provider_idx in range(1, 9):
+            prefix = f'hd_wknd_am_d{day_idx}_'
             data_mappings.append({
-                'csv_column':  f'hd_wknd_am_{provider_idx}',
+                'csv_column':  f'{prefix}{provider_idx}',    # yields hd_wknd_am_d6_1 … hd_wknd_am_d6_8
                 'excel_sheet': 'HOPE_DRIVE',
                 'excel_cell':  f'{col}{7 + provider_idx}'
             })
+        
 
 
 # --- Main execution flow for generating and then updating the workbook ---
