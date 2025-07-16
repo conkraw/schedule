@@ -379,6 +379,86 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
 excel_bytes = generate_opd_workbook(out_df)
 st.download_button(label="⬇️ Download OPD.xlsx",data=excel_bytes,file_name="OPD.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+
+import pandas as pd
+import io
+from openpyxl import load_workbook
+from openpyxl.styles import Alignment # <--- NEW IMPORT
+
+# --- MODIFIED update_excel_from_csv function to work with bytes ---
+def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, mappings: list) -> bytes | None:
+    """
+    Updates an Excel file (from bytes) with values from a CSV (from bytes)
+    based on provided mappings, and returns the updated Excel as bytes.
+
+    Args:
+        excel_template_bytes (bytes): The bytes content of the Excel file to be updated.
+        csv_data_bytes (bytes): The bytes content of the CSV file containing the data.
+        mappings (list of dict): A list of dictionaries, where each dictionary
+                                 defines a mapping:
+                                 {'csv_column': 'name_of_csv_column',
+                                  'excel_sheet': 'Sheet Name',
+                                  'excel_cell': 'Cell Address (e.g., B8)'}
+    Returns:
+        bytes: The bytes content of the updated Excel workbook, or None if an error occurs.
+    """
+    try:
+        # Load the CSV data from bytes using BytesIO
+        df_csv = pd.read_csv(io.BytesIO(csv_data_bytes))
+
+        if df_csv.empty:
+            # Assuming st is available in the Streamlit environment
+            # If running outside Streamlit, you might use print() or logging
+            # st.error("Error: The CSV data is empty. Cannot update Excel.")
+            return None
+
+        # Load the Excel workbook from bytes using BytesIO
+        wb = load_workbook(io.BytesIO(excel_template_bytes))
+
+        # Iterate through the mappings and update the Excel file
+        for mapping in mappings:
+            csv_column = mapping['csv_column']
+            excel_sheet_name = mapping['excel_sheet']
+            excel_cell = mapping['excel_cell']
+
+            if csv_column not in df_csv.columns:
+                # st.warning(f"Warning: CSV column '{csv_column}' not found in CSV data. Skipping this mapping.")
+                continue
+
+            # Get the value from the first row of the specified CSV column
+            value_to_transfer = df_csv.loc[0, csv_column]
+
+            if excel_sheet_name not in wb.sheetnames:
+                # st.warning(f"Warning: Excel sheet '{excel_sheet_name}' not found in the Excel template. Skipping this mapping.")
+                continue
+
+            ws = wb[excel_sheet_name]
+
+            # --- APPLY THE REQUESTED FORMATTING HERE ---
+            # 1. Convert to string and append " ~ "
+            # This ensures that even if value_to_transfer is a number, it can be concatenated
+            formatted_value = str(value_to_transfer) + ' ~ '
+
+            # 2. Write the formatted value to the cell
+            ws[excel_cell] = formatted_value
+
+            # 3. Set the alignment for the cell using openpyxl's Alignment
+            cell = ws[excel_cell] # Get the cell object
+            cell.alignment = Alignment(horizontal='center', vertical='center') # Set horizontal and vertical centering
+
+            # st.info(f"Successfully wrote '{formatted_value}' from CSV column '{csv_column}' to '{excel_sheet_name}'!{excel_cell}")
+
+        # Save the modified Excel workbook to a BytesIO object
+        output_excel_bytes_io = io.BytesIO()
+        wb.save(output_excel_bytes_io)
+        output_excel_bytes_io.seek(0) # Rewind the buffer to the beginning
+
+        return output_excel_bytes_io.getvalue()
+
+    except Exception as e:
+        # st.error(f"An error occurred during Excel update: {e}")
+        return None
+        
 # --- Configuration for update_excel_from_csv (your mappings) ---
 data_mappings       = []
 excel_column_letters = ['B','C','D','E','F','G','H']
