@@ -379,110 +379,159 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
 excel_bytes = generate_opd_workbook(out_df)
 st.download_button(label="⬇️ Download OPD.xlsx",data=excel_bytes,file_name="OPD.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-import pandas as pd
-import io
-from openpyxl import load_workbook
-from openpyxl.styles import Alignment # <--- NEW IMPORT
-
-# --- MODIFIED update_excel_from_csv function to work with bytes ---
-def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, mappings: list) -> bytes | None:
-    """
-    Updates an Excel file (from bytes) with values from a CSV (from bytes)
-    based on provided mappings, and returns the updated Excel as bytes.
-
-    Args:
-        excel_template_bytes (bytes): The bytes content of the Excel file to be updated.
-        csv_data_bytes (bytes): The bytes content of the CSV file containing the data.
-        mappings (list of dict): A list of dictionaries, where each dictionary
-                                 defines a mapping:
-                                 {'csv_column': 'name_of_csv_column',
-                                  'excel_sheet': 'Sheet Name',
-                                  'excel_cell': 'Cell Address (e.g., B8)'}
-    Returns:
-        bytes: The bytes content of the updated Excel workbook, or None if an error occurs.
-    """
-    try:
-        # Load the CSV data from bytes using BytesIO
-        df_csv = pd.read_csv(io.BytesIO(csv_data_bytes))
-
-        if df_csv.empty:
-            # Assuming st is available in the Streamlit environment
-            # If running outside Streamlit, you might use print() or logging
-            # st.error("Error: The CSV data is empty. Cannot update Excel.")
-            return None
-
-        # Load the Excel workbook from bytes using BytesIO
-        wb = load_workbook(io.BytesIO(excel_template_bytes))
-
-        # Iterate through the mappings and update the Excel file
-        for mapping in mappings:
-            csv_column = mapping['csv_column']
-            excel_sheet_name = mapping['excel_sheet']
-            excel_cell = mapping['excel_cell']
-
-            if csv_column not in df_csv.columns:
-                # st.warning(f"Warning: CSV column '{csv_column}' not found in CSV data. Skipping this mapping.")
-                continue
-
-            # Get the value from the first row of the specified CSV column
-            value_to_transfer = df_csv.loc[0, csv_column]
-
-            if excel_sheet_name not in wb.sheetnames:
-                # st.warning(f"Warning: Excel sheet '{excel_sheet_name}' not found in the Excel template. Skipping this mapping.")
-                continue
-
-            ws = wb[excel_sheet_name]
-
-            # --- APPLY THE REQUESTED FORMATTING HERE ---
-            # 1. Convert to string and append " ~ "
-            # This ensures that even if value_to_transfer is a number, it can be concatenated
-            formatted_value = str(value_to_transfer) + ' ~ '
-
-            # 2. Write the formatted value to the cell
-            ws[excel_cell] = formatted_value
-
-            # 3. Set the alignment for the cell using openpyxl's Alignment
-            cell = ws[excel_cell] # Get the cell object
-            cell.alignment = Alignment(horizontal='center', vertical='center') # Set horizontal and vertical centering
-
-            # st.info(f"Successfully wrote '{formatted_value}' from CSV column '{csv_column}' to '{excel_sheet_name}'!{excel_cell}")
-
-        # Save the modified Excel workbook to a BytesIO object
-        output_excel_bytes_io = io.BytesIO()
-        wb.save(output_excel_bytes_io)
-        output_excel_bytes_io.seek(0) # Rewind the buffer to the beginning
-
-        return output_excel_bytes_io.getvalue()
-
-    except Exception as e:
-        # st.error(f"An error occurred during Excel update: {e}")
-        return None
-
 # --- Configuration for update_excel_from_csv (your mappings) ---
-data_mappings      = []
+data_mappings       = []
 excel_column_letters = ['B','C','D','E','F','G','H']
-num_weeks          = 4
+num_weeks           = 4
 
-# where continuity rows start (within each week‐block of 24 rows)
+# continuity start rows within each 24-row week block
 row_defs = {
     'AM':  {'cont_start': 8},
     'PM':  {'cont_start': 18},
 }
 
-# tell it which base_map key(s) go with each sheet
+# full prefix map
+base_map = {
+    "hope drive am continuity":     "hd_am_",
+    "hope drive pm continuity":     "hd_pm_",
+    "hope drive am acute precept":  "hd_am_acute_",
+    "hope drive pm acute precept":  "hd_pm_acute_",
+    "hope drive weekend acute 1":   "hd_wknd_acute_1_",
+    "hope drive weekend acute 2":   "hd_wknd_acute_2_",
+    "hope drive weekend continuity":"hd_wknd_am_",
+    "etown am continuity":          "etown_am_",
+    "etown pm continuity":          "etown_pm_",
+    "nyes rd am continuity":        "nyes_am_",
+    "nyes rd pm continuity":        "nyes_pm_",
+    "nursery weekday 8a-6p":        ["nursery_am_","nursery_pm_"],
+    "rounder 1 7a-7p":              ["ward_a_am_team_1_","ward_a_pm_team_1_"],
+    "rounder 2 7a-7p":              ["ward_a_am_team_2_","ward_a_pm_team_2_"],
+    "rounder 3 7a-7p":              ["ward_a_am_team_3_","ward_a_pm_team_3_"],
+    "hope drive clinic am":         "complex_am_1_",
+    "hope drive clinic pm":         "complex_pm_1_",
+    "briarcrest clinic am":         "adol_med_am_1_",
+    "briarcrest clinic pm":         "adol_med_pm_1_",
+}
+
+# which keys to use per sheet
 sheet_map = {
-    'ETOWN':            ('etown am continuity',   'etown pm continuity'),
+    'ETOWN':           ('etown am continuity','etown pm continuity'),
+    'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
+    'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
+    'W_A':             ('rounder 1 7a-7p',),
+    'PSHCH_NURSERY':   ('nursery weekday 8a-6p',),
+    'HAMPDEN_NURSERY': ('nursery weekday 8a-6p',),
+    'SJR_HOSP':        ('nursery weekday 8a-6p',),
+    'AAC':             ('briarcrest clinic am','briarcrest clinic pm'),
 }
 
 worksheet_names = [
-        'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
-        'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC'
-    ]
+    'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
+    'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY',
+    'SJR_HOSP','AAC'
+]
 
-for ws in worksheet_names: 
+for ws in worksheet_names:
     if ws == 'HOPE_DRIVE':
-        # ——— keep your existing HOPE_DRIVE code here ———
-        # within each week, AM slots start at rows 6 (acute) & 8 (cont), 
+        # — your existing HOPE_DRIVE code here —
+        continue
+
+    # safely get mapping keys; skip if missing
+    mapping_keys = sheet_map.get(ws)
+    if mapping_keys is None:
+        continue
+
+    # determine AM/PM prefixes
+    first_val = base_map[mapping_keys[0]]
+    if isinstance(first_val, list):
+        am_prefix, pm_prefix = first_val
+    elif len(mapping_keys) == 2:
+        am_prefix = base_map[mapping_keys[0]]
+        pm_prefix = base_map[mapping_keys[1]]
+    else:
+        am_prefix = pm_prefix = first_val
+
+    # generate continuity only for 4 weeks × 7 days × AM & PM
+    for week_idx in range(1, num_weeks + 1):
+        week_base  = (week_idx - 1) * 24
+        day_offset = (week_idx - 1) * 7
+
+        for day_idx, col in enumerate(excel_column_letters, start=1):
+            day_num = day_idx + day_offset
+
+            # AM continuity (_1–_8)
+            for provider_idx in range(1, 9):
+                row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
+                data_mappings.append({
+                    'csv_column': f"{am_prefix}{day_num}_{provider_idx}",
+                    'excel_sheet': ws,
+                    'excel_cell': f"{col}{row}",
+                })
+
+            # PM continuity (_1–_8)
+            for provider_idx in range(1, 9):
+                row = week_base + row_defs['PM']['cont_start'] + (provider_idx - 1)
+                data_mappings.append({
+                    'csv_column': f"{pm_prefix}{day_num}_{provider_idx}",
+                    'excel_sheet': ws,
+                    'excel_cell': f"{col}{row}",
+                })
+
+
+# --- Configuration for update_excel_from_csv (your mappings) ---
+data_mappings       = []
+excel_column_letters = ['B','C','D','E','F','G','H']
+num_weeks           = 4
+
+# continuity start rows within each 24-row week block
+row_defs = {
+    'AM':  {'cont_start': 8},
+    'PM':  {'cont_start': 18},
+}
+
+# full prefix map
+base_map = {
+    "hope drive am continuity":     "hd_am_",
+    "hope drive pm continuity":     "hd_pm_",
+    "hope drive am acute precept":  "hd_am_acute_",
+    "hope drive pm acute precept":  "hd_pm_acute_",
+    "hope drive weekend acute 1":   "hd_wknd_acute_1_",
+    "hope drive weekend acute 2":   "hd_wknd_acute_2_",
+    "hope drive weekend continuity":"hd_wknd_am_",
+    "etown am continuity":          "etown_am_",
+    "etown pm continuity":          "etown_pm_",
+    "nyes rd am continuity":        "nyes_am_",
+    "nyes rd pm continuity":        "nyes_pm_",
+    "nursery weekday 8a-6p":        ["nursery_am_","nursery_pm_"],
+    "rounder 1 7a-7p":              ["ward_a_am_team_1_","ward_a_pm_team_1_"],
+    "rounder 2 7a-7p":              ["ward_a_am_team_2_","ward_a_pm_team_2_"],
+    "rounder 3 7a-7p":              ["ward_a_am_team_3_","ward_a_pm_team_3_"],
+    "hope drive clinic am":         "complex_am_1_",
+    "hope drive clinic pm":         "complex_pm_1_",
+    "briarcrest clinic am":         "adol_med_am_1_",
+    "briarcrest clinic pm":         "adol_med_pm_1_",
+}
+
+# which keys to use per sheet
+sheet_map = {
+    'ETOWN':           ('etown am continuity','etown pm continuity'),
+    'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
+    'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
+    'W_A':             ('rounder 1 7a-7p',),
+    'PSHCH_NURSERY':   ('nursery weekday 8a-6p',),
+    'HAMPDEN_NURSERY': ('nursery weekday 8a-6p',),
+    'SJR_HOSP':        ('nursery weekday 8a-6p',),
+    'AAC':             ('briarcrest clinic am','briarcrest clinic pm'),
+}
+
+worksheet_names = [
+    'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
+    'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY',
+    'SJR_HOSP','AAC'
+]
+
+for ws in worksheet_names:
+    if ws == 'HOPE_DRIVE':
         # PM slots at 16 (acute) & 18 (cont)
         row_defs = {
             'AM': {'acute_start': 6,  'cont_start': 8},
@@ -570,40 +619,48 @@ for ws in worksheet_names:
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-                continue
 
-    # pick up 1 or 2 prefix strings from base_map
-    keys = sheet_map[ws]
-    if len(keys) == 1:
-        am_prefix, pm_prefix = base_map[keys[0]]
+        continue
+
+    # safely get mapping keys; skip if missing
+    mapping_keys = sheet_map.get(ws)
+    if mapping_keys is None:
+        continue
+
+    # determine AM/PM prefixes
+    first_val = base_map[mapping_keys[0]]
+    if isinstance(first_val, list):
+        am_prefix, pm_prefix = first_val
+    elif len(mapping_keys) == 2:
+        am_prefix = base_map[mapping_keys[0]]
+        pm_prefix = base_map[mapping_keys[1]]
     else:
-        am_prefix = base_map[keys[0]]
-        pm_prefix = base_map[keys[1]]
+        am_prefix = pm_prefix = first_val
 
-    # continuity only, AM & PM
-    for week_idx in range(1, num_weeks+1):
+    # generate continuity only for 4 weeks × 7 days × AM & PM
+    for week_idx in range(1, num_weeks + 1):
         week_base  = (week_idx - 1) * 24
         day_offset = (week_idx - 1) * 7
 
         for day_idx, col in enumerate(excel_column_letters, start=1):
             day_num = day_idx + day_offset
 
-            # — AM continuity (_1–_8) — rows 8–15 + week_base
+            # AM continuity (_1–_8)
             for provider_idx in range(1, 9):
                 row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
                 data_mappings.append({
-                    'csv_column':  f'{am_prefix}{day_num}_{provider_idx}',
+                    'csv_column': f"{am_prefix}{day_num}_{provider_idx}",
                     'excel_sheet': ws,
-                    'excel_cell':  f'{col}{row}',
+                    'excel_cell': f"{col}{row}",
                 })
 
-            # — PM continuity (_1–_8) — rows 18–25 + week_base
+            # PM continuity (_1–_8)
             for provider_idx in range(1, 9):
                 row = week_base + row_defs['PM']['cont_start'] + (provider_idx - 1)
                 data_mappings.append({
-                    'csv_column':  f'{pm_prefix}{day_num}_{provider_idx}',
+                    'csv_column': f"{pm_prefix}{day_num}_{provider_idx}",
                     'excel_sheet': ws,
-                    'excel_cell':  f'{col}{row}',
+                    'excel_cell': f"{col}{row}",
                 })
 
 
