@@ -461,34 +461,35 @@ def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, ma
 # --- Configuration for update_excel_from_csv (your mappings) ---
 data_mappings = []
 
-# Define the Excel column letters corresponding to d1, d2, ..., d7
-excel_column_letters = ['B', 'C', 'D', 'E', 'F']
+# now covers d1…d7
+excel_column_letters = ['B', 'C', 'D', 'E', 'F', 'G', 'H']
 
-# --- Mappings for 'hd_am_dX_Y' (continuity) ---
-# This loop handles d1 through d7
-for day_idx in range(1, 6): # day_idx will go from 1 to 5
-    current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
-
-    # This inner loop handles provider slots _1 through _8
-    for provider_idx in range(1, 9): # provider_idx will go from 1 to 8
+for day_idx, col in enumerate(excel_column_letters, start=1):
+    if day_idx <= 5:
+        # weekday prefixes & row offsets
+        am_prefix    = 'hd_am_d'
+        acute_prefix = 'hd_am_acute_d'
+    else:
+        # weekend prefixes & same offsets
+        am_prefix    = 'hd_wknd_am_'
+        acute_prefix = 'hd_wknd_acute_'
+    
+    # acute slots
+    for provider_idx in range(1, 3):
         data_mappings.append({
-            'csv_column': f'hd_am_d{day_idx}_{provider_idx}',
+            'csv_column': f'{acute_prefix}{day_idx}_{provider_idx}',
             'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{current_excel_column}{7 + provider_idx}' # B8 to B15, C8 to C15, etc.
+            'excel_cell': f'{col}{5 + provider_idx}'
+        })
+    
+    # continuity slots
+    for provider_idx in range(1, 9):
+        data_mappings.append({
+            'csv_column': f'{am_prefix}{day_idx if day_idx<=5 else provider_idx}',
+            'excel_sheet': 'HOPE_DRIVE',
+            'excel_cell': f'{col}{7 + provider_idx}'
         })
 
-# --- Mappings for 'hd_am_acute_dX_Y' (acute precept) ---
-# This loop handles d1 through d7
-for day_idx in range(1, 6): # day_idx will go from 1 to 5
-    current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
-
-    # This inner loop handles acute provider slots _1 through _2
-    for provider_idx in range(1, 3): # provider_idx will go from 1 to 2
-        data_mappings.append({
-            'csv_column': f'hd_am_acute_d{day_idx}_{provider_idx}',
-            'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{current_excel_column}{5 + provider_idx}' # B6 to B7, C6 to C7, etc.
-        })
 
 # --- Main execution flow for generating and then updating the workbook ---
 
