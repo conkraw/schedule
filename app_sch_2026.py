@@ -461,33 +461,32 @@ def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, ma
 # --- Configuration for update_excel_from_csv (your mappings) ---
 data_mappings = []
 
-# now covers d1…d7
+# now covers d1…d7 → B, C, D, E, F, G, H
 excel_column_letters = ['B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 for day_idx, col in enumerate(excel_column_letters, start=1):
+    # choose the right prefix
     if day_idx <= 5:
-        # weekday prefixes & row offsets
-        am_prefix    = 'hd_am_d'
-        acute_prefix = 'hd_am_acute_d'
+        am_prefix    = 'hd_am_d'        # yields hd_am_d1_1, etc.
+        acute_prefix = 'hd_am_acute_d'  # yields hd_am_acute_d1_1, etc.
     else:
-        # weekend prefixes & same offsets
-        am_prefix    = 'hd_wknd_am_'
-        acute_prefix = 'hd_wknd_acute_'
-    
-    # acute slots
+        am_prefix    = 'hd_wknd_am_d'        # yields hd_wknd_am_d6_1, etc.
+        acute_prefix = 'hd_wknd_acute_d'     # yields hd_wknd_acute_d6_1, etc.
+
+    # — acute slots (_1 through _2) go in row 6–7
     for provider_idx in range(1, 3):
         data_mappings.append({
-            'csv_column': f'{acute_prefix}{day_idx}_{provider_idx}',
-            'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{col}{5 + provider_idx}'
+            'csv_column':    f'{acute_prefix}{day_idx}_{provider_idx}',
+            'excel_sheet':   'HOPE_DRIVE',
+            'excel_cell':    f'{col}{5 + provider_idx}',  # 5+1=6, 5+2=7
         })
-    
-    # continuity slots
+
+    # — continuity slots (_1 through _8) go in row 8–15
     for provider_idx in range(1, 9):
         data_mappings.append({
-            'csv_column': f'{am_prefix}{day_idx if day_idx<=5 else provider_idx}',
-            'excel_sheet': 'HOPE_DRIVE',
-            'excel_cell': f'{col}{7 + provider_idx}'
+            'csv_column':    f'{am_prefix}{day_idx}_{provider_idx}',
+            'excel_sheet':   'HOPE_DRIVE',
+            'excel_cell':    f'{col}{7 + provider_idx}',  # 7+1=8 … 7+8=15
         })
 
 
