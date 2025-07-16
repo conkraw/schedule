@@ -461,33 +461,50 @@ def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, ma
 # --- Configuration for update_excel_from_csv (your mappings) ---
 data_mappings = []
 
-# now covers d1…d7 → B, C, D, E, F, G, H
-excel_column_letters = ['B', 'C', 'D', 'E', 'F', 'G', 'H']
+excel_column_letters = ['B','C','D','E','F','G','H']
 
 for day_idx, col in enumerate(excel_column_letters, start=1):
-    # choose the right prefix
     if day_idx <= 5:
-        am_prefix    = 'hd_am_d'        # yields hd_am_d1_1, etc.
-        acute_prefix = 'hd_am_acute_d'  # yields hd_am_acute_d1_1, etc.
+        # ─── weekdays d1…d5 ───
+        am_prefix    = 'hd_am_d'        # e.g. hd_am_d1_1
+        acute_prefix = 'hd_am_acute_d'  # e.g. hd_am_acute_d1_1
+
+        # acute slots (_1–_2) → rows 6–7
+        for provider_idx in range(1, 3):
+            data_mappings.append({
+                'csv_column':  f'{acute_prefix}{day_idx}_{provider_idx}',
+                'excel_sheet': 'HOPE_DRIVE',
+                'excel_cell':  f'{col}{5 + provider_idx}'
+            })
+
+        # continuity (_1–_8) → rows 8–15
+        for provider_idx in range(1, 9):
+            data_mappings.append({
+                'csv_column':  f'{am_prefix}{day_idx}_{provider_idx}',
+                'excel_sheet': 'HOPE_DRIVE',
+                'excel_cell':  f'{col}{7 + provider_idx}'
+            })
+
     else:
-        am_prefix    = 'hd_wknd_am_d'        # yields hd_wknd_am_d6_1, etc.
-        acute_prefix = 'hd_wknd_acute_d'     # yields hd_wknd_acute_d6_1, etc.
+        # ─── weekends d6–d7 ───
+        # acute: two separate prefixes, one slot each per day
+        for acute_type in [1, 2]:
+            prefix = f'hd_wknd_acute_{acute_type}_'  # ends with underscore
+            # row 6 if acute_type==1, row 7 if acute_type==2
+            row = 5 + acute_type
+            data_mappings.append({
+                'csv_column':  f'{prefix}{day_idx}',
+                'excel_sheet': 'HOPE_DRIVE',
+                'excel_cell':  f'{col}{row}'
+            })
 
-    # — acute slots (_1 through _2) go in row 6–7
-    for provider_idx in range(1, 3):
-        data_mappings.append({
-            'csv_column':    f'{acute_prefix}{day_idx}_{provider_idx}',
-            'excel_sheet':   'HOPE_DRIVE',
-            'excel_cell':    f'{col}{5 + provider_idx}',  # 5+1=6, 5+2=7
-        })
-
-    # — continuity slots (_1 through _8) go in row 8–15
-    for provider_idx in range(1, 9):
-        data_mappings.append({
-            'csv_column':    f'{am_prefix}{day_idx}_{provider_idx}',
-            'excel_sheet':   'HOPE_DRIVE',
-            'excel_cell':    f'{col}{7 + provider_idx}',  # 7+1=8 … 7+8=15
-        })
+        # continuity (_1–_8) → rows 8–15
+        for provider_idx in range(1, 9):
+            data_mappings.append({
+                'csv_column':  f'hd_wknd_am_{provider_idx}',
+                'excel_sheet': 'HOPE_DRIVE',
+                'excel_cell':  f'{col}{7 + provider_idx}'
+            })
 
 
 # --- Main execution flow for generating and then updating the workbook ---
