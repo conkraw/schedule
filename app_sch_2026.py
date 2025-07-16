@@ -474,7 +474,12 @@ sheet_map = {
     'ETOWN':            ('etown am continuity',   'etown pm continuity'),
 }
 
-for ws in worksheet_names:
+worksheet_names = [
+        'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
+        'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC'
+    ]
+
+for ws in worksheet_names: 
     if ws == 'HOPE_DRIVE':
         # ——— keep your existing HOPE_DRIVE code here ———
         # within each week, AM slots start at rows 6 (acute) & 8 (cont), 
