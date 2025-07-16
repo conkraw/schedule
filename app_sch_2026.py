@@ -435,12 +435,37 @@ def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, ma
         return None
 
 # --- Configuration for update_excel_from_csv (your mappings) ---
-data_mappings = [
-    {'csv_column': 'hd_am_d1_1', 'excel_sheet': 'HOPE_DRIVE', 'excel_cell': 'B8'},
-    {'csv_column': 'hd_am_acute_d1_1', 'excel_sheet': 'HOPE_DRIVE', 'excel_cell': 'B6'},
-    # Add more mappings as needed:
-    # {'csv_column': 'another_csv_column', 'excel_sheet': 'SHEET_NAME', 'excel_cell': 'A1'},
-]
+data_mappings = []
+
+# Define the Excel column letters corresponding to d1, d2, ..., d7
+excel_column_letters = ['B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+# --- Mappings for 'hd_am_dX_Y' (continuity) ---
+# This loop handles d1 through d7
+for day_idx in range(1, 8): # day_idx will go from 1 to 7
+    current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
+
+    # This inner loop handles provider slots _1 through _8
+    for provider_idx in range(1, 9): # provider_idx will go from 1 to 8
+        data_mappings.append({
+            'csv_column': f'hd_am_d{day_idx}_{provider_idx}',
+            'excel_sheet': 'HOPE_DRIVE',
+            'excel_cell': f'{current_excel_column}{7 + provider_idx}' # B8 to B15, C8 to C15, etc.
+        })
+
+# --- Mappings for 'hd_am_acute_dX_Y' (acute precept) ---
+# This loop handles d1 through d7
+for day_idx in range(1, 8): # day_idx will go from 1 to 7
+    current_excel_column = excel_column_letters[day_idx - 1] # d1 -> B, d2 -> C, etc.
+
+    # This inner loop handles acute provider slots _1 through _2
+    for provider_idx in range(1, 3): # provider_idx will go from 1 to 2
+        data_mappings.append({
+            'csv_column': f'hd_am_acute_d{day_idx}_{provider_idx}',
+            'excel_sheet': 'HOPE_DRIVE',
+            'excel_cell': f'{current_excel_column}{5 + provider_idx}' # B6 to B7, C6 to C7, etc.
+        })
+
 
 # --- Main execution flow for generating and then updating the workbook ---
 
