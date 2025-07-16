@@ -458,61 +458,67 @@ def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, ma
         # st.error(f"An error occurred during Excel update: {e}")
         return None
 
+# --- Configuration for update_excel_from_csv (your mappings) ---
 data_mappings = []
+
 excel_column_letters = ['B','C','D','E','F','G','H']
 num_weeks = 4
 
-# define where each block starts *within* a week
+# within each week, AM slots start at rows 6 (acute) & 8 (cont), 
+# PM slots at 16 (acute) & 18 (cont)
 row_defs = {
-    'AM': {'acute_start': 6, 'cont_start': 8},
+    'AM': {'acute_start': 6,  'cont_start': 8},
     'PM': {'acute_start': 16, 'cont_start': 18},
 }
 
-for week_idx in range(1, num_weeks+1):
-    week_base = (week_idx - 1) * 24  # each week block is 24 rows apart
+for week_idx in range(1, num_weeks + 1):
+    week_base  = (week_idx - 1) * 24    # shift down by 24 rows per past week
+    day_offset = (week_idx - 1) * 7     # shift day number by 7 per past week
 
     for day_idx, col in enumerate(excel_column_letters, start=1):
         is_weekday = day_idx <= 5
+        day_num    = day_idx + day_offset  # goes 1–7, 8–14, 15–21, 22–28
 
-        # ─── AM ─────────────────────────────────────────────────────────
+        # ─── AM block ───────────────────────────────────────────────
         if is_weekday:
-            # weekday acute (_1–2)
+            # weekday AM acute (_1–_2)
             for provider_idx in range(1, 3):
                 row = week_base + row_defs['AM']['acute_start'] + (provider_idx - 1)
                 data_mappings.append({
-                    'csv_column':  f'hd_am_d{day_idx}_{provider_idx}',
+                    'csv_column':  f'hd_am_acute_d{day_idx}_{provider_idx}',
                     'excel_sheet': 'HOPE_DRIVE',
                     'excel_cell':  f'{col}{row}',
                 })
-            # weekday continuity (_1–8)
+            # weekday AM continuity (_1–_8)
             for provider_idx in range(1, 9):
                 row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
                 data_mappings.append({
                     'csv_column':  f'hd_am_d{day_idx}_{provider_idx}',
-                    'excel_sheet': 'HOPE_DRIVE',
-                    'excel_cell':  f'{col}{row}',
-                })
-        else:
-            # weekend acute types 1 & 2 (one slot each)
-            for acute_type in (1, 2):
-                row = week_base + row_defs['AM']['acute_start'] + (acute_type - 1)
-                data_mappings.append({
-                    'csv_column':  f'hd_wknd_acute_{acute_type}_d{day_idx}_1',
-                    'excel_sheet': 'HOPE_DRIVE',
-                    'excel_cell':  f'{col}{row}',
-                })
-            # weekend continuity (_1–8)
-            for provider_idx in range(1, 9):
-                row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
-                data_mappings.append({
-                    'csv_column':  f'hd_wknd_am_d{day_idx}_{provider_idx}',
                     'excel_sheet': 'HOPE_DRIVE',
                     'excel_cell':  f'{col}{row}',
                 })
 
-        # ─── PM ─────────────────────────────────────────────────────────
+        else:
+            # weekend AM acute 1 & 2 (one slot each)
+            for acute_type in (1, 2):
+                row = week_base + row_defs['AM']['acute_start'] + (acute_type - 1)
+                data_mappings.append({
+                    'csv_column':  f'hd_wknd_acute_{acute_type}_d{day_num}_1',
+                    'excel_sheet': 'HOPE_DRIVE',
+                    'excel_cell':  f'{col}{row}',
+                })
+            # weekend AM continuity (_1–_8)
+            for provider_idx in range(1, 9):
+                row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
+                data_mappings.append({
+                    'csv_column':  f'hd_wknd_am_d{day_num}_{provider_idx}',
+                    'excel_sheet': 'HOPE_DRIVE',
+                    'excel_cell':  f'{col}{row}',
+                })
+
+        # ─── PM block ───────────────────────────────────────────────
         if is_weekday:
-            # weekday PM acute (_1–2)
+            # weekday PM acute (_1–_2)
             for provider_idx in range(1, 3):
                 row = week_base + row_defs['PM']['acute_start'] + (provider_idx - 1)
                 data_mappings.append({
@@ -520,7 +526,7 @@ for week_idx in range(1, num_weeks+1):
                     'excel_sheet': 'HOPE_DRIVE',
                     'excel_cell':  f'{col}{row}',
                 })
-            # weekday PM continuity (_1–8)
+            # weekday PM continuity (_1–_8)
             for provider_idx in range(1, 9):
                 row = week_base + row_defs['PM']['cont_start'] + (provider_idx - 1)
                 data_mappings.append({
@@ -528,24 +534,24 @@ for week_idx in range(1, num_weeks+1):
                     'excel_sheet': 'HOPE_DRIVE',
                     'excel_cell':  f'{col}{row}',
                 })
+
         else:
-            # weekend PM acute types 1 & 2
+            # weekend PM acute 1 & 2
             for acute_type in (1, 2):
                 row = week_base + row_defs['PM']['acute_start'] + (acute_type - 1)
                 data_mappings.append({
-                    'csv_column':  f'hd_wknd_pm_acute_{acute_type}_d{day_idx}_1',
+                    'csv_column':  f'hd_wknd_pm_acute_{acute_type}_d{day_num}_1',
                     'excel_sheet': 'HOPE_DRIVE',
                     'excel_cell':  f'{col}{row}',
                 })
-            # weekend PM continuity (_1–8)
+            # weekend PM continuity (_1–_8)
             for provider_idx in range(1, 9):
                 row = week_base + row_defs['PM']['cont_start'] + (provider_idx - 1)
                 data_mappings.append({
-                    'csv_column':  f'hd_wknd_pm_d{day_idx}_{provider_idx}',
+                    'csv_column':  f'hd_wknd_pm_d{day_num}_{provider_idx}',
                     'excel_sheet': 'HOPE_DRIVE',
                     'excel_cell':  f'{col}{row}',
                 })
-
 
 
 # --- Main execution flow for generating and then updating the workbook ---
