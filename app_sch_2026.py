@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import re
 import xlsxwriter
+from openpyxl import load_workbook # Ensure load_workbook is imported
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
