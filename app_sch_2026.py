@@ -493,8 +493,7 @@ for day_idx in range(1, 6): # day_idx will go from 1 to 5
 excel_column_letters = ['G','H']
 
 # --- Mappings for 'hd_wknd_am_dX_Y' (continuity) ---
-# This loop handles d7 and d8, mapping to columns G and H respectively
-for day_idx in range(7, 9): # day_idx will go from 7 to 8
+for day_idx in range(6, 8): # day_idx will go from 7 to 8
     # Corrected: day_idx - 7 will give 0 for day_idx=7 ('G'), 1 for day_idx=8 ('H')
     current_excel_column = excel_column_letters[day_idx - 7]
 
@@ -505,9 +504,8 @@ for day_idx in range(7, 9): # day_idx will go from 7 to 8
             'excel_sheet': 'HOPE_DRIVE',
             'excel_cell': f'{current_excel_column}{7 + provider_idx}' # G8 to G15, H8 to H15
         })
-
+        
 # --- Mappings for 'hd_wknd_acute_1_dX_Y' (acute precept) ---
-# This loop handles d7 and d8, mapping to columns G and H respectively
 for day_idx in range(6, 8):
     current_excel_column = excel_column_letters[day_idx - 7]
 
@@ -520,7 +518,6 @@ for day_idx in range(6, 8):
         })
 
 # --- Mappings for 'hd_wknd_acute_2_dX_Y' (acute precept for acute 2) ---
-# This new loop handles d7 and d8, mapping to columns G and H respectively for acute 2
 for day_idx in range(6, 8):
     current_excel_column = excel_column_letters[day_idx - 7]
 
