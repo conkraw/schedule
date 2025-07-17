@@ -46,9 +46,9 @@ base_map = {
     
     "nursery weekday 8a-6p":       ["nursery_am_", "nursery_pm_"],
     
-    "rounder 1 7a-7p":             ["ward_a_am_team_1_","ward_a_pm_team_1_"],
-    "rounder 2 7a-7p":             ["ward_a_am_team_2_","ward_a_pm_team_2_"],
-    "rounder 3 7a-7p":             ["ward_a_am_team_3_","ward_a_pm_team_3_"],
+    "rounder 1 7a-7p":             ["ward_a_am_","ward_a_pm_"],
+    "rounder 2 7a-7p":             ["ward_a_am_","ward_a_pm_"],
+    "rounder 3 7a-7p":             ["ward_a_am_","ward_a_pm_"],
 
     "hope drive clinic am":        "complex_am_",
     "hope drive clinic pm":        "complex_pm_",
