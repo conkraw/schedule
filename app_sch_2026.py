@@ -604,47 +604,46 @@ for ws in worksheet_names:
                         })
         continue
 
-    # ─── All other sheets: continuity only ────────────────────
-    mapping_keys = sheet_map.get(ws)
+     # get the list of prefix‐keys for this sheet (e.g. 3 for W_A)
+    mapping_keys = sheet_map.get(ws, ())
     if not mapping_keys:
         continue
 
-    # determine AM/PM prefixes
-    first_val = base_map[mapping_keys[0]]
-    if isinstance(first_val, list):
-        am_prefix, pm_prefix = first_val
-    elif len(mapping_keys) == 2:
-        am_prefix = base_map[mapping_keys[0]]
-        pm_prefix = base_map[mapping_keys[1]]
-    else:
-        am_prefix = pm_prefix = first_val
+    # for each team/key, emit its own continuity block
+    for key in mapping_keys:
+        val = base_map[key]
+        if isinstance(val, list):
+            # a [am_prefix, pm_prefix]
+            am_prefix, pm_prefix = val
+        else:
+            # same prefix for AM & PM continuity
+            am_prefix = pm_prefix = val
 
-    # generate continuity only for 4 weeks × 7 days × AM & PM
-    for week_idx in range(1, num_weeks + 1):
-        week_base  = (week_idx - 1) * 24
-        day_offset = (week_idx - 1) * 7
+        # 4 weeks × 7 days × 8 providers
+        for week_idx in range(1, num_weeks + 1):
+            week_base  = (week_idx - 1) * 24
+            day_offset = (week_idx - 1) * 7
 
-        for day_idx, col in enumerate(excel_column_letters, start=1):
-            day_num = day_idx + day_offset
+            for day_idx, col in enumerate(excel_column_letters, start=1):
+                day_num = day_idx + day_offset
 
-            # AM continuity (_1–8)
-            for provider_idx in range(1, 9):
-                row = week_base + cont_row_defs['AM'] + (provider_idx - 1)
-                data_mappings.append({
-                    'csv_column': f"{am_prefix}d{day_num}_{provider_idx}",
-                    'excel_sheet': ws,
-                    'excel_cell': f"{col}{row}",
-                })
+                # AM continuity (_1–8) → rows 6–13 + week_base
+                for provider_idx in range(1, 9):
+                    row = week_base + cont_row_defs['AM'] + (provider_idx - 1)
+                    data_mappings.append({
+                        'csv_column':  f"{am_prefix}d{day_num}_{provider_idx}",
+                        'excel_sheet': ws,
+                        'excel_cell':  f"{col}{row}",
+                    })
 
-            # PM continuity (_1–8)
-            for provider_idx in range(1, 9):
-                row = week_base + cont_row_defs['PM'] + (provider_idx - 1)
-                data_mappings.append({
-                    'csv_column': f"{pm_prefix}d{day_num}_{provider_idx}",
-                    'excel_sheet': ws,
-                    'excel_cell': f"{col}{row}",
-                })
-
+                # PM continuity (_1–8) → rows 16–23 + week_base
+                for provider_idx in range(1, 9):
+                    row = week_base + cont_row_defs['PM'] + (provider_idx - 1)
+                    data_mappings.append({
+                        'csv_column':  f"{pm_prefix}d{day_num}_{provider_idx}",
+                        'excel_sheet': ws,
+                        'excel_cell':  f"{col}{row}",
+                    })
 
 
 # --- Main execution flow for generating and then updating the workbook ---
