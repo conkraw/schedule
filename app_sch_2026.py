@@ -7,6 +7,7 @@ import random
 from openpyxl import load_workbook # Ensure load_workbook is imported
 import io, zipfile
 from docx import Document
+from docx.enum.section import WD_ORIENT
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -928,20 +929,25 @@ if st.button("Generate and Update Excel Files"):
 
     # 4) Build a Word doc with the summary table
     doc = Document()
+    # ─── make the page landscape ────────────────────────────────────────────────
+    section = doc.sections[0]
+    section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width, section.page_height = section.page_height, section.page_width
+    
     doc.add_heading("Assignment Summary by Week", level=1)
-    cols = df_summary.columns.tolist()
-    table = doc.add_table(rows=1, cols=len(cols))
+    
+    # ─── add table with visible borders ─────────────────────────────────────────
+    cols  = df_summary.columns.tolist()
+    # you can pass style='Table Grid' to get the default grid borders
+    table = doc.add_table(rows=1, cols=len(cols), style="Table Grid")
     hdr_cells = table.rows[0].cells
     for i, c in enumerate(cols):
         hdr_cells[i].text = c
+    
     for _, row in df_summary.iterrows():
         row_cells = table.add_row().cells
         for i, c in enumerate(cols):
             row_cells[i].text = str(row[c])
-    word_io = io.BytesIO()
-    doc.save(word_io)
-    word_io.seek(0)
-    word_bytes = word_io.read()
 
     # 5) Package into a ZIP
     zip_io = io.BytesIO()
