@@ -70,6 +70,11 @@ min_required = {
     "rounder 3 7a-7p":             2,
 }
 
+file_configs = {"HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN_NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda","Alur, Pradeep","Nanda, Sharmilarani","HAMPDEN_NURSERY"]},
+                "SJR_HOSP.xlsx": {"title": "SJR_HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley","Gubitosi, Terry","SJR_1","SJR_2"]},
+                "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding","Abimbola Ajayi","Shilu Joshi","Desiree Webb","Amy Zisa","Abdullah Sakarcan","Anna Karasik","AAC_1","AAC_2","AAC_3"]},}
+
+
 # ─── 1. Aggregate schedule assignments by date ────────────────────────────────
 assignments_by_date = {}
 for file in schedule_files:
@@ -152,8 +157,14 @@ for idx, date in enumerate(sorted_dates, start=1):
             for i, name in enumerate(provs, start=1):
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
-
                     
+  # ─── 3b. Add “file config” names into the same redcap_row ────────────────                  
+        for fname, cfg in file_configs.items():
+            # use custom_text as the field‐name prefix in REDCap
+            prefix = cfg["custom_text"].lower() + "_"  # e.g. "custom_print_"
+            for i, person in enumerate(cfg["names"], start=1):
+                redcap_row[f"{prefix}{i}"] = person
+                            
 # append student slots s1,s2,...
 for i,name in enumerate(legal_names, start=1):
     redcap_row[f"s{i}"] = name
