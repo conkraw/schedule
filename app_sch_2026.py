@@ -62,7 +62,9 @@ base_map = {
 min_required = {
     "hope drive am acute precept": 2,
     "hope drive pm acute precept": 2,
+    
     "nursery weekday 8a-6p":       2,
+    
     "rounder 1 7a-7p":             2,
     "rounder 2 7a-7p":             2,
     "rounder 3 7a-7p":             2,
@@ -167,26 +169,9 @@ for c in out_df.columns:
 st.subheader("✅ Full REDCap Import Preview")
 st.dataframe(out_df)
 
-# subset columns
-date_cols     = [c for c in out_df.columns if c.startswith("hd_day_date")]
-am_cont_cols  = [f"hd_am_d1_{i}" for i in range(1, 19)] + [f"hd_am_d2_{i}" for i in range(1, 19)] + [f"hd_am_d3_{i}" for i in range(1, 19)] + [f"hd_am_d4_{i}" for i in range(1, 19)] +[f"hd_am_d5_{i}" for i in range(1, 19)]
-am_cont_cols  = am_cont_cols + [f"hd_pm_d1_{i}" for i in range(1, 19)] + [f"hd_pm_d2_{i}" for i in range(1, 19)] + [f"hd_pm_d3_{i}" for i in range(1, 19)] + [f"hd_pm_d4_{i}" for i in range(1, 19)] +[f"hd_pm_d5_{i}" for i in range(1, 19)]
-am_acute_cols = [f"hd_am_acute_d1_{i}" for i in (1,2)] + [f"hd_am_acute_d2_{i}" for i in (1,2)] + [f"hd_am_acute_d3_{i}" for i in (1,2)] + [f"hd_am_acute_d4_{i}" for i in (1,2)] + [f"hd_am_acute_d5_{i}" for i in (1,2)] 
-am_acute_cols = am_acute_cols + [f"hd_pm_acute_d1_{i}" for i in (1,2)] + [f"hd_pm_acute_d2_{i}" for i in (1,2)] + [f"hd_pm_acute_d3_{i}" for i in (1,2)] + [f"hd_pm_acute_d4_{i}" for i in (1,2)] + [f"hd_pm_acute_d5_{i}" for i in (1,2)] 
-student_cols  = [f"s{i}" for i in range(1, len(legal_names)+1)]
-
-subset = ["record_id"] + date_cols + am_cont_cols + am_acute_cols + student_cols
-subset = [c for c in subset if c in out_df.columns]
-
-st.subheader("📅 Dates, AM Continuity/Acute & Students")
-st.dataframe(out_df[subset])
-
 # downloads
 csv_full = out_df.to_csv(index=False).encode("utf-8")
 st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv", "text/csv")
-
-csv_sub  = out_df[subset].to_csv(index=False).encode("utf-8")
-st.download_button("⬇️ Download Dates+AM+Students CSV", csv_sub, "dates_am_students.csv", "text/csv")
 
 def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     import io
@@ -246,14 +231,14 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     # ─── Worksheets ─────────────────────────────────────────────────────────────
     worksheet_names = [
         'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
-        'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC'
+        'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','ADOLMED'
     ]
     sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
 
     # ─── Site headers ────────────────────────────────────────────────────────────
     site_list = [
         'Hope Drive','Elizabethtown','Nyes Road','Complex Care',
-        'WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC'
+        'WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC', 'ADOLMED'
     ]
     for ws, site in zip(sheets.values(), site_list):
         ws.write(0, 0, 'Site:', format1)
@@ -499,16 +484,22 @@ base_map = {
     "hope drive weekend acute 1":    "hd_wknd_acute_1_",
     "hope drive weekend acute 2":    "hd_wknd_acute_2_",
     "hope drive weekend continuity": "hd_wknd_am_",
+    
     "etown am continuity":           "etown_am_",
     "etown pm continuity":           "etown_pm_",
+    
     "nyes rd am continuity":         "nyes_am_",
     "nyes rd pm continuity":         "nyes_pm_",
+    
     "nursery weekday 8a-6p":         ["nursery_am_","nursery_pm_"],
+    
     "rounder 1 7a-7p":               ["ward_a_am_","ward_a_pm_"],
     "rounder 2 7a-7p":               ["ward_a_am_","ward_a_pm_"],
     "rounder 3 7a-7p":               ["ward_a_am_","ward_a_pm_"],
+    
     "hope drive clinic am":          "complex_am_",
     "hope drive clinic pm":          "complex_pm_",
+    
     "briarcrest clinic am":          "adol_med_am_",
     "briarcrest clinic pm":          "adol_med_pm_",
 }
@@ -519,17 +510,15 @@ sheet_map = {
     'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
     'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
     'W_A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
-    'PSHCH_NURSERY':   ('nursery weekday 8a-6p',),
-    'HAMPDEN_NURSERY': ('nursery weekday 8a-6p',),
-    'SJR_HOSP':        ('nursery weekday 8a-6p',),
-    'AAC':             ('briarcrest clinic am','briarcrest clinic pm'),
+    
+    'PSHCH_NURSERY':   ('',),
+    'HAMPDEN_NURSERY': ('',),
+    'SJR_HOSP':        ('',),
+    
+    'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
 }
 
-worksheet_names = [
-    'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
-    'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY',
-    'SJR_HOSP','AAC'
-]
+worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC', 'ADOLMED']
 
 for ws in worksheet_names:
     if ws == 'HOPE_DRIVE':
