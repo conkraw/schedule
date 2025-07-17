@@ -999,38 +999,6 @@ if mode == "Format OPD + Summary":
         # 6) Single download
         st.download_button(label="⬇️ Download OPD.xlsx + Summary (zip)",data=zip_io.read(),file_name="Batch_Output.zip",mime="application/zip")
 
-import io
-import streamlit as st
-import pandas as pd
-
-def save_to_session(filename, fileobj, namespace="uploaded_files"):
-    st.session_state.setdefault(namespace, {})[filename] = fileobj
-
-def load_workbook_df(label, types, key):
-    """
-    Upload an .xlsx or .csv and return a DataFrame.
-    Saves the raw upload into session_state.uploaded_files.
-    """
-    upload = st.file_uploader(label, type=types, key=key)
-    if not upload:
-        st.info(f"Please upload {label}.")
-        return None
-
-    name = upload.name
-    try:
-        if name.lower().endswith(".csv"):
-            df = pd.read_csv(upload)
-        else:
-            df = pd.read_excel(upload)
-        st.success(f"{name} loaded.")
-        save_to_session(name, upload)
-        return df
-
-    except Exception as e:
-        st.error(f"Error loading {name}: {e}")
-        return None
-
-# … elsewhere in your main app loop …
 elif mode == "Create Student Schedule":
     st.subheader("Create Student Schedule")
 
