@@ -1182,7 +1182,7 @@ elif mode == "Create Student Schedule":
         
         if st.button("Create Blank MS_Schedule.xlsx"):
             students = df_rot["legal_name"].dropna().unique()
-            buf = create_ms_schedule_template(students, dates, locations_by_week)
+            buf = create_ms_schedule_template(students, dates)
             st.download_button(
                 "Download MS_Schedule.xlsx",
                 data=buf.getvalue(),
