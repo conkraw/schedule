@@ -132,42 +132,38 @@ sorted_dates = sorted(assignments_by_date.keys())
 for idx, date in enumerate(sorted_dates, start=1):
     redcap_row[f"hd_day_date{idx}"] = date
     suffix = f"d{idx}_"
-    
-    # build your per‑designator prefixes
+
+    # build day‑specific prefixes
     des_map = {
         des: ([p + suffix for p in prefs] if isinstance(prefs, list)
               else [prefs + suffix])
         for des, prefs in base_map.items()
     }
 
+    # 3a) schedule providers (your existing hd_am_, ward_a_am_, etc.)
     for des, provs in assignments_by_date[date].items():
-        # pad to the min_required (2 here)
         req = min_required.get(des, len(provs))
         while len(provs) < req and provs:
             provs.append(provs[0])
 
         if des.startswith("rounder"):
-            # parse team index out of e.g. "rounder 2 7a-7p" → 1 (zero‑based)
             team_idx = int(des.split()[1]) - 1
-            # each team has 'req' slots
             for i, name in enumerate(provs, start=1):
-                slot = team_idx * req + i  # team 1:1-2, team 2:3-4, team 3:5-6
+                slot = team_idx * req + i
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{slot}"] = name
-
         else:
-            # everyone else still fills 1…n
             for i, name in enumerate(provs, start=1):
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
-                    
-# ─── 3b. Add “file config” names into the same redcap_row ────────────────                  
+
+    # 3b) custom_print names — once per date, using the SAME suffix
     for fname, cfg in file_configs.items():
-        # use custom_text as the field‐name prefix in REDCap
-        prefix = cfg["custom_text"].lower() + "_"  # e.g. "custom_print_"
+        prefix = cfg["custom_text"].lower() + "_"    # "custom_print_"
         for i, person in enumerate(cfg["names"], start=1):
-            redcap_row[f"{prefix}{i}"] = person
-                            
+            # note the suffix goes BEFORE the slot index
+            redcap_row[f"{prefix}{suffix}{i}"] = person
+            
 # append student slots s1,s2,...
 for i,name in enumerate(legal_names, start=1):
     redcap_row[f"s{i}"] = name
