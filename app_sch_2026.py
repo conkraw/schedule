@@ -1200,7 +1200,7 @@ elif mode == "Create Student Schedule":
     # or hard‑code if you know the filename:
     # uploaded_name = "OPD.xlsx"
 
-raw_opd = st.session_state.uploaded_files[uploaded_name]
+    raw_opd = st.session_state.uploaded_files[uploaded_name]
 
     # ───────── Build & Assign ─────────
     if df_opd is not None and df_rot is not None:
