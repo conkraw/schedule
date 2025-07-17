@@ -1110,15 +1110,15 @@ def load_book4():
 
 # --- Main Page Logic ---
 elif st.mode == "Create Student Schedule":
-    st.title("Create Student Schedule")
-    df_opd = load_opd()
-    df_schedule = load_book4()
+st.title("Create Student Schedule")
+df_opd = load_opd()
+df_schedule = load_book4()
 
-    if st.button("Load Student Schedule"):
-        if df_opd is not None and df_schedule is not None:
-            st.session_state.page = "Create List"
-            st.rerun()
-        else:
-            st.warning("Both OPD.xlsx and Book4 schedule must be loaded before proceeding.")
+if st.button("Load Student Schedule"):
+    if df_opd is not None and df_schedule is not None:
+        st.session_state.page = "Create List"
+        st.rerun()
+    else:
+        st.warning("Both OPD.xlsx and Book4 schedule must be loaded before proceeding.")
 
 
