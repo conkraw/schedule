@@ -14,7 +14,7 @@ st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Inputs ────────────────────────────────────────────────────────────────────
 # Required keywords to look for in the content
-required_keywords = ["academic general pediatrics", "hospitalists", "complex care", "adolescent medicine"]
+required_keywords = ["academic general pediatrics", "hospitalists", "complex care", "Adol Med"]
 found_keywords = set()
 
 schedule_files = st.file_uploader("1) Upload one or more QGenda calendar Excel(s)",type=["xlsx", "xls"],accept_multiple_files=True)
