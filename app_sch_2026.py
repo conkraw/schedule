@@ -1061,7 +1061,7 @@ elif mode == "Create Student Schedule":
                             'font_color':'black','bg_color':'#89CFF0','border':1})
     
         days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-        start_rows = [3, 11, 19, 27]
+        start_rows = [2, 10, 18, 26]
         weeks = ['Week 1','Week 2','Week 3','Week 4']
         due_texts = [
             'Quiz 1 Due',
