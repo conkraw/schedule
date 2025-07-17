@@ -70,9 +70,53 @@ min_required = {
     "rounder 3 7a-7p":             2,
 }
 
-file_configs = {"HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN_NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda","Alur, Pradeep","Nanda, Sharmilarani","HAMPDEN_NURSERY"]},
-                "SJR_HOSP.xlsx": {"title": "SJR_HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley","Gubitosi, Terry","SJR_1","SJR_2"]},
-                "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding","Abimbola Ajayi","Shilu Joshi","Desiree Webb","Amy Zisa","Abdullah Sakarcan","Anna Karasik","AAC_1","AAC_2","AAC_3"]},}
+file_configs = {
+    "HAMPDEN_NURSERY.xlsx": {
+        "title":       "HAMPDEN_NURSERY",
+        "custom_text": "CUSTOM_PRINT",
+        "names": [
+            "Folaranmi, Oluwamayoda",
+            "Alur, Pradeep",
+            "Nanda, Sharmilarani",
+            "HAMPDEN_NURSERY"
+        ]
+    },
+    "SJR_HOSP.xlsx": {
+        "title":       "SJR_HOSPITALIST",
+        "custom_text": "CUSTOM_PRINT",
+        "names": [
+            "Spangola, Haley",
+            "Gubitosi, Terry",
+            "SJR_1",
+            "SJR_2"
+        ]
+    },
+    "AAC.xlsx": {
+        "title":       "AAC",
+        "custom_text": "CUSTOM_PRINT",
+        "names": [
+            "Vaishnavi Harding",
+            "Abimbola Ajayi",
+            "Shilu Joshi",
+            "Desiree Webb",
+            "Amy Zisa",
+            "Abdullah Sakarcan",
+            "Anna Karasik",
+            "AAC_1",
+            "AAC_2",
+            "AAC_3",
+            "Mahoussi Aholoukpe"
+        ]
+    },
+    # New standalone sheet for Mahoussi
+    "MAHOUSSI_AHOLOUKPE.xlsx": {
+        "title":       "MAHOUSSI_AHOLOUKPE",
+        "custom_text": "CUSTOM_PRINT",
+        "names": [
+            "Mahoussi Aholoukpe"
+        ]
+    },
+}
 
 # ─── HERE: generate sheet‐specific custom_print entries for the configss...  ────────────────────
 for cfg in file_configs.values():
