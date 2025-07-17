@@ -460,14 +460,20 @@ def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, ma
         return None
         
 # --- Configuration for update_excel_from_csv (your mappings) ---
-data_mappings       = []
+data_mappings        = []
 excel_column_letters = ['B','C','D','E','F','G','H']
-num_weeks           = 4
+num_weeks            = 4
 
-# continuity start rows within each 24-row week block
-row_defs = {
-    'AM':  {'cont_start': 6},
-    'PM':  {'cont_start': 16},
+# HOPE_DRIVE uses both acute & continuity
+hd_row_defs = {
+    'AM': {'acute_start': 6,  'cont_start': 8},
+    'PM': {'acute_start': 16, 'cont_start': 18},
+}
+
+# All other sheets only need continuity rows
+cont_row_defs = {
+    'AM':  6,   # rows 6–13
+    'PM': 16,   # rows 16–23
 }
 
 # full prefix map
@@ -479,10 +485,11 @@ base_map = {
     "hope drive weekend acute 1":   "hd_wknd_acute_1_",
     "hope drive weekend acute 2":   "hd_wknd_acute_2_",
     "hope drive weekend continuity":"hd_wknd_am_",
+    
     "etown am continuity":          "etown_am_d",
     "etown pm continuity":          "etown_pm_d",
-    "nyes rd am continuity":        "nyes_am_",
-    "nyes rd pm continuity":        "nyes_pm_",
+    "nyes rd am continuity":        "nyes_am_d",
+    "nyes rd pm continuity":        "nyes_pm_d",
     "nursery weekday 8a-6p":        ["nursery_am_","nursery_pm_"],
     "rounder 1 7a-7p":              ["ward_a_am_team_1_","ward_a_pm_team_1_"],
     "rounder 2 7a-7p":              ["ward_a_am_team_2_","ward_a_pm_team_2_"],
@@ -513,99 +520,91 @@ worksheet_names = [
 
 for ws in worksheet_names:
     if ws == 'HOPE_DRIVE':
-        # PM slots at 16 (acute) & 18 (cont)
-        row_defs = {
-            'AM': {'acute_start': 6,  'cont_start': 8},
-            'PM': {'acute_start': 16, 'cont_start': 18},
-        }
-        
+        # ─── HOPE_DRIVE logic (unchanged) ───────────────────────
         for week_idx in range(1, num_weeks + 1):
-            week_base  = (week_idx - 1) * 24    # shift down by 24 rows per past week
-            day_offset = (week_idx - 1) * 7     # shift day number by 7 per past week
-        
+            week_base  = (week_idx - 1) * 24
+            day_offset = (week_idx - 1) * 7
+
             for day_idx, col in enumerate(excel_column_letters, start=1):
                 is_weekday = day_idx <= 5
-                day_num    = day_idx + day_offset  # goes 1–7, 8–14, 15–21, 22–28
-        
-                # ─── AM block ───────────────────────────────────────────────
+                day_num    = day_idx + day_offset
+
+                # AM acute + continuity
                 if is_weekday:
-                    # weekday AM acute (_1–_2)
+                    # acute (_1–2)
                     for provider_idx in range(1, 3):
-                        row = week_base + row_defs['AM']['acute_start'] + (provider_idx - 1)
+                        row = week_base + hd_row_defs['AM']['acute_start'] + (provider_idx - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_am_acute_d{day_idx}_{provider_idx}',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-                    # weekday AM continuity (_1–_8)
+                    # continuity (_1–8)
                     for provider_idx in range(1, 9):
-                        row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
+                        row = week_base + hd_row_defs['AM']['cont_start'] + (provider_idx - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_am_d{day_idx}_{provider_idx}',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-        
                 else:
-                    # weekend AM acute 1 & 2 (one slot each)
+                    # weekend acute 1 & 2
                     for acute_type in (1, 2):
-                        row = week_base + row_defs['AM']['acute_start'] + (acute_type - 1)
+                        row = week_base + hd_row_defs['AM']['acute_start'] + (acute_type - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_wknd_acute_{acute_type}_d{day_num}_1',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-                    # weekend AM continuity (_1–_8)
+                    # weekend continuity
                     for provider_idx in range(1, 9):
-                        row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
+                        row = week_base + hd_row_defs['AM']['cont_start'] + (provider_idx - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_wknd_am_d{day_num}_{provider_idx}',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-        
-                # ─── PM block ───────────────────────────────────────────────
+
+                # PM acute + continuity
                 if is_weekday:
-                    # weekday PM acute (_1–_2)
+                    # acute (_1–2)
                     for provider_idx in range(1, 3):
-                        row = week_base + row_defs['PM']['acute_start'] + (provider_idx - 1)
+                        row = week_base + hd_row_defs['PM']['acute_start'] + (provider_idx - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_pm_acute_d{day_idx}_{provider_idx}',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-                    # weekday PM continuity (_1–_8)
+                    # continuity (_1–8)
                     for provider_idx in range(1, 9):
-                        row = week_base + row_defs['PM']['cont_start'] + (provider_idx - 1)
+                        row = week_base + hd_row_defs['PM']['cont_start'] + (provider_idx - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_pm_d{day_idx}_{provider_idx}',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-        
                 else:
-                    # weekend PM acute 1 & 2
+                    # weekend acute 1 & 2
                     for acute_type in (1, 2):
-                        row = week_base + row_defs['PM']['acute_start'] + (acute_type - 1)
+                        row = week_base + hd_row_defs['PM']['acute_start'] + (acute_type - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_wknd_pm_acute_{acute_type}_d{day_num}_1',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-                    # weekend PM continuity (_1–_8)
+                    # weekend continuity
                     for provider_idx in range(1, 9):
-                        row = week_base + row_defs['PM']['cont_start'] + (provider_idx - 1)
+                        row = week_base + hd_row_defs['PM']['cont_start'] + (provider_idx - 1)
                         data_mappings.append({
                             'csv_column':  f'hd_wknd_pm_d{day_num}_{provider_idx}',
                             'excel_sheet': 'HOPE_DRIVE',
                             'excel_cell':  f'{col}{row}',
                         })
-
         continue
 
-    # safely get mapping keys; skip if missing
+    # ─── All other sheets: continuity only ────────────────────
     mapping_keys = sheet_map.get(ws)
-    if mapping_keys is None:
+    if not mapping_keys:
         continue
 
     # determine AM/PM prefixes
@@ -626,23 +625,24 @@ for ws in worksheet_names:
         for day_idx, col in enumerate(excel_column_letters, start=1):
             day_num = day_idx + day_offset
 
-            # AM continuity (_1–_8)
+            # AM continuity (_1–8)
             for provider_idx in range(1, 9):
-                row = week_base + row_defs['AM']['cont_start'] + (provider_idx - 1)
+                row = week_base + cont_row_defs['AM'] + (provider_idx - 1)
                 data_mappings.append({
                     'csv_column': f"{am_prefix}{day_num}_{provider_idx}",
                     'excel_sheet': ws,
                     'excel_cell': f"{col}{row}",
                 })
 
-            # PM continuity (_1–_8)
+            # PM continuity (_1–8)
             for provider_idx in range(1, 9):
-                row = week_base + row_defs['PM']['cont_start'] + (provider_idx - 1)
+                row = week_base + cont_row_defs['PM'] + (provider_idx - 1)
                 data_mappings.append({
                     'csv_column': f"{pm_prefix}{day_num}_{provider_idx}",
                     'excel_sheet': ws,
                     'excel_cell': f"{col}{row}",
                 })
+
 
 
 # --- Main execution flow for generating and then updating the workbook ---
