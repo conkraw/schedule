@@ -228,16 +228,14 @@ for c in out_df.columns:
 
 
 # ─── 4b. Only keep Jennifer Shook in the adolmed columns ─────────────
-# adjust the exact string to however her name appears in your data:
-target = "Shook, Jennifer"  
-
-# find every adolmed column
+target = "Shook, Jennifer"
 adol_cols = [c for c in out_df.columns 
              if c.startswith("adol_med_am_") or c.startswith("adol_med_pm_")]
 
-# blank out any cell that isn’t Jennifer Shook
 for col in adol_cols:
     out_df[col] = out_df[col].where(out_df[col] == target, "")
+# now replace any leftover NaN with blank
+out_df[adol_cols] = out_df[adol_cols].fillna("")
 
 st.subheader("✅ Full REDCap Import Preview")
 st.dataframe(out_df)
