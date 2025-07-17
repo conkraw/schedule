@@ -1109,7 +1109,7 @@ def load_book4():
         return None
 
 # --- Main Page Logic ---
-if st.session_state.page == "Create Student Schedule":
+elif st.mode == "Create Student Schedule":
     st.title("Create Student Schedule")
     df_opd = load_opd()
     df_schedule = load_book4()
