@@ -112,12 +112,6 @@ for file in schedule_files:
             if desc in grp and prov:
                 grp[desc].append(prov)
 
-        # ── debug ──
-        st.write(f"On {d} →",
-                 "team1:", grp["rounder 1 7a-7p"],
-                 "team2:", grp["rounder 2 7a-7p"],
-                 "team3:", grp["rounder 3 7a-7p"])
-
 # ─── 2. Read student list and prepare s1, s2, … ───────────────────────────────
 students_df = pd.read_csv(student_file, dtype=str)
 legal_names = students_df["legal_name"].dropna().tolist()
@@ -606,6 +600,57 @@ for ws in worksheet_names:
                         })
         # done with HOPE_DRIVE
         continue
+
+    # ─── Special case: W_A (rounders go one after another) ────────────────
+        if ws == 'W_A':
+            mapping_keys = sheet_map[ws]   # ('rounder 1 7a-7p', 'rounder 2 7a-7p', 'rounder 3 7a-7p')
+            for week_idx in range(1, num_weeks + 1):
+                week_base  = (week_idx - 1) * 24
+                day_offset = (week_idx - 1) * 7
+        
+                for day_idx, col in enumerate(excel_column_letters, start=1):
+                    day_num = day_idx + day_offset
+        
+                    # — AM CONTINUITY: start at row 6 + week_base
+                    row = week_base + cont_row_defs['AM']
+                    for key in mapping_keys:
+                        # get and pad this team’s providers
+                        prefs = base_map[key]               # e.g. ["ward_a_am_team_1_","ward_a_pm_team_1_"]
+                        am_pref = prefs[0] if isinstance(prefs, list) else prefs
+                        provs   = assignments_by_date[date][key]
+                        req     = min_required.get(key, len(provs))
+                        while len(provs) < req:
+                            provs.append(provs[0])
+        
+                        # write each provider for this team
+                        for i, name in enumerate(provs, start=1):
+                            data_mappings.append({
+                                'csv_column':  f"{am_pref}d{day_num}_{i}",
+                                'excel_sheet': ws,
+                                'excel_cell':  f"{col}{row}",
+                            })
+                            row += 1   # move one row down
+        
+                    # — PM CONTINUITY: same pattern starting at row 16 + week_base
+                    row = week_base + cont_row_defs['PM']
+                    for key in mapping_keys:
+                        prefs = base_map[key]
+                        pm_pref = prefs[1] if isinstance(prefs, list) else prefs
+                        provs   = assignments_by_date[date][key]
+                        req     = min_required.get(key, len(provs))
+                        while len(provs) < req:
+                            provs.append(provs[0])
+        
+                        for i, name in enumerate(provs, start=1):
+                            data_mappings.append({
+                                'csv_column':  f"{pm_pref}d{day_num}_{i}",
+                                'excel_sheet': ws,
+                                'excel_cell':  f"{col}{row}",
+                            })
+                            row += 1
+        
+            # skip the generic “other sheets” logic
+            continue
 
     # ─── All other sheets: multi‑team continuity only ───
     mapping_keys = sheet_map.get(ws, ())
