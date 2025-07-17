@@ -23,7 +23,7 @@ record_id = "peds_clerkship"
 
 # ─── Guard ─────────────────────────────────────────────────────────────────────
 if not schedule_files or not student_file or not record_id:
-    st.info("Please upload schedule Excel(s), student CSV, and enter a record_id.")
+    st.info("Please upload schedule Excel(s), student CSV")
     st.stop()
 
 # ─── Prep: Date regex & maps ───────────────────────────────────────────────────
