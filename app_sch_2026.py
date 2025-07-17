@@ -318,7 +318,71 @@ for student in leftovers:
         break
     # if no slot left, the student remains unassigned in PSHCH_NURSERY
 
+# ─── SUMMARY TABLE ─────────
+# Build summary table from redcap_row and legal_names
+week_numbers = [1, 2, 3, 4]
+summary = []
 
+for student in legal_names:
+    entry = {"Student": student}
+    for w in range(4):
+        days = [day + w*7 for day in range(1, 6)]  # Mon–Fri of week
+        assignments = []
+        
+        # Ward A
+        found_ward = False
+        for shift in ("am", "pm"):
+            for slot in range(1, 7):
+                for d in days:
+                    key = f"ward_a_{shift}_d{d}_{slot}"
+                    if key in redcap_row and student in redcap_row[key]:
+                        assignments.append("WardA")
+                        found_ward = True
+                        break
+                if found_ward:
+                    break
+            if found_ward:
+                break
+        
+        # Hampden Nursery (slot 4)
+        if not found_ward:  # optional: only if not already recorded
+            for d in days:
+                key = f"custom_print_hampden_nursery_d{d}_4"
+                if key in redcap_row and student in redcap_row[key]:
+                    assignments.append("Hampden")
+                    break
+        
+        # SJR Hospitalist (slots 3 & 4)
+        found_sjr = False
+        for slot in (3, 4):
+            for d in days:
+                key = f"custom_print_sjr_hospitalist_d{d}_{slot}"
+                if key in redcap_row and student in redcap_row[key]:
+                    assignments.append("SJR")
+                    found_sjr = True
+                    break
+            if found_sjr:
+                break
+        
+        # PSHCH Nursery (slots 1 & 2)
+        for slot in (1, 2):
+            for d in days:
+                for prefix in ("nursery_am_", "nursery_pm_"):
+                    key = f"{prefix}d{d}_{slot}"
+                    if key in redcap_row and student in redcap_row[key]:
+                        assignments.append("PSHCH")
+                        break
+                if "PSHCH" in assignments:
+                    break
+            if "PSHCH" in assignments:
+                break
+        
+        entry[f"Week{w+1}"] = ", ".join(assignments) if assignments else ""
+    summary.append(entry)
+
+df_summary = pd.DataFrame(summary)
+
+st.dataframe(df_summary)
 
 # format date columns
 for c in out_df.columns:
