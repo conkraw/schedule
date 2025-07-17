@@ -226,6 +226,19 @@ for c in out_df.columns:
     if c.startswith("hd_day_date"):
         out_df[c] = pd.to_datetime(out_df[c]).dt.strftime("%m-%d-%Y")
 
+
+# ─── 4b. Only keep Jennifer Shook in the adolmed columns ─────────────
+# adjust the exact string to however her name appears in your data:
+target = "Shook, Jennifer"  
+
+# find every adolmed column
+adol_cols = [c for c in out_df.columns 
+             if c.startswith("adol_med_am_") or c.startswith("adol_med_pm_")]
+
+# blank out any cell that isn’t Jennifer Shook
+for col in adol_cols:
+    out_df[col] = out_df[col].where(out_df[col] == target, "")
+
 st.subheader("✅ Full REDCap Import Preview")
 st.dataframe(out_df)
 
