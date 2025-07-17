@@ -1204,7 +1204,7 @@ elif mode == "Create Student Schedule":
         dates     = pd.date_range(start=monday, periods=28, freq="D").tolist()
 
         # use the OPD student list
-        students = df_opd['legal_name'].dropna().unique().tolist()
+        students = df_rot['legal_name'].dropna().unique().tolist()
 
         if st.button("Create & Download MS_Schedule.xlsx"):
             # 1) blank calendar
