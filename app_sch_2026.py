@@ -8,6 +8,7 @@ from openpyxl import load_workbook # Ensure load_workbook is imported
 import io, zipfile
 from docx import Document
 from docx.enum.section import WD_ORIENT
+from datetime import timedelta
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -1163,6 +1164,16 @@ elif mode == "Create Student Schedule":
     # ───> INSERT MASTER SCHEDULE CREATION HERE <───
     if df_opd is not None:
         # define your helper (or move it up above)
+        # 1️⃣ Get the earliest start date from your rotation schedule
+        min_start = pd.to_datetime(df_rot["start_date"]).min()
+        
+        # 2️⃣ Snap it back to the Monday of that week
+        #    Python’s weekday(): Monday == 0, … Sunday == 6
+        monday = min_start - timedelta(days=min_start.weekday())
+        
+        # 3️⃣ Build a list of 28 consecutive dates (4 weeks × 7 days)
+        dates = pd.date_range(start=monday, periods=28, freq="D").tolist()
+        
         if st.button("Create Blank MS_Schedule.xlsx"):
             students = df_rot["legal_name"].dropna().unique()
             buf = create_ms_schedule_template(students, dates, locations_by_week)
