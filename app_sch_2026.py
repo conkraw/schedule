@@ -222,19 +222,25 @@ for i,name in enumerate(legal_names, start=1):
 # ─── 4. Display & slice out dates/am/acute and students ─────────────────────
 out_df = pd.DataFrame([redcap_row])
 
-# ─── Randomly assign the same student AM & PM for every slot (1–6) on each weekday over 4 weeks ─────
-day_nums = [day + week*7 for week in range(4) for day in range(1,6)]  # [1–5, 8–12, 15–19, 22–26]
-MAX_SLOTS = 6
+# ─── 1) List all Monday–Friday day numbers for 4 weeks ─────────────────────────
+day_nums = [day + week*7 
+            for week in range(4)    # 0,1,2,3 → weeks
+            for day in range(1, 6)]  # 1–5 → Mon–Fri
+# Example: [1,2,3,4,5, 8,9,10,11,12, 15,…,19, 22,…,26]
 
-for day_num in day_nums:
-    # pick 6 distinct students for this day (slots 1–6), no repeats in same day
-    picks = random.sample(legal_names, k=MAX_SLOTS)
-    for slot_idx, student in enumerate(picks, start=1):
-        for shift in ("am", "pm"):
-            key  = f"ward_a_{shift}_d{day_num}_{slot_idx}"
-            orig = redcap_row.get(key, "")
-            # preserve existing preceptor text, then append the student
-            redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
+# ─── 2) Shuffle students and pick one unique day per student ────────────────
+students    = legal_names.copy()
+random.shuffle(students)
+
+# If you have more students than days, only the first len(day_nums) will get assigned:
+assign_days = random.sample(day_nums, k=min(len(students), len(day_nums)))
+
+# ─── 3) Assign each student exactly once to slot _1 (AM & PM) on their day ──
+for student, day_num in zip(students, assign_days):
+    for shift in ("am", "pm"):
+        key  = f"ward_a_{shift}_d{day_num}_1"
+        orig = redcap_row.get(key, "")
+        redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
 
 
 # format date columns
