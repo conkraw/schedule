@@ -15,7 +15,7 @@ st.title("Batch Preceptor → REDCap Import Generator")
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 mode = st.sidebar.radio(
     "What do you want to do?",
-    ("Format OPD + Summary", "Generate Blank Individual Schedule")
+    ("Format OPD + Summary", "Create Student Schedule")
 )
 
 if mode == "Format OPD + Summary":
@@ -1109,7 +1109,7 @@ def load_book4():
         return None
 
 # --- Main Page Logic ---
-elif st.mode == "Create Student Schedule":
+elif mode == "Create Student Schedule":
 st.title("Create Student Schedule")
 df_opd = load_opd()
 df_schedule = load_book4()
