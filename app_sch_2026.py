@@ -325,12 +325,13 @@ for c in out_df.columns:
 
 
 out_df = pd.DataFrame([redcap_row])
-        
-st.subheader("✅ Full REDCap Import Preview")
-st.dataframe(out_df)
 
-csv_full = out_df.to_csv(index=False).encode("utf-8")
-st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv", "text/csv")
+# ─── File to Check Column Assignments ─────────────────────────────────────────────────────────────────
+#st.subheader("✅ Full REDCap Import Preview")
+#st.dataframe(out_df)
+
+#csv_full = out_df.to_csv(index=False).encode("utf-8")
+#st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv", "text/csv")
 
 def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     import io
@@ -535,7 +536,7 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     return output.read()
 
 excel_bytes = generate_opd_workbook(out_df)
-st.download_button(label="⬇️ Download OPD.xlsx",data=excel_bytes,file_name="OPD.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+#st.download_button(label="⬇️ Download OPD.xlsx",data=excel_bytes,file_name="OPD.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 import pandas as pd
