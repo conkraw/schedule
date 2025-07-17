@@ -329,73 +329,6 @@ out_df = pd.DataFrame([redcap_row])
 st.subheader("✅ Full REDCap Import Preview")
 st.dataframe(out_df)
 
-# ─── AFTER your REDCap preview ───────────────────────────────────────────────
-st.subheader("🗂️ Assignment Summary by Week")
-
-# Build summary table from redcap_row and legal_names
-summary = []
-for student in legal_names:
-    entry = {"Student": student}
-    for w in range(4):
-        days       = [d + w*7 for d in range(1, 6)]  # Mon–Fri of week w+1
-        assigns    = []
-
-        # 1) Ward A?
-        found = False
-        for shift in ("am","pm"):
-            for slot in range(1,7):
-                for d in days:
-                    key = f"ward_a_{shift}_d{d}_{slot}"
-                    if student in redcap_row.get(key, ""):
-                        assigns.append("Ward A")
-                        found = True
-                        break
-                if found: break
-            if found: break
-
-        # 2) Hampden?
-        if not found:
-            for d in days:
-                key = f"custom_print_hampden_nursery_d{d}_4"
-                if student in redcap_row.get(key, ""):
-                    assigns.append("Hampden")
-                    break
-
-        # 3) SJR Hospitalist?
-        sjr_found = False
-        for slot in (3,4):
-            for d in days:
-                key = f"custom_print_sjr_hospitalist_d{d}_{slot}"
-                if student in redcap_row.get(key, ""):
-                    assigns.append("SJR")
-                    sjr_found = True
-                    break
-            if sjr_found: break
-
-        # 4) PSHCH Nursery?
-        pshch_found = False
-        for slot in (1,2):
-            for d in days:
-                for prefix in ("nursery_am_","nursery_pm_"):
-                    key = f"{prefix}d{d}_{slot}"
-                    if student in redcap_row.get(key, ""):
-                        assigns.append("PSHCH")
-                        pshch_found = True
-                        break
-                if pshch_found: break
-            if pshch_found: break
-
-        entry[f"Week {w+1}"] = ", ".join(assigns) or ""
-    summary.append(entry)
-
-df_summary = pd.DataFrame(summary)
-st.dataframe(df_summary)
-# ─── END SUMMARY ─────────────────────────────────────────────────────────────
-
-# …then continue with your OPD generation…
-
-
-# downloads
 csv_full = out_df.to_csv(index=False).encode("utf-8")
 st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv", "text/csv")
 
@@ -958,3 +891,63 @@ if st.button("Generate and Update Excel Files"):
             st.error("Failed to update Excel file.")
     else:
         st.error("Failed to generate initial OPD.xlsx template.")
+
+        # ─── NOW SHOW THE SUMMARY ───────────────────────────────────
+        st.subheader("🗂️ Assignment Summary by Week")
+        # build df_summary exactly as before, using redcap_row & legal_names
+        summary = []
+        for student in legal_names:
+            entry = {"Student": student}
+            for w in range(4):
+                days = [d + w*7 for d in range(1,6)]
+                assigns = []
+                # 1) Ward A?
+                found = False
+                for shift in ("am","pm"):
+                    for slot in range(1,7):
+                        for d in days:
+                            key = f"ward_a_{shift}_d{d}_{slot}"
+                            if student in redcap_row.get(key, ""):
+                                assigns.append("Ward A")
+                                found = True
+                                break
+                        if found: break
+                    if found: break
+        
+                # 2) Hampden?
+                if not found:
+                    for d in days:
+                        key = f"custom_print_hampden_nursery_d{d}_4"
+                        if student in redcap_row.get(key, ""):
+                            assigns.append("Hampden")
+                            break
+        
+                # 3) SJR Hospitalist?
+                sjr_found = False
+                for slot in (3,4):
+                    for d in days:
+                        key = f"custom_print_sjr_hospitalist_d{d}_{slot}"
+                        if student in redcap_row.get(key, ""):
+                            assigns.append("SJR")
+                            sjr_found = True
+                            break
+                    if sjr_found: break
+        
+                # 4) PSHCH Nursery?
+                pshch_found = False
+                for slot in (1,2):
+                    for d in days:
+                        for prefix in ("nursery_am_","nursery_pm_"):
+                            key = f"{prefix}d{d}_{slot}"
+                            if student in redcap_row.get(key, ""):
+                                assigns.append("PSHCH")
+                                pshch_found = True
+                                break
+                        if pshch_found: break
+                    if pshch_found: break
+        
+                entry[f"Week {w+1}"] = ", ".join(assigns) or ""
+                entry[f"Week {w+1}"] = ", ".join(assigns)
+            summary.append(entry)
+        df_summary = pd.DataFrame(summary)
+        st.dataframe(df_summary)
