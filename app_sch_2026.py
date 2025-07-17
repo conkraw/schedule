@@ -1037,121 +1037,125 @@ elif mode == "Create Student Schedule":
             st.error(f"Error loading {name}: {e}")
             return None
 
+
+    
     def create_ms_schedule_template(students, dates):
         """
-        Build an in‑memory MS_Schedule.xlsx with:
-          • One sheet per name in `students`
-          • Dates for 4 weeks (28 dates) at the top of each week block
-          • Every AM/PM slot filled with "Asynchronous Time"
-          • All the header, coloring, and assignment‐due formatting preserved
+        Exactly replicates your original layout:
+          - Merges A1:A2 / B1:B2 / C1:H2
+          - Days on rows 3, 11, 19, 27 in cols B–H
+          - 'Week N' in A4, A12, A20, A28
+          - 'AM' in A6, A14, A22, A30
+          - 'PM' in A7, A15, A23, A31
+          - Dates in rows 3,11,19,27 cols C–I
+          - 'Asynchronous Time' in rows 6–7,14–15,22–23,30–31 cols C–J
+          - Zoom, widths, formats, separators, and assignment‑due rows exactly as before.
         """
         buf = io.BytesIO()
-        wb = Workbook(buf, {'in_memory': True})
+        wb = xlsxwriter.Workbook(buf, {'in_memory': True})
     
-        # ─── Formats ────────────────────────────────────────────────────────────────
-        f1 = wb.add_format({
-            'font_size':14,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','text_wrap':True,'bg_color':'#FEFFCC','border':1
-        })
-        f2 = wb.add_format({
-            'font_size':10,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'yellow','bg_color':'black','border':1,'text_wrap':True
-        })
-        f3 = wb.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#FFC7CE','border':1
-        })
-        f4 = wb.add_format({
-            'num_format':'mm/dd/yyyy','font_size':12,'bold':1,'align':'center',
-            'valign':'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1
-        })
-        f5 = wb.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#F4F6F7','border':1
-        })
+        # — Formats —
+        f1 = wb.add_format({'font_size':14,'bold':1,'align':'center','valign':'vcenter',
+                            'font_color':'black','text_wrap':True,'bg_color':'#FEFFCC','border':1})
+        f2 = wb.add_format({'font_size':10,'bold':1,'align':'center','valign':'vcenter',
+                            'font_color':'yellow','bg_color':'black','border':1,'text_wrap':True})
+        f3 = wb.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                            'font_color':'black','bg_color':'#FFC7CE','border':1})
+        f4 = wb.add_format({'num_format':'mm/dd/yyyy','font_size':12,'bold':1,'align':'center',
+                            'valign':'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1})
+        f5 = wb.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                            'font_color':'black','bg_color':'#F4F6F7','border':1})
         f6 = wb.add_format({'bg_color':'black','border':1})
-        f7 = wb.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#90EE90','border':1
-        })
-        f8 = wb.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#89CFF0','border':1
-        })
+        f7 = wb.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                            'font_color':'black','bg_color':'#90EE90','border':1})
+        f8 = wb.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                            'font_color':'black','bg_color':'#89CFF0','border':1})
     
-        days       = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
         start_rows = [3, 11, 19, 27]
-        weeks      = ['Week 1','Week 2','Week 3','Week 4']
-        due_texts  = [
+        weeks = ['Week 1','Week 2','Week 3','Week 4']
+        due_texts = [
             'Quiz 1 Due',
             'Quiz 2, Pediatric Documentation #1, 1 Clinical Encounter Log Due',
             'Quiz 3 Due',
-            ('Quiz 4, Pediatric Documentation #2, Social Drivers of Health '
-             'Assessment Form, Developmental Assessment of Pediatric Patient '
-             'Form, All Clinical Encounter Logs are Due!')
+            'Quiz 4, Pediatric Documentation #2, Social Drivers of Health Assessment Form, Developmental Assessment of Pediatric Patient Form, All Clinical Encounter Logs are Due!'
         ]
     
         for name in students:
-            title = str(name)[:31].replace('/','-').replace('\\','-')
+            title = name[:31].replace('/','-').replace('\\','-')
             ws = wb.add_worksheet(title)
             ws.set_zoom(70)
     
-            # — Header & Note —
-            ws.merge_range('A1:A2','Student Name:',f1)
-            ws.merge_range('B1:B2', title,       f1)
+            # Header
+            ws.merge_range('A1:A2','Student Name:', f1)
+            ws.merge_range('B1:B2',      title,      f1)
             note = ("*Note* Asynchronous time is for coursework only. During this time period, "
-                    "we expect students to do coursework, be available for educational activities, "
-                    "and any extra clinical time available. Unapproved absences are unprofessional.")
+                    "we expect students to do coursework, be available for any additional educational "
+                    "activities, and any extra clinical time that may be available. If the student is not "
+                    "available during this time period and has not made an absence request, the student "
+                    "will be cited for unprofessionalism and will risk failing the course.")
             ws.merge_range('C1:H2', note, f2)
     
-            # — Column widths & row height —
-            ws.set_column('A:A', 20); ws.set_column('B:B', 30)
-            ws.set_column('C:G', 40); ws.set_column('H:H', 155)
+            # Column widths & row height
+            ws.set_column('A:A', 20)
+            ws.set_column('B:B', 30)
+            ws.set_column('C:G', 40)
+            ws.set_column('H:H',155)
             ws.set_row(0, 37.25)
     
-            # — Week blocks: days, dates, labels, AM/PM —
-            d = 0
-            for w, start in enumerate(start_rows):
-                # days of week
-                for c, day in enumerate(days, start=1):
-                    ws.write(start,    c, day, f3)
-                    # date underneath day
-                    ws.write(start+1, c, dates[d], f4)
-                    d += 1
+            # Days headers and dates
+            date_idx = 0
+            for block, row in enumerate(start_rows):
+                # Days (B–H)
+                for col_offset, day in enumerate(days, start=1):
+                    ws.write(row, col_offset, day, f3)
+                # Dates (C–I)
+                for col_offset in range(7):
+                    if date_idx < len(dates):
+                        ws.write(row, col_offset+2, dates[date_idx], f4)
+                        date_idx += 1
     
-                # “Week N” label
-                ws.write(start+2, 0, weeks[w], f3)
-                # AM/PM labels
-                ws.write(start+4, 0, 'AM', f3)
-                ws.write(start+5, 0, 'PM', f3)
+            # Week labels
+            for i, week in enumerate(weeks):
+                row = 4 + (i * 8)
+                ws.write(f'A{row}', week, f3)
     
-                # fill AM/PM slots with “Asynchronous Time”
-                for r in (start+4, start+5):
-                    for c in range(1, 8):
-                        ws.write(r, c, "Asynchronous Time", f5)
+            # AM / PM labels
+            for i in range(4):
+                ws.write(f'A{6 + i*8}', 'AM', f3)
+                ws.write(f'A{7 + i*8}', 'PM', f3)
     
-            # — Horizontal separators & filler rows —
-            for sep in [10,18,26,34]:
+            # Fill AM/PM blocks with Asynchronous Time (cols C–J)
+            for block in range(4):
+                am_row = 6 + block*8
+                pm_row = 7 + block*8
+                for col in range(2, 10):
+                    ws.write(am_row, col, "Asynchronous Time", f5)
+                    ws.write(pm_row, col, "Asynchronous Time", f5)
+    
+            # Separators
+            for sep in [10, 18, 26, 34]:
                 ws.merge_range(f'A{sep}:H{sep}', '', f6)
-            for block in [9,17,25,33]:
-                for c in range(8):
-                    ws.write(block, c, ' ', f7)
     
-            # — Assignment‐due rows —
-            for i, base in enumerate([8,16,24,32]):
-                ws.write(base, 0, 'ASSIGNMENT DUE:', f8)
-                for c in range(1,8):
-                    if c == 5:
-                        ws.write(base, c, 'Ask for Feedback!', f8)
-                    elif c == 7:
-                        ws.write(base, c, due_texts[i], f8)
+            # Green filler rows
+            for filler in [9, 17, 25, 33]:
+                for col in range(8):
+                    ws.write(filler, col, ' ', f7)
+    
+            # Assignment‑due rows
+            for i, base in enumerate([8, 16, 24, 32]):
+                ws.write(f'A{base}', 'ASSIGNMENT DUE:', f8)
+                for col in range(1, 8):
+                    if col == 5:
+                        ws.write(base-1, col, 'Ask for Feedback!', f8)
+                    elif col == 7:
+                        ws.write(base-1, col, due_texts[i], f8)
                     else:
-                        ws.write(base, c, ' ', f8)
+                        ws.write(base-1, col, ' ', f8)
     
         wb.close()
         buf.seek(0)
         return buf
-
 
             
     # 1️⃣ Load OPD.xlsx
