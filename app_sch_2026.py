@@ -222,24 +222,27 @@ for i,name in enumerate(legal_names, start=1):
 # ─── 4. Display & slice out dates/am/acute and students ─────────────────────
 out_df = pd.DataFrame([redcap_row])
 
-# a) Decide the order you want to cycle through provider‐slots:
-slot_order = [1, 3, 5, 2, 4, 6]
-
-# b) Shuffle your students:
+# 1) shuffle
 students = legal_names.copy()
 random.shuffle(students)
 
-# c) Loop over each student once:
+# 2) define slot sequence
+slot_seq = [1, 3, 5, 2, 4, 6]
+
+# 3) assign
 for idx, student in enumerate(students):
-    week_idx  = idx % 4                        # 0→week1,1→week2,2→week3,3→week4, then wrap
-    slot      = slot_order[idx % len(slot_order)]
-    # monday–friday of that week are days 1–5 + 7*week_idx
+    slot_group = idx // 4                  # every 4 students move to next slot
+    slot       = slot_seq[slot_group % len(slot_seq)]
+    week_idx   = idx % 4                   # 0→week1,1→week2,2→week3,3→week4
+
+    # for their week, each Mon–Fri (days 1–5 + 7*week_idx)
     for day in range(1, 6):
         day_num = day + 7 * week_idx
         for shift in ("am", "pm"):
             key  = f"ward_a_{shift}_d{day_num}_{slot}"
             orig = redcap_row.get(key, "")
             redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
+
 
 
 
