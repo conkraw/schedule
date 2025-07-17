@@ -1171,7 +1171,7 @@ elif mode == "Create Student Schedule":
         monday = min_start - timedelta(days=min_start.weekday())
         
         # 3️⃣ Prepare your students list (in the same order you’ll pass to the template)
-        students = df_opd['legal_name'].dropna().unique().tolist()
+        students = df_rot['legal_name'].dropna().unique().tolist()
         
         # 4️⃣ Build locations_by_week
         locations_by_week = {w: [] for w in range(1,5)}
