@@ -165,7 +165,10 @@ for idx, date in enumerate(sorted_dates, start=1):
 
     # 3b) custom_print names — once per date, using the SAME suffix
     for fname, cfg in file_configs.items():
-        prefix = cfg["custom_text"].lower() + "_"    # "custom_print_"
+        sheet = cfg["title"]          
+        key   = sheet.lower() + "_print"
+        prefix = base_map[key]       # e.g. "custom_print_hampden_nursery_"
+        
         for i, person in enumerate(cfg["names"], start=1):
             # note the suffix goes BEFORE the slot index
             redcap_row[f"{prefix}{suffix}{i}"] = person
