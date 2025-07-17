@@ -1163,16 +1163,41 @@ elif mode == "Create Student Schedule":
 
     # ───> INSERT MASTER SCHEDULE CREATION HERE <───
     if df_opd is not None:
-        # define your helper (or move it up above)
-        # 1️⃣ Get the earliest start date from your rotation schedule
-        min_start = pd.to_datetime(df_rot["start_date"]).min()
+        # 1️⃣ Normalize your dates
+        df_rot['start_date'] = pd.to_datetime(df_rot['start_date'])
         
-        # 2️⃣ Snap it back to the Monday of that week
-        #    Python’s weekday(): Monday == 0, … Sunday == 6
+        # 2️⃣ Find the Monday that kicks off your 4‑week block
+        min_start = df_rot['start_date'].min()
         monday = min_start - timedelta(days=min_start.weekday())
         
-        # 3️⃣ Build a list of 28 consecutive dates (4 weeks × 7 days)
-        dates = pd.date_range(start=monday, periods=28, freq="D").tolist()
+        # 3️⃣ Prepare your students list (in the same order you’ll pass to the template)
+        students = df_opd['legal_name'].dropna().unique().tolist()
+        
+        # 4️⃣ Build locations_by_week
+        locations_by_week = {w: [] for w in range(1,5)}
+        
+        for student in students:
+            # all assignments for this student
+            stu_sched = df_rot[df_rot['legal_name'] == student]
+            
+            for w in range(1,5):
+                # define this week’s window
+                week_start = monday + timedelta(days=(w-1)*7)
+                week_end   = week_start + timedelta(days=6)
+                
+                # pick any location they have in that span
+                locs = (
+                    stu_sched
+                    .loc[
+                        (stu_sched['start_date'] >= week_start) &
+                        (stu_sched['start_date'] <= week_end),
+                        'rotation'
+                    ]
+                    .unique()
+                )
+                
+                # use the first rotation found, or OFF if none
+                locations_by_week[w].append(locs[0] if len(locs) else "OFF")
         
         if st.button("Create Blank MS_Schedule.xlsx"):
             students = df_rot["legal_name"].dropna().unique()
