@@ -76,6 +76,14 @@ file_configs = {"HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN_NURSERY","custom_text
                 "SJR_HOSP.xlsx": {"title": "SJR_HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley","Gubitosi, Terry","SJR_1","SJR_2"]},
                 "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding","Abimbola Ajayi","Shilu Joshi","Desiree Webb","Amy Zisa","Abdullah Sakarcan","Anna Karasik","AAC_1","AAC_2","AAC_3"]},}
 
+# ─── HERE: generate sheet‐specific custom_print entries for the configss...  ────────────────────
+for cfg in file_configs.values():
+    sheet = cfg["title"]              # e.g. "HAMPDEN_NURSERY"
+    key   = sheet.lower() + "_print"  # e.g. "hampden_nursery_print"
+    prefix = f"{cfg['custom_text'].lower()}_{sheet.lower()}_"
+    base_map[key] = prefix
+    sheet_map[sheet] = (key,)
+    
 
 # ─── 1. Aggregate schedule assignments by date ────────────────────────────────
 assignments_by_date = {}
