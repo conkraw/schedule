@@ -522,7 +522,9 @@ base_map = {
     "briarcrest clinic am":          "adol_med_am_",
     "briarcrest clinic pm":          "adol_med_pm_",
 
-    "custom_print": 'custom_print_',
+    'hampden_nursery_print':    'custom_print_hampden_nursery_',
+    'sjr_hospitalist_print':    'custom_print_sjr_hospitalist_',
+    'aac_print':                'custom_print_aac_',
 }
 
 # which keys from base_map for each sheet
