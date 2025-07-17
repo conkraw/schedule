@@ -1109,7 +1109,7 @@ def load_book4():
         return None
 
 # --- Main Page Logic ---
-elif mode == "Create Student Schedule":
+elif mode == "Generate Blank Individual Schedule":
 st.title("Create Student Schedule")
 df_opd = load_opd()
 df_schedule = load_book4()
