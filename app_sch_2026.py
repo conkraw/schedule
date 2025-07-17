@@ -466,8 +466,8 @@ num_weeks           = 4
 
 # continuity start rows within each 24-row week block
 row_defs = {
-    'AM':  {'cont_start': 8},
-    'PM':  {'cont_start': 18},
+    'AM':  {'cont_start': 6},
+    'PM':  {'cont_start': 16},
 }
 
 # full prefix map
