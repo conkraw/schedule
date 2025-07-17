@@ -511,7 +511,7 @@ sheet_map = {
     'ETOWN':           ('etown am continuity','etown pm continuity'),
     'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
     'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
-    'W_A':             ('rounder 1 7a-7p',),
+    'W_A':             ('rounder 1 7a-7p',"rounder 2 7a-7p","rounder 3 7a-7p"),
     'PSHCH_NURSERY':   ('nursery weekday 8a-6p',),
     'HAMPDEN_NURSERY': ('nursery weekday 8a-6p',),
     'SJR_HOSP':        ('nursery weekday 8a-6p',),
