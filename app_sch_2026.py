@@ -1004,7 +1004,7 @@ elif mode == "Generate Blank Individual Schedule":
     st.subheader("Create Student Schedule")
     # Upload the OPD.xlsx file
     uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
-    uploaded_book4_file = st.file_uploader("Upload Book4 file (.xlsx or .csv)", type=["xlsx", "csv"])
+    uploaded_book4_file = st.file_uploader("Upload RedCap Rotation Schedule file (.xlsx or .csv)", type=["xlsx", "csv"])
 
     
     if uploaded_opd_file:
