@@ -513,6 +513,8 @@ base_map = {
     
     "briarcrest clinic am":          "adol_med_am_",
     "briarcrest clinic pm":          "adol_med_pm_",
+
+    "custom_print": 'custom_print_',
 }
 
 # which keys from base_map for each sheet
@@ -522,6 +524,10 @@ sheet_map = {
     'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
     'W_A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
     'PSHCH_NURSERY':    ("nursery weekday 8a-6p","nursery weekday 8a-6p"),
+    
+    'HAMPDEN_NURSERY': ('custom_print',), 
+    'SJR_HOSP':         ('custom_print',),
+    'AAC':              ('custom_print',),
     
     'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
 }
