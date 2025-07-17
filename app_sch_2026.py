@@ -9,6 +9,7 @@ import io, zipfile
 from docx import Document
 from docx.enum.section import WD_ORIENT
 from datetime import timedelta
+from xlsxwriter import Workbook as XlsxWorkbook
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
