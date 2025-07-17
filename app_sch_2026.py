@@ -1129,7 +1129,7 @@ elif mode == "Create Student Schedule":
                 ws.merge_range(f'A{sep}:H{sep}', '', f6)
     
             # Green filler rows
-            for filler in [9, 17, 25, 33]:
+            for filler in [8, 16, 24, 32]:
                 for col in range(8):
                     ws.write(filler, col, ' ', f7)
     
