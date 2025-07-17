@@ -533,9 +533,9 @@ sheet_map = {
     'W_A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
     'PSHCH_NURSERY':    ("nursery weekday 8a-6p","nursery weekday 8a-6p"),
     
-    'HAMPDEN_NURSERY': ('custom_print',), 
-    'SJR_HOSP':         ('custom_print',),
-    'AAC':              ('custom_print',),
+    'HAMPDEN_NURSERY': ('hampden_nursery_print',), 
+    'SJR_HOSP':         ('custom_print_sjr_hospitalist_',),
+    'AAC':              ('custom_print_aac_',),
     
     'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
 }
