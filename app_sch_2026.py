@@ -353,12 +353,12 @@ for c in out_df.columns:
 
 
 out_df = pd.DataFrame([redcap_row])
+csv_full = out_df.to_csv(index=False).encode("utf-8")
 
 # ─── File to Check Column Assignments ─────────────────────────────────────────────────────────────────
 #st.subheader("✅ Full REDCap Import Preview")
 #st.dataframe(out_df)
 
-#csv_full = out_df.to_csv(index=False).encode("utf-8")
 #st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv", "text/csv")
 
 def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
