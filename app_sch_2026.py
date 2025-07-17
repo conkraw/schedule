@@ -1178,7 +1178,7 @@ elif mode == "Create Student Schedule":
         dates = pd.date_range(start=monday, periods=28, freq="D").tolist()
         
         # 3) Get your student list
-        students = df_opd['legal_name'].dropna().unique().tolist()
+        students = df_rot['legal_name'].dropna().unique().tolist()
         
         if st.button("Create Blank MS_Schedule.xlsx"):
             students = df_rot["legal_name"].dropna().unique()
