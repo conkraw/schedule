@@ -17,7 +17,9 @@ schedule_files = st.file_uploader("1) Upload one or more QGENDA calendar Excel(s
 
 student_file = st.file_uploader("2) Upload Redcap Rotation list CSV (must have a 'legal_name' and 'start_date' column)",type=["csv"])
 
-record_id = st.text_input("3) Enter the REDCap record_id for this batch", "")
+#record_id = st.text_input("3) Enter the REDCap record_id for this batch", "")
+
+record_id = "peds_clerkship"
 
 # ─── Guard ─────────────────────────────────────────────────────────────────────
 if not schedule_files or not student_file or not record_id:
