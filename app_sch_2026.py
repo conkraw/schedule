@@ -1100,11 +1100,11 @@ elif mode == "Create Student Schedule":
                     ws.write(row, col_offset, day, f3)
         
             # 2) write the dates directly beneath in B–H (row+1)
-            for col_offset in range(7):
-                if date_idx < len(dates):
-                    # note the +1 here instead of +2
-                    ws.write(row+1, col_offset+1, dates[date_idx], f4)
-                    date_idx += 1
+                for col_offset in range(7):
+                    if date_idx < len(dates):
+                        # note the +1 here instead of +2
+                        ws.write(row+1, col_offset+1, dates[date_idx], f4)
+                        date_idx += 1
     
             # Week labels
             for i, week in enumerate(weeks):
