@@ -631,7 +631,14 @@ if mode == "Format OPD + Summary":
                 # --- APPLY THE REQUESTED FORMATTING HERE ---
                 # 1. Convert to string and append " ~ "
                 # This ensures that even if value_to_transfer is a number, it can be concatenated
-                formatted_value = str(value_to_transfer) + ' ~ '
+                #formatted_value = str(value_to_transfer) + ' ~ '
+
+                orig = str(value_to_transfer).strip()
+                # if it already contains a student‐delimiter, don’t add another
+                if ' ~ ' in orig:
+                    formatted_value = orig
+                else:
+                    formatted_value = orig + ' ~ '
     
                 # 2. Write the formatted value to the cell
                 ws[excel_cell] = formatted_value
