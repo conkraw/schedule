@@ -242,8 +242,51 @@ for idx, student in enumerate(students):
             key  = f"ward_a_{shift}_d{day_num}_{slot}"
             orig = redcap_row.get(key, "")
             redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
+            
+# ─── 1) HAMPDEN_NURSERY: max 1 student, only weeks 1 or 3 (idx 0 or 2), avoid Ward A week
+h_week_choice = random.choice([0,2])
+cand_pool = [s for s in legal_names if ward_a_assignment[s] != h_week_choice]
+if cand_pool:
+    candidate = random.choice(cand_pool)
+    assigned = {candidate}
+    for day in range(1,6):
+        d = day + 7*h_week_choice
+        for shift in ("am","pm"):
+            key = f"custom_print_hampden_nursery_d{d}_1"
+            orig = redcap_row.get(key,"")
+            redcap_row[key] = f"{orig} ~ {candidate}" if orig else f"~ {candidate}"
+else:
+    assigned = set()
 
+# ─── 2) SJR_HOSPITALIST: max 2 students, any weeks but ≠ their Ward A week
+sjr_weeks = [0,1,2,3]
+random.shuffle(sjr_weeks)
+for _ in range(2):
+    pool = [s for s in legal_names if s not in assigned and ward_a_assignment[s] != sjr_weeks[0]]
+    if not pool: break
+    cand = random.choice(pool)
+    assigned.add(cand)
+    w = sjr_weeks.pop(0)
+    for day in range(1,6):
+        d = day + 7*w
+        for shift in ("am","pm"):
+            key = f"custom_print_sjr_hospitalist_d{d}_1"
+            orig = redcap_row.get(key,"")
+            redcap_row[key] = f"{orig} ~ {cand}" if orig else f"~ {cand}"
 
+# ─── 3) EVERYONE ELSE → PSHCH_NURSERY (one week per student, avoid Ward A week)
+leftovers = [s for s in legal_names if s not in assigned]
+for idx, student in enumerate(leftovers):
+    # pick a week round‐robin but skip their Ward A week
+    wk = idx % 4
+    if wk == ward_a_assignment[student]:
+        wk = (wk + 1) % 4
+    for day in range(1,6):
+        d = day + 7*wk
+        for prefix in ("nursery_am_","nursery_pm_"):
+            key = f"{prefix}d{d}_1"
+            orig = redcap_row.get(key,"")
+            redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
 
 
 # format date columns
