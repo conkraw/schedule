@@ -245,7 +245,8 @@ for idx, student in enumerate(students):
             
 # ─── 1) HAMPDEN_NURSERY: max 1 student, only weeks 1 or 3 (idx 0 or 2), avoid Ward A week
 h_week_choice = random.choice([0,2])
-cand_pool = [s for s in legal_names if ward_a_assignment[s] != h_week_choice]
+cand_pool = [s for s in legal_names 
+             if ward_a_assignment.get(s, -1) != h_week_choice]
 if cand_pool:
     candidate = random.choice(cand_pool)
     assigned = {candidate}
