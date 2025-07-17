@@ -82,9 +82,7 @@ for cfg in file_configs.values():
     key   = sheet.lower() + "_print"  # e.g. "hampden_nursery_print"
     prefix = f"{cfg['custom_text'].lower()}_{sheet.lower()}_"
     base_map[key] = prefix
-    sheet_map[sheet] = (key,)
     
-
 # ─── 1. Aggregate schedule assignments by date ────────────────────────────────
 assignments_by_date = {}
 for file in schedule_files:
