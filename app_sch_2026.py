@@ -118,47 +118,40 @@ legal_names = students_df["legal_name"].dropna().tolist()
 
 # ─── 3. Build the single REDCap row ───────────────────────────────────────────
 redcap_row = {"record_id": record_id}
-
-# sort dates chronologically
 sorted_dates = sorted(assignments_by_date.keys())
 
 for idx, date in enumerate(sorted_dates, start=1):
     redcap_row[f"hd_day_date{idx}"] = date
     suffix = f"d{idx}_"
-    # build the map of CSV prefixes for this day
+    # build your per‑designator prefixes
     des_map = {
-        des: ([p+suffix for p in prefs] if isinstance(prefs, list)
-              else [prefs+suffix])
+        des: ([p + suffix for p in prefs] if isinstance(prefs, list)
+              else [prefs + suffix])
         for des, prefs in base_map.items()
     }
 
-    # --- reset a counter for rounders ---
-    # (we know each 'rounder X 7a-7p' should get exactly 2 slots)
-    rounder_req = min_required["rounder 1 7a-7p"]
-    # team 1 → slots 1–2, team 2 → 3–4, team 3 → 5–6
     for des, provs in assignments_by_date[date].items():
-        # pad to minimum
+        # pad to the min_required (2 here)
         req = min_required.get(des, len(provs))
         while len(provs) < req and provs:
             provs.append(provs[0])
 
         if des.startswith("rounder"):
-            # extract the numeric team index from the designation
-            # e.g. "rounder 2 7a-7p" → team_idx = 1 (zero‑based)
-            team_idx = int(des.split()[1]) - 1  
-            prefix_list = des_map[des]
-
+            # parse team index out of e.g. "rounder 2 7a-7p" → 1 (zero‑based)
+            team_idx = int(des.split()[1]) - 1
+            # each team has 'req' slots
             for i, name in enumerate(provs, start=1):
-                # compute global slot: team_idx*req + i
-                slot = team_idx * req + i
-                for prefix in prefix_list:
+                slot = team_idx * req + i  # team 1:1-2, team 2:3-4, team 3:5-6
+                for prefix in des_map[des]:
                     redcap_row[f"{prefix}{slot}"] = name
 
         else:
-            # normal groups still start at slot 1 each
+            # everyone else still fills 1…n
             for i, name in enumerate(provs, start=1):
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
+
+                    
 # append student slots s1,s2,...
 for i,name in enumerate(legal_names, start=1):
     redcap_row[f"s{i}"] = name
