@@ -1195,6 +1195,13 @@ elif mode == "Create Student Schedule":
         key="rot_blank"
     )
 
+    # after you’ve called load_workbook_df("Upload OPD.xlsx …") and it returned df_opd:
+    uploaded_name = list(st.session_state.uploaded_files.keys())[0]
+    # or hard‑code if you know the filename:
+    # uploaded_name = "OPD.xlsx"
+
+raw_opd = st.session_state.uploaded_files[uploaded_name]
+
     # ───────── Build & Assign ─────────
     if df_opd is not None and df_rot is not None:
         # compute your 4‑week dates from df_rot
