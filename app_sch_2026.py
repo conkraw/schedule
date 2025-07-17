@@ -225,25 +225,7 @@ out_df = pd.DataFrame([redcap_row])
 for c in out_df.columns:
     if c.startswith("hd_day_date"):
         out_df[c] = pd.to_datetime(out_df[c]).dt.strftime("%m-%d-%Y")
-
-
-# ─── 4b. Only keep Jennifer Shook in the adolmed columns ─────────────
-target = "Shook, Jennifer"
-
-# 1) Identify the ADOLMED columns
-adol_cols = [c for c in out_df.columns 
-             if c.startswith("adol_med_am_") or c.startswith("adol_med_pm_")]
-
-# 2) Of those, only keep the ones where *any* row equals your target
-keep_adol = [c for c in adol_cols if out_df[c].eq(target).any()]
-
-# 3) Put together the final column list: all non‑adol columns plus the filtered adol ones
-final_cols = [c for c in out_df.columns if c not in adol_cols] + keep_adol
-
-# 4) Reindex the DataFrame
-out_df = out_df[final_cols]
-
-
+        
 st.subheader("✅ Full REDCap Import Preview")
 st.dataframe(out_df)
 
