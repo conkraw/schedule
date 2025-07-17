@@ -1036,7 +1036,8 @@ elif mode == "Create Student Schedule":
         except Exception as e:
             st.error(f"Error loading {name}: {e}")
             return None
-    
+
+    from xlsxwriter import Workbook as XlsxWorkbook
     def create_ms_schedule_template(students, dates):
         """
         Build an in‑memory MS_Schedule.xlsx with:
