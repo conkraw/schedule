@@ -1034,6 +1034,117 @@ elif mode == "Create Student Schedule":
         except Exception as e:
             st.error(f"Error loading {name}: {e}")
             return None
+
+    def create_ms_schedule_template(student_names, dates, locations_by_week):
+        """
+        Build an in‑memory MS_Schedule.xlsx with one sheet per student,
+        laid out exactly like your previous xlsxwriter code.
+        
+        - student_names: list of legal_name strings
+        - dates: a flat list of 28 dates for weeks 1–4 (Mon–Sun each)
+        - locations_by_week: dict {1: [locs len==n_students], …, 4: […]}
+        """
+        buf = io.BytesIO()
+        workbook = Workbook(buf, {'in_memory': True})
+        
+        # define formats
+        f1 = workbook.add_format({'font_size':14,'bold':1,'align':'center','valign':'vcenter',
+                                  'font_color':'black','text_wrap':True,'bg_color':'#FEFFCC','border':1})
+        f2 = workbook.add_format({'font_size':10,'bold':1,'align':'center','valign':'vcenter',
+                                  'font_color':'yellow','bg_color':'black','border':1,'text_wrap':True})
+        f3 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                                  'font_color':'black','bg_color':'#FFC7CE','border':1})
+        f4 = workbook.add_format({'num_format':'mm/dd/yyyy','font_size':12,'bold':1,'align':'center',
+                                  'valign':'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1})
+        f5 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                                  'font_color':'black','bg_color':'#F4F6F7','border':1})
+        f6 = workbook.add_format({'bg_color':'black','border':1})
+        f7 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                                  'font_color':'black','bg_color':'#90EE90','border':1})
+        f8 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+                                  'font_color':'black','bg_color':'#89CFF0','border':1})
+    
+        days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        start_rows = [3, 11, 19, 27]
+        weeks = ['Week 1','Week 2','Week 3','Week 4']
+        
+        for idx, student in enumerate(student_names):
+            name = str(student)[:31]
+            ws = workbook.add_worksheet(name)
+            
+            # header merges
+            ws.merge_range('A1:A2', 'Student Name:', f1)
+            ws.merge_range('B1:B2', name, f1)
+            note = ("*Note* Asynchronous time is for coursework only. During this time period, "
+                    "we expect students to do coursework, be available for any additional educational "
+                    "activities, and any extra clinical time that may be available. If the student is not "
+                    "available during this time period and has not made an absence request, the student "
+                    "will be cited for unprofessionalism and will risk failing the course.")
+            ws.merge_range('C1:H2', note, f2)
+    
+            # column widths & zoom
+            ws.set_column('A:A', 20)
+            ws.set_column('B:B', 30)
+            ws.set_column('C:G', 40)
+            ws.set_column('H:H', 155)
+            ws.set_row(0, 37.25)
+            ws.set_zoom(70)
+    
+            # days & week labels
+            for w, start in enumerate(start_rows):
+                # days
+                for c, day in enumerate(days, start=1):
+                    ws.write(start, c, day, f3)
+                # Week N label
+                ws.write(start+1, 0, weeks[w], f3)
+                # AM / PM on next rows
+                ws.write(start+3, 0, 'AM', f3)
+                ws.write(start+4, 0, 'PM', f3)
+    
+            # fill dates across the four week blocks
+            d=0
+            for block, start in enumerate(start_rows):
+                for c in range(1,8):
+                    if d < len(dates):
+                        ws.write(start, c, dates[d], f4)
+                        d+=1
+    
+            # horizontal separators
+            for sep in [10,18,26,34]:
+                ws.merge_range(f'A{sep}:H{sep}', '', f6)
+    
+            # colored filler rows
+            for block, base in enumerate([9,17,25,33]):
+                for col in range(0,8):
+                    ws.write(base, col, ' ', f7)
+    
+            # assignment‐due rows
+            due_texts = [
+                'Quiz 1 Due',
+                'Quiz 2, Pediatric Documentation #1, 1 Clinical Encounter Log Due',
+                'Quiz 3 Due',
+                ('Quiz 4, Pediatric Documentation #2, Social Drivers of Health '
+                 'Assessment Form, Developmental Assessment of Pediatric Patient Form, '
+                 'All Clinical Encounter Logs are Due!')
+            ]
+            for i, base in enumerate([8,16,24,32]):
+                ws.write(base, 0, 'ASSIGNMENT DUE:', f8)
+                for col in range(1,8):
+                    val = 'Ask for Feedback!' if col==5 else (' ' if col!=7 else due_texts[i])
+                    ws.write(base, col, val, f8)
+    
+            # now fill your locations for this student, per week
+            for w, rows in enumerate([(6,7),(14,15),(22,23),(30,31)], start=1):
+                loc = locations_by_week[w][idx]
+                for r in rows:
+                    for col in range(1,8):
+                        val = loc if col<6 else 'OFF'
+                        ws.write(r, col, val, f5)
+    
+        workbook.close()
+        buf.seek(0)
+        return buf
+
             
     # 1️⃣ Load OPD.xlsx
     df_opd = load_workbook_df(
