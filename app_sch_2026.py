@@ -230,11 +230,15 @@ random.shuffle(students)
 slot_seq = [1, 3, 5, 2, 4, 6]
 
 # 3) assign
+ward_a_assignment = {}
+
 for idx, student in enumerate(students):
     slot_group = idx // 4                  # every 4 students move to next slot
     slot       = slot_seq[slot_group % len(slot_seq)]
     week_idx   = idx % 4                   # 0→week1,1→week2,2→week3,3→week4
 
+    ward_a_assignment[student] = week_idx
+    
     # for their week, each Mon–Fri (days 1–5 + 7*week_idx)
     for day in range(1, 6):
         day_num = day + 7 * week_idx
@@ -245,8 +249,7 @@ for idx, student in enumerate(students):
             
 # ─── 1) HAMPDEN_NURSERY: max 1 student, only weeks 1 or 3 (idx 0 or 2), avoid Ward A week
 h_week_choice = random.choice([0,2])
-cand_pool = [s for s in legal_names 
-             if ward_a_assignment.get(s, -1) != h_week_choice]
+cand_pool = [s for s in legal_names if ward_a_assignment.get(s, -1) != h_week_choice]
 if cand_pool:
     candidate = random.choice(cand_pool)
     assigned = {candidate}
@@ -263,7 +266,7 @@ else:
 sjr_weeks = [0,1,2,3]
 random.shuffle(sjr_weeks)
 for _ in range(2):
-    pool = [s for s in legal_names if s not in assigned and ward_a_assignment[s] != sjr_weeks[0]]
+    pool = [s for s in legal_names if s not in assigned and ward_a_assignment.get(s, -1) != sjr_weeks[0]]
     if not pool: break
     cand = random.choice(pool)
     assigned.add(cand)
@@ -280,7 +283,7 @@ leftovers = [s for s in legal_names if s not in assigned]
 for idx, student in enumerate(leftovers):
     # pick a week round‐robin but skip their Ward A week
     wk = idx % 4
-    if wk == ward_a_assignment[student]:
+    if wk == ward_a_assignment.get(student, -1):
         wk = (wk + 1) % 4
     for day in range(1,6):
         d = day + 7*wk
