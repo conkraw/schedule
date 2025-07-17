@@ -272,27 +272,27 @@ for week_idx in (0, 2):  # 0→week1, 2→week3
         redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
 
 # ─── 2) SJR_HOSPITALIST (max 2 students, any weeks ≠ their Ward A week) ─────
-sjr_weeks = [0,1,2,3]
-random.shuffle(sjr_weeks)
-for _ in range(2):
-    # find next week with at least one eligible student
-    while sjr_weeks:
-        w = sjr_weeks.pop(0)
-        pool = [s for s in legal_names 
-                if s not in nursery_assigned 
-                and ward_a_assignment.get(s, -1) != w]
-        if pool:
-            cand = random.choice(pool)
-            nursery_assigned.add(cand)
-            for day in range(1, 6):
-                d = day + w * 7
-                key  = f"custom_print_sjr_hospitalist_d{d}_1"
-                orig = redcap_row.get(key, "")
-                redcap_row[key] = f"{orig} ~ {cand}" if orig else f"~ {cand}"
+for week_idx in range(4):  # 0→wk1,1→wk2,2→wk3,3→wk4
+    # build pool excluding Hampden and anyone on Ward A that week
+    pool = [
+        s for s in legal_names
+        if s not in nursery_assigned
+        and ward_a_assignment.get(s, -1) != week_idx
+    ]
+    random.shuffle(pool)
+    # assign up to two students: first to slot 3, next to slot 4
+    for slot_idx in (3, 4):
+        if not pool:
             break
-    else:
-        # no more weeks  
-        break
+        student = pool.pop()
+        nursery_assigned.add(student)
+        # Mon–Fri of this week
+        for day in range(1, 6):
+            d   = day + 7 * week_idx
+            key = f"custom_print_sjr_hospitalist_d{d}_{slot_idx}"
+            orig = redcap_row.get(key, "")
+            redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
+
 
 # ─── 3) PSHCH_NURSERY (everyone else, up to 8 slots: slot1 weeks1–4, then slot2 wks1–4) ─────────
 leftovers = [s for s in legal_names if s not in nursery_assigned]
