@@ -535,8 +535,9 @@ sheet_map = {
 worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC', 'ADOLMED']
 
 for ws in worksheet_names:
+    # ─── HOPE_DRIVE ───────────────────────────────────────────
     if ws == 'HOPE_DRIVE':
-        # ─── HOPE_DRIVE: exact same 4‑week AM/PM acute+cont logic ───
+                # ─── HOPE_DRIVE: exact same 4‑week AM/PM acute+cont logic ───
         for week_idx in range(1, num_weeks + 1):
             week_base  = (week_idx - 1) * 24
             day_offset = (week_idx - 1) * 7
@@ -615,58 +616,57 @@ for ws in worksheet_names:
         # done with HOPE_DRIVE
         continue
 
-    # ─── Special case: W_A (rounders go one after another) ────────────────
-        if ws == 'W_A':
-            mapping_keys = sheet_map[ws]   # ('rounder 1 7a-7p', 'rounder 2 7a-7p', 'rounder 3 7a-7p')
-            for week_idx in range(1, num_weeks + 1):
-                week_base  = (week_idx - 1) * 24
-                day_offset = (week_idx - 1) * 7
-        
-                for day_idx, col in enumerate(excel_column_letters, start=1):
-                    day_num = day_idx + day_offset
-        
-                    # — AM CONTINUITY: start at row 6 + week_base
-                    row = week_base + cont_row_defs['AM']
-                    for key in mapping_keys:
-                        # get and pad this team’s providers
-                        prefs = base_map[key]               # e.g. ["ward_a_am_team_1_","ward_a_pm_team_1_"]
-                        am_pref = prefs[0] if isinstance(prefs, list) else prefs
-                        provs   = assignments_by_date[date][key]
-                        req     = min_required.get(key, len(provs))
-                        while len(provs) < req:
-                            provs.append(provs[0])
-        
-                        # write each provider for this team
-                        for i, name in enumerate(provs, start=1):
-                            data_mappings.append({
-                                'csv_column':  f"{am_pref}d{day_num}_{i}",
-                                'excel_sheet': ws,
-                                'excel_cell':  f"{col}{row}",
-                            })
-                            row += 1   # move one row down
-        
-                    # — PM CONTINUITY: same pattern starting at row 16 + week_base
-                    row = week_base + cont_row_defs['PM']
-                    for key in mapping_keys:
-                        prefs = base_map[key]
-                        pm_pref = prefs[1] if isinstance(prefs, list) else prefs
-                        provs   = assignments_by_date[date][key]
-                        req     = min_required.get(key, len(provs))
-                        while len(provs) < req:
-                            provs.append(provs[0])
-        
-                        for i, name in enumerate(provs, start=1):
-                            data_mappings.append({
-                                'csv_column':  f"{pm_pref}d{day_num}_{i}",
-                                'excel_sheet': ws,
-                                'excel_cell':  f"{col}{row}",
-                            })
-                            row += 1
-        
-            # skip the generic “other sheets” logic
-            continue
 
-    # ─── All other sheets: multi‑team continuity only ───
+    # ─── W_A (rounders) ───────────────────────────────────────
+    if ws == 'W_A':
+        mapping_keys = sheet_map[ws]  # ('rounder 1…','rounder 2…','rounder 3…')
+        for week_idx in range(1, num_weeks+1):
+            week_base  = (week_idx - 1) * 24
+            day_offset = (week_idx - 1) * 7
+
+            for day_idx, col in enumerate(excel_column_letters, start=1):
+                day_num = day_idx + day_offset
+
+                # AM block → rows 6–…
+                row = week_base + cont_row_defs['AM']
+                for team_idx, key in enumerate(mapping_keys):
+                    am_pref = base_map[key][0]  # e.g. "ward_a_am_"
+                    provs   = assignments_by_date[date][key]
+                    req     = min_required.get(key, len(provs))
+                    # pad to exactly 2 providers
+                    while len(provs) < req:
+                        provs.append(provs[0])
+                    offset = team_idx * req
+                    for i, name in enumerate(provs, start=1):
+                        slot = offset + i     # team1→1,2; team2→3,4; team3→5,6
+                        data_mappings.append({
+                            'csv_column': f"{am_pref}d{day_num}_{slot}",
+                            'excel_sheet': ws,
+                            'excel_cell': f"{col}{row}",
+                        })
+                        row += 1
+
+                # PM block → rows 16–…
+                row = week_base + cont_row_defs['PM']
+                for team_idx, key in enumerate(mapping_keys):
+                    pm_pref = base_map[key][1]  # e.g. "ward_a_pm_"
+                    provs   = assignments_by_date[date][key]
+                    req     = min_required.get(key, len(provs))
+                    while len(provs) < req:
+                        provs.append(provs[0])
+                    offset = team_idx * req
+                    for i, name in enumerate(provs, start=1):
+                        slot = offset + i
+                        data_mappings.append({
+                            'csv_column': f"{pm_pref}d{day_num}_{slot}",
+                            'excel_sheet': ws,
+                            'excel_cell': f"{col}{row}",
+                        })
+                        row += 1
+
+        continue  # skip the generic logic below
+
+    # ─── ALL OTHER SHEETS ──────────────────────────────────────
     mapping_keys = sheet_map.get(ws, ())
     if not mapping_keys:
         continue
@@ -685,7 +685,7 @@ for ws in worksheet_names:
             for day_idx, col in enumerate(excel_column_letters, start=1):
                 day_num = day_idx + day_offset
 
-                # AM continuity (_1–8) → rows 6–13
+                # AM continuity (_1–8)
                 for prov in range(1, 9):
                     row = week_base + cont_row_defs['AM'] + (prov - 1)
                     data_mappings.append({
@@ -694,7 +694,7 @@ for ws in worksheet_names:
                         'excel_cell': f"{col}{row}",
                     })
 
-                # PM continuity (_1–8) → rows 16–23
+                # PM continuity (_1–8)
                 for prov in range(1, 9):
                     row = week_base + cont_row_defs['PM'] + (prov - 1)
                     data_mappings.append({
