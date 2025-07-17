@@ -251,20 +251,17 @@ for idx, student in enumerate(students):
 nursery_assigned = set()
 
 # ─── HAMPDEN_NURSERY: max 1 student for week1 and 1 for week3, into slot _4 ─────
-assigned_hampden = set()
 for week_idx in (0, 2):  # 0→week1, 2→week3
-    # build pool of students not yet given HAMPDEN and not on Ward A that week
     pool = [
         s for s in legal_names
-        if s not in assigned_hampden
+        if s not in nursery_assigned
         and ward_a_assignment.get(s, -1) != week_idx
     ]
     if not pool:
         continue
     student = random.choice(pool)
-    assigned_hampden.add(student)
+    nursery_assigned.add(student)    # ← mark them as “used”!
 
-    # assign Mon–Fri, AM & PM, in slot _4
     for day in range(1, 6):
         d   = day + 7 * week_idx
         key = f"custom_print_hampden_nursery_d{d}_4"
