@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import re
 import xlsxwriter
+import random
 from openpyxl import load_workbook # Ensure load_workbook is imported
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
@@ -217,6 +218,11 @@ for idx, date in enumerate(sorted_dates, start=1):
 # append student slots s1,s2,...
 for i,name in enumerate(legal_names, start=1):
     redcap_row[f"s{i}"] = name
+
+# ─── Pick one random student for WARD_A AM (Monday–Friday of week 1) ────────
+chosen = random.choice(legal_names)         # one student
+for day_idx in range(1, 6):                 # d1 through d5
+    redcap_row[f"ward_a_am_d{day_idx}_1"] = f"~ {chosen}"
 
 # ─── 4. Display & slice out dates/am/acute and students ─────────────────────
 out_df = pd.DataFrame([redcap_row])
