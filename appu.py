@@ -1770,7 +1770,7 @@ elif st.session_state.page == "Create Student Schedule":
             if name.endswith(".csv"):
                 # 1️⃣ read CSV
                 df_csv = pd.read_csv(uploaded_book4_file, parse_dates=["start_date"])
-                df_csv.rename(columns={"rotationstart": "Start Date"}, inplace=True)
+                df_csv.rename(columns={"start_date": "Start Date"}, inplace=True)
 
                 # 2️⃣ build Book4.xlsx in memory
                 wb = Workbook()
