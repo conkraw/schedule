@@ -695,8 +695,8 @@ for ws in worksheet_names:
             for day_idx, col in enumerate(excel_column_letters, start=1):
                 day_num = day_idx + day_offset
 
-                # AM continuity (_1–8)
-                for prov in range(1, 9):
+                # AM continuity (_1–10)
+                for prov in range(1, 11):
                     row = week_base + cont_row_defs['AM'] + (prov - 1)
                     data_mappings.append({
                         'csv_column': f"{am_prefix}d{day_num}_{prov}",
@@ -704,8 +704,8 @@ for ws in worksheet_names:
                         'excel_cell': f"{col}{row}",
                     })
 
-                # PM continuity (_1–8)
-                for prov in range(1, 9):
+                # PM continuity (_1-10)
+                for prov in range(1, 11):
                     row = week_base + cont_row_defs['PM'] + (prov - 1)
                     data_mappings.append({
                         'csv_column': f"{pm_prefix}d{day_num}_{prov}",
