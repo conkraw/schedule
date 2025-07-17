@@ -1148,6 +1148,38 @@ elif mode == "Create Student Schedule":
         buf.seek(0)
         return buf
 
+    
+    def assign_preceptors(opd_file, ms_file):
+        """
+        Reads OPD.xlsx and MS_Schedule.xlsx (either file paths or file-like objects),
+        finds entries in OPD sheets of the form 'Preceptor ~ Student' in cells B6:B15,
+        and writes 'Preceptor [SiteName]' into cell B6 of the matching Student sheet
+        in MS_Schedule. Returns an in‑memory buffer of the updated workbook.
+        """
+        # 1) Read all sheets from OPD.xlsx without headers
+        opd_sheets = pd.read_excel(opd_file, sheet_name=None, header=None)
+        
+        # 2) Load the MS_Schedule workbook
+        ms_wb = load_workbook(ms_file)
+        
+        # 3) Iterate through each OPD sheet (clinic site)
+        for site_name, df in opd_sheets.items():
+            # Look at column B rows 6–15 (zero‑based rows 5–14, col 1)
+            for entry in df.iloc[5:15, 1].dropna():
+                text = str(entry)
+                if '~' in text:
+                    preceptor, student = [s.strip() for s in text.split('~', 1)]
+                    # Only proceed if we have a matching sheet in MS_Schedule
+                    if student in ms_wb.sheetnames:
+                        ws = ms_wb[student]
+                        ws['B6'] = f"{preceptor} [{site_name}]"
+        
+        # 4) Save the updated workbook into a BytesIO buffer
+        out_buf = io.BytesIO()
+        ms_wb.save(out_buf)
+        out_buf.seek(0)
+        return out_buf
+
             
     # 1️⃣ Load OPD.xlsx
     df_opd = load_workbook_df(
@@ -1163,28 +1195,31 @@ elif mode == "Create Student Schedule":
         key="rot_blank"
     )
 
-    # ───> INSERT MASTER SCHEDULE CREATION HERE <───
-    if df_opd is not None:
-        # 1) Load df_rot and df_opd earlier...
-        df_rot['start_date'] = pd.to_datetime(df_rot['start_date'])
-        min_start = df_rot['start_date'].min()
-        monday    = min_start - timedelta(days=min_start.weekday())
-        
-        # 2) Build the 28 dates
-        dates = pd.date_range(start=monday, periods=28, freq="D").tolist()
-        
-        # 3) Get your student list
-        students = df_rot['legal_name'].dropna().unique().tolist()
-        
-        if st.button("Create Blank MS_Schedule.xlsx"):
-            students = df_rot["legal_name"].dropna().unique()
-            buf = create_ms_schedule_template(students, dates)
-            st.download_button(
-                "Download MS_Schedule.xlsx",
-                data=buf.getvalue(),
-                file_name="MS_Schedule.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-    else:
-        st.write("Upload both OPD.xlsx and the rotation schedule above to proceed.")
+    # ───────── Build & Assign ─────────
+        if df_opd is not None and df_rot is not None:
+            # compute your 4‑week dates from df_rot
+            df_rot['start_date'] = pd.to_datetime(df_rot['start_date'])
+            min_start = df_rot['start_date'].min()
+            monday    = min_start - pd.Timedelta(days=min_start.weekday())
+            dates     = pd.date_range(start=monday, periods=28, freq="D").tolist()
+    
+            # use the OPD student list
+            students = df_opd['legal_name'].dropna().unique().tolist()
+    
+            if st.button("Create & Download MS_Schedule.xlsx"):
+                # 1) blank calendar
+                blank_buf = create_ms_schedule_template(students, dates)
+                # 2) overlay preceptors
+                final_buf = assign_preceptors(
+                    opd_file=st.session_state.uploaded_files["OPD.xlsx"],
+                    ms_file=blank_buf
+                )
+                # 3) download it
+                st.download_button(
+                    "Download Fully‑Populated MS_Schedule.xlsx",
+                    data=final_buf.getvalue(),
+                    file_name="MS_Schedule.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        else:
+            st.write("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
