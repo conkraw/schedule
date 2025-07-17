@@ -222,25 +222,25 @@ for i,name in enumerate(legal_names, start=1):
 # ─── 4. Display & slice out dates/am/acute and students ─────────────────────
 out_df = pd.DataFrame([redcap_row])
 
-# ─── 1) List all Monday–Friday day numbers for 4 weeks ─────────────────────────
-day_nums = [day + week*7 
-            for week in range(4)    # 0,1,2,3 → weeks
-            for day in range(1, 6)]  # 1–5 → Mon–Fri
-# Example: [1,2,3,4,5, 8,9,10,11,12, 15,…,19, 22,…,26]
+# a) Decide the order you want to cycle through provider‐slots:
+slot_order = [1, 3, 5, 2, 4, 6]
 
-# ─── 2) Shuffle students and pick one unique day per student ────────────────
-students    = legal_names.copy()
+# b) Shuffle your students:
+students = legal_names.copy()
 random.shuffle(students)
 
-# If you have more students than days, only the first len(day_nums) will get assigned:
-assign_days = random.sample(day_nums, k=min(len(students), len(day_nums)))
+# c) Loop over each student once:
+for idx, student in enumerate(students):
+    week_idx  = idx % 4                        # 0→week1,1→week2,2→week3,3→week4, then wrap
+    slot      = slot_order[idx % len(slot_order)]
+    # monday–friday of that week are days 1–5 + 7*week_idx
+    for day in range(1, 6):
+        day_num = day + 7 * week_idx
+        for shift in ("am", "pm"):
+            key  = f"ward_a_{shift}_d{day_num}_{slot}"
+            orig = redcap_row.get(key, "")
+            redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
 
-# ─── 3) Assign each student exactly once to slot _1 (AM & PM) on their day ──
-for student, day_num in zip(students, assign_days):
-    for shift in ("am", "pm"):
-        key  = f"ward_a_{shift}_d{day_num}_1"
-        orig = redcap_row.get(key, "")
-        redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
 
 
 # format date columns
