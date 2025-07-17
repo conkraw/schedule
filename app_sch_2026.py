@@ -1035,116 +1035,122 @@ elif mode == "Create Student Schedule":
         except Exception as e:
             st.error(f"Error loading {name}: {e}")
             return None
-
-    def create_ms_schedule_template(student_names, dates, locations_by_week):
+    
+    def create_ms_schedule_template(students, dates):
         """
-        Build an in‑memory MS_Schedule.xlsx with one sheet per student,
-        laid out exactly like your previous xlsxwriter code.
-        
-        - student_names: list of legal_name strings
-        - dates: a flat list of 28 dates for weeks 1–4 (Mon–Sun each)
-        - locations_by_week: dict {1: [locs len==n_students], …, 4: […]}
+        Build an in‑memory MS_Schedule.xlsx with:
+          • One sheet per name in `students`
+          • Dates for 4 weeks (28 dates) at the top of each week block
+          • Every AM/PM slot filled with "Asynchronous Time"
+          • All the header, coloring, and assignment‐due formatting preserved
         """
         buf = io.BytesIO()
-        workbook = Workbook(buf, {'in_memory': True})
-        
-        # define formats
-        f1 = workbook.add_format({'font_size':14,'bold':1,'align':'center','valign':'vcenter',
-                                  'font_color':'black','text_wrap':True,'bg_color':'#FEFFCC','border':1})
-        f2 = workbook.add_format({'font_size':10,'bold':1,'align':'center','valign':'vcenter',
-                                  'font_color':'yellow','bg_color':'black','border':1,'text_wrap':True})
-        f3 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-                                  'font_color':'black','bg_color':'#FFC7CE','border':1})
-        f4 = workbook.add_format({'num_format':'mm/dd/yyyy','font_size':12,'bold':1,'align':'center',
-                                  'valign':'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1})
-        f5 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-                                  'font_color':'black','bg_color':'#F4F6F7','border':1})
-        f6 = workbook.add_format({'bg_color':'black','border':1})
-        f7 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-                                  'font_color':'black','bg_color':'#90EE90','border':1})
-        f8 = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-                                  'font_color':'black','bg_color':'#89CFF0','border':1})
+        wb = Workbook(buf, {'in_memory': True})
     
-        days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        # ─── Formats ────────────────────────────────────────────────────────────────
+        f1 = wb.add_format({
+            'font_size':14,'bold':1,'align':'center','valign':'vcenter',
+            'font_color':'black','text_wrap':True,'bg_color':'#FEFFCC','border':1
+        })
+        f2 = wb.add_format({
+            'font_size':10,'bold':1,'align':'center','valign':'vcenter',
+            'font_color':'yellow','bg_color':'black','border':1,'text_wrap':True
+        })
+        f3 = wb.add_format({
+            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+            'font_color':'black','bg_color':'#FFC7CE','border':1
+        })
+        f4 = wb.add_format({
+            'num_format':'mm/dd/yyyy','font_size':12,'bold':1,'align':'center',
+            'valign':'vcenter','font_color':'black','bg_color':'#F4F6F7','border':1
+        })
+        f5 = wb.add_format({
+            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+            'font_color':'black','bg_color':'#F4F6F7','border':1
+        })
+        f6 = wb.add_format({'bg_color':'black','border':1})
+        f7 = wb.add_format({
+            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+            'font_color':'black','bg_color':'#90EE90','border':1
+        })
+        f8 = wb.add_format({
+            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
+            'font_color':'black','bg_color':'#89CFF0','border':1
+        })
+    
+        days       = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
         start_rows = [3, 11, 19, 27]
-        weeks = ['Week 1','Week 2','Week 3','Week 4']
-        
-        for idx, student in enumerate(student_names):
-            name = str(student)[:31]
-            ws = workbook.add_worksheet(name)
-            
-            # header merges
-            ws.merge_range('A1:A2', 'Student Name:', f1)
-            ws.merge_range('B1:B2', name, f1)
-            note = ("*Note* Asynchronous time is for coursework only. During this time period, "
-                    "we expect students to do coursework, be available for any additional educational "
-                    "activities, and any extra clinical time that may be available. If the student is not "
-                    "available during this time period and has not made an absence request, the student "
-                    "will be cited for unprofessionalism and will risk failing the course.")
-            ws.merge_range('C1:H2', note, f2)
+        weeks      = ['Week 1','Week 2','Week 3','Week 4']
+        due_texts  = [
+            'Quiz 1 Due',
+            'Quiz 2, Pediatric Documentation #1, 1 Clinical Encounter Log Due',
+            'Quiz 3 Due',
+            ('Quiz 4, Pediatric Documentation #2, Social Drivers of Health '
+             'Assessment Form, Developmental Assessment of Pediatric Patient '
+             'Form, All Clinical Encounter Logs are Due!')
+        ]
     
-            # column widths & zoom
-            ws.set_column('A:A', 20)
-            ws.set_column('B:B', 30)
-            ws.set_column('C:G', 40)
-            ws.set_column('H:H', 155)
-            ws.set_row(0, 37.25)
+        for name in students:
+            title = str(name)[:31].replace('/','-').replace('\\','-')
+            ws = wb.add_worksheet(title)
             ws.set_zoom(70)
     
-            # days & week labels
+            # — Header & Note —
+            ws.merge_range('A1:A2','Student Name:',f1)
+            ws.merge_range('B1:B2', title,       f1)
+            note = ("*Note* Asynchronous time is for coursework only. During this time period, "
+                    "we expect students to do coursework, be available for educational activities, "
+                    "and any extra clinical time available. Unapproved absences are unprofessional.")
+            ws.merge_range('C1:H2', note, f2)
+    
+            # — Column widths & row height —
+            ws.set_column('A:A', 20); ws.set_column('B:B', 30)
+            ws.set_column('C:G', 40); ws.set_column('H:H', 155)
+            ws.set_row(0, 37.25)
+    
+            # — Week blocks: days, dates, labels, AM/PM —
+            d = 0
             for w, start in enumerate(start_rows):
-                # days
+                # days of week
                 for c, day in enumerate(days, start=1):
-                    ws.write(start, c, day, f3)
-                # Week N label
-                ws.write(start+1, 0, weeks[w], f3)
-                # AM / PM on next rows
-                ws.write(start+3, 0, 'AM', f3)
-                ws.write(start+4, 0, 'PM', f3)
+                    ws.write(start,    c, day, f3)
+                    # date underneath day
+                    ws.write(start+1, c, dates[d], f4)
+                    d += 1
     
-            # fill dates across the four week blocks
-            d=0
-            for block, start in enumerate(start_rows):
-                for c in range(1,8):
-                    if d < len(dates):
-                        ws.write(start, c, dates[d], f4)
-                        d+=1
+                # “Week N” label
+                ws.write(start+2, 0, weeks[w], f3)
+                # AM/PM labels
+                ws.write(start+4, 0, 'AM', f3)
+                ws.write(start+5, 0, 'PM', f3)
     
-            # horizontal separators
+                # fill AM/PM slots with “Asynchronous Time”
+                for r in (start+4, start+5):
+                    for c in range(1, 8):
+                        ws.write(r, c, "Asynchronous Time", f5)
+    
+            # — Horizontal separators & filler rows —
             for sep in [10,18,26,34]:
                 ws.merge_range(f'A{sep}:H{sep}', '', f6)
+            for block in [9,17,25,33]:
+                for c in range(8):
+                    ws.write(block, c, ' ', f7)
     
-            # colored filler rows
-            for block, base in enumerate([9,17,25,33]):
-                for col in range(0,8):
-                    ws.write(base, col, ' ', f7)
-    
-            # assignment‐due rows
-            due_texts = [
-                'Quiz 1 Due',
-                'Quiz 2, Pediatric Documentation #1, 1 Clinical Encounter Log Due',
-                'Quiz 3 Due',
-                ('Quiz 4, Pediatric Documentation #2, Social Drivers of Health '
-                 'Assessment Form, Developmental Assessment of Pediatric Patient Form, '
-                 'All Clinical Encounter Logs are Due!')
-            ]
+            # — Assignment‐due rows —
             for i, base in enumerate([8,16,24,32]):
                 ws.write(base, 0, 'ASSIGNMENT DUE:', f8)
-                for col in range(1,8):
-                    val = 'Ask for Feedback!' if col==5 else (' ' if col!=7 else due_texts[i])
-                    ws.write(base, col, val, f8)
+                for c in range(1,8):
+                    if c == 5:
+                        ws.write(base, c, 'Ask for Feedback!', f8)
+                    elif c == 7:
+                        ws.write(base, c, due_texts[i], f8)
+                    else:
+                        ws.write(base, c, ' ', f8)
     
-            # now fill your locations for this student, per week
-            for w, rows in enumerate([(6,7),(14,15),(22,23),(30,31)], start=1):
-                loc = locations_by_week[w][idx]
-                for r in rows:
-                    for col in range(1,8):
-                        val = loc if col<6 else 'OFF'
-                        ws.write(r, col, val, f5)
-    
-        workbook.close()
+        wb.close()
         buf.seek(0)
         return buf
+
 
             
     # 1️⃣ Load OPD.xlsx
@@ -1163,40 +1169,16 @@ elif mode == "Create Student Schedule":
 
     # ───> INSERT MASTER SCHEDULE CREATION HERE <───
     if df_opd is not None:
-        # 1️⃣ Normalize your dates
+        # 1) Load df_rot and df_opd earlier...
         df_rot['start_date'] = pd.to_datetime(df_rot['start_date'])
-        
-        # 2️⃣ Find the Monday that kicks off your 4‑week block
         min_start = df_rot['start_date'].min()
-        monday = min_start - timedelta(days=min_start.weekday())
+        monday    = min_start - timedelta(days=min_start.weekday())
         
-        # 3️⃣ Prepare your students list (in the same order you’ll pass to the template)
-        students = df_rot['legal_name'].dropna().unique().tolist()
+        # 2) Build the 28 dates
+        dates = pd.date_range(start=monday, periods=28, freq="D").tolist()
         
-        # 4️⃣ Build locations_by_week
-        locations_by_week = {w: [] for w in range(1,5)}
-        
-        for student in students:
-            # all assignments for this student
-            stu_sched = df_rot[df_rot['legal_name'] == student]
-            
-            for w in range(1,5):
-                # define this week’s window
-                week_start = monday + timedelta(days=(w-1)*7)
-                week_end   = week_start + timedelta(days=6)
-                
-                # pick any location they have in that span
-                locs = (
-                    stu_sched
-                    .loc[
-                        (stu_sched['start_date'] >= week_start) &
-                        (stu_sched['start_date'] <= week_end),
-                    ]
-                    .unique()
-                )
-                
-                # use the first rotation found, or OFF if none
-                locations_by_week[w].append(locs[0] if len(locs) else "OFF")
+        # 3) Get your student list
+        students = df_opd['legal_name'].dropna().unique().tolist()
         
         if st.button("Create Blank MS_Schedule.xlsx"):
             students = df_rot["legal_name"].dropna().unique()
