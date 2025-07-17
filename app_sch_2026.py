@@ -1211,7 +1211,7 @@ elif mode == "Create Student Schedule":
             blank_buf = create_ms_schedule_template(students, dates)
             # 2) overlay preceptors
             final_buf = assign_preceptors(
-                opd_file=st.session_state.uploaded_files["OPD.xlsx"],
+                opd_file=df_opd,
                 ms_file=blank_buf
             )
             # 3) download it
