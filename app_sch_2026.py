@@ -100,18 +100,23 @@ for file in schedule_files:
         
         for r in range(row0+1, df.shape[0]):
             raw = str(df.iat[r, col0]).replace("\xa0", " ").strip()
-            if not raw:
-                # empty cell → done with this date’s block
+            # stop if we hit a blank row
+            if raw == "":
                 break
-        
-            # if you see another date in that column, stop also
+            # stop if we hit another date header
             if date_pat.match(raw):
                 break
-        
+
             desc = raw.lower()
             prov = str(df.iat[r, col0+1]).strip()
             if desc in grp and prov:
                 grp[desc].append(prov)
+
+        # ── debug ──
+        st.write(f"On {d} →",
+                 "team1:", grp["rounder 1 7a-7p"],
+                 "team2:", grp["rounder 2 7a-7p"],
+                 "team3:", grp["rounder 3 7a-7p"])
 
 # ─── 2. Read student list and prepare s1, s2, … ───────────────────────────────
 students_df = pd.read_csv(student_file, dtype=str)
