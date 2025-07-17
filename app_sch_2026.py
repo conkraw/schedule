@@ -50,11 +50,11 @@ base_map = {
     "rounder 2 7a-7p":             ["ward_a_am_team_2_","ward_a_pm_team_2_"],
     "rounder 3 7a-7p":             ["ward_a_am_team_3_","ward_a_pm_team_3_"],
 
-    "hope drive clinic am":        "complex_am_1_",
-    "hope drive clinic pm":        "complex_pm_1_",
+    "hope drive clinic am":        "complex_am_",
+    "hope drive clinic pm":        "complex_pm_",
     
-    "briarcrest clinic am":       "adol_med_am_1_",
-    "briarcrest clinic pm":       "adol_med_pm_1_",
+    "briarcrest clinic am":       "adol_med_am_",
+    "briarcrest clinic pm":       "adol_med_pm_",
     
 }
 
@@ -477,6 +477,7 @@ cont_row_defs = {
 }
 
 # full prefix map
+
 base_map = {
     "hope drive am continuity":     "hd_am_",
     "hope drive pm continuity":     "hd_pm_",
@@ -486,18 +487,23 @@ base_map = {
     "hope drive weekend acute 2":   "hd_wknd_acute_2_",
     "hope drive weekend continuity":"hd_wknd_am_",
     
-    "etown am continuity":          "etown_am_d",
-    "etown pm continuity":          "etown_pm_d",
-    "nyes rd am continuity":        "nyes_am_d",
-    "nyes rd pm continuity":        "nyes_pm_d",
+    "etown am continuity":          "etown_am_",
+    "etown pm continuity":          "etown_pm_",
+    
+    "nyes rd am continuity":        "nyes_am_",
+    "nyes rd pm continuity":        "nyes_pm_",
+    
     "nursery weekday 8a-6p":        ["nursery_am_","nursery_pm_"],
+    
     "rounder 1 7a-7p":              ["ward_a_am_team_1_","ward_a_pm_team_1_"],
     "rounder 2 7a-7p":              ["ward_a_am_team_2_","ward_a_pm_team_2_"],
     "rounder 3 7a-7p":              ["ward_a_am_team_3_","ward_a_pm_team_3_"],
-    "hope drive clinic am":         "complex_am_1_",
-    "hope drive clinic pm":         "complex_pm_1_",
-    "briarcrest clinic am":         "adol_med_am_1_",
-    "briarcrest clinic pm":         "adol_med_pm_1_",
+    
+    "hope drive clinic am":         "complex_am_",
+    "hope drive clinic pm":         "complex_pm_",
+    
+    "briarcrest clinic am":         "adol_med_am_",
+    "briarcrest clinic pm":         "adol_med_pm_",
 }
 
 # which keys to use per sheet
@@ -512,11 +518,7 @@ sheet_map = {
     'AAC':             ('briarcrest clinic am','briarcrest clinic pm'),
 }
 
-worksheet_names = [
-    'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
-    'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY',
-    'SJR_HOSP','AAC'
-]
+worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC']
 
 for ws in worksheet_names:
     if ws == 'HOPE_DRIVE':
@@ -629,7 +631,7 @@ for ws in worksheet_names:
             for provider_idx in range(1, 9):
                 row = week_base + cont_row_defs['AM'] + (provider_idx - 1)
                 data_mappings.append({
-                    'csv_column': f"{am_prefix}{day_num}_{provider_idx}",
+                    'csv_column': f"{am_prefix}d{day_num}_{provider_idx}",
                     'excel_sheet': ws,
                     'excel_cell': f"{col}{row}",
                 })
@@ -638,7 +640,7 @@ for ws in worksheet_names:
             for provider_idx in range(1, 9):
                 row = week_base + cont_row_defs['PM'] + (provider_idx - 1)
                 data_mappings.append({
-                    'csv_column': f"{pm_prefix}{day_num}_{provider_idx}",
+                    'csv_column': f"{pm_prefix}d{day_num}_{provider_idx}",
                     'excel_sheet': ws,
                     'excel_cell': f"{col}{row}",
                 })
