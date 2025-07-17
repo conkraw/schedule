@@ -56,8 +56,6 @@ base_map = {
     "briarcrest clinic am":       "adol_med_am_",
     "briarcrest clinic pm":       "adol_med_pm_",
 
-    "custom_print": "custom_print_",
-    
 }
 
 # Which groups need at least 2 providers?
