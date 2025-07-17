@@ -1001,6 +1001,32 @@ if mode == "Format OPD + Summary":
 
 elif mode == "Create Student Schedule":
     st.subheader("Create Student Schedule")
+    def save_to_session(filename, fileobj, namespace="uploaded_files"):
+        st.session_state.setdefault(namespace, {})[filename] = fileobj
+
+    def load_workbook_df(label, types, key):
+        """
+        Upload an .xlsx or .csv and return a DataFrame.
+        Saves the raw upload into session_state.uploaded_files.
+        """
+        upload = st.file_uploader(label, type=types, key=key)
+        if not upload:
+            st.info(f"Please upload {label}.")
+            return None
+    
+        name = upload.name
+        try:
+            if name.lower().endswith(".csv"):
+                df = pd.read_csv(upload)
+            else:
+                df = pd.read_excel(upload)
+            st.success(f"{name} loaded.")
+            save_to_session(name, upload)
+            return df
+    
+        except Exception as e:
+            st.error(f"Error loading {name}: {e}")
+            return None
 
     # 1️⃣ Load your master list of students
     df_opd = load_workbook_df(
