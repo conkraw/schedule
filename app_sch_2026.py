@@ -250,19 +250,26 @@ for idx, student in enumerate(students):
 # ─── track who’s already grabbed a nursery slot ─────────────────────────────
 nursery_assigned = set()
 
-# ─── 1) HAMPDEN_NURSERY (max 1 student, only week1 or week3) ────────────────
-h_choice = random.choice([0,2])
-cand_pool = [s for s in legal_names 
-             if ward_a_assignment.get(s,-1) != h_choice]
-if cand_pool:
-    cand = random.choice(cand_pool)
-    nursery_assigned.add(cand)
-    for day in range(1,6):
-        d   = day + 7*h_choice
-        key = f"custom_print_hampden_nursery_d{d}_1"
-        orig = redcap_row.get(key,"")
-        redcap_row[key] = f"{orig} ~ {cand}" if orig else f"~ {cand}"
+# ─── HAMPDEN_NURSERY: max 1 student for week1 and 1 for week3, into slot _4 ─────
+assigned_hampden = set()
+for week_idx in (0, 2):  # 0→week1, 2→week3
+    # build pool of students not yet given HAMPDEN and not on Ward A that week
+    pool = [
+        s for s in legal_names
+        if s not in assigned_hampden
+        and ward_a_assignment.get(s, -1) != week_idx
+    ]
+    if not pool:
+        continue
+    student = random.choice(pool)
+    assigned_hampden.add(student)
 
+    # assign Mon–Fri, AM & PM, in slot _4
+    for day in range(1, 6):
+        d   = day + 7 * week_idx
+        key = f"custom_print_hampden_nursery_d{d}_4"
+        orig = redcap_row.get(key, "")
+        redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
 
 # ─── 2) SJR_HOSPITALIST (max 2 students, any weeks ≠ their Ward A week) ─────
 sjr_weeks = [0,1,2,3]
