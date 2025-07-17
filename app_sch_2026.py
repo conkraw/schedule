@@ -1120,7 +1120,7 @@ elif mode == "Create Student Schedule":
             for block in range(4):
                 am_row = 5 + block*8
                 pm_row = 6 + block*8
-                for col in range(1, 9):
+                for col in range(1, 8):
                     ws.write(am_row, col, "Asynchronous Time", f5)
                     ws.write(pm_row, col, "Asynchronous Time", f5)
     
