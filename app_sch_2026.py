@@ -1191,7 +1191,6 @@ elif mode == "Create Student Schedule":
                     .loc[
                         (stu_sched['start_date'] >= week_start) &
                         (stu_sched['start_date'] <= week_end),
-                        'rotation'
                     ]
                     .unique()
                 )
