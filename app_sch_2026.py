@@ -1039,7 +1039,7 @@ elif mode == "Create Student Schedule":
 
     import io
     import xlsxwriter
-    from xlsxwriter import Workbook as XlsxWorkbook
+    from xlsxwriter import Workbook as Workbook
 
     def create_ms_schedule_template(students, dates):
         """
