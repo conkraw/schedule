@@ -999,26 +999,126 @@ if mode == "Format OPD + Summary":
         # 6) Single download
         st.download_button(label="⬇️ Download OPD.xlsx + Summary (zip)",data=zip_io.read(),file_name="Batch_Output.zip",mime="application/zip")
 
-elif mode == "Generate Blank Individual Schedule":
-    # — new flow: build one blank student schedule template for each student (or one generic blank calendar) —
-    st.subheader("Create Student Schedule")
-    # Upload the OPD.xlsx file
-    uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
-    uploaded_book4_file = st.file_uploader("Upload RedCap Rotation Schedule file (.xlsx or .csv)", type=["xlsx", "csv"])
+def save_to_session(key, value, namespace="uploaded_files"):
+    """Helper to stash things in session_state under a namespace dict."""
+    st.session_state.setdefault(namespace, {})[key] = value
 
-    
-    if uploaded_opd_file:
-        try:
-            # Read the uploaded OPD file into a pandas dataframe
-            df_opd = pd.read_excel(uploaded_opd_file)
-            st.write("File successfully uploaded and loaded.")
-            
-            # Store the uploaded file in session state for use later
-            st.session_state.uploaded_files['OPD.xlsx'] = uploaded_opd_file
-                
-        except Exception as e:
-            st.error(f"Error reading the uploaded file: {e}")
-    else:
-        st.write("Please upload the OPD.xlsx file to proceed.")
+def load_opd(file_uploader_label="Upload OPD.xlsx file"):
+    opd_file = st.file_uploader(file_uploader_label, type="xlsx", key="opd_uploader")
+    if not opd_file:
+        st.info("Please upload the OPD.xlsx file to proceed.")
+        return None
+
+    try:
+        df = pd.read_excel(opd_file)
+        st.success("OPD.xlsx loaded.")
+        save_to_session("OPD.xlsx", opd_file)
+        return df
+    except Exception as e:
+        st.error(f"Failed to read OPD.xlsx: {e}")
+        return None
+
+def convert_csv_to_excel(df_csv):
+    """Build an in-memory Excel workbook from the CSV schedule dataframe."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Schedule"
+    ws.sheet_view.zoomScale = 80
+
+    # header row
+    headers = [
+        "Student Name:", "cl5rks1p",
+        "Week 1", "", "Week 2", "",
+        "Week 3", "", "Week 4", ""
+    ]
+    ws.append(headers)
+    for coord in ["C1:D1", "E1:F1", "G1:H1", "I1:J1"]:
+        ws.merge_cells(coord)
+
+    bold_underline = Font(bold=True, underline="single")
+    for col in ["A", "B", "C", "E", "G", "I"]:
+        cell = ws[f"{col}1"]
+        cell.font = bold_underline
+        if col in "CEGI":
+            cell.alignment = Alignment(horizontal="center")
+
+    # center all cells in the header row
+    for cell in ws[1]:
+        cell.alignment = Alignment(horizontal="center")
+
+    # dates row
+    start = df_csv["start_date"].min()
+    formulas = {
+        "C2": start,
+        "D2": "=C2+4",
+        "E2": "=C2+7",
+        "F2": "=D2+7",
+        "G2": "=C2+14",
+        "H2": "=D2+14",
+        "I2": "=C2+21",
+        "J2": "=D2+21"
+    }
+    for coord, val in formulas.items():
+        ws[coord].value = val
+        if coord[0] in "CDEFGHIJ":
+            ws[coord].number_format = "M/D/YYYY"
+
+    # column widths
+    ws.column_dimensions["A"].width = 30
+    for col in "BCDEFGHIJKLMNOPQRSTUVWXYZ":
+        ws.column_dimensions[col].width = 20
+
+    # fill student rows
+    for idx, row in enumerate(df_csv.itertuples(), start=3):
+        ws[f"A{idx}"] = row.legal_name
+        for col in "CDEFGHIJ":
+            ws[f"{col}{idx}"] = "Asynchronous Time"
+
+    # save to BytesIO
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+def load_book4():
+    book4 = st.file_uploader("Upload  Redcap Rotation Schedule CSV)", type=["csv"], key="book4_uploader")
+    if not book4:
+        st.info("Please upload the Redcap Rotation Schedule CSV to convert.")
+        return None
+
+    name = book4.name.lower()
+    try:
+        if name.endswith(".csv"):
+            df_csv = pd.read_csv(book4, parse_dates=["start_date"])
+            df_csv.rename(columns={"start_date": "start_date"}, inplace=True)
+            buf = convert_csv_to_excel(df_csv)
+            st.success("CSV converted to Book4.xlsx")
+        else:
+            buf = io.BytesIO(book4.read())
+            st.success("Book4.xlsx uploaded")
+
+        df_schedule = pd.read_excel(buf, sheet_name="Schedule")
+        st.write("Loaded schedule preview:")
+        st.dataframe(df_schedule.head())
+
+        save_to_session("Book4.xlsx", buf, namespace="uploaded_files")
+        return df_schedule
+
+    except Exception as e:
+        st.error(f"Error processing Book4: {e}")
+        return None
+
+# --- Main Page Logic ---
+if st.session_state.page == "Create Student Schedule":
+    st.title("Create Student Schedule")
+    df_opd = load_opd()
+    df_schedule = load_book4()
+
+    if st.button("Load Student Schedule"):
+        if df_opd is not None and df_schedule is not None:
+            st.session_state.page = "Create List"
+            st.rerun()
+        else:
+            st.warning("Both OPD.xlsx and Book4 schedule must be loaded before proceeding.")
 
 
