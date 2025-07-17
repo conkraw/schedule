@@ -1163,27 +1163,12 @@ elif mode == "Create Student Schedule":
     # ───> INSERT MASTER SCHEDULE CREATION HERE <───
     if df_opd is not None:
         # define your helper (or move it up above)
-        def create_blank_ms_schedule(student_names):
-            from openpyxl import Workbook
-            import io
-
-            wb = Workbook()
-            wb.remove(wb.active)
-            for name in student_names:
-                safe = name[:31].replace("/", "-").replace("\\", "-")
-                wb.create_sheet(title=safe)
-
-            buf = io.BytesIO()
-            wb.save(buf)
-            buf.seek(0)
-            return buf
-
         if st.button("Create Blank MS_Schedule.xlsx"):
             students = df_rot["legal_name"].dropna().unique()
-            excel_buf = create_blank_ms_schedule(students)
+            buf = create_ms_schedule_template(students, dates, locations_by_week)
             st.download_button(
                 "Download MS_Schedule.xlsx",
-                data=excel_buf.getvalue(),
+                data=buf.getvalue(),
                 file_name="MS_Schedule.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
