@@ -1045,8 +1045,8 @@ elif mode == "Create Student Schedule":
     # 3️⃣ Once both are present, let the user kick off generation
     if df_opd is not None and df_rot is not None:
         if st.button("Generate Blank Schedules"):
-            # example: loop through every student in df_opd
-            for student in df_opd["legal_name"].unique():
+            # example: loop through every student in df_rot
+            for student in df_rot["legal_name"].unique():
                 # build a blank template (you’d swap this for your own logic)
                 buf = io.BytesIO()
                 # … create one blank workbook per student …
