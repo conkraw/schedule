@@ -1035,19 +1035,6 @@ elif mode == "Create Student Schedule":
             st.error(f"Error loading {name}: {e}")
             return None
             
-    df_opd = load_workbook_df(
-        label="Upload OPD.xlsx file",
-        types=["xlsx"],
-        key="opd_blank"
-    )
-
-    # 2️⃣ Load rotation schedule (if you still need it below)
-    df_rot = load_workbook_df(
-        label="Upload RedCap Rotation Schedule file (.xlsx or .csv)",
-        types=["xlsx", "csv"],
-        key="rot_blank"
-    )
-
     # ───> INSERT MASTER SCHEDULE CREATION HERE <───
     if df_opd is not None:
         # define your helper (or move it up above)
