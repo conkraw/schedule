@@ -13,7 +13,7 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Inputs ────────────────────────────────────────────────────────────────────
-schedule_files = st.file_uploader("1) Upload one or more AGP calendar Excel(s)",type=["xlsx","xls"],accept_multiple_files=True)
+schedule_files = st.file_uploader("1) Upload one or more QGENDA calendar Excel(s)",type=["xlsx","xls"],accept_multiple_files=True)
 
 student_file = st.file_uploader(
     "2) Upload student list CSV (must have a 'legal_name' column)",
