@@ -221,11 +221,15 @@ for i,name in enumerate(legal_names, start=1):
 
 # ─── Pick one random student for WARD_A AM (Monday–Friday of week 1) ────────
 chosen = random.choice(legal_names)         # one student
-for day_idx in range(1, 6):                 # d1 through d5
-    key   = f"ward_a_am_d{day_idx}_1"
-    orig  = redcap_row.get(key, "")
-    # if there’s already a preceptor there, preserve it and append; otherwise just add the student
-    redcap_row[key] = f"{orig} ~ {chosen}" if orig else f"~ {chosen}"
+for day_idx in range(1, 6):  # Monday–Friday
+    for shift in ("am", "pm"):
+        key  = f"ward_a_{shift}_d{day_idx}_1"
+        orig = redcap_row.get(key, "")
+        # preserve whatever preceptor text was there, then append ~ Student
+        if orig:
+            redcap_row[key] = f"{orig} ~ {chosen}"
+        else:
+            redcap_row[key] = f"~ {chosen}"
 # ─── 4. Display & slice out dates/am/acute and students ─────────────────────
 out_df = pd.DataFrame([redcap_row])
 
