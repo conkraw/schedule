@@ -1001,6 +1001,24 @@ if mode == "Format OPD + Summary":
 
 elif mode == "Generate Blank Individual Schedule":
     # — new flow: build one blank student schedule template for each student (or one generic blank calendar) —
-    st.subheader("🗓️ Generate Blank Individual Schedules")
+    st.subheader("Create Student Schedule")
+    # Upload the OPD.xlsx file
+    uploaded_opd_file = st.file_uploader("Upload OPD.xlsx file", type="xlsx")
+    uploaded_book4_file = st.file_uploader("Upload Book4 file (.xlsx or .csv)", type=["xlsx", "csv"])
+
+    
+    if uploaded_opd_file:
+        try:
+            # Read the uploaded OPD file into a pandas dataframe
+            df_opd = pd.read_excel(uploaded_opd_file)
+            st.write("File successfully uploaded and loaded.")
+            
+            # Store the uploaded file in session state for use later
+            st.session_state.uploaded_files['OPD.xlsx'] = uploaded_opd_file
+                
+        except Exception as e:
+            st.error(f"Error reading the uploaded file: {e}")
+    else:
+        st.write("Please upload the OPD.xlsx file to proceed.")
 
 
