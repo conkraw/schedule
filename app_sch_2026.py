@@ -15,7 +15,7 @@ st.title("Batch Preceptor → REDCap Import Generator")
 # ─── Inputs ────────────────────────────────────────────────────────────────────
 schedule_files = st.file_uploader("1) Upload one or more QGENDA calendar Excel(s)",type=["xlsx","xls"],accept_multiple_files=True)
 
-student_file = st.file_uploader("2) Upload Redcap Rotation list CSV (must have a 'legal_name' and "start_date" column)",type=["csv"])
+student_file = st.file_uploader("2) Upload Redcap Rotation list CSV (must have a 'legal_name' and 'start_date' column)",type=["csv"])
 
 record_id = st.text_input("3) Enter the REDCap record_id for this batch", "")
 
