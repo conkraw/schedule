@@ -1011,58 +1011,60 @@ elif mode == "Create Student Schedule":
     def save_to_session(filename, fileobj, namespace="uploaded_files"):
         st.session_state.setdefault(namespace, {})[filename] = fileobj
 
-    def load_workbook_df(label, types, key):
-        """
-        Upload an .xlsx or .csv and return a DataFrame.
-        Saves the raw upload into session_state.uploaded_files.
-        """
-        upload = st.file_uploader(label, type=types, key=key)
-        if not upload:
-            st.info(f"Please upload {label}.")
-            return None
-    
-        name = upload.name
-        try:
-            if name.lower().endswith(".csv"):
-                df = pd.read_csv(upload)
-            else:
-                df = pd.read_excel(upload)
-            st.success(f"{name} loaded.")
-            save_to_session(name, upload)
-            return df
-    
-        except Exception as e:
-            st.error(f"Error loading {name}: {e}")
-            return None
-
-    # 1️⃣ Load your master list of students
+    # 1️⃣ Load OPD.xlsx
     df_opd = load_workbook_df(
         label="Upload OPD.xlsx file",
         types=["xlsx"],
         key="opd_blank"
     )
 
-    # 2️⃣ Load your RedCap rotation schedule
+    # 2️⃣ Load rotation schedule (if you still need it below)
     df_rot = load_workbook_df(
         label="Upload RedCap Rotation Schedule file (.xlsx or .csv)",
         types=["xlsx", "csv"],
         key="rot_blank"
     )
 
-    # 3️⃣ Once both are present, let the user kick off generation
+    # ───> INSERT MASTER SCHEDULE CREATION HERE <───
+    if df_opd is not None:
+        # define your helper (or move it up above)
+        def create_blank_ms_schedule(student_names):
+            from openpyxl import Workbook
+            import io
+
+            wb = Workbook()
+            wb.remove(wb.active)
+            for name in student_names:
+                safe = name[:31].replace("/", "-").replace("\\", "-")
+                wb.create_sheet(title=safe)
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            return buf
+
+        if st.button("Create Blank MS_Schedule.xlsx"):
+            students = df_opd["legal_name"].dropna().unique()
+            excel_buf = create_blank_ms_schedule(students)
+            st.download_button(
+                "Download MS_Schedule.xlsx",
+                data=excel_buf.getvalue(),
+                file_name="MS_Schedule.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    # ─── existing “Generate Blank Schedules” logic ───
     if df_opd is not None and df_rot is not None:
         if st.button("Generate Blank Schedules"):
-            # example: loop through every student in df_rot
             for student in df_rot["legal_name"].unique():
-                # build a blank template (you’d swap this for your own logic)
                 buf = io.BytesIO()
-                # … create one blank workbook per student …
-                #       then write to buf and st.download_button…
+                # … your per-student template logic …
                 st.download_button(
                     label=f"Download blank schedule for {student}",
                     data=buf.getvalue(),
                     file_name=f"{student.replace(' ', '_')}_schedule.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
+
     else:
         st.write("Upload both OPD.xlsx and the rotation schedule above to proceed.")
