@@ -220,7 +220,8 @@ for i,name in enumerate(legal_names, start=1):
     redcap_row[f"s{i}"] = name
 
 # ─── Pick one random student for WARD_A AM (Monday–Friday of week 1) ────────
-chosen = random.choice(legal_names)         # one student
+chosen = random.choice(legal_names)
+
 for day_idx in range(1, 6):  # Monday–Friday
     for shift in ("am", "pm"):
         key  = f"ward_a_{shift}_d{day_idx}_1"
@@ -230,6 +231,22 @@ for day_idx in range(1, 6):  # Monday–Friday
             redcap_row[key] = f"{orig} ~ {chosen}"
         else:
             redcap_row[key] = f"~ {chosen}"
+
+# ─── Now fill slots 2–6 for each weekday over 4 weeks ────────────────────────
+MAX_SLOTS = 6   # total students per day (you already filled slot 1)
+for shift in ("am","pm"):
+    for week in range(4):                # week=0,1,2,3
+        for weekday in range(1, 6):      # Mon–Fri → weekday=1…5
+            day_num = weekday + 7*week   # maps to d1…d28
+            # pick 6 distinct students for this day
+            picks = random.sample(legal_names, k=MAX_SLOTS)
+            for slot_idx, student in enumerate(picks, start=1):
+                key  = f"ward_a_{shift}_d{day_num}_{slot_idx}"
+                orig = redcap_row.get(key, "")
+                # preserve any existing text (preceptor) then append
+                redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
+
+
 # ─── 4. Display & slice out dates/am/acute and students ─────────────────────
 out_df = pd.DataFrame([redcap_row])
 
