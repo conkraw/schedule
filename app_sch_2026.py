@@ -105,7 +105,6 @@ file_configs = {
             "AAC_1",
             "AAC_2",
             "AAC_3",
-            "Mahoussi Aholoukpe"
         ]
     },
     # New standalone sheet for Mahoussi
