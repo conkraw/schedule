@@ -9,7 +9,7 @@ import io, zipfile
 from docx import Document
 from docx.enum.section import WD_ORIENT
 from datetime import timedelta
-from xlsxwriter import Workbook as XlsxWorkbook
+from xlsxwriter import Workbook as Workbook
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -1036,10 +1036,6 @@ elif mode == "Create Student Schedule":
         except Exception as e:
             st.error(f"Error loading {name}: {e}")
             return None
-
-    import io
-    import xlsxwriter
-    from xlsxwriter import Workbook as Workbook
 
     def create_ms_schedule_template(students, dates):
         """
