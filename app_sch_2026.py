@@ -510,10 +510,7 @@ sheet_map = {
     'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
     'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
     'W_A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
-    
-    'PSHCH_NURSERY':   ('',),
-    'HAMPDEN_NURSERY': ('',),
-    'SJR_HOSP':        ('',),
+
     
     'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
 }
