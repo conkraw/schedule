@@ -1035,50 +1035,6 @@ elif mode == "Create Student Schedule":
             st.error(f"Error loading {name}: {e}")
             return None
             
-    # ───> INSERT MASTER SCHEDULE CREATION HERE <───
-    if df_opd is not None:
-        # define your helper (or move it up above)
-        def create_blank_ms_schedule(student_names):
-            from openpyxl import Workbook
-            import io
-
-            wb = Workbook()
-            wb.remove(wb.active)
-            for name in student_names:
-                safe = name[:31].replace("/", "-").replace("\\", "-")
-                wb.create_sheet(title=safe)
-
-            buf = io.BytesIO()
-            wb.save(buf)
-            buf.seek(0)
-            return buf
-
-        if st.button("Create Blank MS_Schedule.xlsx"):
-            students = df_opd["legal_name"].dropna().unique()
-            excel_buf = create_blank_ms_schedule(students)
-            st.download_button(
-                "Download MS_Schedule.xlsx",
-                data=excel_buf.getvalue(),
-                file_name="MS_Schedule.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-    # ─── existing “Generate Blank Schedules” logic ───
-    if df_opd is not None and df_rot is not None:
-        if st.button("Generate Blank Schedules"):
-            for student in df_rot["legal_name"].unique():
-                buf = io.BytesIO()
-                # … your per-student template logic …
-                st.download_button(
-                    label=f"Download blank schedule for {student}",
-                    data=buf.getvalue(),
-                    file_name=f"{student.replace(' ', '_')}_schedule.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-
-    else:
-        st.write("Upload both OPD.xlsx and the rotation schedule above to proceed.")
-
     # 1️⃣ Load OPD.xlsx
     df_opd = load_workbook_df(
         label="Upload OPD.xlsx file",
