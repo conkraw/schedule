@@ -132,6 +132,7 @@ sorted_dates = sorted(assignments_by_date.keys())
 for idx, date in enumerate(sorted_dates, start=1):
     redcap_row[f"hd_day_date{idx}"] = date
     suffix = f"d{idx}_"
+    
     # build your per‑designator prefixes
     des_map = {
         des: ([p + suffix for p in prefs] if isinstance(prefs, list)
@@ -160,12 +161,12 @@ for idx, date in enumerate(sorted_dates, start=1):
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
                     
-  # ─── 3b. Add “file config” names into the same redcap_row ────────────────                  
-        for fname, cfg in file_configs.items():
-            # use custom_text as the field‐name prefix in REDCap
-            prefix = cfg["custom_text"].lower() + "_"  # e.g. "custom_print_"
-            for i, person in enumerate(cfg["names"], start=1):
-                redcap_row[f"{prefix}{i}"] = person
+# ─── 3b. Add “file config” names into the same redcap_row ────────────────                  
+    for fname, cfg in file_configs.items():
+        # use custom_text as the field‐name prefix in REDCap
+        prefix = cfg["custom_text"].lower() + "_"  # e.g. "custom_print_"
+        for i, person in enumerate(cfg["names"], start=1):
+            redcap_row[f"{prefix}{i}"] = person
                             
 # append student slots s1,s2,...
 for i,name in enumerate(legal_names, start=1):
