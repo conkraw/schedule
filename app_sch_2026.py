@@ -929,16 +929,14 @@ if st.button("Generate and Update Excel Files"):
 
     # 4) Build a Word doc with the summary table
     doc = Document()
-    # ─── make the page landscape ────────────────────────────────────────────────
+    # make landscape
     section = doc.sections[0]
     section.orientation = WD_ORIENT.LANDSCAPE
     section.page_width, section.page_height = section.page_height, section.page_width
     
     doc.add_heading("Assignment Summary by Week", level=1)
     
-    # ─── add table with visible borders ─────────────────────────────────────────
     cols  = df_summary.columns.tolist()
-    # you can pass style='Table Grid' to get the default grid borders
     table = doc.add_table(rows=1, cols=len(cols), style="Table Grid")
     hdr_cells = table.rows[0].cells
     for i, c in enumerate(cols):
@@ -948,21 +946,21 @@ if st.button("Generate and Update Excel Files"):
         row_cells = table.add_row().cells
         for i, c in enumerate(cols):
             row_cells[i].text = str(row[c])
-
+    
+    # **Save** into bytes
+    word_io = io.BytesIO()
+    doc.save(word_io)
+    word_io.seek(0)
+    word_bytes = word_io.read()
+    
     # 5) Package into a ZIP
     zip_io = io.BytesIO()
     with zipfile.ZipFile(zip_io, "w") as z:
-        z.writestr("Updated_OPD.xlsx",    updated_excel_bytes)
+        z.writestr("Updated_OPD.xlsx", updated_excel_bytes)
         z.writestr("Assignment_Summary.docx", word_bytes)
     zip_io.seek(0)
-
+    
     # 6) Single download
-    st.download_button(
-        label="⬇️ Download OPD.xlsx + Summary (zip)",
-        data=zip_io.read(),
-        file_name="Batch_Output.zip",
-        mime="application/zip"
-    )
-
+    st.download_button(label="⬇️ Download OPD.xlsx + Summary (zip)",data=zip_io.read(),file_name="Batch_Output.zip",mime="application/zip")
 
 
