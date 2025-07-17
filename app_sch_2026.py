@@ -291,14 +291,14 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     # ─── Worksheets ─────────────────────────────────────────────────────────────
     worksheet_names = [
         'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
-        'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','ADOLMED'
+        'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED'
     ]
     sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
 
     # ─── Site headers ────────────────────────────────────────────────────────────
     site_list = [
         'Hope Drive','Elizabethtown','Nyes Road','Complex Care',
-        'WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC', 'ADOLMED'
+        'WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','AHOLOUKPE','ADOLMED'
     ]
     for ws, site in zip(sheets.values(), site_list):
         ws.write(0, 0, 'Site:', format1)
@@ -566,6 +566,9 @@ base_map = {
     'hampden_nursery_print':    'custom_print_hampden_nursery_',
     'sjr_hospitalist_print':    'custom_print_sjr_hospitalist_',
     'aac_print':                'custom_print_aac_',
+
+    'mahoussi_aholoukpe_print': 'custom_print_mahoussi_aholoukpe_',
+    
 }
 
 # which keys from base_map for each sheet
@@ -579,11 +582,12 @@ sheet_map = {
     'HAMPDEN_NURSERY': ('hampden_nursery_print',),
     'SJR_HOSP':        ('sjr_hospitalist_print',),
     'AAC':             ('aac_print',),
+    'AHOLOUKPE':        ('mahoussi_aholoukpe_print',),
     
     'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
 }
 
-worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC', 'ADOLMED']
+worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
 
 for ws in worksheet_names:
     # ─── HOPE_DRIVE ───────────────────────────────────────────
