@@ -229,13 +229,20 @@ for c in out_df.columns:
 
 # ─── 4b. Only keep Jennifer Shook in the adolmed columns ─────────────
 target = "Shook, Jennifer"
+
+# 1) Identify the ADOLMED columns
 adol_cols = [c for c in out_df.columns 
              if c.startswith("adol_med_am_") or c.startswith("adol_med_pm_")]
 
-for col in adol_cols:
-    out_df[col] = out_df[col].where(out_df[col] == target, "")
-# now replace any leftover NaN with blank
-out_df[adol_cols] = out_df[adol_cols].fillna("")
+# 2) Of those, only keep the ones where *any* row equals your target
+keep_adol = [c for c in adol_cols if out_df[c].eq(target).any()]
+
+# 3) Put together the final column list: all non‑adol columns plus the filtered adol ones
+final_cols = [c for c in out_df.columns if c not in adol_cols] + keep_adol
+
+# 4) Reindex the DataFrame
+out_df = out_df[final_cols]
+
 
 st.subheader("✅ Full REDCap Import Preview")
 st.dataframe(out_df)
