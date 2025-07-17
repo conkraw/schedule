@@ -1196,30 +1196,30 @@ elif mode == "Create Student Schedule":
     )
 
     # ───────── Build & Assign ─────────
-        if df_opd is not None and df_rot is not None:
-            # compute your 4‑week dates from df_rot
-            df_rot['start_date'] = pd.to_datetime(df_rot['start_date'])
-            min_start = df_rot['start_date'].min()
-            monday    = min_start - pd.Timedelta(days=min_start.weekday())
-            dates     = pd.date_range(start=monday, periods=28, freq="D").tolist()
-    
-            # use the OPD student list
-            students = df_opd['legal_name'].dropna().unique().tolist()
-    
-            if st.button("Create & Download MS_Schedule.xlsx"):
-                # 1) blank calendar
-                blank_buf = create_ms_schedule_template(students, dates)
-                # 2) overlay preceptors
-                final_buf = assign_preceptors(
-                    opd_file=st.session_state.uploaded_files["OPD.xlsx"],
-                    ms_file=blank_buf
-                )
-                # 3) download it
-                st.download_button(
-                    "Download Fully‑Populated MS_Schedule.xlsx",
-                    data=final_buf.getvalue(),
-                    file_name="MS_Schedule.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-        else:
-            st.write("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
+    if df_opd is not None and df_rot is not None:
+        # compute your 4‑week dates from df_rot
+        df_rot['start_date'] = pd.to_datetime(df_rot['start_date'])
+        min_start = df_rot['start_date'].min()
+        monday    = min_start - pd.Timedelta(days=min_start.weekday())
+        dates     = pd.date_range(start=monday, periods=28, freq="D").tolist()
+
+        # use the OPD student list
+        students = df_opd['legal_name'].dropna().unique().tolist()
+
+        if st.button("Create & Download MS_Schedule.xlsx"):
+            # 1) blank calendar
+            blank_buf = create_ms_schedule_template(students, dates)
+            # 2) overlay preceptors
+            final_buf = assign_preceptors(
+                opd_file=st.session_state.uploaded_files["OPD.xlsx"],
+                ms_file=blank_buf
+            )
+            # 3) download it
+            st.download_button(
+                "Download Fully‑Populated MS_Schedule.xlsx",
+                data=final_buf.getvalue(),
+                file_name="MS_Schedule.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+    else:
+        st.write("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
