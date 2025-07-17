@@ -1040,17 +1040,6 @@ elif mode == "Create Student Schedule":
 
     
     def create_ms_schedule_template(students, dates):
-        """
-        Exactly replicates your original layout:
-          - Merges A1:A2 / B1:B2 / C1:H2
-          - Days on rows 3, 11, 19, 27 in cols B–H
-          - 'Week N' in A4, A12, A20, A28
-          - 'AM' in A6, A14, A22, A30
-          - 'PM' in A7, A15, A23, A31
-          - Dates in rows 3,11,19,27 cols C–I
-          - 'Asynchronous Time' in rows 6–7,14–15,22–23,30–31 cols C–J
-          - Zoom, widths, formats, separators, and assignment‑due rows exactly as before.
-        """
         buf = io.BytesIO()
         wb = xlsxwriter.Workbook(buf, {'in_memory': True})
     
@@ -1106,13 +1095,14 @@ elif mode == "Create Student Schedule":
             # Days headers and dates
             date_idx = 0
             for block, row in enumerate(start_rows):
-                # Days (B–H)
+                # 1) write the days on row `row`, cols B–H
                 for col_offset, day in enumerate(days, start=1):
                     ws.write(row, col_offset, day, f3)
-                # Dates (C–I)
+        
+                # 2) write the dates on row `row+1`, cols C–I
                 for col_offset in range(7):
                     if date_idx < len(dates):
-                        ws.write(row, col_offset+2, dates[date_idx], f4)
+                        ws.write(row+1, col_offset+2, dates[date_idx], f4)
                         date_idx += 1
     
             # Week labels
