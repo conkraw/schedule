@@ -13,7 +13,36 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Inputs ────────────────────────────────────────────────────────────────────
-schedule_files = st.file_uploader("1) Upload one or more QGENDA calendar Excel(s)",type=["xlsx","xls"],accept_multiple_files=True)
+# Required keywords to look for in the content
+required_keywords = ["academic general pediatrics", "hospitalists", "complex care", "adolescent medicine"]
+found_keywords = set()
+
+schedule_files = st.file_uploader("1) Upload one or more QGenda calendar Excel(s)",type=["xlsx", "xls"],accept_multiple_files=True)
+
+if schedule_files:
+    for file in schedule_files:
+        try:
+            # Read the first sheet
+            df = pd.read_excel(file, sheet_name=0, header=None)
+
+            # Flatten all string values to a list of lowercase strings
+            cell_values = df.astype(str).apply(lambda x: x.str.lower()).values.flatten().tolist()
+
+            # Check if any keyword is found in cell values
+            for keyword in required_keywords:
+                if any(keyword in val for val in cell_values):
+                    found_keywords.add(keyword)
+
+        except Exception as e:
+            st.error(f"Error reading {file.name}: {e}")
+
+    # Identify missing calendars
+    missing_keywords = [k for k in required_keywords if k not in found_keywords]
+
+    if missing_keywords:
+        st.warning(f"Missing required calendar(s): {', '.join(missing_keywords)}. Please upload all four.")
+    else:
+        st.success("All required calendars uploaded and verified by content.")
 
 student_file = st.file_uploader("2) Upload Redcap Rotation list CSV (must have a 'legal_name' and 'start_date' column)",type=["csv"])
 
