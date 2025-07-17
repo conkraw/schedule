@@ -251,24 +251,18 @@ for idx, student in enumerate(students):
 nursery_assigned = set()
 
 # ─── 1) HAMPDEN_NURSERY (max 1 student, only week1 or week3) ────────────────
-# pick a week that isn’t the student’s Ward A week
-h_weeks = [0, 2]
-random.shuffle(h_weeks)
-for hw in h_weeks:
-    pool = [s for s in legal_names 
-            if s not in nursery_assigned 
-            and ward_a_assignment.get(s, -1) != hw]
-    if not pool:
-        continue
-    cand = random.choice(pool)
+h_choice = random.choice([0,2])
+cand_pool = [s for s in legal_names 
+             if ward_a_assignment.get(s,-1) != h_choice]
+if cand_pool:
+    cand = random.choice(cand_pool)
     nursery_assigned.add(cand)
-    for day in range(1, 6):
-        d = day + hw * 7
-        for shift in ("am","pm"):
-            key  = f"custom_print_hampden_nursery_d{d}_1"
-            orig = redcap_row.get(key, "")
-            redcap_row[key] = f"{orig} ~ {cand}" if orig else f"~ {cand}"
-    break  # only one student
+    for day in range(1,6):
+        d   = day + 7*h_choice
+        key = f"custom_print_hampden_nursery_d{d}_1"
+        orig = redcap_row.get(key,"")
+        redcap_row[key] = f"{orig} ~ {cand}" if orig else f"~ {cand}"
+
 
 # ─── 2) SJR_HOSPITALIST (max 2 students, any weeks ≠ their Ward A week) ─────
 sjr_weeks = [0,1,2,3]
@@ -285,10 +279,9 @@ for _ in range(2):
             nursery_assigned.add(cand)
             for day in range(1, 6):
                 d = day + w * 7
-                for shift in ("am","pm"):
-                    key  = f"custom_print_sjr_hospitalist_d{d}_1"
-                    orig = redcap_row.get(key, "")
-                    redcap_row[key] = f"{orig} ~ {cand}" if orig else f"~ {cand}"
+                key  = f"custom_print_sjr_hospitalist_d{d}_1"
+                orig = redcap_row.get(key, "")
+                redcap_row[key] = f"{orig} ~ {cand}" if orig else f"~ {cand}"
             break
     else:
         # no more weeks  
