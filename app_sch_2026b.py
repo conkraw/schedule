@@ -1222,27 +1222,26 @@ elif mode == "Create Student Schedule":
         """
         wb = load_workbook(opd_file, data_only=True)
         seen = defaultdict(set)
-    
         name_regex = re.compile(r"^[A-Za-z]+(?: [A-Za-z]+)+$")  # at least two words
     
         for sheet in wb.sheetnames:
             ws = wb[sheet]
             for row in range(1, ws.max_row + 1):
                 for col in range(2, 9):  # B–H
-                    val = ws.cell(row=row, column=col).value
-                    if not val or "~" not in val:
+                    cell = ws.cell(row=row, column=col)
+                    val = cell.value
+                    text = str(val or "")
+                    if "~" not in text:
                         continue
-                    parts = [s.strip() for s in str(val).split("~", 1)]
-                    if len(parts) < 2:
-                        continue
-                    student = parts[1]
-                    # skip if the “student” side doesn't look like a real two-word name
+                    pre, student = [s.strip() for s in text.split("~", 1)]
+                    # only accept if student side looks like two words
                     if not name_regex.match(student):
                         continue
     
-                    coord = ws.cell(row=row, column=col).coordinate
+                    coord = cell.coordinate
                     seen[(coord, student)].add(sheet)
     
+        # collect conflicts
         conflicts = []
         for (coord, student), sheets in seen.items():
             if len(sheets) > 1:
