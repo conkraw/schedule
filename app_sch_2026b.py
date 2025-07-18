@@ -1182,29 +1182,40 @@ elif mode == "Create Student Schedule":
         out_buf.seek(0)
         return out_buf
 
+
     def assign_preceptors_week1_am(opd_file, ms_file):
-        # 1) Open workbooks
         opd_wb = load_workbook(opd_file, data_only=True)
         ms_wb  = load_workbook(ms_file)
     
-        # 2) Pick the first site (or loop through all sites exactly the same)
         for site in opd_wb.sheetnames:
             ws_opd = opd_wb[site]
     
-            # 3) Dynamically find Week 1 AM block start/end in col A
-            am_rows = [
-                cell.row
-                for cell in ws_opd['A']
-                if isinstance(cell.value, str) and re.match(r"^\s*AM\b", cell.value, re.IGNORECASE)
-            ]
-            if not am_rows:
-                continue
-            start_row = min(am_rows)
-            end_row   = max(am_rows)
+            # 1) find the first AM marker in col A
+            start_row = None
+            for cell in ws_opd['A']:
+                if isinstance(cell.value, str) and re.match(r"^\s*AM\b", cell.value, re.IGNORECASE):
+                    start_row = cell.row
+                    break
+            if start_row is None:
+                continue  # no AM found at all
     
-            # 4) Now use that single block instead of hard‑coded (6,15,6)
-            ms_row = 6  # Week 1 AM always writes to row 6 in your template
-            for col in range(2, 9):  # B=2 … H=8
+            # 2) find the first PM marker after that
+            pm_row = None
+            for cell in ws_opd['A']:
+                if cell.row <= start_row:
+                    continue
+                if isinstance(cell.value, str) and re.match(r"^\s*PM\b", cell.value, re.IGNORECASE):
+                    pm_row = cell.row
+                    break
+            if pm_row is None:
+                # fallback: scan for next AM that’s not contiguous?
+                # but typically you have a PM label
+                continue
+    
+            end_row = pm_row - 1
+    
+            # 3) now copy B–H from start_row..end_row into MS row 6
+            for col in range(2, 9):
                 for r in range(start_row, end_row + 1):
                     val = ws_opd.cell(row=r, column=col).value
                     if not val or "~" not in str(val):
@@ -1213,14 +1224,14 @@ elif mode == "Create Student Schedule":
                     if student not in ms_wb.sheetnames:
                         continue
                     ws_ms = ms_wb[student]
-                    ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
+                    ws_ms.cell(row=6, column=col).value = f"{pre} - [{site}]"
     
-        # 5) Save back to a BytesIO buffer
+        # flush to buffer
         out = io.BytesIO()
         ms_wb.save(out)
         out.seek(0)
         return out
-            
+                
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
     df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
