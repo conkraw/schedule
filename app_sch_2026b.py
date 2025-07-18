@@ -383,7 +383,6 @@ if mode == "Format OPD + Summary":
         
         for start in BLOCK_STARTS:
             zero_row = start - 1
-            
             # — AM half of the block —
             for i in range(AM_COUNT):
                 # first 2 → ACUTES, rest → Continuity
@@ -391,7 +390,7 @@ if mode == "Format OPD + Summary":
                     label = 'AM - ACUTES'
                 else:
                     label = 'AM - Continuity'
-                ws.write(zero_row + i, 0, label, format5a)
+                hd.write(zero_row + i, 0, label, format5a)
             
             # — PM half of the block —
             for i in range(PM_COUNT):
@@ -399,12 +398,8 @@ if mode == "Format OPD + Summary":
                     label = 'PM - ACUTES'
                 else:
                     label = 'PM - Continuity'
-                ws.write(zero_row + AM_COUNT + i, 0, label, format5a)
+                hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
             
-            ## — your other labels go in column I (index 8) —
-            #for i, lab in enumerate(labels):
-            #    ws.write(start + i, 8, lab, formate)
-
         #acute_ranges = [(6,7),(16,17),(30,31),(40,41),(54,55),(64,65),(78,79),(88,89)]
         #for idx, (r1, r2) in enumerate(acute_ranges):
         #    # even idx → AM; odd idx → PM
