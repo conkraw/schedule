@@ -1139,62 +1139,53 @@ elif mode == "Create Student Schedule":
         buf.seek(0)
         return buf
 
-    
-
     def assign_preceptors_am_only(opd_file, ms_file):
-        opd_sheets = pd.read_excel(opd_file, sheet_name=None, header=None)
-        ms_wb      = load_workbook(ms_file)
+        """
+        Reads OPD.xlsx and MS_Schedule.xlsx (both file‑like or paths) and:
+          • Week 1 AM: OPD B6–H15 → MS_Schedule row 6, cols B–H
+          • Week 2 AM: OPD B30–H39 → MS row 14
+          • Week 3 AM: OPD B54–H63 → MS row 22
+          • Week 4 AM: OPD B78–H87 → MS row 30
+        For each cell containing “Preceptor ~ Student”, writes
+        “Preceptor - [SiteName]” into the student’s sheet at that MS cell.
+        Returns a BytesIO of the updated MS_Schedule.
+        """
+        # Open both workbooks
+        opd_wb = load_workbook(opd_file, data_only=True)
+        ms_wb  = load_workbook(ms_file)
     
-        opd_row_starts = [5, 29, 53, 77]
-        ms_am_rows     = [6, 14, 22, 30]
+        # Define the OPD row blocks and corresponding MS rows
+        opd_blocks = [
+            (6,  15, 6),   # OPD rows 6–15 → MS row 6
+            (30, 39, 14),  # OPD 30–39 → MS 14
+            (54, 63, 22),  # OPD 54–63 → MS 22
+            (78, 87, 30),  # OPD 78–87 → MS 30
+        ]
     
-        # For debug: record how many writes we do
-        total_writes = 0
+        for site in opd_wb.sheetnames:
+            ws_opd = opd_wb[site]
+            for start, end, ms_row in opd_blocks:
+                for col in range(2, 9):  # columns B (2) through H (8)
+                    val = ws_opd.cell(row=start, column=col).value
+                    # scan down the block, not just the first row
+                    # so for row in start…end:
+                    for r in range(start, end + 1):
+                        cell = ws_opd.cell(row=r, column=col).value
+                        if not cell or "~" not in str(cell):
+                            continue
+                        pre, student = [s.strip() for s in str(cell).split("~", 1)]
+                        if student not in ms_wb.sheetnames:
+                            continue
+                        ws_ms = ms_wb[student]
+                        # write to the same column at the designated ms_row
+                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
     
-        for site_name, df in opd_sheets.items():
-            print(f"▶ Processing site: {site_name!r} (shape={df.shape})")
-            for week_idx, opd_start in enumerate(opd_row_starts):
-                target_row = ms_am_rows[week_idx]
-                print(f"   – Week {week_idx+1}: OPD row {opd_start+1} → MS row {target_row}")
-    
-                for col_idx in range(1, 8):
-                    # bounds check
-                    if opd_start >= len(df) or col_idx >= df.shape[1]:
-                        print(f"      • Skipping col {col_idx} (out of bounds)")
-                        continue
-    
-                    entry = df.iat[opd_start, col_idx]
-                    if pd.isna(entry):
-                        # no assignment
-                        continue
-    
-                    text = str(entry).strip()
-                    print(f"      • Found entry at OPD[{opd_start+1}, {col_idx+1}]: {text!r}")
-    
-                    if '~' not in text:
-                        print("        – No '~' found, skipping")
-                        continue
-    
-                    preceptor, student = [s.strip() for s in text.split('~', 1)]
-                    print(f"        – Parsed: preceptor={preceptor!r}, student={student!r}")
-    
-                    if student not in ms_wb.sheetnames:
-                        print(f"        – Student sheet {student!r} not found in MS workbook")
-                        continue
-    
-                    ws = ms_wb[student]
-                    col_excel = col_idx + 1  # B=2, C=3, etc.
-                    print(f"        – Writing to {student!r}.cell(row={target_row}, col={col_excel})")
-                    ws.cell(row=target_row, column=col_excel,
-                            value=f"{preceptor} - [{site_name}]")
-                    total_writes += 1
-    
-        print(f"✅ Total writes performed: {total_writes}")
-    
-        out_buf = io.BytesIO()
-        ms_wb.save(out_buf)
-        out_buf.seek(0)
-        return out_buf
+        # Save back to BytesIO
+        out = io.BytesIO()
+        ms_wb.save(out)
+        out.seek(0)
+        return out
+
             
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
