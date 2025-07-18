@@ -1355,12 +1355,12 @@ elif mode == "Create Student Schedule":
                     ws_ms = ms_wb[student]
                     ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
 
-    # Save back to a BytesIO buffer
-    out = io.BytesIO()
-    ms_wb.save(out)
-    out.seek(0)
-    return out
-
+        # Save back to a BytesIO buffer
+        out = io.BytesIO()
+        ms_wb.save(out)
+        out.seek(0)
+        return out
+    
 
                 
     # ───────── Load OPD & Rotation Schedule ─────────
