@@ -1192,36 +1192,50 @@ elif mode == "Create Student Schedule":
         return out
 
     
-    def detect_duplicate_assignments(opd_file):
+    def detect_duplicate_student_assignments(opd_file):
         """
-        Finds any student assigned in the *same cell* (B–H) across more than one OPD sheet.
-        Ignores entries where the part after '~' is empty or just whitespace.
+        Scans OPD.xlsx (all sheets) in columns B–H, rows 1..max, for 'Preceptor ~ Student'.
+        Ignores blanks and non-name entries. Builds a map:
+            student -> [(sheet, cell_coord), ...]
+        Returns a list of conflicts:
+          [
+            {
+              "student": "Jane Doe",
+              "locations": [("HOPE_DRIVE","B6"), ("ETOWN","B6"), ("HOPE_DRIVE","B7")],
+            },
+            ...
+          ]
+        i.e. any student with more than one assignment slot.
         """
         wb = load_workbook(opd_file, data_only=True)
-        seen = defaultdict(set)
+        student_locations = defaultdict(list)
+    
+        name_regex = re.compile(r"^[A-Za-z]+(?: [A-Za-z]+)+$")
     
         for sheet in wb.sheetnames:
             ws = wb[sheet]
             for row in range(1, ws.max_row + 1):
                 for col in range(2, 9):  # B–H
-                    val = ws.cell(row=row, column=col).value
-                    if not val or "~" not in str(val):
+                    raw = ws.cell(row=row, column=col).value
+                    if not raw or "~" not in str(raw):
                         continue
-                    parts = [s.strip() for s in str(val).split("~", 1)]
-                    # Must have non-empty student after the '~'
+                    parts = [s.strip() for s in str(raw).split("~", 1)]
                     if len(parts) < 2 or not parts[1]:
                         continue
                     student = parts[1]
-                    coord   = ws.cell(row=row, column=col).coordinate
-                    seen[(coord, student)].add(sheet)
+                    # ensure it's a name
+                    if not name_regex.match(student):
+                        continue
+                    coord = ws.cell(row=row, column=col).coordinate
+                    student_locations[student].append((sheet, coord))
     
+        # build conflicts
         conflicts = []
-        for (coord, student), sheets in seen.items():
-            if len(sheets) > 1:
+        for student, locs in student_locations.items():
+            if len(locs) > 1:
                 conflicts.append({
                     "student": student,
-                    "cell": coord,
-                    "sheets": sorted(sheets)
+                    "locations": locs
                 })
     
         return conflicts
