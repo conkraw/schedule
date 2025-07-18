@@ -902,7 +902,7 @@ if mode == "Format OPD + Summary":
     # --- Main execution flow for generating and then updating the workbook ---
     st.subheader("Generate & Update OPD.xlsx + Summary")
     
-    if st.button("Generate OPD File For Sarah to Load Preceptors"):
+    if st.button("Generate OPD File For Sarah to Load Students"):
         # 1) Generate the initial OPD workbook
         excel_template_bytes = generate_opd_workbook(out_df)
         if not excel_template_bytes:
