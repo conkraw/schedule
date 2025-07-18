@@ -1298,48 +1298,48 @@ elif mode == "Create Student Schedule":
         return out
 
     def assign_preceptors_all_weeks_pm(opd_file, ms_file):
-    """
-    For each OPD sheet:
-      1) Collect all rows where col A starts with "PM".
-      2) Cluster those rows into contiguous week‑blocks.
-      3) Map each week_block i to MS_Schedule row [7,15,23,31][i].
-      4) Copy any "Preceptor ~ Student" in OPD cols B–H within that block
-         into the student's sheet at that row.
-    Returns an in‑memory BytesIO of the populated MS_Schedule.
-    """
-    # Open workbooks
-    opd_wb = load_workbook(opd_file, data_only=True)
-    ms_wb  = load_workbook(ms_file)
-
-    # Fixed target rows in MS template for Week1–4 PM
-    target_ms_rows = [7, 15, 23, 31]
-
-    for site in opd_wb.sheetnames:
-        ws_opd = opd_wb[site]
-
-        # 1) Find all PM marker rows in col A
-        pm_rows = [
-            cell.row
-            for cell in ws_opd['A']
-            if isinstance(cell.value, str) and re.match(r"^\s*PM\b", cell.value, re.IGNORECASE)
-        ]
-
-        if not pm_rows:
-            continue
-
-        # 2) Cluster contiguous PM rows into blocks
-        pm_rows.sort()
-        blocks = []
-        current = [pm_rows[0]]
-        for r in pm_rows[1:]:
-            if r == current[-1] + 1:
-                current.append(r)
-            else:
-                blocks.append(current)
-                current = [r]
-        blocks.append(current)
-
-        # 3) Process up to 4 week‐blocks
+        """
+        For each OPD sheet:
+          1) Collect all rows where col A starts with "PM".
+          2) Cluster those rows into contiguous week‑blocks.
+          3) Map each week_block i to MS_Schedule row [7,15,23,31][i].
+          4) Copy any "Preceptor ~ Student" in OPD cols B–H within that block
+             into the student's sheet at that row.
+        Returns an in‑memory BytesIO of the populated MS_Schedule.
+        """
+        # Open workbooks
+        opd_wb = load_workbook(opd_file, data_only=True)
+        ms_wb  = load_workbook(ms_file)
+    
+        # Fixed target rows in MS template for Week1–4 PM
+        target_ms_rows = [7, 15, 23, 31]
+    
+        for site in opd_wb.sheetnames:
+            ws_opd = opd_wb[site]
+    
+            # 1) Find all PM marker rows in col A
+            pm_rows = [
+                cell.row
+                for cell in ws_opd['A']
+                if isinstance(cell.value, str) and re.match(r"^\s*PM\b", cell.value, re.IGNORECASE)
+            ]
+    
+            if not pm_rows:
+                continue
+    
+            # 2) Cluster contiguous PM rows into blocks
+            pm_rows.sort()
+            blocks = []
+            current = [pm_rows[0]]
+            for r in pm_rows[1:]:
+                if r == current[-1] + 1:
+                    current.append(r)
+                else:
+                    blocks.append(current)
+                    current = [r]
+            blocks.append(current)
+    
+            # 3) Process up to 4 week‐blocks
         for week_idx, block in enumerate(blocks[:4]):
             ms_row = target_ms_rows[week_idx]
 
