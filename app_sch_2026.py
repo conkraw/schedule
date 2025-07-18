@@ -1180,16 +1180,16 @@ elif mode == "Create Student Schedule":
         out_buf.seek(0)
         return out_buf
 
-            
-        # ───────── Uploads ─────────
-        df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], "opd_main")
-        if df_opd is not None and "opd_file" not in st.session_state:
-            # stash raw OPD upload
-            st.session_state.opd_file = st.session_state.uploaded_files["OPD.xlsx"]
-    
-        df_rot = load_workbook_df("Upload RedCap Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], "rot_main")
-        if df_rot is not None and "rot_file" not in st.session_state:
-            st.session_state.rot_file = st.session_state.uploaded_files[df_rot.name]
+        
+    # ───────── Uploads ─────────
+    df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], "opd_main")
+    if df_opd is not None and "opd_file" not in st.session_state:
+        # stash raw OPD upload
+        st.session_state.opd_file = st.session_state.uploaded_files["OPD.xlsx"]
+
+    df_rot = load_workbook_df("Upload RedCap Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], "rot_main")
+    if df_rot is not None and "rot_file" not in st.session_state:
+        st.session_state.rot_file = st.session_state.uploaded_files[df_rot.name]
     
     # ───────── Build, Assign & Download ─────────
     if df_opd is not None and df_rot is not None:
