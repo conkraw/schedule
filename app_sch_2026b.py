@@ -1214,27 +1214,33 @@ elif mode == "Create Student Schedule":
         out.seek(0)
         return out
 
+
     def detect_duplicate_assignments(opd_file):
         """
         Finds any student assigned in the *same cell* (B–H) across more than one OPD sheet.
-        Ignores entries where the part after '~' is empty or just whitespace.
+        Skips any tilde-entries where the part after '~' doesn't look like First Last.
         """
         wb = load_workbook(opd_file, data_only=True)
         seen = defaultdict(set)
+    
+        name_regex = re.compile(r"^[A-Za-z]+(?: [A-Za-z]+)+$")  # at least two words
     
         for sheet in wb.sheetnames:
             ws = wb[sheet]
             for row in range(1, ws.max_row + 1):
                 for col in range(2, 9):  # B–H
                     val = ws.cell(row=row, column=col).value
-                    if not val or "~" not in str(val):
+                    if not val or "~" not in val:
                         continue
                     parts = [s.strip() for s in str(val).split("~", 1)]
-                    # Must have non-empty student after the '~'
-                    if len(parts) < 2 or not parts[1]:
+                    if len(parts) < 2:
                         continue
                     student = parts[1]
-                    coord   = ws.cell(row=row, column=col).coordinate
+                    # skip if the “student” side doesn't look like a real two-word name
+                    if not name_regex.match(student):
+                        continue
+    
+                    coord = ws.cell(row=row, column=col).coordinate
                     seen[(coord, student)].add(sheet)
     
         conflicts = []
