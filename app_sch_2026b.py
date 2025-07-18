@@ -1191,51 +1191,36 @@ elif mode == "Create Student Schedule":
         out.seek(0)
         return out
 
-    
-    def detect_duplicate_student_assignments(opd_file):
+    def detect_duplicate_assignments(opd_file):
         """
-        Scans OPD.xlsx (all sheets) in columns B–H, rows 1..max, for 'Preceptor ~ Student'.
-        Ignores blanks and non-name entries. Builds a map:
-            student -> [(sheet, cell_coord), ...]
-        Returns a list of conflicts:
-          [
-            {
-              "student": "Jane Doe",
-              "locations": [("HOPE_DRIVE","B6"), ("ETOWN","B6"), ("HOPE_DRIVE","B7")],
-            },
-            ...
-          ]
-        i.e. any student with more than one assignment slot.
+        Finds any student assigned in the *same cell* (B–H) across more than one OPD sheet.
+        Ignores entries where the part after '~' is empty or just whitespace.
         """
         wb = load_workbook(opd_file, data_only=True)
-        student_locations = defaultdict(list)
-    
-        name_regex = re.compile(r"^[A-Za-z]+(?: [A-Za-z]+)+$")
+        seen = defaultdict(set)
     
         for sheet in wb.sheetnames:
             ws = wb[sheet]
             for row in range(1, ws.max_row + 1):
                 for col in range(2, 9):  # B–H
-                    raw = ws.cell(row=row, column=col).value
-                    if not raw or "~" not in str(raw):
+                    val = ws.cell(row=row, column=col).value
+                    if not val or "~" not in str(val):
                         continue
-                    parts = [s.strip() for s in str(raw).split("~", 1)]
+                    parts = [s.strip() for s in str(val).split("~", 1)]
+                    # Must have non-empty student after the '~'
                     if len(parts) < 2 or not parts[1]:
                         continue
                     student = parts[1]
-                    # ensure it's a name
-                    if not name_regex.match(student):
-                        continue
-                    coord = ws.cell(row=row, column=col).coordinate
-                    student_locations[student].append((sheet, coord))
+                    coord   = ws.cell(row=row, column=col).coordinate
+                    seen[(coord, student)].add(sheet)
     
-        # build conflicts
         conflicts = []
-        for student, locs in student_locations.items():
-            if len(locs) > 1:
+        for (coord, student), sheets in seen.items():
+            if len(sheets) > 1:
                 conflicts.append({
                     "student": student,
-                    "locations": locs
+                    "cell": coord,
+                    "sheets": sorted(sheets)
                 })
     
         return conflicts
@@ -1247,7 +1232,7 @@ elif mode == "Create Student Schedule":
 
         # ───────── Check for duplicates ─────────
     if df_opd is not None:
-        dupes = detect_duplicate_student_assignments(st.session_state["opd_main_file"])
+        dupes = detect_duplicate_assignments(st.session_state["opd_main_file"])
         if dupes:
             for d in dupes:
                 st.warning(
