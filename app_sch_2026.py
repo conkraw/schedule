@@ -1186,6 +1186,54 @@ elif mode == "Create Student Schedule":
         out.seek(0)
         return out
 
+    def assign_preceptors_pm_only(opd_file, ms_file):
+        """
+        Reads OPD.xlsx and MS_Schedule.xlsx, then for each OPD sheet and each of four PM weeks:
+          • Week 1 PM: OPD rows 16–25 → MS row 7
+          • Week 2 PM: OPD rows 40–49 → MS row 15
+          • Week 3 PM: OPD rows 64–73 → MS row 23
+          • Week 4 PM: OPD rows 88–97 → MS row 31
+        Columns B–H (2–8) map directly.  
+        For each cell containing “Preceptor ~ Student” in OPD, writes
+        “Preceptor - [SiteName]” into the corresponding MS sheet cell.
+        Returns a BytesIO buffer of the updated MS_Schedule.
+        """
+        # Open workbooks
+        opd_wb = load_workbook(opd_file, data_only=True)
+        ms_wb  = load_workbook(ms_file)
+    
+        # Define OPD PM blocks and corresponding MS rows
+        opd_blocks = [
+            (16, 25, 7),   # OPD rows 16–25 → MS row 7
+            (40, 49, 15),  # OPD rows 40–49 → MS row 15
+            (64, 73, 23),  # OPD rows 64–73 → MS row 23
+            (88, 97, 31),  # OPD rows 88–97 → MS row 31
+        ]
+    
+        # Iterate each clinic site
+        for site in opd_wb.sheetnames:
+            ws_opd = opd_wb[site]
+            # For each week block
+            for start, end, ms_row in opd_blocks:
+                # Columns B (2) through H (8)
+                for col in range(2, 9):
+                    # Scan all rows in this block
+                    for r in range(start, end + 1):
+                        cell_val = ws_opd.cell(row=r, column=col).value
+                        if not cell_val or "~" not in str(cell_val):
+                            continue
+                        preceptor, student = [s.strip() for s in str(cell_val).split("~", 1)]
+                        if student in ms_wb.sheetnames:
+                            ws_ms = ms_wb[student]
+                            # Write into the MS sheet at (ms_row, same col)
+                            ws_ms.cell(row=ms_row, column=col).value = f"{preceptor} - [{site}]"
+    
+        # Save updated workbook into an in-memory buffer
+        out_buf = io.BytesIO()
+        ms_wb.save(out_buf)
+        out_buf.seek(0)
+        return out_buf
+
             
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
@@ -1201,20 +1249,28 @@ elif mode == "Create Student Schedule":
         # students from OPD
         students = df_rot["legal_name"].dropna().unique().tolist()
 
-        if st.button("Create & Download MS_Schedule.xlsx"):
-            # (1) blank calendar
+        if st.button("Create & Download Fully‑Populated MS_Schedule"):
+            # 1) Build the blank 4‑week calendar
             blank_buf = create_ms_schedule_template(students, dates)
-            # (2) overlay preceptors
-            final_buf = assign_preceptors_am_only(
+        
+            # 2) Populate AM slots from OPD
+            am_buf = assign_preceptors_am_only(
                 opd_file = st.session_state["opd_main_file"],
                 ms_file  = blank_buf
             )
-            # (3) download
+        
+            # 3) (Optional) Populate PM slots on top of the AM‑populated file
+            full_buf = assign_preceptors_pm_only(
+                opd_file = st.session_state["opd_main_file"],
+                ms_file  = am_buf
+            )
+        
+            # 4) Offer the final workbook for download
             st.download_button(
-                "Download Fully‑Populated MS_Schedule.xlsx",
-                data=final_buf.getvalue(),
-                file_name="MS_Schedule.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                "Download MS_Schedule.xlsx",
+                data      = full_buf.getvalue(),
+                file_name = "MS_Schedule.xlsx",
+                mime      = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     else:
         st.info("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
