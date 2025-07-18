@@ -1231,6 +1231,76 @@ elif mode == "Create Student Schedule":
         ms_wb.save(out)
         out.seek(0)
         return out
+
+    def assign_preceptors_all_weeks_am_dynamic(opd_file, ms_file):
+        """
+        1) Load MS_Schedule and detect its AM rows in col A (dynamically).
+        2) Load OPD and for each sheet, find each AM→PM block.
+        3) For each block i, map it to the i-th AM row in the MS template.
+        4) Copy Preceptor~Student from OPD B–H into each student's MS sheet at that row.
+        """
+        # 1) Open MS and discover AM rows
+        ms_wb     = load_workbook(ms_file)
+        sample_ws = ms_wb[ms_wb.sheetnames[0]]
+        ms_am_rows = [
+            cell.row
+            for cell in sample_ws['A']
+            if isinstance(cell.value, str) and cell.value.strip().upper().startswith("AM")
+        ]
+    
+        # 2) Open OPD
+        opd_wb = load_workbook(opd_file, data_only=True)
+    
+        # 3) Process each OPD sheet
+        for site in opd_wb.sheetnames:
+            ws_opd = opd_wb[site]
+    
+            # collect markers in col A
+            markers = []
+            for cell in ws_opd['A']:
+                if not isinstance(cell.value, str):
+                    continue
+                txt = cell.value.strip().upper()
+                if txt.startswith("AM"):
+                    markers.append((cell.row, "AM"))
+                elif txt.startswith("PM"):
+                    markers.append((cell.row, "PM"))
+    
+            # build AM→PM blocks
+            blocks = []
+            for i, (r, kind) in enumerate(markers):
+                if kind != "AM":
+                    continue
+                # find next PM
+                for j in range(i+1, len(markers)):
+                    if markers[j][1] == "PM":
+                        blocks.append((r, markers[j][0] - 1))
+                        break
+                if len(blocks) >= len(ms_am_rows):
+                    break
+    
+            # 4) For each week-block, copy entries
+            for wk, (start_row, end_row) in enumerate(blocks):
+                if wk >= len(ms_am_rows):
+                    break
+                target_ms_row = ms_am_rows[wk]
+                for col in range(2, 9):  # B–H
+                    for r in range(start_row, end_row + 1):
+                        val = ws_opd.cell(row=r, column=col).value
+                        if not val or "~" not in str(val):
+                            continue
+                        pre, student = [s.strip() for s in str(val).split("~", 1)]
+                        if student not in ms_wb.sheetnames:
+                            continue
+                        ws_ms = ms_wb[student]
+                        ws_ms.cell(row=target_ms_row, column=col).value = f"{pre} - [{site}]"
+    
+        # 5) Save back to a buffer
+        buf = io.BytesIO()
+        ms_wb.save(buf)
+        buf.seek(0)
+        return buf
+
                 
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
@@ -1254,7 +1324,7 @@ elif mode == "Create Student Schedule":
             #am_buf = assign_preceptors_am_only(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
             
             ##─────────TESTING─────────##
-            full_buf = assign_preceptors_week1_am(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
+            full_buf = assign_preceptors_all_weeks_am_dynamic(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
             ##─────────TESTING─────────##
         
             # 3) (Optional) Populate PM slots on top of the AM‑populated file
