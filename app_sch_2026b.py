@@ -1340,20 +1340,20 @@ elif mode == "Create Student Schedule":
             blocks.append(current)
     
             # 3) Process up to 4 week‐blocks
-        for week_idx, block in enumerate(blocks[:4]):
-            ms_row = target_ms_rows[week_idx]
-
-            # 4) Copy assignments in B–H for every row in this block
-            for col in range(2, 9):  # B=2 … H=8
-                for r in block:
-                    val = ws_opd.cell(row=r, column=col).value
-                    if not val or "~" not in str(val):
-                        continue
-                    pre, student = [s.strip() for s in str(val).split("~", 1)]
-                    if student not in ms_wb.sheetnames:
-                        continue
-                    ws_ms = ms_wb[student]
-                    ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
+            for week_idx, block in enumerate(blocks[:4]):
+                ms_row = target_ms_rows[week_idx]
+    
+                # 4) Copy assignments in B–H for every row in this block
+                for col in range(2, 9):  # B=2 … H=8
+                    for r in block:
+                        val = ws_opd.cell(row=r, column=col).value
+                        if not val or "~" not in str(val):
+                            continue
+                        pre, student = [s.strip() for s in str(val).split("~", 1)]
+                        if student not in ms_wb.sheetnames:
+                            continue
+                        ws_ms = ms_wb[student]
+                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
 
         # Save back to a BytesIO buffer
         out = io.BytesIO()
