@@ -1131,73 +1131,7 @@ elif mode == "Create Student Schedule":
         ms_wb.save(out)
         out.seek(0)
         return out
-
-    import io
-    import re
-    from openpyxl import load_workbook
     
-    def assign_preceptors_am_dynamic(opd_file, ms_file):
-        """
-        Dynamically finds AM→PM blocks in each OPD sheet and maps them to
-        the AM rows in the MS_Schedule template by detecting where each
-        sheet’s column A says “AM…”.
-        """
-        # 1) Load MS_Schedule & detect its AM‐rows in col A
-        ms_wb = load_workbook(ms_file)
-        # pick first sheet to discover AM row numbers
-        sample = ms_wb[ms_wb.sheetnames[0]]
-        target_ms_rows = [
-            c.row for c in sample['A']
-            if isinstance(c.value, str) and c.value.strip().upper().startswith("AM")
-        ]
-    
-        # 2) Load OPD workbook
-        opd_wb = load_workbook(opd_file, data_only=True)
-    
-        # 3) For each OPD sheet
-        for site in opd_wb.sheetnames:
-            ws_opd = opd_wb[site]
-            # gather all rows in col A with "AM*" or "PM*"
-            markers = []
-            for cell in ws_opd['A']:
-                v = cell.value
-                if isinstance(v, str) and re.match(r"^(AM|PM)\b", v.strip(), re.I):
-                    markers.append((cell.row, v.strip().upper()))
-            # now walk markers in pairs: find AM then its next PM
-            blocks = []
-            for i in range(len(markers)):
-                if markers[i][1].startswith("AM"):
-                    # look for the next PM after this
-                    for j in range(i+1, len(markers)):
-                        if markers[j][1].startswith("PM"):
-                            am_row, _ = markers[i]
-                            pm_row, _ = markers[j]
-                            blocks.append((am_row, pm_row - 1))
-                            break
-                if len(blocks) >= len(target_ms_rows):
-                    break
-    
-            # 4) For each week‐block, map to the template’s Nth AM row
-            for week_idx, (start_row, end_row) in enumerate(blocks):
-                if week_idx >= len(target_ms_rows):
-                    break
-                ms_row = target_ms_rows[week_idx]
-                # copy any "Preceptor ~ Student" in B–H of OPD rows start_row..end_row
-                for col in range(2, 9):
-                    for r in range(start_row, end_row + 1):
-                        val = ws_opd.cell(row=r, column=col).value
-                        if not val or "~" not in val:
-                            continue
-                        pre, student = [s.strip() for s in str(val).split("~", 1)]
-                        if student in ms_wb.sheetnames:
-                            ws_ms = ms_wb[student]
-                            ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
-    
-        # 5) Save back to BytesIO
-        out = io.BytesIO()
-        ms_wb.save(out)
-        out.seek(0)
-        return out
 
 
     def assign_preceptors_pm_only(opd_file, ms_file):
@@ -1248,6 +1182,44 @@ elif mode == "Create Student Schedule":
         out_buf.seek(0)
         return out_buf
 
+    def assign_preceptors_week1_am(opd_file, ms_file):
+        # 1) Open workbooks
+        opd_wb = load_workbook(opd_file, data_only=True)
+        ms_wb  = load_workbook(ms_file)
+    
+        # 2) Pick the first site (or loop through all sites exactly the same)
+        for site in opd_wb.sheetnames:
+            ws_opd = opd_wb[site]
+    
+            # 3) Dynamically find Week 1 AM block start/end in col A
+            am_rows = [
+                cell.row
+                for cell in ws_opd['A']
+                if isinstance(cell.value, str) and re.match(r"^\s*AM\b", cell.value, re.IGNORECASE)
+            ]
+            if not am_rows:
+                continue
+            start_row = min(am_rows)
+            end_row   = max(am_rows)
+    
+            # 4) Now use that single block instead of hard‑coded (6,15,6)
+            ms_row = 6  # Week 1 AM always writes to row 6 in your template
+            for col in range(2, 9):  # B=2 … H=8
+                for r in range(start_row, end_row + 1):
+                    val = ws_opd.cell(row=r, column=col).value
+                    if not val or "~" not in str(val):
+                        continue
+                    pre, student = [s.strip() for s in str(val).split("~", 1)]
+                    if student not in ms_wb.sheetnames:
+                        continue
+                    ws_ms = ms_wb[student]
+                    ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
+    
+        # 5) Save back to a BytesIO buffer
+        out = io.BytesIO()
+        ms_wb.save(out)
+        out.seek(0)
+        return out
             
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
@@ -1268,12 +1240,14 @@ elif mode == "Create Student Schedule":
             blank_buf = create_ms_schedule_template(students, dates)
         
             # 2) Populate AM slots from OPD
-            am_buf = assign_preceptors_am_only(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
-            #full_buf = assign_preceptors_am_dynamic(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
+            #am_buf = assign_preceptors_am_only(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
             
+            ##─────────TESTING─────────##
+            full_buf = assign_preceptors_week1_am(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
+            ##─────────TESTING─────────##
         
             # 3) (Optional) Populate PM slots on top of the AM‑populated file
-            full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
+            #full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
             #full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
         
             # 4) Offer the final workbook for download
