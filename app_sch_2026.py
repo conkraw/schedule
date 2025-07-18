@@ -1140,38 +1140,55 @@ elif mode == "Create Student Schedule":
         return buf
 
     
-    def assign_preceptors(opd_file, ms_file):
+
+    def assign_preceptors_am_only(opd_file, ms_file):
         """
-        Reads OPD.xlsx and MS_Schedule.xlsx (either file paths or file-like objects),
-        finds entries in OPD sheets of the form 'Preceptor ~ Student' in cells B6:B15,
-        and writes 'Preceptor [SiteName]' into cell B6 of the matching Student sheet
-        in MS_Schedule. Returns an in‑memory buffer of the updated workbook.
+        Reads OPD.xlsx and MS_Schedule.xlsx (file paths or file-like objects),
+        then for each OPD sheet and each of four AM weeks:
+          • Week 1: OPD rows 6–15 → MS row 6
+          • Week 2: OPD rows 30–39 → MS row 14
+          • Week 3: OPD rows 54–63 → MS row 22
+          • Week 4: OPD rows 78–87 → MS row 30
+        Columns B–H (indices 1–7) map directly.  
+        Each cell of the form “Preceptor ~ Student” in OPD is parsed and written as
+        “Preceptor - [SiteName]” into the corresponding MS sheet cell.
+        Returns a BytesIO buffer of the updated MS_Schedule workbook.
         """
-        # 1) Read all sheets from OPD.xlsx without headers
+        # Load all sheets from OPD.xlsx
         opd_sheets = pd.read_excel(opd_file, sheet_name=None, header=None)
-        
-        # 2) Load the MS_Schedule workbook
+        # Load the blank MS_Schedule workbook
         ms_wb = load_workbook(ms_file)
-        
-        # 3) Iterate through each OPD sheet (clinic site)
+    
+        # Define the zero‑based start rows in OPD and the target MS AM rows
+        opd_row_starts = [5, 29, 53, 77]   # corresponds to Excel rows 6,30,54,78
+        ms_am_rows     = [6, 14, 22, 30]   # exact Excel rows for AM slots
+    
         for site_name, df in opd_sheets.items():
-            # Look at column B rows 6–15 (zero‑based rows 5–14, col 1)
-            for entry in df.iloc[5:15, 1].dropna():
-                text = str(entry)
-                if '~' in text:
+            for week_idx, opd_start in enumerate(opd_row_starts):
+                target_row = ms_am_rows[week_idx]
+                for col_idx in range(1, 8):  # B=1 through H=7
+                    if opd_start >= len(df) or col_idx >= df.shape[1]:
+                        continue
+                    entry = df.iat[opd_start, col_idx]
+                    if pd.isna(entry):
+                        continue
+                    text = str(entry)
+                    if '~' not in text:
+                        continue
                     preceptor, student = [s.strip() for s in text.split('~', 1)]
-                    # Only proceed if we have a matching sheet in MS_Schedule
-                    if student in ms_wb.sheetnames:
-                        ws = ms_wb[student]
-                        ws['B6'] = f"{preceptor} - [{site_name}]"
-        
-        # 4) Save the updated workbook into a BytesIO buffer
+                    if student not in ms_wb.sheetnames:
+                        continue
+                    ws = ms_wb[student]
+                    # Write into MS: same column (col_idx+1) at target_row
+                    ws.cell(row=target_row, column=col_idx+1,
+                            value=f"{preceptor} - [{site_name}]")
+    
+        # Save updated workbook into an in-memory buffer
         out_buf = io.BytesIO()
         ms_wb.save(out_buf)
         out_buf.seek(0)
         return out_buf
-
-        
+            
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
     df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
@@ -1190,7 +1207,7 @@ elif mode == "Create Student Schedule":
             # (1) blank calendar
             blank_buf = create_ms_schedule_template(students, dates)
             # (2) overlay preceptors
-            final_buf = assign_preceptors(
+            final_buf = assign_preceptors_am_only(
                 opd_file = st.session_state["opd_main_file"],
                 ms_file  = blank_buf
             )
