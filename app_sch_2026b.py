@@ -453,13 +453,13 @@ if mode == "Format OPD + Summary":
                     ws.write(zero_row + i, 0, 'AM', format5a)
                 for i in range(PM_COUNT):
                     ws.write(zero_row + AM_COUNT + i, 0, 'PM', format5a)
-                for i, lab in enumerate(labels):
-                    ws.write(start + i, 8, lab, formate)
+                #for i, lab in enumerate(labels):
+                #    ws.write(start + i, 8, lab, formate)
     
             # 3) Write H0…H19 in column I
-            for start in BLOCK_STARTS:
-                for i, lab in enumerate(labels):
-                    ws.write(f'I{start + i}', lab, formate)
+            #for start in BLOCK_STARTS:
+            #    for i, lab in enumerate(labels):
+            #        ws.write(f'I{start + i}', lab, formate)
     
     
         # ─── Universal formatting & dates ────────────────────────────────────────────
