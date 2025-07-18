@@ -1247,7 +1247,7 @@ elif mode == "Create Student Schedule":
 
         # ───────── Check for duplicates ─────────
     if df_opd is not None:
-        dupes = detect_duplicate_assignments(st.session_state["opd_main_file"])
+        dupes = detect_duplicate_student_assignments(st.session_state["opd_main_file"])
         if dupes:
             for d in dupes:
                 st.warning(
