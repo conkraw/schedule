@@ -401,21 +401,6 @@ if mode == "Format OPD + Summary":
                     label = 'PM - Continuity'
                 hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
             
-        #acute_ranges = [(6,7),(16,17),(30,31),(40,41),(54,55),(64,65),(78,79),(88,89)]
-        #for idx, (r1, r2) in enumerate(acute_ranges):
-        #    # even idx → AM; odd idx → PM
-        #    fmt   = format4  if idx % 2 == 0 else format4a
-        #    label = 'AM - ACUTES' if idx % 2 == 0 else 'PM - ACUTES'
-        #    for r in range(r1, r2 + 1):
-        #        hd.write(f'A{r}', label, fmt)
-        
-        #cont_ranges = [(8,15),(18,25),(32,39),(42,49),(56,63),(66,73),(80,87),(90,97)]
-        #for idx, (r1, r2) in enumerate(cont_ranges):
-        #    fmt   = format5  if idx % 2 == 0 else format5a
-        #    label = 'AM - Continuity' if idx % 2 == 0 else 'PM - Continuity'
-        #    for r in range(r1, r2 + 1):
-        #        hd.write(f'A{r}', label, fmt)
-            
         # ─── GENERIC SHEETS ─────────────────────────────────────────────────────────
         others       = [ws for name, ws in sheets.items() if name != 'HOPE_DRIVE']
         AM_COUNT     = 10
@@ -449,14 +434,6 @@ if mode == "Format OPD + Summary":
                     ws.write(zero_row + i, 0, 'AM', format5a)
                 for i in range(PM_COUNT):
                     ws.write(zero_row + AM_COUNT + i, 0, 'PM', format5a)
-                #for i, lab in enumerate(labels):
-                #    ws.write(start + i, 8, lab, formate)
-    
-            # 3) Write H0…H19 in column I
-            #for start in BLOCK_STARTS:
-            #    for i, lab in enumerate(labels):
-            #        ws.write(f'I{start + i}', lab, formate)
-    
     
         # ─── Universal formatting & dates ────────────────────────────────────────────
         date_cols = [f"hd_day_date{i}" for i in range(1,29)]
@@ -497,7 +474,7 @@ if mode == "Format OPD + Summary":
                 'Students are to alert their preceptors when they have a Clinical '
                 'Reasoning Teaching Session (CRTS).  Please allow the students to '
                 'leave approximately 15 minutes prior to the start of their session '
-                'so they can be prepared to actively participate.  ~ Thank you!'
+                'so they can be prepared to actively participate.  - Thank you!'
             )
             ws.merge_range('C1:F1', text1, merge_format)
             ws.write('G1', '', merge_format)
@@ -1214,34 +1191,30 @@ elif mode == "Create Student Schedule":
         out.seek(0)
         return out
 
-
+    
     def detect_duplicate_assignments(opd_file):
         """
         Finds any student assigned in the *same cell* (B–H) across more than one OPD sheet.
-        Skips any tilde-entries where the part after '~' doesn't look like First Last.
+        Ignores entries where the part after '~' is empty or just whitespace.
         """
         wb = load_workbook(opd_file, data_only=True)
         seen = defaultdict(set)
-        name_regex = re.compile(r"^[A-Za-z]+(?: [A-Za-z]+)+$")  # at least two words
     
         for sheet in wb.sheetnames:
             ws = wb[sheet]
             for row in range(1, ws.max_row + 1):
                 for col in range(2, 9):  # B–H
-                    cell = ws.cell(row=row, column=col)
-                    val = cell.value
-                    text = str(val or "")
-                    if "~" not in text:
+                    val = ws.cell(row=row, column=col).value
+                    if not val or "~" not in str(val):
                         continue
-                    pre, student = [s.strip() for s in text.split("~", 1)]
-                    # only accept if student side looks like two words
-                    if not name_regex.match(student):
+                    parts = [s.strip() for s in str(val).split("~", 1)]
+                    # Must have non-empty student after the '~'
+                    if len(parts) < 2 or not parts[1]:
                         continue
-    
-                    coord = cell.coordinate
+                    student = parts[1]
+                    coord   = ws.cell(row=row, column=col).coordinate
                     seen[(coord, student)].add(sheet)
     
-        # collect conflicts
         conflicts = []
         for (coord, student), sheets in seen.items():
             if len(sheets) > 1:
@@ -1252,6 +1225,7 @@ elif mode == "Create Student Schedule":
                 })
     
         return conflicts
+
                     
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
