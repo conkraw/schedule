@@ -1273,7 +1273,7 @@ elif mode == "Create Student Schedule":
             
         
             # 3) (Optional) Populate PM slots on top of the AM‑populated file
-            full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
+            #full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
             #full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
         
             # 4) Offer the final workbook for download
