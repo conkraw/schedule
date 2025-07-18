@@ -370,21 +370,56 @@ if mode == "Format OPD + Summary":
             hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format4})
         for cr in ['A16:H16','A17:H17','A40:H40','A41:H41','A64:H64','A65:H65','A88:H88','A89:H89']:
             hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format4a})
+
+        # how many acute vs continuity rows per block
+        ACUTE_COUNT      = 2
+        CONTINUITY_COUNT = 8
+        BLOCK_SIZE       = ACUTE_COUNT + CONTINUITY_COUNT  # should be 10
+        AM_COUNT         = BLOCK_SIZE
+        PM_COUNT         = BLOCK_SIZE
         
-        acute_ranges = [(6,7),(16,17),(30,31),(40,41),(54,55),(64,65),(78,79),(88,89)]
-        for idx, (r1, r2) in enumerate(acute_ranges):
-            # even idx → AM; odd idx → PM
-            fmt   = format4  if idx % 2 == 0 else format4a
-            label = 'AM - ACUTES' if idx % 2 == 0 else 'PM - ACUTES'
-            for r in range(r1, r2 + 1):
-                hd.write(f'A{r}', label, fmt)
+        # e.g. [6,16,30,40,54,64,78,88]
+        BLOCK_STARTS = [6, 30, 54, 78]
         
-        cont_ranges = [(8,15),(18,25),(32,39),(42,49),(56,63),(66,73),(80,87),(90,97)]
-        for idx, (r1, r2) in enumerate(cont_ranges):
-            fmt   = format5  if idx % 2 == 0 else format5a
-            label = 'AM - Continuity' if idx % 2 == 0 else 'PM - Continuity'
-            for r in range(r1, r2 + 1):
-                hd.write(f'A{r}', label, fmt)
+        for start in BLOCK_STARTS:
+            zero_row = start - 1
+            
+            # — AM half of the block —
+            for i in range(AM_COUNT):
+                # first 2 → ACUTES, rest → Continuity
+                if i < ACUTE_COUNT:
+                    label = 'AM - ACUTES'
+                else:
+                    label = 'AM - Continuity'
+                ws.write(zero_row + i, 0, label, format5a)
+            
+            # — PM half of the block —
+            for i in range(PM_COUNT):
+                if i < ACUTE_COUNT:
+                    label = 'PM - ACUTES'
+                else:
+                    label = 'PM - Continuity'
+                ws.write(zero_row + AM_COUNT + i, 0, label, format5a)
+            
+            # — your other labels go in column I (index 8) —
+            for i, lab in enumerate(labels):
+                ws.write(start + i, 8, lab, formate)
+
+        
+        #acute_ranges = [(6,7),(16,17),(30,31),(40,41),(54,55),(64,65),(78,79),(88,89)]
+        #for idx, (r1, r2) in enumerate(acute_ranges):
+        #    # even idx → AM; odd idx → PM
+        #    fmt   = format4  if idx % 2 == 0 else format4a
+        #    label = 'AM - ACUTES' if idx % 2 == 0 else 'PM - ACUTES'
+        #    for r in range(r1, r2 + 1):
+        #        hd.write(f'A{r}', label, fmt)
+        
+        #cont_ranges = [(8,15),(18,25),(32,39),(42,49),(56,63),(66,73),(80,87),(90,97)]
+        #for idx, (r1, r2) in enumerate(cont_ranges):
+        #    fmt   = format5  if idx % 2 == 0 else format5a
+        #    label = 'AM - Continuity' if idx % 2 == 0 else 'PM - Continuity'
+        #    for r in range(r1, r2 + 1):
+        #        hd.write(f'A{r}', label, fmt)
             
         # ─── GENERIC SHEETS ─────────────────────────────────────────────────────────
         others       = [ws for name, ws in sheets.items() if name != 'HOPE_DRIVE']
