@@ -15,10 +15,7 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio(
-    "What do you want to do?",
-    ("Format OPD + Summary", "Create Student Schedule")
-)
+mode = st.sidebar.radio("What do you want to do?",("Format OPD + Summary", "Create Student Schedule"))
 
 if mode == "Format OPD + Summary":
     # ─── Inputs ────────────────────────────────────────────────────────────────────
@@ -111,52 +108,12 @@ if mode == "Format OPD + Summary":
         "rounder 3 7a-7p":             2,
     }
     
-    file_configs = {
-        "HAMPDEN_NURSERY.xlsx": {
-            "title":       "HAMPDEN_NURSERY",
-            "custom_text": "CUSTOM_PRINT",
-            "names": [
-                "Folaranmi, Oluwamayoda",
-                "Alur, Pradeep",
-                "Nanda, Sharmilarani",
-                "HAMPDEN_NURSERY"
-            ]
-        },
-        "SJR_HOSP.xlsx": {
-            "title":       "SJR_HOSPITALIST",
-            "custom_text": "CUSTOM_PRINT",
-            "names": [
-                "Spangola, Haley",
-                "Gubitosi, Terry",
-                "SJR_1",
-                "SJR_2"
-            ]
-        },
-        "AAC.xlsx": {
-            "title":       "AAC",
-            "custom_text": "CUSTOM_PRINT",
-            "names": [
-                "Vaishnavi Harding",
-                "Abimbola Ajayi",
-                "Shilu Joshi",
-                "Desiree Webb",
-                "Amy Zisa",
-                "Abdullah Sakarcan",
-                "Anna Karasik",
-                "AAC_1",
-                "AAC_2",
-                "AAC_3",
-            ]
-        },
-        # New standalone sheet for Mahoussi
-        "MAHOUSSI_AHOLOUKPE.xlsx": {
-            "title":       "MAHOUSSI_AHOLOUKPE",
-            "custom_text": "CUSTOM_PRINT",
-            "names": [
-                "Mahoussi Aholoukpe"
-            ]
-        },
-    }
+    file_configs = {"HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN_NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda","Alur, Pradeep","Nanda, Sharmilarani","HAMPDEN_NURSERY"]},
+                    "SJR_HOSP.xlsx": {"title": "SJR_HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley","Gubitosi, Terry","SJR_1","SJR_2"]},
+                    "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding","Abimbola Ajayi","Shilu Joshi","Desiree Webb","Amy Zisa","Abdullah Sakarcan","Anna Karasik","AAC_1","AAC_2","AAC_3",]},
+                    "MAHOUSSI_AHOLOUKPE.xlsx": {"title": "MAHOUSSI_AHOLOUKPE","custom_text": "CUSTOM_PRINT","names": ["Mahoussi Aholoukpe"]},
+                    #"REPLACE.xlsx": {"title": "REPLACE","custom_text": "CUSTOM_PRINT","names": ["ReplaceFirstName ReplaceLastName"]},
+                   }
     
     # ─── HERE: generate sheet‐specific custom_print entries for the configss...  ────────────────────
     for cfg in file_configs.values():
@@ -290,7 +247,7 @@ if mode == "Format OPD + Summary":
     # ─── track who’s already grabbed a nursery slot ─────────────────────────────
     nursery_assigned = set()
     
-    # ─── HAMPDEN_NURSERY: max 1 student for week1 and 1 for week3, into slot _4 ─────
+    # ─── HAMPDEN_NURSERY: max 1 student for week1 and 1 for week3, into slot _4 ##FOCUSES ON SLOT 4!!! ─────
     for week_idx in (0, 2):  # 0→week1, 2→week3
         pool = [
             s for s in legal_names
@@ -304,7 +261,7 @@ if mode == "Format OPD + Summary":
     
         for day in range(1, 6):
             d   = day + 7 * week_idx
-            key = f"custom_print_hampden_nursery_d{d}_4"
+            key = f"custom_print_hampden_nursery_d{d}_4"        
             orig = redcap_row.get(key, "")
             redcap_row[key] = f"{orig} ~ {student}" if orig else f"~ {student}"
     
@@ -378,52 +335,18 @@ if mode == "Format OPD + Summary":
         workbook = xlsxwriter.Workbook(output, {'in_memory': True})
     
         # ─── Formats ─────────────────────────────────────────────────────────────────
-        format1     = workbook.add_format({
-            'font_size':18,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#FEFFCC','border':1
-        })
-        format4     = workbook.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#8ccf6f','border':1
-        })
-        format4a    = workbook.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#9fc5e8','border':1
-        })
-        format5     = workbook.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#FEFFCC','border':1
-        })
-        format5a    = workbook.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#d0e9ff','border':1
-        })
-        format11    = workbook.add_format({
-            'font_size':18,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#FEFFCC','border':1
-        })
-        formate     = workbook.add_format({
-            'font_size':12,'bold':0,'align':'center','valign':'vcenter',
-            'font_color':'white','border':0
-        })
-        format3     = workbook.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#FFC7CE','border':1
-        })
+        format1     = workbook.add_format({'font_size':18,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+        format4     = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#8ccf6f','border':1})
+        format4a    = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#9fc5e8','border':1})
+        format5     = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+        format5a    = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#d0e9ff','border':1})
+        format11    = workbook.add_format({'font_size':18,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
+        formate     = workbook.add_format({'font_size':12,'bold':0,'align':'center','valign':'vcenter','font_color':'white','border':0})
+        format3     = workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
         format2     = workbook.add_format({'bg_color':'black'})
-        format_date = workbook.add_format({
-            'num_format':'m/d/yyyy','font_size':12,'bold':1,
-            'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#FFC7CE','border':1
-        })
-        format_label= workbook.add_format({
-            'font_size':12,'bold':1,'align':'center','valign':'vcenter',
-            'font_color':'black','bg_color':'#FFC7CE','border':1
-        })
-        merge_format= workbook.add_format({
-            'bold':1,'align':'center','valign':'vcenter','text_wrap':True,
-            'font_color':'red','bg_color':'#FEFFCC','border':1
-        })
+        format_date = workbook.add_format({'num_format':'m/d/yyyy','font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
+        format_label= workbook.add_format({'font_size':12,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FFC7CE','border':1})
+        merge_format= workbook.add_format({'bold':1,'align':'center','valign':'vcenter','text_wrap':True,'font_color':'red','bg_color':'#FEFFCC','border':1})
     
         # ─── Worksheets ─────────────────────────────────────────────────────────────
         worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
@@ -447,24 +370,18 @@ if mode == "Format OPD + Summary":
             hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format4})
         for cr in ['A16:H16','A17:H17','A40:H40','A41:H41','A64:H64','A65:H65','A88:H88','A89:H89']:
             hd.conditional_format(cr, {'type':'cell','criteria':'>=','value':0,'format':format4a})
+        
         acute_ranges = [(6,7),(16,17),(30,31),(40,41),(54,55),(64,65),(78,79),(88,89)]
         for r1, r2 in acute_ranges:
             fmt   = format4 if r1 % 2 == 0 else format4a
             label = 'AM - ACUTES' if r1 % 2 == 0 else 'PM - ACUTES'
             for r in range(r1, r2+1):
                 hd.write(f'A{r}', label, fmt)
+        
         cont_ranges = [(8,15),(18,25),(32,39),(42,49),(56,63),(66,73),(80,87),(90,97)]
         for r1, r2 in cont_ranges:
             for r in range(r1, r2+1):
-                hd.write(
-                    f'A{r}',
-                    'AM - Continuity' if r1 % 2 == 0 else 'PM - Continuity',
-                    format5a
-                )
-        labels = [f'H{i}' for i in range(20)]
-        for start in [6, 30, 54, 78]:
-            for i, lab in enumerate(labels):
-                hd.write(f'I{start+i}', lab, formate)
+                hd.write(f'A{r}','AM - Continuity' if r1 % 2 == 0 else 'PM - Continuity',format5a)
     
         # ─── GENERIC SHEETS ─────────────────────────────────────────────────────────
         others       = [ws for name, ws in sheets.items() if name != 'HOPE_DRIVE']
