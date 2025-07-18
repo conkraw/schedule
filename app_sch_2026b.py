@@ -10,6 +10,7 @@ from docx import Document
 from docx.enum.section import WD_ORIENT
 from datetime import timedelta
 from xlsxwriter import Workbook as Workbook
+from collections import defaultdict
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -1084,154 +1085,6 @@ elif mode == "Create Student Schedule":
         wb.close()
         buf.seek(0)
         return buf
-
-    def assign_preceptors_am_only(opd_file, ms_file):
-        """
-        Reads OPD.xlsx and MS_Schedule.xlsx (both file‑like or paths) and:
-          • Week 1 AM: OPD B6–H15 → MS_Schedule row 6, cols B–H
-          • Week 2 AM: OPD B30–H39 → MS row 14
-          • Week 3 AM: OPD B54–H63 → MS row 22
-          • Week 4 AM: OPD B78–H87 → MS row 30
-        For each cell containing “Preceptor ~ Student”, writes
-        “Preceptor - [SiteName]” into the student’s sheet at that MS cell.
-        Returns a BytesIO of the updated MS_Schedule.
-        """
-        # Open both workbooks
-        opd_wb = load_workbook(opd_file, data_only=True)
-        ms_wb  = load_workbook(ms_file)
-    
-        # Define the OPD row blocks and corresponding MS rows
-        opd_blocks = [
-            (6,  15, 6),   # OPD rows 6–15 → MS row 6
-            (30, 39, 14),  # OPD 30–39 → MS 14
-            (54, 63, 22),  # OPD 54–63 → MS 22
-            (78, 87, 30),  # OPD 78–87 → MS 30
-        ]
-    
-        for site in opd_wb.sheetnames:
-            ws_opd = opd_wb[site]
-            for start, end, ms_row in opd_blocks:
-                for col in range(2, 9):  # columns B (2) through H (8)
-                    val = ws_opd.cell(row=start, column=col).value
-                    # scan down the block, not just the first row
-                    # so for row in start…end:
-                    for r in range(start, end + 1):
-                        cell = ws_opd.cell(row=r, column=col).value
-                        if not cell or "~" not in str(cell):
-                            continue
-                        pre, student = [s.strip() for s in str(cell).split("~", 1)]
-                        if student not in ms_wb.sheetnames:
-                            continue
-                        ws_ms = ms_wb[student]
-                        # write to the same column at the designated ms_row
-                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
-    
-        # Save back to BytesIO
-        out = io.BytesIO()
-        ms_wb.save(out)
-        out.seek(0)
-        return out
-    
-
-
-    def assign_preceptors_pm_only(opd_file, ms_file):
-        """
-        Reads OPD.xlsx and MS_Schedule.xlsx, then for each OPD sheet and each of four PM weeks:
-          • Week 1 PM: OPD rows 16–25 → MS row 7
-          • Week 2 PM: OPD rows 40–49 → MS row 15
-          • Week 3 PM: OPD rows 64–73 → MS row 23
-          • Week 4 PM: OPD rows 88–97 → MS row 31
-        Columns B–H (2–8) map directly.  
-        For each cell containing “Preceptor ~ Student” in OPD, writes
-        “Preceptor - [SiteName]” into the corresponding MS sheet cell.
-        Returns a BytesIO buffer of the updated MS_Schedule.
-        """
-        # Open workbooks
-        opd_wb = load_workbook(opd_file, data_only=True)
-        ms_wb  = load_workbook(ms_file)
-    
-        # Define OPD PM blocks and corresponding MS rows
-        opd_blocks = [
-            (16, 25, 7),   # OPD rows 16–25 → MS row 7
-            (40, 49, 15),  # OPD rows 40–49 → MS row 15
-            (64, 73, 23),  # OPD rows 64–73 → MS row 23
-            (88, 97, 31),  # OPD rows 88–97 → MS row 31
-        ]
-    
-        # Iterate each clinic site
-        for site in opd_wb.sheetnames:
-            ws_opd = opd_wb[site]
-            # For each week block
-            for start, end, ms_row in opd_blocks:
-                # Columns B (2) through H (8)
-                for col in range(2, 9):
-                    # Scan all rows in this block
-                    for r in range(start, end + 1):
-                        cell_val = ws_opd.cell(row=r, column=col).value
-                        if not cell_val or "~" not in str(cell_val):
-                            continue
-                        preceptor, student = [s.strip() for s in str(cell_val).split("~", 1)]
-                        if student in ms_wb.sheetnames:
-                            ws_ms = ms_wb[student]
-                            # Write into the MS sheet at (ms_row, same col)
-                            ws_ms.cell(row=ms_row, column=col).value = f"{preceptor} - [{site}]"
-    
-        # Save updated workbook into an in-memory buffer
-        out_buf = io.BytesIO()
-        ms_wb.save(out_buf)
-        out_buf.seek(0)
-        return out_buf
-
-
-    def assign_preceptors_week1_am(opd_file, ms_file):
-        opd_wb = load_workbook(opd_file, data_only=True)
-        ms_wb  = load_workbook(ms_file)
-    
-        for site in opd_wb.sheetnames:
-            ws_opd = opd_wb[site]
-    
-            # 1) find the first AM marker in col A
-            start_row = None
-            for cell in ws_opd['A']:
-                if isinstance(cell.value, str) and re.match(r"^\s*AM\b", cell.value, re.IGNORECASE):
-                    start_row = cell.row
-                    break
-            if start_row is None:
-                continue  # no AM found at all
-    
-            # 2) find the first PM marker after that
-            pm_row = None
-            for cell in ws_opd['A']:
-                if cell.row <= start_row:
-                    continue
-                if isinstance(cell.value, str) and re.match(r"^\s*PM\b", cell.value, re.IGNORECASE):
-                    pm_row = cell.row
-                    break
-            if pm_row is None:
-                # fallback: scan for next AM that’s not contiguous?
-                # but typically you have a PM label
-                continue
-    
-            end_row = pm_row - 1
-    
-            # 3) now copy B–H from start_row..end_row into MS row 6
-            for col in range(2, 9):
-                for r in range(start_row, end_row + 1):
-                    val = ws_opd.cell(row=r, column=col).value
-                    if not val or "~" not in str(val):
-                        continue
-                    pre, student = [s.strip() for s in str(val).split("~", 1)]
-                    if student not in ms_wb.sheetnames:
-                        continue
-                    ws_ms = ms_wb[student]
-                    ws_ms.cell(row=6, column=col).value = f"{pre} - [{site}]"
-    
-        # flush to buffer
-        out = io.BytesIO()
-        ms_wb.save(out)
-        out.seek(0)
-        return out
-    
     
     def assign_preceptors_all_weeks_am(opd_file, ms_file):
         """
@@ -1360,12 +1213,66 @@ elif mode == "Create Student Schedule":
         ms_wb.save(out)
         out.seek(0)
         return out
-    
 
+    def detect_duplicate_assignments(opd_file):
+        """
+        Reads OPD.xlsx and finds every cell of the form 'Preceptor ~ Student'
+        in *every* sheet.  If the same Student appears in the *same* cell
+        location (e.g. 'B6') on more than one sheet, it flags that as a conflict.
+    
+        Returns a list of dicts:
+          [
+            {"student": "Jane Doe", "cell": "B6", "sheets": ["HOPE_DRIVE","ETOWN"]},
+            ...
+          ]
+        """
+        wb = load_workbook(opd_file, data_only=True)
+        # map (coordinate, student) → set of sheets
+        seen = defaultdict(set)
+    
+        # scan all sheets
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            # scan columns B–H (2–8) and rows 1..max_row
+            for row in range(1, ws.max_row+1):
+                for col in range(2, 9):
+                    cell = ws.cell(row=row, column=col)
+                    val = cell.value
+                    if not val or "~" not in str(val):
+                        continue
+                    # parse out student
+                    _, student = [s.strip() for s in str(val).split("~",1)]
+                    coord = cell.coordinate
+                    seen[(coord, student)].add(sheet_name)
+    
+        # collect conflicts
+        conflicts = []
+        for (coord, student), sheets in seen.items():
+            if len(sheets) > 1:
+                conflicts.append({
+                    "student": student,
+                    "cell": coord,
+                    "sheets": sorted(sheets)
+                })
+    
+        return conflicts
                 
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
     df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
+
+        # ───────── Check for duplicates ─────────
+    if df_opd is not None:
+        dupes = detect_duplicate_assignments(st.session_state["opd_main_file"])
+        if dupes:
+            for d in dupes:
+                st.warning(
+                    f"⚠️ {d['student']} appears in {d['cell']} on sheets "
+                    f"{', '.join(d['sheets'])}"
+                )
+        else:
+            st.info("No duplicate student assignments detected.")
+
 
     # ───────── Build, Assign & Download ─────────
     if df_opd is not None and df_rot is not None:
