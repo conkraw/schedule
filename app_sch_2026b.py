@@ -1216,36 +1216,27 @@ elif mode == "Create Student Schedule":
 
     def detect_duplicate_assignments(opd_file):
         """
-        Reads OPD.xlsx and finds every cell of the form 'Preceptor ~ Student'
-        in *every* sheet.  If the same Student appears in the *same* cell
-        location (e.g. 'B6') on more than one sheet, it flags that as a conflict.
-    
-        Returns a list of dicts:
-          [
-            {"student": "Jane Doe", "cell": "B6", "sheets": ["HOPE_DRIVE","ETOWN"]},
-            ...
-          ]
+        Finds any student assigned in the *same cell* (B–H) across more than one OPD sheet.
+        Ignores entries where the part after '~' is empty or just whitespace.
         """
         wb = load_workbook(opd_file, data_only=True)
-        # map (coordinate, student) → set of sheets
         seen = defaultdict(set)
     
-        # scan all sheets
-        for sheet_name in wb.sheetnames:
-            ws = wb[sheet_name]
-            # scan columns B–H (2–8) and rows 1..max_row
-            for row in range(1, ws.max_row+1):
-                for col in range(2, 9):
-                    cell = ws.cell(row=row, column=col)
-                    val = cell.value
+        for sheet in wb.sheetnames:
+            ws = wb[sheet]
+            for row in range(1, ws.max_row + 1):
+                for col in range(2, 9):  # B–H
+                    val = ws.cell(row=row, column=col).value
                     if not val or "~" not in str(val):
                         continue
-                    # parse out student
-                    _, student = [s.strip() for s in str(val).split("~",1)]
-                    coord = cell.coordinate
-                    seen[(coord, student)].add(sheet_name)
+                    parts = [s.strip() for s in str(val).split("~", 1)]
+                    # Must have non-empty student after the '~'
+                    if len(parts) < 2 or not parts[1]:
+                        continue
+                    student = parts[1]
+                    coord   = ws.cell(row=row, column=col).coordinate
+                    seen[(coord, student)].add(sheet)
     
-        # collect conflicts
         conflicts = []
         for (coord, student), sheets in seen.items():
             if len(sheets) > 1:
@@ -1256,7 +1247,7 @@ elif mode == "Create Student Schedule":
                 })
     
         return conflicts
-                
+                    
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
     df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
