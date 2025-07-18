@@ -1297,6 +1297,70 @@ elif mode == "Create Student Schedule":
         out.seek(0)
         return out
 
+    def assign_preceptors_all_weeks_pm(opd_file, ms_file):
+    """
+    For each OPD sheet:
+      1) Collect all rows where col A starts with "PM".
+      2) Cluster those rows into contiguous week‑blocks.
+      3) Map each week_block i to MS_Schedule row [7,15,23,31][i].
+      4) Copy any "Preceptor ~ Student" in OPD cols B–H within that block
+         into the student's sheet at that row.
+    Returns an in‑memory BytesIO of the populated MS_Schedule.
+    """
+    # Open workbooks
+    opd_wb = load_workbook(opd_file, data_only=True)
+    ms_wb  = load_workbook(ms_file)
+
+    # Fixed target rows in MS template for Week1–4 PM
+    target_ms_rows = [7, 15, 23, 31]
+
+    for site in opd_wb.sheetnames:
+        ws_opd = opd_wb[site]
+
+        # 1) Find all PM marker rows in col A
+        pm_rows = [
+            cell.row
+            for cell in ws_opd['A']
+            if isinstance(cell.value, str) and re.match(r"^\s*PM\b", cell.value, re.IGNORECASE)
+        ]
+
+        if not pm_rows:
+            continue
+
+        # 2) Cluster contiguous PM rows into blocks
+        pm_rows.sort()
+        blocks = []
+        current = [pm_rows[0]]
+        for r in pm_rows[1:]:
+            if r == current[-1] + 1:
+                current.append(r)
+            else:
+                blocks.append(current)
+                current = [r]
+        blocks.append(current)
+
+        # 3) Process up to 4 week‐blocks
+        for week_idx, block in enumerate(blocks[:4]):
+            ms_row = target_ms_rows[week_idx]
+
+            # 4) Copy assignments in B–H for every row in this block
+            for col in range(2, 9):  # B=2 … H=8
+                for r in block:
+                    val = ws_opd.cell(row=r, column=col).value
+                    if not val or "~" not in str(val):
+                        continue
+                    pre, student = [s.strip() for s in str(val).split("~", 1)]
+                    if student not in ms_wb.sheetnames:
+                        continue
+                    ws_ms = ms_wb[student]
+                    ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
+
+    # Save back to a BytesIO buffer
+    out = io.BytesIO()
+    ms_wb.save(out)
+    out.seek(0)
+    return out
+
 
                 
     # ───────── Load OPD & Rotation Schedule ─────────
@@ -1318,15 +1382,10 @@ elif mode == "Create Student Schedule":
             blank_buf = create_ms_schedule_template(students, dates)
         
             # 2) Populate AM slots from OPD
-            #am_buf = assign_preceptors_am_only(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
-            
-            ##─────────TESTING─────────##
-            full_buf = assign_preceptors_all_weeks_am(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
-            ##─────────TESTING─────────##
+            am_buf = assign_preceptors_all_weeks_am(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
         
-            # 3) (Optional) Populate PM slots on top of the AM‑populated file
-            #full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
-            #full_buf = assign_preceptors_pm_only(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
+            # 3) Populate PM slots on top of the AM‑populated file
+            full_buf = assign_preceptors_all_weeks_pm(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
         
             # 4) Offer the final workbook for download
             st.download_button("Download MS_Schedule.xlsx",data = full_buf.getvalue(),file_name = "MS_Schedule.xlsx",mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
