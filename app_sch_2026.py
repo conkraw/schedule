@@ -426,17 +426,13 @@ if mode == "Format OPD + Summary":
         })
     
         # ─── Worksheets ─────────────────────────────────────────────────────────────
-        worksheet_names = [
-            'HOPE_DRIVE','ETOWN','NYES','COMPLEX',
-            'W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED'
-        ]
+        worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
+        
         sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
     
         # ─── Site headers ────────────────────────────────────────────────────────────
-        site_list = [
-            'Hope Drive','Elizabethtown','Nyes Road','Complex Care',
-            'WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','AHOLOUKPE','ADOLMED'
-        ]
+        site_list = ['Hope Drive','Elizabethtown','Nyes Road','Complex Care','WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','AHOLOUKPE','ADOLMED']
+        
         for ws, site in zip(sheets.values(), site_list):
             ws.write(0, 0, 'Site:', format1)
             ws.write(0, 1, site,   format1)
@@ -720,7 +716,7 @@ if mode == "Format OPD + Summary":
         'ETOWN':           ('etown am continuity','etown pm continuity'),
         'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
         'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
-        'W_A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
+        'WARD A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
         'PSHCH_NURSERY':    ("nursery weekday 8a-6p","nursery weekday 8a-6p"),
         
         'HAMPDEN_NURSERY': ('hampden_nursery_print',),
@@ -731,7 +727,7 @@ if mode == "Format OPD + Summary":
         'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
     }
     
-    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','W_A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
+    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
     
     for ws in worksheet_names:
         # ─── HOPE_DRIVE ───────────────────────────────────────────
