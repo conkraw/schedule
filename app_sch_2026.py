@@ -1012,32 +1012,24 @@ elif mode == "Create Student Schedule":
     st.subheader("Create Student Schedule")
     def save_to_session(filename, fileobj, namespace="uploaded_files"):
         st.session_state.setdefault(namespace, {})[filename] = fileobj
+        
+    # ───────── Helper to load & stash uploads ─────────
     def load_workbook_df(label, types, key):
-        """
-        Upload an .xlsx or .csv and return a DataFrame.
-        Also saves the raw upload in session_state under '{key}_file'.
-        """
         upload = st.file_uploader(label, type=types, key=key)
         if not upload:
             st.info(f"Please upload {label}.")
             return None
-    
-        # stash the raw file under a known key
+        # stash the raw upload under a known session key
         st.session_state[f"{key}_file"] = upload
-    
         try:
             if upload.name.lower().endswith(".csv"):
-                df = pd.read_csv(upload)
+                return pd.read_csv(upload)
             else:
-                df = pd.read_excel(upload)
-            st.success(f"{upload.name} loaded.")
-            return df
-    
+                return pd.read_excel(upload)
         except Exception as e:
             st.error(f"Error loading {upload.name}: {e}")
             return None
 
-    
     def create_ms_schedule_template(students, dates):
         buf = io.BytesIO()
         wb = xlsxwriter.Workbook(buf, {'in_memory': True})
@@ -1180,37 +1172,29 @@ elif mode == "Create Student Schedule":
         return out_buf
 
         
-    # ───────── Uploads ─────────
-    df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], "opd_main")
-    if df_opd is not None and "opd_file" not in st.session_state:
-        # stash raw OPD upload
-        st.session_state["opd_main_file"]
+    # ───────── Load OPD & Rotation Schedule ─────────
+    df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
+    df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
 
-    df_rot = load_workbook_df("Upload RedCap Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], "rot_main")
-    if df_rot is not None and "rot_file" not in st.session_state:
-        st.session_state.rot_file = st.session_state.uploaded_files[df_rot.name]
-    
     # ───────── Build, Assign & Download ─────────
     if df_opd is not None and df_rot is not None:
-        # 1) compute 4‑week dates from df_rot
+        # compute dates
         df_rot["start_date"] = pd.to_datetime(df_rot["start_date"])
-        min_start = df_rot["start_date"].min()
-        monday    = min_start - pd.Timedelta(days=min_start.weekday())
-        dates     = pd.date_range(start=monday, periods=28, freq="D").tolist()
+        monday = df_rot["start_date"].min() - pd.Timedelta(days=df_rot["start_date"].min().weekday())
+        dates  = pd.date_range(start=monday, periods=28, freq="D").tolist()
 
-        # 2) student list from OPD
+        # students from OPD
         students = df_opd["legal_name"].dropna().unique().tolist()
 
-        # 3) single button to build, assign, and download
         if st.button("Create & Download MS_Schedule.xlsx"):
-            # a) blank calendar
+            # (1) blank calendar
             blank_buf = create_ms_schedule_template(students, dates)
-            # b) overlay preceptors
+            # (2) overlay preceptors
             final_buf = assign_preceptors(
-                opd_file=st.session_state.opd_file,
-                ms_file=blank_buf
+                opd_file = st.session_state["opd_main_file"],
+                ms_file  = blank_buf
             )
-            # c) download
+            # (3) download
             st.download_button(
                 "Download Fully‑Populated MS_Schedule.xlsx",
                 data=final_buf.getvalue(),
@@ -1219,3 +1203,4 @@ elif mode == "Create Student Schedule":
             )
     else:
         st.info("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
+
