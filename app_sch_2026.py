@@ -1163,7 +1163,7 @@ elif mode == "Create Student Schedule":
                     # Only proceed if we have a matching sheet in MS_Schedule
                     if student in ms_wb.sheetnames:
                         ws = ms_wb[student]
-                        ws['B6'] = f"{preceptor} [{site_name}]"
+                        ws['B6'] = f"{preceptor} - [{site_name}]"
         
         # 4) Save the updated workbook into a BytesIO buffer
         out_buf = io.BytesIO()
