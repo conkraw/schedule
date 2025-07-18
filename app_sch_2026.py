@@ -1012,31 +1012,30 @@ elif mode == "Create Student Schedule":
     st.subheader("Create Student Schedule")
     def save_to_session(filename, fileobj, namespace="uploaded_files"):
         st.session_state.setdefault(namespace, {})[filename] = fileobj
-
     def load_workbook_df(label, types, key):
         """
         Upload an .xlsx or .csv and return a DataFrame.
-        Saves the raw upload into session_state.uploaded_files.
+        Also saves the raw upload in session_state under '{key}_file'.
         """
         upload = st.file_uploader(label, type=types, key=key)
         if not upload:
             st.info(f"Please upload {label}.")
             return None
     
-        name = upload.name
+        # stash the raw file under a known key
+        st.session_state[f"{key}_file"] = upload
+    
         try:
-            if name.lower().endswith(".csv"):
+            if upload.name.lower().endswith(".csv"):
                 df = pd.read_csv(upload)
             else:
                 df = pd.read_excel(upload)
-            st.success(f"{name} loaded.")
-            save_to_session(name, upload)
+            st.success(f"{upload.name} loaded.")
             return df
     
         except Exception as e:
-            st.error(f"Error loading {name}: {e}")
+            st.error(f"Error loading {upload.name}: {e}")
             return None
-
 
     
     def create_ms_schedule_template(students, dates):
@@ -1185,7 +1184,7 @@ elif mode == "Create Student Schedule":
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], "opd_main")
     if df_opd is not None and "opd_file" not in st.session_state:
         # stash raw OPD upload
-        st.session_state.opd_file = st.session_state.uploaded_files["OPD.xlsx"]
+        st.session_state["opd_main_file"]
 
     df_rot = load_workbook_df("Upload RedCap Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], "rot_main")
     if df_rot is not None and "rot_file" not in st.session_state:
