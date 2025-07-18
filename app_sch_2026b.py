@@ -1191,37 +1191,79 @@ elif mode == "Create Student Schedule":
         out.seek(0)
         return out
 
-    def detect_duplicate_assignments(opd_file):
+    def detect_shift_conflicts(opd_file):
         """
-        Finds any student assigned in the *same cell* (B–H) across more than one OPD sheet.
-        Ignores entries where the part after '~' is empty or just whitespace.
+        Scans all OPD sheets for both AM and PM blocks and flags any student
+        who appears more than once in the same week/day/shift (AM or PM).
+    
+        Returns a list of dicts:
+          [
+            {
+              "student": "Jane Doe",
+              "week": 2,
+              "day": "Tuesday",
+              "shift": "PM",
+              "occurrences": [("HOPE_DRIVE","C42"),("ETOWN","C45")],
+            },
+            ...
+          ]
         """
         wb = load_workbook(opd_file, data_only=True)
-        seen = defaultdict(set)
+        days       = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+        am_marker  = re.compile(r"^\s*AM\b", re.IGNORECASE)
+        pm_marker  = re.compile(r"^\s*PM\b", re.IGNORECASE)
+        conflicts  = []
     
-        for sheet in wb.sheetnames:
-            ws = wb[sheet]
-            for row in range(1, ws.max_row + 1):
-                for col in range(2, 9):  # B–H
-                    val = ws.cell(row=row, column=col).value
-                    if not val or "~" not in str(val):
-                        continue
-                    parts = [s.strip() for s in str(val).split("~", 1)]
-                    # Must have non-empty student after the '~'
-                    if len(parts) < 2 or not parts[1]:
-                        continue
-                    student = parts[1]
-                    coord   = ws.cell(row=row, column=col).coordinate
-                    seen[(coord, student)].add(sheet)
+        # Helper to find blocks for a given marker regex
+        def find_blocks(ws, marker_re):
+            rows = [cell.row for cell in ws['A']
+                    if isinstance(cell.value, str) and marker_re.match(cell.value)]
+            rows.sort()
+            blocks, current = [], []
+            for r in rows:
+                if not current or r == current[-1] + 1:
+                    current.append(r)
+                else:
+                    blocks.append(current)
+                    current = [r]
+            if current:
+                blocks.append(current)
+            return blocks
     
-        conflicts = []
-        for (coord, student), sheets in seen.items():
-            if len(sheets) > 1:
-                conflicts.append({
-                    "student": student,
-                    "cell": coord,
-                    "sheets": sorted(sheets)
-                })
+        # Use first sheet as template for block structure
+        template = wb[wb.sheetnames[0]]
+        am_blocks = find_blocks(template, am_marker)[:4]
+        pm_blocks = find_blocks(template, pm_marker)[:4]
+    
+        # For each shift type
+        for shift, blocks in (("AM", am_blocks), ("PM", pm_blocks)):
+            for week_idx, block_rows in enumerate(blocks, start=1):
+                target_week = week_idx
+                # For each day column B–H
+                for day_idx, day_name in enumerate(days):
+                    col = 2 + day_idx
+                    student_locs = defaultdict(list)
+                    # scan every sheet
+                    for sheet in wb.sheetnames:
+                        ws = wb[sheet]
+                        for r in block_rows:
+                            val = ws.cell(row=r, column=col).value
+                            if not val or "~" not in str(val):
+                                continue
+                            student = str(val).split("~",1)[1].strip()
+                            coord   = ws.cell(row=r, column=col).coordinate
+                            student_locs[student].append((sheet, coord))
+    
+                    # any student in >1 slots → conflict
+                    for student, occ in student_locs.items():
+                        if len(occ) > 1:
+                            conflicts.append({
+                                "student":     student,
+                                "week":        target_week,
+                                "day":         day_name,
+                                "shift":       shift,
+                                "occurrences": occ
+                            })
     
         return conflicts
 
@@ -1232,15 +1274,16 @@ elif mode == "Create Student Schedule":
 
         # ───────── Check for duplicates ─────────
     if df_opd is not None:
-        dupes = detect_duplicate_assignments(st.session_state["opd_main_file"])
-        if dupes:
-            for d in dupes:
+        conflicts = detect_shift_conflicts(st.session_state["opd_main_file"])
+        if conflicts:
+            for c in conflicts:
+                occ_str = "; ".join(f"{sheet}@{coord}" for sheet, coord in c["occurrences"])
                 st.warning(
-                    f"⚠️ {d['student']} appears in {d['cell']} on sheets "
-                    f"{', '.join(d['sheets'])}"
+                    f"⚠️ Week {c['week']} {c['day']} {c['shift']}: "
+                    f"{c['student']} double‑booked ({occ_str})"
                 )
         else:
-            st.info("No duplicate student assignments detected.")
+            st.success("No AM/PM shift conflicts detected.")
 
 
     # ───────── Build, Assign & Download ─────────
