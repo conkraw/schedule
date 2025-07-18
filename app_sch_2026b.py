@@ -1190,23 +1190,22 @@ elif mode == "Create Student Schedule":
         ms_wb.save(out)
         out.seek(0)
         return out
-
+    
     def detect_shift_conflicts(opd_file):
         """
         Scans both AM and PM shifts, week 1–4, day Mon–Sun, and flags any student
         who appears more than once in the same shift/day/week.
-        Ignores any tilde‑entries where the 'student' side is blank or not two words.
+        Only ignores entries where there is no text after the '~'.
         """
         wb = load_workbook(opd_file, data_only=True)
-        days       = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-        am_marker  = re.compile(r"^\s*AM\b", re.IGNORECASE)
-        pm_marker  = re.compile(r"^\s*PM\b", re.IGNORECASE)
-        name_regex = re.compile(r"^[A-Za-z]+(?: [A-Za-z]+)+$")  # require at least two words
-        conflicts  = []
+        days      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+        am_marker = re.compile(r"^\s*AM\b", re.IGNORECASE)
+        pm_marker = re.compile(r"^\s*PM\b", re.IGNORECASE)
+        conflicts = []
     
         def find_blocks(ws, marker_re):
-            rows = [cell.row for cell in ws['A']
-                    if isinstance(cell.value, str) and marker_re.match(cell.value)]
+            rows = [c.row for c in ws['A']
+                    if isinstance(c.value, str) and marker_re.match(c.value)]
             rows.sort()
             blocks, curr = [], []
             for r in rows:
@@ -1219,32 +1218,33 @@ elif mode == "Create Student Schedule":
                 blocks.append(curr)
             return blocks[:4]
     
-        # Use first sheet as template for block structure
-        template  = wb[wb.sheetnames[0]]
-        am_blocks = find_blocks(template, am_marker)
-        pm_blocks = find_blocks(template, pm_marker)
+        # derive AM/PM blocks from first sheet
+        tpl      = wb[wb.sheetnames[0]]
+        am_blocks = find_blocks(tpl, am_marker)
+        pm_blocks = find_blocks(tpl, pm_marker)
     
         for shift, blocks in (("AM", am_blocks), ("PM", pm_blocks)):
             for week_idx, block_rows in enumerate(blocks, start=1):
                 for day_idx, day_name in enumerate(days):
                     col = 2 + day_idx
-                    student_locs = defaultdict(list)
+                    locs = defaultdict(list)
     
+                    # collect all assignments in this shift
                     for sheet in wb.sheetnames:
                         ws = wb[sheet]
                         for r in block_rows:
                             raw = ws.cell(row=r, column=col).value
-                            text = str(raw or "").strip()
+                            text = str(raw or "")
                             if "~" not in text:
                                 continue
-                            pre, student = [s.strip() for s in text.split("~", 1)]
-                            # ignore if student side is blank or not two words
-                            if not student or not name_regex.match(student):
+                            pre, student = [s.strip() for s in text.split("~",1)]
+                            if not student:
                                 continue
                             coord = ws.cell(row=r, column=col).coordinate
-                            student_locs[student].append((sheet, coord))
+                            locs[student].append((sheet, coord))
     
-                    for student, occ in student_locs.items():
+                    # flag duplicates
+                    for student, occ in locs.items():
                         if len(occ) > 1:
                             conflicts.append({
                                 "student":     student,
@@ -1255,6 +1255,7 @@ elif mode == "Create Student Schedule":
                             })
     
         return conflicts
+
                     
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
