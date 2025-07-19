@@ -41,6 +41,7 @@ if mode == "Instructions":
         # --- Generate a Word document with the same instructions ---
         doc = Document()
         doc.add_heading('Qgenda Report Instructions', level=1)
+        doc.styles['Normal'].font.size = Pt(10)
         
         # Bold the date range
         p = doc.add_paragraph()
@@ -50,6 +51,7 @@ if mode == "Instructions":
         p.add_run(' → ')
         run_end = p.add_run(f'{e:%B %d, %Y}')
         run_end.bold = True
+        
         
         doc.add_paragraph('1. Go to https://login.qgenda.com/')
         
