@@ -30,60 +30,127 @@ if mode == "Instructions":
     
             st.write('Please go to https://login.qgenda.com/')
     
+            # Display on‐screen instructions
             st.markdown(f"""
-    Download four files and create reports based on **{s:%B %d, %Y}** → **{e:%B %d, %Y}**:
-    
-    **Report 1 – Department of Pediatrics**  
-    - Click **Department of Pediatrics → Schedule → Reports**  
-    - Set **Report Type** to *Calendar by Task*  
-    - Set **Format** to *Excel*  
-    - Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-    - Ensure **Calendar starts on Monday**  
-    - Show **Staff by** Last Name, First Name  
-    - Show **Tasks by** Short Name  
-    - Click **Run Report**
-    """)
+Download four files and create reports based on **{s:%B %d, %Y}** → **{e:%B %d, %Y}**:
+
+**Report 1 – Department of Pediatrics**  
+- Click **Department of Pediatrics → Schedule → Reports**  
+- Set **Report Type** to *Calendar by Task*  
+- Set **Format** to *Excel*  
+- Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+- Ensure **Calendar starts on Monday**  
+- Show **Staff by** Last Name, First Name  
+- Show **Tasks by** Short Name  
+- Click **Run Report**
+
+**Report 2 – Penn State Health Children's Hospital – Hospitalists**  
+- Click **Penn State Health Children's Hospital → Schedule → Reports**  
+- Set **Report Type** to *Calendar by Task*  
+- Set **Format** to *Excel*  
+- Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+- Ensure **Calendar starts on Monday**  
+- Show **Staff by** Last Name, First Name  
+- Show **Tasks by** Long Name  
+- Click **Run Report**
+
+**Report 3 – Department of Pediatrics (Admin ‑ Adolescent Med)**  
+- Click **Department of Pediatrics → Schedule → Reports**  
+- In the top‑right corner, select **Admin ‑ Adolescent Med**  
+- Set **Report Type** to *Calendar by Task*  
+- Set **Format** to *Excel*  
+- Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+- Ensure **Calendar starts on Monday**  
+- Show **Staff by** Last Name, First Name  
+- Show **Tasks by** Long Name  
+- Click **Run Report**
+
+**Report 4 – Department of Pediatrics (Complex Care)**  
+- Click **Department of Pediatrics → Schedule → Reports**  
+- In the top‑right corner, select **Complex Care**  
+- Set **Report Type** to *Calendar by Task*  
+- Set **Format** to *Excel*  
+- Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+- Ensure **Calendar starts on Monday**  
+- Show **Staff by** Last Name, First Name  
+- Show **Tasks by** Long Name  
+- Click **Run Report**
+""")
         except ValueError:
             st.error('Invalid format – use m/d/yyyy (e.g. 7/6/2021)')
 
-        st.markdown(f"""
-        **Report 2 – Penn State Health Children's Hospital – Hospitalists**  
-        - Click **Penn State Health Children's Hospital → Schedule → Reports**  
-        - Set **Report Type** to *Calendar by Task*  
-        - Set **Format** to *Excel*  
-        - Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-        - Ensure **Calendar starts on Monday**  
-        - Show **Staff by** Last Name, First Name  
-        - Show **Tasks by** Long Name  
-        - Click **Run Report**
-        """)
-    
-        st.markdown(f"""
-        **Report 3 – Department of Pediatrics (Admin ‑ Adolescent Med)**  
-        - Click **Department of Pediatrics → Schedule → Reports**  
-        - In the top-right corner, select **Admin ‑ Adolescent Med**  
-        - Set **Report Type** to *Calendar by Task*  
-        - Set **Format** to *Excel*  
-        - Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-        - Ensure **Calendar starts on Monday**  
-        - Show **Staff by** Last Name, First Name  
-        - Show **Tasks by** Long Name  
-        - Click **Run Report**
-        """)
-    
-        st.markdown(f"""
-        **Report 4 – Department of Pediatrics (Complex Care)**  
-        - Click **Department of Pediatrics → Schedule → Reports**  
-        - In the top-right corner, select **Complex Care**  
-        - Set **Report Type** to *Calendar by Task*  
-        - Set **Format** to *Excel*  
-        - Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-        - Ensure **Calendar starts on Monday**  
-        - Show **Staff by** Last Name, First Name  
-        - Show **Tasks by** Long Name  
-        - Click **Run Report**
-        """)
+        # --- Generate a Word document with the same instructions ---
+        doc = Document()
+        doc.add_heading('Qgenda Report Instructions', level=1)
+        doc.add_paragraph(f'Date range: {s:%B %d, %Y} → {e:%B %d, %Y}')
+        doc.add_paragraph('1. Go to https://login.qgenda.com/')
+        
+        # Helper to add each report block
+        def add_report(title, steps):
+            doc.add_heading(title, level=2)
+            for step in steps:
+                doc.add_paragraph(step, style='List Bullet')
+        
+        add_report(
+            'Report 1 – Department of Pediatrics',
+            [
+                'Click Department of Pediatrics → Schedule → Reports',
+                'Set Report Type to Calendar by Task',
+                'Set Format to Excel',
+                f'Enter Start Date: {s:%m/%d/%Y} and End Date: {e:%m/%d/%Y}',
+                'Ensure Calendar starts on Monday',
+                'Show Staff by Last Name, First Name',
+                'Show Tasks by Short Name',
+                'Click Run Report'
+            ]
+        )
+        add_report(
+            "Report 2 – Penn State Health Children's Hospital – Hospitalists",
+            [
+                'Click Penn State Health Children\'s Hospital → Schedule → Reports',
+                'Set Report Type to Calendar by Task',
+                'Set Format to Excel',
+                f'Enter Start Date: {s:%m/%d/%Y} and End Date: {e:%m/%d/%Y}',
+                'Ensure Calendar starts on Monday',
+                'Show Staff by Last Name, First Name',
+                'Show Tasks by Long Name',
+                'Click Run Report'
+            ]
+        )
+        add_report(
+            'Report 3 – Department of Pediatrics (Admin ‑ Adolescent Med)',
+            [
+                'Click Department of Pediatrics → Schedule → Reports',
+                'Select Admin ‑ Adolescent Med in top‑right corner',
+                'Set Report Type to Calendar by Task',
+                'Set Format to Excel',
+                f'Enter Start Date: {s:%m/%d/%Y} and End Date: {e:%m/%d/%Y}',
+                'Ensure Calendar starts on Monday',
+                'Show Staff by Last Name, First Name',
+                'Show Tasks by Long Name',
+                'Click Run Report'
+            ]
+        )
+        add_report(
+            'Report 4 – Department of Pediatrics (Complex Care)',
+            [
+                'Click Department of Pediatrics → Schedule → Reports',
+                'Select Complex Care in top‑right corner',
+                'Set Report Type to Calendar by Task',
+                'Set Format to Excel',
+                f'Enter Start Date: {s:%m/%d/%Y} and End Date: {e:%m/%d/%Y}',
+                'Ensure Calendar starts on Monday',
+                'Show Staff by Last Name, First Name',
+                'Show Tasks by Long Name',
+                'Click Run Report'
+            ]
+        )
 
+        # Save to bytes and offer download
+        buf = io.BytesIO()
+        doc.save(buf)
+        buf.seek(0)
+        st.download_button(label="📄 Download Instructions (Word)",data=buf.getvalue(),file_name="Qgenda_Report_Instructions.docx",mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 
 elif mode == "Format OPD + Summary":
