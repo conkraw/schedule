@@ -31,8 +31,8 @@ if mode == "Instructions":
             st.write('Please go to https://login.qgenda.com/')
     
             # Display on‐screen instructions
-            st.markdown(f"""Download four files and create reports based on **{s:%B %d, %Y}** → **{e:%B %d, %Y}**. 
-            Download instructions here:""")
+            st.markdown(f"""Download four files and create reports based on **{s:%B %d, %Y}** → **{e:%B %d, %Y}**.""")
+            st.write("Download instructions here:")
 
 
         except ValueError:
