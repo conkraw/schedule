@@ -7,6 +7,7 @@ import random
 from openpyxl import load_workbook # Ensure load_workbook is imported
 import io, zipfile
 from docx import Document
+from docx.shared import Pt
 from docx.enum.section import WD_ORIENT
 from datetime import timedelta
 from xlsxwriter import Workbook as Workbook
