@@ -31,51 +31,9 @@ if mode == "Instructions":
             st.write('Please go to https://login.qgenda.com/')
     
             # Display on‐screen instructions
-            st.markdown(f"""
-Download four files and create reports based on **{s:%B %d, %Y}** → **{e:%B %d, %Y}**:
+            st.markdown(f"""Download four files and create reports based on **{s:%B %d, %Y}** → **{e:%B %d, %Y}**. Download instructions here:""")
 
-**Report 1 – Department of Pediatrics**  
-- Click **Department of Pediatrics → Schedule → Reports**  
-- Set **Report Type** to *Calendar by Task*  
-- Set **Format** to *Excel*  
-- Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-- Ensure **Calendar starts on Monday**  
-- Show **Staff by** Last Name, First Name  
-- Show **Tasks by** Short Name  
-- Click **Run Report**
 
-**Report 2 – Penn State Health Children's Hospital – Hospitalists**  
-- Click **Penn State Health Children's Hospital → Schedule → Reports**  
-- Set **Report Type** to *Calendar by Task*  
-- Set **Format** to *Excel*  
-- Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-- Ensure **Calendar starts on Monday**  
-- Show **Staff by** Last Name, First Name  
-- Show **Tasks by** Long Name  
-- Click **Run Report**
-
-**Report 3 – Department of Pediatrics (Admin ‑ Adolescent Med)**  
-- Click **Department of Pediatrics → Schedule → Reports**  
-- In the top‑right corner, select **Admin ‑ Adolescent Med**  
-- Set **Report Type** to *Calendar by Task*  
-- Set **Format** to *Excel*  
-- Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-- Ensure **Calendar starts on Monday**  
-- Show **Staff by** Last Name, First Name  
-- Show **Tasks by** Long Name  
-- Click **Run Report**
-
-**Report 4 – Department of Pediatrics (Complex Care)**  
-- Click **Department of Pediatrics → Schedule → Reports**  
-- In the top‑right corner, select **Complex Care**  
-- Set **Report Type** to *Calendar by Task*  
-- Set **Format** to *Excel*  
-- Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-- Ensure **Calendar starts on Monday**  
-- Show **Staff by** Last Name, First Name  
-- Show **Tasks by** Long Name  
-- Click **Run Report**
-""")
         except ValueError:
             st.error('Invalid format – use m/d/yyyy (e.g. 7/6/2021)')
 
