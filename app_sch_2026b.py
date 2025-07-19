@@ -32,6 +32,9 @@ if mode == "Instructions":
         except ValueError:
             st.error('Invalid format – use m/d/yyyy (e.g. 7/6/2021)')
 
+    st.write('Please go to https://login.qgenda.com/')
+
+
 elif mode == "Format OPD + Summary":
     # ─── Inputs ────────────────────────────────────────────────────────────────────
     # Required keywords to look for in the content
