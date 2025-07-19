@@ -41,14 +41,36 @@ if mode == "Instructions":
         # --- Generate a Word document with the same instructions ---
         doc = Document()
         doc.add_heading('Qgenda Report Instructions', level=1)
-        doc.add_paragraph(f'Date range: {s:%B %d, %Y} → {e:%B %d, %Y}')
+        
+        # Bold the date range
+        p = doc.add_paragraph()
+        p.add_run('Date range: ')
+        run_start = p.add_run(f'{s:%B %d, %Y}')
+        run_start.bold = True
+        p.add_run(' → ')
+        run_end = p.add_run(f'{e:%B %d, %Y}')
+        run_end.bold = True
+        
         doc.add_paragraph('1. Go to https://login.qgenda.com/')
         
         # Helper to add each report block
         def add_report(title, steps):
             doc.add_heading(title, level=2)
             for step in steps:
-                doc.add_paragraph(step, style='List Bullet')
+                # If the step contains dates, bold them
+                if 'Enter Start Date:' in step:
+                    p = doc.add_paragraph(style='List Bullet')
+                    prefix, dates = step.split(':', 1)
+                    p.add_run(prefix + ': ')
+                    # split the two dates on " and End Date:"
+                    start_part, end_part = dates.strip().split(' and End Date:')
+                    r1 = p.add_run(start_part.strip())
+                    r1.bold = True
+                    p.add_run(' and End Date: ')
+                    r2 = p.add_run(end_part.strip())
+                    r2.bold = True
+                else:
+                    doc.add_paragraph(step, style='List Bullet')
         
         add_report(
             'Report 1 – Department of Pediatrics',
@@ -77,10 +99,10 @@ if mode == "Instructions":
             ]
         )
         add_report(
-            'Report 3 – Department of Pediatrics (Admin ‑ Adolescent Med)',
+            'Report 3 – Department of Pediatrics (Admin - Adolescent Med)',
             [
                 'Click Department of Pediatrics → Schedule → Reports',
-                'Select Admin ‑ Adolescent Med in top‑right corner',
+                'Select Admin - Adolescent Med in top-right corner',
                 'Set Report Type to Calendar by Task',
                 'Set Format to Excel',
                 f'Enter Start Date: {s:%m/%d/%Y} and End Date: {e:%m/%d/%Y}',
@@ -94,7 +116,7 @@ if mode == "Instructions":
             'Report 4 – Department of Pediatrics (Complex Care)',
             [
                 'Click Department of Pediatrics → Schedule → Reports',
-                'Select Complex Care in top‑right corner',
+                'Select Complex Care in top-right corner',
                 'Set Report Type to Calendar by Task',
                 'Set Format to Excel',
                 f'Enter Start Date: {s:%m/%d/%Y} and End Date: {e:%m/%d/%Y}',
@@ -104,6 +126,7 @@ if mode == "Instructions":
                 'Click Run Report'
             ]
         )
+
 
         # Save to bytes and offer download
         buf = io.BytesIO()
