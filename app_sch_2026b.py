@@ -29,10 +29,24 @@ if mode == "Instructions":
             s = datetime.strptime(d, '%m/%d/%Y')
             e = s + timedelta(days=34)
             st.write(f"{s:%B %d, %Y} → {e:%B %d, %Y}")
+    
+            st.write('Please go to https://login.qgenda.com/')
+    
+            st.markdown(f"""
+    Download four files and create reports based on **{s:%B %d, %Y}** → **{e:%B %d, %Y}**:
+    
+    **Report 1 – Department of Pediatrics**  
+    - Click **Department of Pediatrics → Schedule → Reports**  
+    - Set **Report Type** to *Calendar by Task*  
+    - Set **Format** to *Excel*  
+    - Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+    - Ensure **Calendar starts on Monday**  
+    - Show **Staff by** Last Name, First Name  
+    - Show **Tasks by** Short Name  
+    - Click **Run Report**
+    """)
         except ValueError:
             st.error('Invalid format – use m/d/yyyy (e.g. 7/6/2021)')
-
-    st.write('Please go to https://login.qgenda.com/')
 
 
 elif mode == "Format OPD + Summary":
