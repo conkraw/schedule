@@ -11,14 +11,28 @@ from docx.enum.section import WD_ORIENT
 from datetime import timedelta
 from xlsxwriter import Workbook as Workbook
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
 
-# ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?",("Format OPD + Summary", "Create Student Schedule"))
 
-if mode == "Format OPD + Summary":
+
+# ─── Sidebar mode selector ─────────────────────────────────────────────────────
+mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule"))
+# ─── Sidebar mode selector ─────────────────────────────────────────────────────
+
+if mode == "Instructions":
+    d = st.text_input('Start date (m/d/yyyy)')
+    if d:
+        try:
+            s = datetime.strptime(d, '%m/%d/%Y')
+            e = s + timedelta(days=34)
+            st.write(f"{s:%B %d, %Y} → {e:%B %d, %Y}")
+        except ValueError:
+            st.error('Invalid format – use m/d/yyyy (e.g. 7/6/2021)')
+
+elif mode == "Format OPD + Summary":
     # ─── Inputs ────────────────────────────────────────────────────────────────────
     # Required keywords to look for in the content
     required_keywords = ["academic general pediatrics", "hospitalists", "complex care", "adol med"]
