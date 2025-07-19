@@ -46,43 +46,43 @@ if mode == "Instructions":
         except ValueError:
             st.error('Invalid format – use m/d/yyyy (e.g. 7/6/2021)')
 
-    st.markdown(f"""
-    **Report 2 – Penn State Health Children's Hospital – Hospitalists**  
-    - Click **Penn State Health Children's Hospital → Schedule → Reports**  
-    - Set **Report Type** to *Calendar by Task*  
-    - Set **Format** to *Excel*  
-    - Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-    - Ensure **Calendar starts on Monday**  
-    - Show **Staff by** Last Name, First Name  
-    - Show **Tasks by** Long Name  
-    - Click **Run Report**
-    """)
-
-    st.markdown(f"""
-    **Report 3 – Department of Pediatrics (Admin ‑ Adolescent Med)**  
-    - Click **Department of Pediatrics → Schedule → Reports**  
-    - In the top-right corner, select **Admin ‑ Adolescent Med**  
-    - Set **Report Type** to *Calendar by Task*  
-    - Set **Format** to *Excel*  
-    - Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-    - Ensure **Calendar starts on Monday**  
-    - Show **Staff by** Last Name, First Name  
-    - Show **Tasks by** Long Name  
-    - Click **Run Report**
-    """)
-
-    st.markdown(f"""
-    **Report 4 – Department of Pediatrics (Complex Care)**  
-    - Click **Department of Pediatrics → Schedule → Reports**  
-    - In the top-right corner, select **Complex Care**  
-    - Set **Report Type** to *Calendar by Task*  
-    - Set **Format** to *Excel*  
-    - Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
-    - Ensure **Calendar starts on Monday**  
-    - Show **Staff by** Last Name, First Name  
-    - Show **Tasks by** Long Name  
-    - Click **Run Report**
-    """)
+        st.markdown(f"""
+        **Report 2 – Penn State Health Children's Hospital – Hospitalists**  
+        - Click **Penn State Health Children's Hospital → Schedule → Reports**  
+        - Set **Report Type** to *Calendar by Task*  
+        - Set **Format** to *Excel*  
+        - Enter the Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+        - Ensure **Calendar starts on Monday**  
+        - Show **Staff by** Last Name, First Name  
+        - Show **Tasks by** Long Name  
+        - Click **Run Report**
+        """)
+    
+        st.markdown(f"""
+        **Report 3 – Department of Pediatrics (Admin ‑ Adolescent Med)**  
+        - Click **Department of Pediatrics → Schedule → Reports**  
+        - In the top-right corner, select **Admin ‑ Adolescent Med**  
+        - Set **Report Type** to *Calendar by Task*  
+        - Set **Format** to *Excel*  
+        - Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+        - Ensure **Calendar starts on Monday**  
+        - Show **Staff by** Last Name, First Name  
+        - Show **Tasks by** Long Name  
+        - Click **Run Report**
+        """)
+    
+        st.markdown(f"""
+        **Report 4 – Department of Pediatrics (Complex Care)**  
+        - Click **Department of Pediatrics → Schedule → Reports**  
+        - In the top-right corner, select **Complex Care**  
+        - Set **Report Type** to *Calendar by Task*  
+        - Set **Format** to *Excel*  
+        - Enter Start Date: **{s:%m/%d/%Y}** and End Date: **{e:%m/%d/%Y}**  
+        - Ensure **Calendar starts on Monday**  
+        - Show **Staff by** Last Name, First Name  
+        - Show **Tasks by** Long Name  
+        - Click **Run Report**
+        """)
 
 
 
