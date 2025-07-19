@@ -42,7 +42,7 @@ if mode == "Instructions":
         # --- Generate a Word document with the same instructions ---
         doc = Document()
         doc.add_heading('Qgenda Report Instructions', level=1)
-        doc.styles['Normal'].font.size = Pt(10)
+        doc.styles['Normal'].font.size = Pt(8)
         
         # Bold the date range
         p = doc.add_paragraph()
