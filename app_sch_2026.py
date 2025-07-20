@@ -108,11 +108,11 @@ if mode == "OPD Check":
             if change['dropped']:
                 st.markdown("**Dropped**")
                 for week, period, day, name, cell in change['dropped']:
-                    st.write(f"- {name} — Week {week} {period} {day} at {cell}")
+                    st.write(f"- {name} — at {cell}")
             if change['added']:
                 st.markdown("**Added**")
                 for week, period, day, name, cell in change['added']:
-                    st.write(f"- {name} — Week {week} {period} {day} at {cell}")
+                    st.write(f"- {name} — Week at {cell}")
             if not change['dropped'] and not change['added']:
                 st.success("No changes detected ✅")
 
