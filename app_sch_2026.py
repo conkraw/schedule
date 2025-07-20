@@ -98,9 +98,10 @@ if mode == "OPD Check":
                                 assn_set.add((week_idx, period, day, name, cell))
     
             results[sheet] = {
-                'dropped': sorted(base_set - assn_set),
-                'added':   sorted(assn_set - base_set)
+                'dropped': sorted(assn_set - base_set),
+                'added':   sorted(base_set - assn_set)
             }
+
     
         # Display results
         for sheet, change in results.items():
