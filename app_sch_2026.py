@@ -18,10 +18,106 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule"))
+mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule","OPD Check"))
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
-if mode == "Instructions":
+if mode == "OPD Check":
+    DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+    
+    def detect_am_pm_blocks(df):
+        """
+        Starting at A6, scan down column A to group consecutive 'AM' or 'PM' runs.
+        Returns a list of (label, start_row, end_row) tuples.
+        """
+        colA = df.iloc[5:, 0].astype(str).tolist()  # rows 6 onward
+        runs = []
+        current_label = colA[0]
+        run_start = 6
+        for offset, label in enumerate(colA, start=6):
+            if label != current_label:
+                runs.append((current_label, run_start, offset - 1))
+                current_label = label
+                run_start = offset
+        runs.append((current_label, run_start, 5 + len(colA)))
+        return runs
+    
+    st.title("OPD Preceptor GI‑al Check")
+    
+    baseline_file = st.file_uploader(
+        "1) Upload baseline OPD (preceptors only)", 
+        type=["xlsx"], key="baseline"
+    )
+    assigned_file = st.file_uploader(
+        "2) Upload assigned OPD (with students)", 
+        type=["xlsx"], key="assigned"
+    )
+    
+    if baseline_file and assigned_file:
+        SHEETS = [
+            'HOPE_DRIVE','ETOWN','NYES','COMPLEX','WARD A',
+            'PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC',
+            'AHOLOUKPE','ADOLMED'
+        ]
+    
+        # Read all relevant sheets at once
+        base_sheets = pd.read_excel(baseline_file, sheet_name=SHEETS, header=None)
+        assn_sheets = pd.read_excel(assigned_file, sheet_name=SHEETS, header=None)
+    
+        results = {}
+    
+        for sheet in SHEETS:
+            df_base = base_sheets[sheet]
+            df_assn = assn_sheets[sheet]
+    
+            # Detect the alternating AM/PM runs in column A
+            runs = detect_am_pm_blocks(df_base)
+            # Pair them into weeks (0&1 → week 1, 2&3 → week 2, etc.)
+            week_pairs = [(runs[i], runs[i+1]) for i in range(0, len(runs), 2)]
+    
+            base_set = set()
+            assn_set = set()
+    
+            # Extract (week, period, day, name, cell) tuples
+            for week_idx, ((am_lbl, am_start, am_end), (pm_lbl, pm_start, pm_end)) in enumerate(week_pairs, start=1):
+                for period, (lbl, start, end) in [
+                    ('AM', (am_lbl, am_start, am_end)),
+                    ('PM', (pm_lbl, pm_start, pm_end))
+                ]:
+                    for col_idx, day in enumerate(DAYS, start=1):
+                        for row in range(start, end + 1):
+                            cell = f"{chr(ord('A') + col_idx)}{row}"
+                            # baseline
+                            val_base = df_base.iat[row - 1, col_idx]
+                            if pd.notna(val_base):
+                                name = str(val_base).split('~', 1)[0].strip()
+                                base_set.add((week_idx, period, day, name, cell))
+                            # assigned
+                            val_assn = df_assn.iat[row - 1, col_idx]
+                            if pd.notna(val_assn):
+                                name = str(val_assn).split('~', 1)[0].strip()
+                                assn_set.add((week_idx, period, day, name, cell))
+    
+            results[sheet] = {
+                'dropped': sorted(base_set - assn_set),
+                'added':   sorted(assn_set - base_set)
+            }
+    
+        # Display results
+        for sheet, change in results.items():
+            st.subheader(sheet)
+            if change['dropped']:
+                st.markdown("**Dropped**")
+                for week, period, day, name, cell in change['dropped']:
+                    st.write(f"- {name} — Week {week} {period} {day} at {cell}")
+            if change['added']:
+                st.markdown("**Added**")
+                for week, period, day, name, cell in change['added']:
+                    st.write(f"- {name} — Week {week} {period} {day} at {cell}")
+            if not change['dropped'] and not change['added']:
+                st.success("No changes detected ✅")
+
+
+elif mode == "Instructions":
     d = st.text_input('Start date (m/d/yyyy)')
     if d:
         try:
