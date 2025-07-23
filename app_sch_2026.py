@@ -104,18 +104,51 @@ if mode == "OPD Check":
 
     
         # Display results
+        #for sheet, change in results.items():
+        #    st.subheader(sheet)
+        #    if change['dropped']:
+        #        st.markdown("**Dropped**")
+        #        for week, period, day, name, cell in change['dropped']:
+        #            st.write(f"- {name} — at {cell}")
+        #    if change['added']:
+        #        st.markdown("**Added**")
+        #        for week, period, day, name, cell in change['added']:
+        #            st.write(f"- {name} — at {cell}")
+        #    if not change['dropped'] and not change['added']:
+        #        st.success("No changes detected ✅")
+
+        report_lines = []
+        
         for sheet, change in results.items():
-            st.subheader(sheet)
+            report_lines.append(f"## {sheet}")
             if change['dropped']:
-                st.markdown("**Dropped**")
+                report_lines.append("**Dropped**")
                 for week, period, day, name, cell in change['dropped']:
-                    st.write(f"- {name} — at {cell}")
+                    report_lines.append(f"- {name} — at {cell}")
             if change['added']:
-                st.markdown("**Added**")
+                report_lines.append("**Added**")
                 for week, period, day, name, cell in change['added']:
-                    st.write(f"- {name} — at {cell}")
+                    report_lines.append(f"- {name} — at {cell}")
             if not change['dropped'] and not change['added']:
-                st.success("No changes detected ✅")
+                report_lines.append("No changes detected ✅")
+            report_lines.append("")  # Blank line between sheets
+        
+        # Join the report text
+        report_text = "\n".join(report_lines)
+        
+        # Create a downloadable text file
+        report_file = io.StringIO()
+        report_file.write(report_text)
+        report_file.seek(0)
+        
+        # Add a download button
+        st.download_button(
+            label="📄 Download Change Report",
+            data=report_file,
+            file_name="change_report.txt",
+            mime="text/plain"
+        )
+
 
 
 elif mode == "Instructions":
