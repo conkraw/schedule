@@ -116,38 +116,40 @@ if mode == "OPD Check":
         #            st.write(f"- {name} — at {cell}")
         #    if not change['dropped'] and not change['added']:
         #        st.success("No changes detected ✅")
-
-        report_lines = []
+        
+        # Create Word document
+        doc = Document()
+        doc.add_heading('Change Report', level=1)
         
         for sheet, change in results.items():
-            report_lines.append(f"## {sheet}")
+            doc.add_heading(sheet, level=2)
+        
             if change['dropped']:
-                report_lines.append("**Dropped**")
+                doc.add_paragraph('Dropped:', style='Heading 3')
                 for week, period, day, name, cell in change['dropped']:
-                    report_lines.append(f"- {name} — at {cell}")
+                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
+        
             if change['added']:
-                report_lines.append("**Added**")
+                doc.add_paragraph('Added:', style='Heading 3')
                 for week, period, day, name, cell in change['added']:
-                    report_lines.append(f"- {name} — at {cell}")
+                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
+        
             if not change['dropped'] and not change['added']:
-                report_lines.append("No changes detected ✅")
-            report_lines.append("")  # Blank line between sheets
+                doc.add_paragraph('No changes detected ✅')
         
-        # Join the report text
-        report_text = "\n".join(report_lines)
+        # Save to in-memory buffer
+        word_file = io.BytesIO()
+        doc.save(word_file)
+        word_file.seek(0)
         
-        # Create a downloadable text file
-        report_file = io.StringIO()
-        report_file.write(report_text)
-        report_file.seek(0)
-        
-        # Add a download button
+        # Download button
         st.download_button(
-            label="📄 Download Change Report",
-            data=report_file,
-            file_name="change_report.txt",
-            mime="text/plain"
+            label="📄 Download Word Report",
+            data=word_file,
+            file_name="change_report.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
+
 
 
 
