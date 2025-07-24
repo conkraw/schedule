@@ -128,30 +128,43 @@ if mode == "OPD Check":
 
 
         
-        doc = Document()
-        doc.add_heading('Change Report', level=1)
-        
-        for sheet, change in results.items():
-            doc.add_heading(sheet, level=2)
-        
-            if change['dropped']:
-                doc.add_paragraph('Dropped:', style='Heading 3')
-                for w,p,d,pre,cell,stu in change['dropped']:
-                    line = f"- {pre} — at {cell}"
+        #
+    doc = Document()
+    doc.add_heading('Change Report', level=1)
+    
+    for sheet, change in results.items():
+        doc.add_heading(sheet, level=2)
+    
+        # build nested week→day map
+        week_map = defaultdict(lambda: defaultdict(lambda: {'dropped': [], 'added': []}))
+        for w,p,d,pre,cell,stu in change['dropped']:
+            week_map[w][d]['dropped'].append((p, pre, cell, stu))
+        for w,p,d,pre,cell,stu in change['added']:
+            week_map[w][d]['added'].append((p, pre, cell, stu))
+    
+        # emit in order
+        for week in sorted(week_map):
+            doc.add_heading(f'Week {week}', level=3)
+            for day in DAYS:  # Monday…Sunday
+                slot = week_map[week].get(day)
+                if not slot or (not slot['dropped'] and not slot['added']):
+                    continue
+    
+                doc.add_heading(day, level=4)
+                # DROPS
+                for p, pre, cell, stu in slot['dropped']:
+                    line = f"- Dropped ({p}): {pre} — was at {cell}"
                     if stu:
                         line += f"  (Student impacted: {stu})"
                     doc.add_paragraph(line, style='List Bullet')
-        
-            if change['added']:
-                doc.add_paragraph('Added:', style='Heading 3')
-                for w,p,d,pre,cell,stu in change['added']:
-                    line = f"- {pre} — now at {cell}"
+                # ADDS
+                for p, pre, cell, stu in slot['added']:
+                    line = f"- Added   ({p}): {pre} — now at {cell}"
                     if stu:
                         line += f"  (Student assigned: {stu})"
                     doc.add_paragraph(line, style='List Bullet')
-        
-            if not change['dropped'] and not change['added']:
-                doc.add_paragraph('No changes detected ✅')
+    
+            doc.add_paragraph()  # blank line between weeks
 
     # Save to in-memory buffer
     word_file = io.BytesIO()
