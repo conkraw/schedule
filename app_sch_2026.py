@@ -84,7 +84,7 @@ if mode == "OPD Check":
         
                             # baseline
                             vb = df_base.iat[row-1, col]
-                            if pd.notna(vb):
+                            if pd.notna(vb) and isinstance(vb, str):
                                 parts = str(vb).split('~', 1)
                                 pre = parts[0].strip()
                                 stu = parts[1].strip() if len(parts)==2 else None
@@ -92,7 +92,7 @@ if mode == "OPD Check":
         
                             # assigned
                             va = df_assn.iat[row-1, col]
-                            if pd.notna(va):
+                            if pd.notna(va) and isinstance(va, str):
                                 parts = str(va).split('~', 1)
                                 pre = parts[0].strip()
                                 stu = parts[1].strip() if len(parts)==2 else None
