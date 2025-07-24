@@ -127,7 +127,7 @@ if mode == "OPD Check":
                                x[4])
             )
         
-            results[sheet] = {"dropped": sorted(dropped_all),"added":   sorted(added_all)}
+            results[sheet] = {"dropped": sorted(dropped_sorted),"added":   sorted(dropped_sorted)}
 
 
         
