@@ -139,19 +139,32 @@ if mode == "OPD Check":
         for sheet, change in results.items():
             doc.add_heading(sheet, level=2)
         
-            if change['dropped']:
-                doc.add_paragraph('Dropped:', style='Heading 3')
-                for week, period, day, name, cell in change['dropped']:
-                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
+            # nest changes: week → day → {dropped: [], added: []}
+            week_map = defaultdict(lambda: defaultdict(lambda: {'dropped': [], 'added': []}))
+            for w, p, d, name, cell in change['dropped']:
+                week_map[w][d]['dropped'].append((p, name, cell))
+            for w, p, d, name, cell in change['added']:
+                week_map[w][d]['added'].append((p, name, cell))
         
-            if change['added']:
-                doc.add_paragraph('Added:', style='Heading 3')
-                for week, period, day, name, cell in change['added']:
-                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
+            # iterate in order
+            for week in sorted(week_map):
+                doc.add_heading(f'Week {week}', level=3)
+                for day in DAYS:
+                    day_changes = week_map[week].get(day)
+                    if not day_changes or (not day_changes['dropped'] and not day_changes['added']):
+                        continue
         
-            if not change['dropped'] and not change['added']:
-                doc.add_paragraph('No changes detected ✅')
+                    doc.add_heading(day, level=4)
+                    # dropped
+                    for p, name, cell in day_changes['dropped']:
+                        doc.add_paragraph(f"- Dropped ({p}): {name} — was at {cell}", style='List Bullet')
+                    # added
+                    for p, name, cell in day_changes['added']:
+                        doc.add_paragraph(f"- Added   ({p}): {name} — now at {cell}", style='List Bullet')
         
+                # blank line between weeks
+                doc.add_paragraph()
+
         # Save to in-memory buffer
         word_file = io.BytesIO()
         doc.save(word_file)
