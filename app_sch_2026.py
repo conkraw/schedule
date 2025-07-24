@@ -205,7 +205,7 @@ if mode == "OPD Check":
                 for p, pre, cell, stu in slot['added']:
                     line = f"- Added: {pre} — now at {cell}"
                     if stu:
-                        line += f"  (Student assigned: {stu})"
+                        line += f"  (Student impacted: {stu})"
                     doc.add_paragraph(line, style='List Bullet')
     
             doc.add_paragraph()  # blank line between weeks
