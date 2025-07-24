@@ -106,11 +106,28 @@ if mode == "OPD Check":
         
                         for name in assn_set - base_set:
                             added_all.append((week_idx, period, day, name, assn_names[name]))
+
+            # define ordering
+            period_order = {'AM': 0, 'PM': 1}
+            day_order    = {day: i for i, day in enumerate(DAYS)}
+            
+            # sort by week → AM/PM → day of week → cell
+            dropped_sorted = sorted(
+                dropped_all,
+                key=lambda x: (x[0],                      # week_idx
+                               period_order[x[1]],        # period
+                               day_order[x[2]],           # day
+                               x[4])                      # cell
+            )
+            added_sorted = sorted(
+                added_all,
+                key=lambda x: (x[0],
+                               period_order[x[1]],
+                               day_order[x[2]],
+                               x[4])
+            )
         
-            results[sheet] = {
-                "dropped": sorted(dropped_all),
-                "added":   sorted(added_all)
-            }
+            results[sheet] = {"dropped": sorted(dropped_all),"added":   sorted(added_all)}
 
 
         
