@@ -153,13 +153,13 @@ if mode == "OPD Check":
                 doc.add_heading(day, level=4)
                 # DROPS
                 for p, pre, cell, stu in slot['dropped']:
-                    line = f"- Dropped ({p}): {pre} — was at {cell}"
+                    line = f"- Dropped: {pre} — was at {cell}"
                     if stu:
                         line += f"  (Student impacted: {stu})"
                     doc.add_paragraph(line, style='List Bullet')
                 # ADDS
                 for p, pre, cell, stu in slot['added']:
-                    line = f"- Added   ({p}): {pre} — now at {cell}"
+                    line = f"- Added: {pre} — now at {cell}"
                     if stu:
                         line += f"  (Student assigned: {stu})"
                     doc.add_paragraph(line, style='List Bullet')
