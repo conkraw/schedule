@@ -73,97 +73,85 @@ if mode == "OPD Check":
             runs = detect_am_pm_blocks(df_base)
             week_pairs = [(runs[i], runs[i+1]) for i in range(0, len(runs), 2)]
         
-            dropped_all = []
-            added_all   = []
+            base_map = {}    # (w,period,day,pre) → (cell, student)
+            assn_map = {}
         
-            for week_idx, ((am_lbl, am_start, am_end), (pm_lbl, pm_start, pm_end)) in enumerate(week_pairs, start=1):
-                for period, (lbl, start, end) in [('AM', (am_lbl, am_start, am_end)),
-                                                  ('PM', (pm_lbl, pm_start, pm_end))]:
-                    for col_idx, day in enumerate(DAYS, start=1):
-                        # Build dicts name->cell for this slot
-                        base_names = {}
-                        assn_names = {}
+            for w_idx, ((am_lbl, am_s, am_e), (pm_lbl, pm_s, pm_e)) in enumerate(week_pairs, start=1):
+                for period, (lbl, start, end) in [('AM',(am_lbl,am_s,am_e)), ('PM',(pm_lbl,pm_s,pm_e))]:
+                    for col, day in enumerate(DAYS, start=1):
+                        for row in range(start, end+1):
+                            cell = f"{chr(ord('A')+col)}{row}"
         
-                        for row in range(start, end + 1):
-                            cell = f"{chr(ord('A') + col_idx)}{row}"
-        
-                            vb = df_base.iat[row - 1, col_idx]
+                            # baseline
+                            vb = df_base.iat[row-1, col]
                             if pd.notna(vb):
-                                name = str(vb).split('~', 1)[0].strip()
-                                base_names.setdefault(name, cell)  # first occurrence
+                                parts = str(vb).split('~', 1)
+                                pre = parts[0].strip()
+                                stu = parts[1].strip() if len(parts)==2 else None
+                                base_map.setdefault((w_idx,period,day,pre), (cell, stu))
         
-                            va = df_assn.iat[row - 1, col_idx]
+                            # assigned
+                            va = df_assn.iat[row-1, col]
                             if pd.notna(va):
-                                name = str(va).split('~', 1)[0].strip()
-                                assn_names.setdefault(name, cell)
+                                parts = str(va).split('~', 1)
+                                pre = parts[0].strip()
+                                stu = parts[1].strip() if len(parts)==2 else None
+                                assn_map.setdefault((w_idx,period,day,pre), (cell, stu))
         
-                        # Set compare for this slot
-                        base_set = set(base_names.keys())
-                        assn_set = set(assn_names.keys())
+            dropped = []
+            added   = []
         
-                        for name in base_set - assn_set:
-                            dropped_all.append((week_idx, period, day, name, base_names[name]))
+            # drops: in base not in assigned
+            for key, (cell, stu) in base_map.items():
+                if key not in assn_map:
+                    w,p,d,pre = key
+                    dropped.append((w,p,d,pre,cell,stu))
         
-                        for name in assn_set - base_set:
-                            added_all.append((week_idx, period, day, name, assn_names[name]))
-
-            # define ordering
-            period_order = {'AM': 0, 'PM': 1}
-            day_order    = {day: i for i, day in enumerate(DAYS)}
-            
-            # sort by week → AM/PM → day of week → cell
+            # adds: in assigned not in base
+            for key, (cell, stu) in assn_map.items():
+                if key not in base_map:
+                    w,p,d,pre = key
+                    added.append((w,p,d,pre,cell,stu))
+        
+            # sort exactly as before...
             dropped_sorted = sorted(
-                dropped_all,
-                key=lambda x: (x[0],                      # week_idx
-                               period_order[x[1]],        # period
-                               day_order[x[2]],           # day
-                               x[4])                      # cell
+                dropped,
+                key=lambda x: (x[0], {'AM':0,'PM':1}[x[1]], DAYS.index(x[2]), x[4])
             )
             added_sorted = sorted(
-                added_all,
-                key=lambda x: (x[0],
-                               period_order[x[1]],
-                               day_order[x[2]],
-                               x[4])
+                added,
+                key=lambda x: (x[0], {'AM':0,'PM':1}[x[1]], DAYS.index(x[2]), x[4])
             )
         
-            results[sheet] = {"dropped": dropped_sorted,"added":   added_sorted}
+            results[sheet] = {"dropped": dropped_sorted, "added": added_sorted}
 
 
 
         
-        # Create Word document
-        doc = Document()
-        doc.add_heading('Change Report', level=1)
-        
-        for sheet, change in results.items():
-            doc.add_heading(sheet, level=2)
-        
-            # nest changes: week → day → {dropped: [], added: []}
-            week_map = defaultdict(lambda: defaultdict(lambda: {'dropped': [], 'added': []}))
-            for w, p, d, name, cell in change['dropped']:
-                week_map[w][d]['dropped'].append((p, name, cell))
-            for w, p, d, name, cell in change['added']:
-                week_map[w][d]['added'].append((p, name, cell))
-        
-            # iterate in order
-            for week in sorted(week_map):
-                doc.add_heading(f'Week {week}', level=3)
-                for day in DAYS:
-                    day_changes = week_map[week].get(day)
-                    if not day_changes or (not day_changes['dropped'] and not day_changes['added']):
-                        continue
-        
-                    doc.add_heading(day, level=4)
-                    # dropped
-                    for p, name, cell in day_changes['dropped']:
-                        doc.add_paragraph(f"- Dropped: {name} — was at {cell}", style='List Bullet')
-                    # added
-                    for p, name, cell in day_changes['added']:
-                        doc.add_paragraph(f"- Added: {name} — now at {cell}", style='List Bullet')
-        
-                # blank line between weeks
-                doc.add_paragraph()
+            doc = Document()
+            doc.add_heading('Change Report', level=1)
+            
+            for sheet, change in results.items():
+                doc.add_heading(sheet, level=2)
+            
+                if change['dropped']:
+                    doc.add_paragraph('Dropped:', style='Heading 3')
+                    for w,p,d,pre,cell,stu in change['dropped']:
+                        line = f"- {pre} — at {cell}"
+                        if stu:
+                            line += f"  (Student impacted: {stu})"
+                        doc.add_paragraph(line, style='List Bullet')
+            
+                if change['added']:
+                    doc.add_paragraph('Added:', style='Heading 3')
+                    for w,p,d,pre,cell,stu in change['added']:
+                        line = f"- {pre} — now at {cell}"
+                        if stu:
+                            line += f"  (Student assigned: {stu})"
+                        doc.add_paragraph(line, style='List Bullet')
+            
+                if not change['dropped'] and not change['added']:
+                    doc.add_paragraph('No changes detected ✅')
 
         # Save to in-memory buffer
         word_file = io.BytesIO()
