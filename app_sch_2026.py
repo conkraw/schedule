@@ -25,23 +25,6 @@ mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD +
 if mode == "OPD Check":
     DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
     
-    def detect_am_pm_blocks_previous(df):
-        """
-        Starting at A6, scan down column A to group consecutive 'AM' or 'PM' runs.
-        Returns a list of (label, start_row, end_row) tuples.
-        """
-        colA = df.iloc[5:, 0].astype(str).tolist()  # rows 6 onward
-        runs = []
-        current_label = colA[0]
-        run_start = 6
-        for offset, label in enumerate(colA, start=6):
-            if label != current_label:
-                runs.append((current_label, run_start, offset - 1))
-                current_label = label
-                run_start = offset
-        runs.append((current_label, run_start, 5 + len(colA)))
-        return runs
-
     def detect_am_pm_blocks(df):
         """
         Scan down column A and group runs whose cell text begins with 'AM' or 'PM',
@@ -107,6 +90,19 @@ if mode == "OPD Check":
         # Read all relevant sheets at once
         base_sheets = pd.read_excel(baseline_file, sheet_name=SHEETS, header=None)
         assn_sheets = pd.read_excel(assigned_file, sheet_name=SHEETS, header=None)
+
+        # 1) Remove student suffix from every baseline sheet
+        for sheet_name, df in base_sheets.items():
+            # skip column 0 (the AM/PM labels)
+            for col in df.columns[1:]:
+                df[col] = (
+                    df[col]
+                      .astype(str)                    # make everything a string
+                      .where(df[col].notna(), np.nan) # keep NaN as NaN
+                      .str.split('~', 1).str[0]       # drop everything after first "~"
+                      .replace({'nan': np.nan})       # back-convert “nan” to real NaN
+                )
+            base_sheets[sheet_name] = df
     
         results = {}
         
