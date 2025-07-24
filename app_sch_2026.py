@@ -63,78 +63,81 @@ if mode == "OPD Check":
         # Read all relevant sheets at once
         base_sheets = pd.read_excel(baseline_file, sheet_name=SHEETS, header=None)
         assn_sheets = pd.read_excel(assigned_file, sheet_name=SHEETS, header=None)
-
-        
+    
         results = {}
-        
+    
         for sheet in SHEETS:
             df_base = base_sheets[sheet]
             df_assn = assn_sheets[sheet]
-        
+    
+            # Detect the alternating AM/PM runs in column A
             runs = detect_am_pm_blocks(df_base)
+            # Pair them into weeks (0&1 → week 1, 2&3 → week 2, etc.)
             week_pairs = [(runs[i], runs[i+1]) for i in range(0, len(runs), 2)]
-        
-            # name -> (week, period, day, cell, pretty_name)
-            base_pos = {}
-            assn_pos = {}
-        
+    
+            base_set = set()
+            assn_set = set()
+    
+            # Extract (week, period, day, name, cell) tuples
             for week_idx, ((am_lbl, am_start, am_end), (pm_lbl, pm_start, pm_end)) in enumerate(week_pairs, start=1):
-                for period, (lbl, start, end) in [('AM', (am_lbl, am_start, am_end)),
-                                                  ('PM', (pm_lbl, pm_start, pm_end))]:
+                for period, (lbl, start, end) in [
+                    ('AM', (am_lbl, am_start, am_end)),
+                    ('PM', (pm_lbl, pm_start, pm_end))
+                ]:
                     for col_idx, day in enumerate(DAYS, start=1):
                         for row in range(start, end + 1):
                             cell = f"{chr(ord('A') + col_idx)}{row}"
-        
                             # baseline
-                            val_b = df_base.iat[row - 1, col_idx]
-                            if pd.notna(val_b):
-                                name = str(val_b).split('~', 1)[0].strip()
-                                key = name.lower()
-                                base_pos.setdefault(key, (week_idx, period, day, cell, name))
-        
+                            val_base = df_base.iat[row - 1, col_idx]
+                            if pd.notna(val_base):
+                                name = str(val_base).split('~', 1)[0].strip()
+                                base_set.add((week_idx, period, day, name, cell))
                             # assigned
-                            val_a = df_assn.iat[row - 1, col_idx]
-                            if pd.notna(val_a):
-                                name = str(val_a).split('~', 1)[0].strip()
-                                key = name.lower()
-                                assn_pos.setdefault(key, (week_idx, period, day, cell, name))
-        
-            dropped = []
-            added   = []
-        
-            for key, info in base_pos.items():
-                if key not in assn_pos:
-                    w,p,d,cell,name = info
-                    dropped.append((name, w, p, d, cell))
-        
-            for key, info in assn_pos.items():
-                if key not in base_pos:
-                    w,p,d,cell,name = info
-                    added.append((name, w, p, d, cell))
-        
-            results[sheet] = {"dropped": sorted(dropped),
-                              "added":   sorted(added)}
-
-        
-            doc = Document()
-            doc.add_heading('Change Report (Adds/Drops Only)', level=1)
-            
-            for sheet, change in results.items():
-                doc.add_heading(sheet, level=2)
-            
-                if change['dropped']:
-                    doc.add_paragraph('Dropped:', style='Heading 3')
-                    for name, w,p,d,cell in change['dropped']:
-                        doc.add_paragraph(f"- {name} (week {w}, {p} {d}) was removed from {cell}", style='List Bullet')
-            
-                if change['added']:
-                    doc.add_paragraph('Added:', style='Heading 3')
-                    for name, w,p,d,cell in change['added']:
-                        doc.add_paragraph(f"- {name} (week {w}, {p} {d}) added at {cell}", style='List Bullet')
+                            val_assn = df_assn.iat[row - 1, col_idx]
+                            if pd.notna(val_assn):
+                                name = str(val_assn).split('~', 1)[0].strip()
+                                assn_set.add((week_idx, period, day, name, cell))
     
-                if not change['dropped'] and not change['added']:
-                    doc.add_paragraph('No changes detected ✅')
-                    
+            results[sheet] = {
+                'dropped': sorted(assn_set - base_set),
+                'added':   sorted(base_set - assn_set)
+            }
+
+    
+        # Display results
+        #for sheet, change in results.items():
+        #    st.subheader(sheet)
+        #    if change['dropped']:
+        #        st.markdown("**Dropped**")
+        #        for week, period, day, name, cell in change['dropped']:
+        #            st.write(f"- {name} — at {cell}")
+        #    if change['added']:
+        #        st.markdown("**Added**")
+        #        for week, period, day, name, cell in change['added']:
+        #            st.write(f"- {name} — at {cell}")
+        #    if not change['dropped'] and not change['added']:
+        #        st.success("No changes detected ✅")
+        
+        # Create Word document
+        doc = Document()
+        doc.add_heading('Change Report', level=1)
+        
+        for sheet, change in results.items():
+            doc.add_heading(sheet, level=2)
+        
+            if change['dropped']:
+                doc.add_paragraph('Dropped:', style='Heading 3')
+                for week, period, day, name, cell in change['dropped']:
+                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
+        
+            if change['added']:
+                doc.add_paragraph('Added:', style='Heading 3')
+                for week, period, day, name, cell in change['added']:
+                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
+        
+            if not change['dropped'] and not change['added']:
+                doc.add_paragraph('No changes detected ✅')
+        
         # Save to in-memory buffer
         word_file = io.BytesIO()
         doc.save(word_file)
@@ -147,7 +150,6 @@ if mode == "OPD Check":
             file_name="change_report.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-
 
 
 elif mode == "Instructions":
