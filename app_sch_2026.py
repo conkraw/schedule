@@ -157,10 +157,10 @@ if mode == "OPD Check":
                     doc.add_heading(day, level=4)
                     # dropped
                     for p, name, cell in day_changes['dropped']:
-                        doc.add_paragraph(f"- Dropped ({p}): {name} — was at {cell}", style='List Bullet')
+                        doc.add_paragraph(f"- Dropped: {name} — was at {cell}", style='List Bullet')
                     # added
                     for p, name, cell in day_changes['added']:
-                        doc.add_paragraph(f"- Added   ({p}): {name} — now at {cell}", style='List Bullet')
+                        doc.add_paragraph(f"- Added: {name} — now at {cell}", style='List Bullet')
         
                 # blank line between weeks
                 doc.add_paragraph()
