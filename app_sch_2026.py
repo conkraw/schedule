@@ -74,10 +74,9 @@ if mode == "OPD Check":
             runs = detect_am_pm_blocks(df_base)
             week_pairs = [(runs[i], runs[i+1]) for i in range(0, len(runs), 2)]
         
-            base_set = set()
-            assn_set = set()
-            base_cell = {}
-            assn_cell = {}
+            # name -> (week, period, day, cell, pretty_name)
+            base_pos = {}
+            assn_pos = {}
         
             for week_idx, ((am_lbl, am_start, am_end), (pm_lbl, pm_start, pm_end)) in enumerate(week_pairs, start=1):
                 for period, (lbl, start, end) in [('AM', (am_lbl, am_start, am_end)),
@@ -90,55 +89,50 @@ if mode == "OPD Check":
                             val_b = df_base.iat[row - 1, col_idx]
                             if pd.notna(val_b):
                                 name = str(val_b).split('~', 1)[0].strip()
-                                key = (week_idx, period, day, name)
-                                base_set.add(key)
-                                base_cell[key] = cell
+                                key = name.lower()
+                                base_pos.setdefault(key, (week_idx, period, day, cell, name))
         
                             # assigned
                             val_a = df_assn.iat[row - 1, col_idx]
                             if pd.notna(val_a):
                                 name = str(val_a).split('~', 1)[0].strip()
-                                key = (week_idx, period, day, name)
-                                assn_set.add(key)
-                                assn_cell[key] = cell
+                                key = name.lower()
+                                assn_pos.setdefault(key, (week_idx, period, day, cell, name))
         
-            # True adds/drops (ignore cell)
-            dropped = sorted(base_set - assn_set)
-            added   = sorted(assn_set - base_set)
+            dropped = []
+            added   = []
         
-            # Optional: detect moves (same name/slot but different cell)
-            common  = base_set & assn_set
-            moved   = sorted(
-                (w,p,d,n, base_cell[(w,p,d,n)], assn_cell[(w,p,d,n)])
-                for (w,p,d,n) in common
-                if base_cell[(w,p,d,n)] != assn_cell[(w,p,d,n)]
-            )
+            for key, info in base_pos.items():
+                if key not in assn_pos:
+                    w,p,d,cell,name = info
+                    dropped.append((name, w, p, d, cell))
         
-            results[sheet] = {"dropped": dropped, "added": added, "moved": moved}
+            for key, info in assn_pos.items():
+                if key not in base_pos:
+                    w,p,d,cell,name = info
+                    added.append((name, w, p, d, cell))
+        
+            results[sheet] = {"dropped": sorted(dropped),
+                              "added":   sorted(added)}
 
         
             doc = Document()
-            doc.add_heading('Change Report', level=1)
+            doc.add_heading('Change Report (Adds/Drops Only)', level=1)
             
             for sheet, change in results.items():
                 doc.add_heading(sheet, level=2)
             
                 if change['dropped']:
                     doc.add_paragraph('Dropped:', style='Heading 3')
-                    for w,p,d,n in change['dropped']:
-                        doc.add_paragraph(f"- {n} ({p} {d}, week {w})", style='List Bullet')
+                    for name, w,p,d,cell in change['dropped']:
+                        doc.add_paragraph(f"- {name} (week {w}, {p} {d}) was removed from {cell}", style='List Bullet')
             
                 if change['added']:
                     doc.add_paragraph('Added:', style='Heading 3')
-                    for w,p,d,n in change['added']:
-                        doc.add_paragraph(f"- {n} ({p} {d}, week {w})", style='List Bullet')
-            
-                if change.get('moved'):
-                    doc.add_paragraph('Moved (cell changed):', style='Heading 3')
-                    for w,p,d,n, old_cell, new_cell in change['moved']:
-                        doc.add_paragraph(f"- {n} ({p} {d}, week {w}) {old_cell} → {new_cell}", style='List Bullet')
-            
-                if (not change['dropped'] and not change['added'] and not change.get('moved')):
+                    for name, w,p,d,cell in change['added']:
+                        doc.add_paragraph(f"- {name} (week {w}, {p} {d}) added at {cell}", style='List Bullet')
+    
+                if not change['dropped'] and not change['added']:
                     doc.add_paragraph('No changes detected ✅')
                     
         # Save to in-memory buffer
