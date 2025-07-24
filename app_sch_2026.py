@@ -94,14 +94,13 @@ if mode == "OPD Check":
 
         # 1) Remove student suffix from every baseline sheet
         for sheet_name, df in base_sheets.items():
-            # skip column 0 (the AM/PM labels)
             for col in df.columns[1:]:
                 df[col] = (
                     df[col]
-                      .astype(str)                    # make everything a string
-                      .where(df[col].notna(), np.nan) # keep NaN as NaN
-                      .str.split('~', 1).str[0]       # drop everything after first "~"
-                      .replace({'nan': np.nan})       # back-convert “nan” to real NaN
+                      .where(df[col].notna(), np.nan)      # keep NaN
+                      .astype(str)
+                      .str.partition('~')[0]               # take text before "~"
+                      .replace({'nan': np.nan})            # restore NaN
                 )
             base_sheets[sheet_name] = df
     
