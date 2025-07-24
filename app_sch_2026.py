@@ -42,49 +42,49 @@ if mode == "OPD Check":
         runs.append((current_label, run_start, 5 + len(colA)))
         return runs
 
-        def detect_am_pm_blocks(df):
-        """
-        Scan down column A and group runs whose cell text begins with 'AM' or 'PM',
-        ignoring everything else.
-        Returns a list of (label, start_row, end_row) tuples.
-        """
-        runs = []
-        current_label = None
-        run_start = None
-        prev_row = None
-    
-        # Excel row 6 is df index 5
-        for idx in range(5, len(df)):
-            raw = df.iat[idx, 0]
-            if isinstance(raw, str):
-                ru = raw.upper()
-                if ru.startswith("AM"):
-                    label = "AM"
-                elif ru.startswith("PM"):
-                    label = "PM"
-                else:
-                    continue
+    def detect_am_pm_blocks(df):
+    """
+    Scan down column A and group runs whose cell text begins with 'AM' or 'PM',
+    ignoring everything else.
+    Returns a list of (label, start_row, end_row) tuples.
+    """
+    runs = []
+    current_label = None
+    run_start = None
+    prev_row = None
+
+    # Excel row 6 is df index 5
+    for idx in range(5, len(df)):
+        raw = df.iat[idx, 0]
+        if isinstance(raw, str):
+            ru = raw.upper()
+            if ru.startswith("AM"):
+                label = "AM"
+            elif ru.startswith("PM"):
+                label = "PM"
             else:
                 continue
-    
-            row = idx + 1  # convert back to 1‑based Excel row
-            if current_label is None:
-                # start new run
-                current_label = label
-                run_start = row
-            elif label != current_label or row != prev_row + 1:
-                # close out previous run
-                runs.append((current_label, run_start, prev_row))
-                current_label = label
-                run_start = row
-    
-            prev_row = row
-    
-        # finish last run
-        if current_label is not None:
+        else:
+            continue
+
+        row = idx + 1  # convert back to 1‑based Excel row
+        if current_label is None:
+            # start new run
+            current_label = label
+            run_start = row
+        elif label != current_label or row != prev_row + 1:
+            # close out previous run
             runs.append((current_label, run_start, prev_row))
-    
-        return runs
+            current_label = label
+            run_start = row
+
+        prev_row = row
+
+    # finish last run
+    if current_label is not None:
+        runs.append((current_label, run_start, prev_row))
+
+    return runs
     
     st.title("OPD Preceptor GI‑al Check")
     
