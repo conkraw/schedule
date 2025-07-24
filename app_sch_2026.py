@@ -140,7 +140,19 @@ if mode == "OPD Check":
             
                 if (not change['dropped'] and not change['added'] and not change.get('moved')):
                     doc.add_paragraph('No changes detected ✅')
-
+                    
+        # Save to in-memory buffer
+        word_file = io.BytesIO()
+        doc.save(word_file)
+        word_file.seek(0)
+        
+        # Download button
+        st.download_button(
+            label="📄 Download Word Report",
+            data=word_file,
+            file_name="change_report.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
 
 
