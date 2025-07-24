@@ -128,43 +128,43 @@ if mode == "OPD Check":
 
 
         
-            doc = Document()
-            doc.add_heading('Change Report', level=1)
-            
-            for sheet, change in results.items():
-                doc.add_heading(sheet, level=2)
-            
-                if change['dropped']:
-                    doc.add_paragraph('Dropped:', style='Heading 3')
-                    for w,p,d,pre,cell,stu in change['dropped']:
-                        line = f"- {pre} — at {cell}"
-                        if stu:
-                            line += f"  (Student impacted: {stu})"
-                        doc.add_paragraph(line, style='List Bullet')
-            
-                if change['added']:
-                    doc.add_paragraph('Added:', style='Heading 3')
-                    for w,p,d,pre,cell,stu in change['added']:
-                        line = f"- {pre} — now at {cell}"
-                        if stu:
-                            line += f"  (Student assigned: {stu})"
-                        doc.add_paragraph(line, style='List Bullet')
-            
-                if not change['dropped'] and not change['added']:
-                    doc.add_paragraph('No changes detected ✅')
-
-        # Save to in-memory buffer
-        word_file = io.BytesIO()
-        doc.save(word_file)
-        word_file.seek(0)
+        doc = Document()
+        doc.add_heading('Change Report', level=1)
         
-        # Download button
-        st.download_button(
-            label="📄 Download Word Report",
-            data=word_file,
-            file_name="change_report.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+        for sheet, change in results.items():
+            doc.add_heading(sheet, level=2)
+        
+            if change['dropped']:
+                doc.add_paragraph('Dropped:', style='Heading 3')
+                for w,p,d,pre,cell,stu in change['dropped']:
+                    line = f"- {pre} — at {cell}"
+                    if stu:
+                        line += f"  (Student impacted: {stu})"
+                    doc.add_paragraph(line, style='List Bullet')
+        
+            if change['added']:
+                doc.add_paragraph('Added:', style='Heading 3')
+                for w,p,d,pre,cell,stu in change['added']:
+                    line = f"- {pre} — now at {cell}"
+                    if stu:
+                        line += f"  (Student assigned: {stu})"
+                    doc.add_paragraph(line, style='List Bullet')
+        
+            if not change['dropped'] and not change['added']:
+                doc.add_paragraph('No changes detected ✅')
+
+    # Save to in-memory buffer
+    word_file = io.BytesIO()
+    doc.save(word_file)
+    word_file.seek(0)
+    
+    # Download button
+    st.download_button(
+        label="📄 Download Word Report",
+        data=word_file,
+        file_name="change_report.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 
 
 elif mode == "Instructions":
