@@ -129,57 +129,49 @@ if mode == "OPD Check":
 
         
         #
+    
     doc = Document()
     doc.add_heading('Change Report', level=1)
     
     for sheet, change in results.items():
         doc.add_heading(sheet, level=2)
     
-        # build nested week→period→day structure
-        wp_map = defaultdict(
-            lambda: defaultdict(
-                lambda: defaultdict(lambda: {'dropped': [], 'added': []})
-            )
-        )
+        # build week→day map (collect both AM & PM under each day)
+        week_map = defaultdict(lambda: defaultdict(lambda: {'dropped': [], 'added': []}))
         for w,p,d,pre,cell,stu in change['dropped']:
-            wp_map[w][p][d]['dropped'].append((pre, cell, stu))
+            week_map[w][d]['dropped'].append((p, pre, cell, stu))
         for w,p,d,pre,cell,stu in change['added']:
-            wp_map[w][p][d]['added'].append((pre, cell, stu))
+            week_map[w][d]['added'].append((p, pre, cell, stu))
     
-        for w in sorted(wp_map):
-            for p in ('AM', 'PM'):
-                days = wp_map[w][p]
-                # skip if no changes in this (week,period)
-                if not any(days[day]['dropped'] or days[day]['added'] for day in DAYS):
+        # emit in week order
+        for w in sorted(week_map):
+            doc.add_heading(f'Week {w}', level=3)
+    
+            for day in DAYS:
+                slot = week_map[w].get(day)
+                if not slot or (not slot['dropped'] and not slot['added']):
                     continue
     
-                # Heading for Week n AM/PM
-                doc.add_heading(f'Week {w} {p}', level=3)
+                doc.add_heading(day, level=4)
     
-                for day in DAYS:
-                    slot = days.get(day)
-                    if not slot or (not slot['dropped'] and not slot['added']):
-                        continue
+                # DROPS
+                for p, pre, cell, stu in slot['dropped']:
+                    line = f"- Dropped: {pre} — was at {cell}"
+                    if stu:
+                        line += f"  (Student impacted: {stu})"
+                    doc.add_paragraph(line, style='List Bullet')
     
-                    # Sub‑heading for the day
-                    doc.add_heading(day, level=4)
+                # ADDS
+                for p, pre, cell, stu in slot['added']:
+                    line = f"- Added: {pre} — now at {cell}"
+                    if stu:
+                        line += f"  (Student assigned: {stu})"
+                    doc.add_paragraph(line, style='List Bullet')
     
-                    # dropped
-                    for pre, cell, stu in slot['dropped']:
-                        line = f"- Dropped: {pre} — was at {cell}"
-                        if stu:
-                            line += f"  (Student impacted: {stu})"
-                        doc.add_paragraph(line, style='List Bullet')
-    
-                    # added
-                    for pre, cell, stu in slot['added']:
-                        line = f"- Added:   {pre} — now at {cell}"
-                        if stu:
-                            line += f"  (Student assigned: {stu})"
-                        doc.add_paragraph(line, style='List Bullet')
-    
-                # blank line between periods
-                doc.add_paragraph()
+            doc.add_paragraph()  # blank line between weeks
+
+
+
 
     # Save to in-memory buffer
     word_file = io.BytesIO()
