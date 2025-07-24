@@ -13,6 +13,7 @@ from datetime import timedelta
 from xlsxwriter import Workbook as Workbook
 from collections import defaultdict
 from datetime import datetime, timedelta
+from collections import Counter
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -62,93 +63,83 @@ if mode == "OPD Check":
         # Read all relevant sheets at once
         base_sheets = pd.read_excel(baseline_file, sheet_name=SHEETS, header=None)
         assn_sheets = pd.read_excel(assigned_file, sheet_name=SHEETS, header=None)
-    
+
+        
         results = {}
-    
+        
         for sheet in SHEETS:
             df_base = base_sheets[sheet]
             df_assn = assn_sheets[sheet]
-    
-            # Detect the alternating AM/PM runs in column A
+        
             runs = detect_am_pm_blocks(df_base)
-            # Pair them into weeks (0&1 → week 1, 2&3 → week 2, etc.)
             week_pairs = [(runs[i], runs[i+1]) for i in range(0, len(runs), 2)]
-    
+        
             base_set = set()
             assn_set = set()
-    
-            # Extract (week, period, day, name, cell) tuples
+            base_cell = {}
+            assn_cell = {}
+        
             for week_idx, ((am_lbl, am_start, am_end), (pm_lbl, pm_start, pm_end)) in enumerate(week_pairs, start=1):
-                for period, (lbl, start, end) in [
-                    ('AM', (am_lbl, am_start, am_end)),
-                    ('PM', (pm_lbl, pm_start, pm_end))
-                ]:
+                for period, (lbl, start, end) in [('AM', (am_lbl, am_start, am_end)),
+                                                  ('PM', (pm_lbl, pm_start, pm_end))]:
                     for col_idx, day in enumerate(DAYS, start=1):
                         for row in range(start, end + 1):
                             cell = f"{chr(ord('A') + col_idx)}{row}"
+        
                             # baseline
-                            val_base = df_base.iat[row - 1, col_idx]
-                            if pd.notna(val_base):
-                                name = str(val_base).split('~', 1)[0].strip()
-                                base_set.add((week_idx, period, day, name, cell))
+                            val_b = df_base.iat[row - 1, col_idx]
+                            if pd.notna(val_b):
+                                name = str(val_b).split('~', 1)[0].strip()
+                                key = (week_idx, period, day, name)
+                                base_set.add(key)
+                                base_cell[key] = cell
+        
                             # assigned
-                            val_assn = df_assn.iat[row - 1, col_idx]
-                            if pd.notna(val_assn):
-                                name = str(val_assn).split('~', 1)[0].strip()
-                                assn_set.add((week_idx, period, day, name, cell))
-    
-            results[sheet] = {
-                'dropped': sorted(assn_set - base_set),
-                'added':   sorted(base_set - assn_set)
-            }
+                            val_a = df_assn.iat[row - 1, col_idx]
+                            if pd.notna(val_a):
+                                name = str(val_a).split('~', 1)[0].strip()
+                                key = (week_idx, period, day, name)
+                                assn_set.add(key)
+                                assn_cell[key] = cell
+        
+            # True adds/drops (ignore cell)
+            dropped = sorted(base_set - assn_set)
+            added   = sorted(assn_set - base_set)
+        
+            # Optional: detect moves (same name/slot but different cell)
+            common  = base_set & assn_set
+            moved   = sorted(
+                (w,p,d,n, base_cell[(w,p,d,n)], assn_cell[(w,p,d,n)])
+                for (w,p,d,n) in common
+                if base_cell[(w,p,d,n)] != assn_cell[(w,p,d,n)]
+            )
+        
+            results[sheet] = {"dropped": dropped, "added": added, "moved": moved}
 
-    
-        # Display results
-        #for sheet, change in results.items():
-        #    st.subheader(sheet)
-        #    if change['dropped']:
-        #        st.markdown("**Dropped**")
-        #        for week, period, day, name, cell in change['dropped']:
-        #            st.write(f"- {name} — at {cell}")
-        #    if change['added']:
-        #        st.markdown("**Added**")
-        #        for week, period, day, name, cell in change['added']:
-        #            st.write(f"- {name} — at {cell}")
-        #    if not change['dropped'] and not change['added']:
-        #        st.success("No changes detected ✅")
         
-        # Create Word document
-        doc = Document()
-        doc.add_heading('Change Report', level=1)
-        
-        for sheet, change in results.items():
-            doc.add_heading(sheet, level=2)
-        
-            if change['dropped']:
-                doc.add_paragraph('Dropped:', style='Heading 3')
-                for week, period, day, name, cell in change['dropped']:
-                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
-        
-            if change['added']:
-                doc.add_paragraph('Added:', style='Heading 3')
-                for week, period, day, name, cell in change['added']:
-                    doc.add_paragraph(f"- {name} — at {cell}", style='List Bullet')
-        
-            if not change['dropped'] and not change['added']:
-                doc.add_paragraph('No changes detected ✅')
-        
-        # Save to in-memory buffer
-        word_file = io.BytesIO()
-        doc.save(word_file)
-        word_file.seek(0)
-        
-        # Download button
-        st.download_button(
-            label="📄 Download Word Report",
-            data=word_file,
-            file_name="change_report.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+            doc = Document()
+            doc.add_heading('Change Report', level=1)
+            
+            for sheet, change in results.items():
+                doc.add_heading(sheet, level=2)
+            
+                if change['dropped']:
+                    doc.add_paragraph('Dropped:', style='Heading 3')
+                    for w,p,d,n in change['dropped']:
+                        doc.add_paragraph(f"- {n} ({p} {d}, week {w})", style='List Bullet')
+            
+                if change['added']:
+                    doc.add_paragraph('Added:', style='Heading 3')
+                    for w,p,d,n in change['added']:
+                        doc.add_paragraph(f"- {n} ({p} {d}, week {w})", style='List Bullet')
+            
+                if change.get('moved'):
+                    doc.add_paragraph('Moved (cell changed):', style='Heading 3')
+                    for w,p,d,n, old_cell, new_cell in change['moved']:
+                        doc.add_paragraph(f"- {n} ({p} {d}, week {w}) {old_cell} → {new_cell}", style='List Bullet')
+            
+                if (not change['dropped'] and not change['added'] and not change.get('moved')):
+                    doc.add_paragraph('No changes detected ✅')
 
 
 
