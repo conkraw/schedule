@@ -64,59 +64,55 @@ if mode == "OPD Check":
         base_sheets = pd.read_excel(baseline_file, sheet_name=SHEETS, header=None)
         assn_sheets = pd.read_excel(assigned_file, sheet_name=SHEETS, header=None)
     
-        results = {}
-    
+         results = {}
+        
         for sheet in SHEETS:
             df_base = base_sheets[sheet]
             df_assn = assn_sheets[sheet]
-    
-            # Detect the alternating AM/PM runs in column A
+        
             runs = detect_am_pm_blocks(df_base)
-            # Pair them into weeks (0&1 → week 1, 2&3 → week 2, etc.)
             week_pairs = [(runs[i], runs[i+1]) for i in range(0, len(runs), 2)]
-    
-            base_set = set()
-            assn_set = set()
-    
-            # Extract (week, period, day, name, cell) tuples
+        
+            dropped_all = []
+            added_all   = []
+        
             for week_idx, ((am_lbl, am_start, am_end), (pm_lbl, pm_start, pm_end)) in enumerate(week_pairs, start=1):
-                for period, (lbl, start, end) in [
-                    ('AM', (am_lbl, am_start, am_end)),
-                    ('PM', (pm_lbl, pm_start, pm_end))
-                ]:
+                for period, (lbl, start, end) in [('AM', (am_lbl, am_start, am_end)),
+                                                  ('PM', (pm_lbl, pm_start, pm_end))]:
                     for col_idx, day in enumerate(DAYS, start=1):
+                        # Build dicts name->cell for this slot
+                        base_names = {}
+                        assn_names = {}
+        
                         for row in range(start, end + 1):
                             cell = f"{chr(ord('A') + col_idx)}{row}"
-                            # baseline
-                            val_base = df_base.iat[row - 1, col_idx]
-                            if pd.notna(val_base):
-                                name = str(val_base).split('~', 1)[0].strip()
-                                base_set.add((week_idx, period, day, name, cell))
-                            # assigned
-                            val_assn = df_assn.iat[row - 1, col_idx]
-                            if pd.notna(val_assn):
-                                name = str(val_assn).split('~', 1)[0].strip()
-                                assn_set.add((week_idx, period, day, name, cell))
-    
+        
+                            vb = df_base.iat[row - 1, col_idx]
+                            if pd.notna(vb):
+                                name = str(vb).split('~', 1)[0].strip()
+                                base_names.setdefault(name, cell)  # first occurrence
+        
+                            va = df_assn.iat[row - 1, col_idx]
+                            if pd.notna(va):
+                                name = str(va).split('~', 1)[0].strip()
+                                assn_names.setdefault(name, cell)
+        
+                        # Set compare for this slot
+                        base_set = set(base_names.keys())
+                        assn_set = set(assn_names.keys())
+        
+                        for name in base_set - assn_set:
+                            dropped_all.append((week_idx, period, day, name, base_names[name]))
+        
+                        for name in assn_set - base_set:
+                            added_all.append((week_idx, period, day, name, assn_names[name]))
+        
             results[sheet] = {
-                'dropped': sorted(assn_set - base_set),
-                'added':   sorted(base_set - assn_set)
+                "dropped": sorted(dropped_all),
+                "added":   sorted(added_all)
             }
 
-    
-        # Display results
-        #for sheet, change in results.items():
-        #    st.subheader(sheet)
-        #    if change['dropped']:
-        #        st.markdown("**Dropped**")
-        #        for week, period, day, name, cell in change['dropped']:
-        #            st.write(f"- {name} — at {cell}")
-        #    if change['added']:
-        #        st.markdown("**Added**")
-        #        for week, period, day, name, cell in change['added']:
-        #            st.write(f"- {name} — at {cell}")
-        #    if not change['dropped'] and not change['added']:
-        #        st.success("No changes detected ✅")
+
         
         # Create Word document
         doc = Document()
