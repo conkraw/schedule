@@ -64,7 +64,7 @@ if mode == "OPD Check":
         base_sheets = pd.read_excel(baseline_file, sheet_name=SHEETS, header=None)
         assn_sheets = pd.read_excel(assigned_file, sheet_name=SHEETS, header=None)
     
-         results = {}
+        results = {}
         
         for sheet in SHEETS:
             df_base = base_sheets[sheet]
