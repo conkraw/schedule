@@ -45,11 +45,11 @@ if mode == "OPD Check":
     st.title("OPD Preceptor GI‑al Check")
     
     baseline_file = st.file_uploader(
-        "1) Upload baseline OPD (preceptors only)", 
+        "1) Upload Current OPD (with student assignments)", 
         type=["xlsx"], key="baseline"
     )
     assigned_file = st.file_uploader(
-        "2) Upload assigned OPD (with students)", 
+        "2) Upload Most Up to Date OPD (no student assignments)", 
         type=["xlsx"], key="assigned"
     )
     
