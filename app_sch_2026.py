@@ -1000,7 +1000,7 @@ elif mode == "Format OPD + Summary":
                         for prov in range(1, 3):
                             row = week_base + hd_row_defs['AM']['acute_start'] + (prov - 1)
                             data_mappings.append({
-                                'csv_column':  f'hd_am_acute_d{day_idx}_{prov}',
+                                'csv_column':  f'hd_am_acute_d{day_num}_{prov}',
                                 'excel_sheet': 'HOPE_DRIVE',
                                 'excel_cell':  f'{col}{row}',
                             })
@@ -1008,7 +1008,7 @@ elif mode == "Format OPD + Summary":
                         for prov in range(1, 9):
                             row = week_base + hd_row_defs['AM']['cont_start'] + (prov - 1)
                             data_mappings.append({
-                                'csv_column':  f'hd_am_d{day_idx}_{prov}',
+                                'csv_column':  f'hd_am_d{day_num}_{prov}',
                                 'excel_sheet': 'HOPE_DRIVE',
                                 'excel_cell':  f'{col}{row}',
                             })
@@ -1035,14 +1035,14 @@ elif mode == "Format OPD + Summary":
                         for prov in range(1, 3):
                             row = week_base + hd_row_defs['PM']['acute_start'] + (prov - 1)
                             data_mappings.append({
-                                'csv_column':  f'hd_pm_acute_d{day_idx}_{prov}',
+                                'csv_column':  f'hd_pm_acute_d{day_num}_{prov}',
                                 'excel_sheet': 'HOPE_DRIVE',
                                 'excel_cell':  f'{col}{row}',
                             })
                         for prov in range(1, 9):
                             row = week_base + hd_row_defs['PM']['cont_start'] + (prov - 1)
                             data_mappings.append({
-                                'csv_column':  f'hd_pm_d{day_idx}_{prov}',
+                                'csv_column':  f'hd_pm_d{day_num}_{prov}',
                                 'excel_sheet': 'HOPE_DRIVE',
                                 'excel_cell':  f'{col}{row}',
                             })
