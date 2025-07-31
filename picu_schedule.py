@@ -140,10 +140,7 @@ if mode == "Format OPD + Summary":
             for i, name in enumerate(provs, start=1):
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
-    
-    # append student slots
-    for i, name in enumerate(legal_names, start=1):
-        redcap_row[f"s{i}"] = name
+
     
     # ─── 4. Display & download ────────────────────────────────────────────────────
     out_df = pd.DataFrame([redcap_row])
