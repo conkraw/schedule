@@ -282,9 +282,9 @@ elif mode == "Instructions":
                     doc.add_paragraph(step, style='List Bullet')
         
         add_report(
-            'Report 1 – Department of Pediatrics',
+            'Report 1 – Penn State Health Hershey Medical Center - Academic General Pediatrics',
             [
-                'Click Department of Pediatrics → Schedule → Reports',
+                'Click Penn State Health Hershey Medical Center - Academic General Pediatrics → Schedule → Reports',
                 'Set Report Type to Calendar by Task',
                 'Set Format to Excel',
                 f'Enter Start Date: {s:%m/%d/%Y} and End Date: {e:%m/%d/%Y}',
