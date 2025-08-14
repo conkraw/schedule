@@ -127,9 +127,6 @@ if mode == "Format OPD + Summary":
         
         # schedule providers
         for des, provs in assignments_by_date[date].items():
-            req = min_required.get(des, len(provs))
-            while len(provs) < req and provs:
-                provs.append(provs[0])
             for i, name in enumerate(provs, start=1):
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
