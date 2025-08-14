@@ -58,7 +58,7 @@ if mode == "Format OPD + Summary":
         type=["csv"]
     )
     
-    #record_id = "peds_clerkship"
+    record_id = "peds_clerkship"
     
     if not schedule_files or not student_file or not record_id:
         st.info("Please upload schedule Excel(s) and student CSV to proceed.")
