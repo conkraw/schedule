@@ -179,7 +179,7 @@ if mode == "Format OPD + Summary":
             # Pin first & second attending
             first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
             if first_att:
-                provider_fields[f"d_att_{day_suffix}_1"] = first_att
+                provider_fields[f"d_att{day_suffix}_1"] = first_att
     
             second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
             if second_att:
