@@ -169,38 +169,37 @@ if mode == "Format OPD + Summary":
             # If QGenda doesn't contain that start_date window, you can warn/skip
             # st.warning(f"No schedule dates found for {rid} from {sd} to {sd + timedelta(weeks=4)}")
             continue
+        
+    # Build provider fields for this student's window only
+    provider_fields = {}
+    for day_idx, date in enumerate(dates_for_student, start=0):  # 00, 01, ...
+        day_suffix = f"{day_idx:02}"
+        day_data = assignments_by_date.get(date, {})
     
-        # Build provider fields for this student's window only
-        provider_fields = {}
-        for day_idx, date in enumerate(dates_for_student, start=0):  # 00, 01, ...
-            day_suffix = f"{day_idx:02}"
-            day_data = assignments_by_date.get(date, {})
+        # Pin first & second attending
+        first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
+        if first_att:
+            provider_fields[f"{{d_att{day_suffix}_1}}"] = first_att   # <- braces
     
-            # Pin first & second attending
-            first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
-            if first_att:
-                provider_fields[f"d_att{day_suffix}_1"] = first_att
+        second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
+        if second_att:
+            provider_fields[f"{{d_att{day_suffix}_2}}"] = second_att   # <- braces
     
-            second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
-            if second_att:
-                provider_fields[f"d_att{day_suffix}_2"] = second_att
+        # Everything else (skip pinned keys)
+        for des, provs in day_data.items():
+            if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
+                continue
+            if des == "app/fellow day 6:30a-6:30p":
+                provs = provs[:1]
     
-            # Everything else (skip the pinned attending keys)
-            for des, provs in day_data.items():
-                if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
-                    continue
-                if des == "app/fellow day 6:30a-6:30p":
-                    provs = provs[:1]  # keep only the first, per your rule
+            prefs = base_map.get(des)
+            if not prefs:
+                continue
+            prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) else [p + day_suffix + "_" for p in prefs]
     
-                prefs = base_map.get(des)
-                if not prefs:
-                    continue
-                prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) \
-                           else [p + day_suffix + "_" for p in prefs]
-                for i, name in enumerate(provs, start=1):
-                    for prefix in prefixes:
-                        provider_fields[f"{prefix}{i}"] = name
-    
+            for i, name in enumerate(provs, start=1):
+                for prefix in prefixes:
+                    provider_fields[f"{{{prefix}{i}}}"] = name        # <- braces
         # Build the student row
         row = {
             "record_id": rid,
