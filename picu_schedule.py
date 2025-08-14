@@ -115,6 +115,10 @@ if mode == "Format OPD + Summary":
     # ─── 2. Read student list ─────────────────────────────────────────────────────
     students_df = pd.read_csv(student_file, dtype=str)
     legal_names = students_df["legal_name"].dropna().tolist()
+
+    # Get start_date from CSV (adjust if multiple rows are expected)
+    start_date_value = students_df.loc[0, "start_date"]  # first row
+    redcap_row["start_date"] = start_date_value
     
     # ─── 3. Build the single REDCap row ───────────────────────────────────────────
     redcap_row = {"record_id": record_id}
