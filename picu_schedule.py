@@ -121,9 +121,10 @@ if mode == "Format OPD + Summary":
     sorted_dates = sorted(assignments_by_date.keys())
     
     for idx, date in enumerate(sorted_dates, start=1):
-        redcap_row[f"d{idx}"] = date
-        suffix = f"d{idx}_"
-        
+        d_str = f"d{idx:02}"  # zero-pad to two digits: 00, 01, 02, ...
+        redcap_row[d_str] = date
+        suffix = f"{d_str}_"
+            
         # per-day prefixes
         des_map = {
             des: ([prefs + suffix] if isinstance(prefs, str) else [p + suffix for p in prefs])
