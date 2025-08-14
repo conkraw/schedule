@@ -107,8 +107,9 @@ if mode == "Format OPD + Summary":
                 desc = raw.lower()
                 prov = str(df.iat[r, col0+1]).strip()
                 if desc in grp and prov:
-                    if desc == FIRST_APP_FELLOW_DAY and grp[desc]:
-                        continue  # skip any additional ones
+                    #IF ONLY WANT TO THE FIRST APP/FELLOW THEN UNHASH
+                    #if desc == FIRST_APP_FELLOW_DAY and grp[desc]:
+                    #    continue  # skip any additional ones
                     grp[desc].append(prov)
     
     # ─── 2. Read student list ─────────────────────────────────────────────────────
