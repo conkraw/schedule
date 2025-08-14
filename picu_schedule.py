@@ -85,18 +85,18 @@ if mode == "Format OPD + Summary":
     # ─── Prep: Date regex & Hope Drive maps ────────────────────────────────────────
     date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
     base_map = {
-        "1st picu attending 7:30a-4p":        "d_att_",
-        "1st picu attending 7:30a-2p":        "d_att_",
-        "1st picu attending 7:30a-5p":        "d_att_",
+        "1st picu attending 7:30a-4p":        "d_att",
+        "1st picu attending 7:30a-2p":        "d_att",
+        "1st picu attending 7:30a-5p":        "d_att",
 
-        "2nd picu attending 7:45a-12p":       "d_att_",
+        "2nd picu attending 7:45a-12p":       "d_att",
 
-        "picu attending pm call 2p-8a":       "n_att_",
-        "picu attending pm call 4p-8a":       "n_att_",
-        "picu attending pm call 5p-11:30a":    "n_att_",
+        "picu attending pm call 2p-8a":       "n_att",
+        "picu attending pm call 4p-8a":       "n_att",
+        "picu attending pm call 5p-11:30a":    "n_att",
         
-        "app/fellow day 6:30a-6:30p":         "d_app_",
-        "app/fellow night 5p-7a":             "n_app_"}
+        "app/fellow day 6:30a-6:30p":         "d_app",
+        "app/fellow night 5p-7a":             "n_app"}
 
     
 
@@ -169,37 +169,38 @@ if mode == "Format OPD + Summary":
             # If QGenda doesn't contain that start_date window, you can warn/skip
             # st.warning(f"No schedule dates found for {rid} from {sd} to {sd + timedelta(weeks=4)}")
             continue
-        
-    # Build provider fields for this student's window only
-    provider_fields = {}
-    for day_idx, date in enumerate(dates_for_student, start=0):  # 00, 01, ...
-        day_suffix = f"{day_idx:02}"
-        day_data = assignments_by_date.get(date, {})
     
-        # Pin first & second attending
-        first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
-        if first_att:
-            provider_fields[f"{{d_att{day_suffix}_1}}"] = first_att   # <- braces
+        # Build provider fields for this student's window only
+        provider_fields = {}
+        for day_idx, date in enumerate(dates_for_student, start=0):  # 00, 01, ...
+            day_suffix = f"{day_idx:02}"
+            day_data = assignments_by_date.get(date, {})
     
-        second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
-        if second_att:
-            provider_fields[f"{{d_att{day_suffix}_2}}"] = second_att   # <- braces
+            # Pin first & second attending
+            first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
+            if first_att:
+                provider_fields[f"d_att_{day_suffix}_1"] = first_att
     
-        # Everything else (skip pinned keys)
-        for des, provs in day_data.items():
-            if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
-                continue
-            if des == "app/fellow day 6:30a-6:30p":
-                provs = provs[:1]
+            second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
+            if second_att:
+                provider_fields[f"d_att_{day_suffix}_2"] = second_att
     
-            prefs = base_map.get(des)
-            if not prefs:
-                continue
-            prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) else [p + day_suffix + "_" for p in prefs]
+            # Everything else (skip the pinned attending keys)
+            for des, provs in day_data.items():
+                if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
+                    continue
+                if des == "app/fellow day 6:30a-6:30p":
+                    provs = provs[:1]  # keep only the first, per your rule
     
-            for i, name in enumerate(provs, start=1):
-                for prefix in prefixes:
-                    provider_fields[f"{{{prefix}{i}}}"] = name        # <- braces
+                prefs = base_map.get(des)
+                if not prefs:
+                    continue
+                prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) \
+                           else [p + day_suffix + "_" for p in prefs]
+                for i, name in enumerate(provs, start=1):
+                    for prefix in prefixes:
+                        provider_fields[f"{prefix}{i}"] = name
+    
         # Build the student row
         row = {
             "record_id": rid,
