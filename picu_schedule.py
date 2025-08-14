@@ -70,6 +70,9 @@ if mode == "Format OPD + Summary":
         "1st picu attending 7:30a-4p":        "d_att_",
         "1st picu attending 7:30a-2p":        "d_att_",
         "1st picu attending 7:30a-5p":        "d_att_",
+
+        "2nd picu attending 7:45a-12p ":      "d_att_",
+        
         "picu attending pm call 4p-8a":       "n_att_",
         "picu attending pm call 5p-1130a":    "n_att_",
         "app/fellow day 6:30a-6:30p":         "d_app_",
