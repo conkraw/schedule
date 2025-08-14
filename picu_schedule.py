@@ -196,7 +196,7 @@ if mode == "Format OPD + Summary":
                 if not prefs:
                     continue
                 prefixes = [prefs + day_suffix + ""] if isinstance(prefs, str) \
-                           else [p + day_suffix + "" for p in prefs]
+                           else [p + day_suffix + "_" for p in prefs]
                 for i, name in enumerate(provs, start=1):
                     for prefix in prefixes:
                         provider_fields[f"{prefix}{i}"] = name
