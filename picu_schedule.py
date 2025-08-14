@@ -93,11 +93,12 @@ if mode == "Format OPD + Summary":
 
         "picu attending pm call 2p-8a":       "n_att",
         "picu attending pm call 4p-8a":       "n_att",
-        "picu attending pm call 5p-11:30a":    "n_att",
-        "picu attending pm call 5p-8a":    "n_att",
+        "picu attending pm call 5p-11:30a":   "n_att",
+        "picu attending pm call 5p-8a":       "n_att",
         
         "app/fellow day 6:30a-6:30p":         "d_app",
-        "app/fellow night 5p-7a":             "n_app"}
+        "app/fellow night 5p-7a":             "n_app",
+        "on-call 6:30a-6:30a":                "n_app",}
 
     
 
@@ -195,6 +196,9 @@ if mode == "Format OPD + Summary":
                     continue
                 if des == "app/fellow day 6:30a-6:30p":
                     provs = provs[:2]  # cap at two
+
+                if des == "on-call 6:30a-6:30a":
+                    provs = provs[:1]  # cap at one
     
                 prefs = base_map.get(des)
                 if not prefs:
