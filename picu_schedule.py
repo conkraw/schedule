@@ -172,7 +172,7 @@ if mode == "Format OPD + Summary":
     
         # Build provider fields for this student's window only
         provider_fields = {}
-        for day_idx, date in enumerate(dates_for_student, start=0):  # 00, 01, ...
+        for day_idx, date in enumerate(dates_for_student, start=1):  # 00, 01, ...
             day_suffix = f"{day_idx:02}"
             day_data = assignments_by_date.get(date, {})
     
