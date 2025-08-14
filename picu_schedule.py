@@ -125,8 +125,8 @@ if mode == "Format OPD + Summary":
     redcap_row["start_date"] = start_date_value
     
     for idx, date in enumerate(sorted_dates, start=1):
-        d_str = f"d{idx:02}"  # zero-pad to two digits: 00, 01, 02, ...
-        redcap_row[d_str] = date
+        #d_str = f"d{idx:02}"  # zero-pad to two digits: 00, 01, 02, ...
+        #redcap_row[d_str] = date
         suffix = f"{d_str}_"
             
         # per-day prefixes
