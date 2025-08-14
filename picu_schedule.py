@@ -124,20 +124,29 @@ if mode == "Format OPD + Summary":
     start_date_value = students_df.loc[0, "start_date"]  # first row
     redcap_row["start_date"] = start_date_value
     
-    for idx, date in enumerate(sorted_dates, start=0):  # start=0 for d00
-        day_suffix = f"{idx:02}"  # 00, 01, 02...
-        
-        # per-day prefixes (e.g., "d_att" -> "d_att00")
+    # ─── 3. Build the single REDCap row ───────────────────────────────────────────
+    redcap_row = {"record_id": record_id}
+    sorted_dates = sorted(assignments_by_date.keys())
+    
+    # Get start_date from CSV
+    start_date_value = students_df.loc[0, "start_date"]  # first row
+    redcap_row["start_date"] = start_date_value
+    
+    for idx, date in enumerate(sorted_dates, start=0):  # start at 0 for 00
+        day_suffix = f"{idx:02}"  # zero-padded day index, e.g., "00", "01"
+    
+        # Build a per-day prefix map: "d_att_" -> "d_att00_"
         des_map = {
-            des: ([prefs + day_suffix] if isinstance(prefs, str) else [p + day_suffix for p in prefs])
+            des: ([prefs + day_suffix + "_" ] if isinstance(prefs, str) else [p + day_suffix + "_" for p in prefs])
             for des, prefs in base_map.items()
         }
         
-        # schedule providers
+        # Fill provider columns
         for des, provs in assignments_by_date[date].items():
             for i, name in enumerate(provs, start=1):
                 for prefix in des_map[des]:
-                    redcap_row[f"{prefix}{i}"] = name
+                    col_name = f"{prefix}{i}"  # e.g., d_att00_1
+                    redcap_row[col_name] = name
 
     
     # ─── 4. Display & download ────────────────────────────────────────────────────
