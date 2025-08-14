@@ -165,6 +165,9 @@ if mode == "Format OPD + Summary":
     
         # Dates to include for this student: [start_date, start_date + 4 weeks)
         dates_for_student = window_dates(all_dates, sd)
+        
+        dates_for_student = dates_for_student[:27]
+        
         if not dates_for_student:
             # If QGenda doesn't contain that start_date window, you can warn/skip
             # st.warning(f"No schedule dates found for {rid} from {sd} to {sd + timedelta(weeks=4)}")
