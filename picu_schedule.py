@@ -58,7 +58,7 @@ if mode == "Format OPD + Summary":
         type=["csv"]
     )
     
-    record_id = "peds_clerkship"
+    #record_id = "peds_clerkship"
     
     if not schedule_files or not student_file or not record_id:
         st.info("Please upload schedule Excel(s) and student CSV to proceed.")
@@ -126,69 +126,70 @@ if mode == "Format OPD + Summary":
     students_df = pd.read_csv(student_file, dtype=str)
     legal_names = students_df["legal_name"].dropna().tolist()
     
-    # ─── 3. Build the single REDCap row ───────────────────────────────────────────
-    redcap_row = {"record_id": record_id}
-    sorted_dates = sorted(assignments_by_date.keys())
-
-    # Get start_date from CSV (adjust if multiple rows are expected)
-    start_date_value = students_df.loc[0, "start_date"]  # first row
-    redcap_row["start_date"] = start_date_value
-    
-    # ─── 3. Build the single REDCap row ───────────────────────────────────────────
-    redcap_row = {"record_id": record_id}
+    # ─── 3. Build REDCap rows (one per student, record_id from CSV) ────────────────
     sorted_dates = sorted(assignments_by_date.keys())
     
-    # Get start_date from CSV
-    start_date_value = students_df.loc[0, "start_date"]  # first row
-    redcap_row["start_date"] = start_date_value
-    
+    # Precompute provider fields once (same schedule for all students)
+    provider_fields = {}
     for idx, date in enumerate(sorted_dates, start=0):  # d00, d01, ...
         day_suffix = f"{idx:02}"  # "00", "01", ...
         day_data = assignments_by_date[date]
     
-        # --- Hard-map attendings to fixed slots ---
-        # First attending -> d_att{day}_1 (take the first non-empty among variants)
+        # First & second attending pinned to fixed slots
         first_att = next(
             (day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]),
             None
         )
         if first_att:
-            redcap_row[f"d_att{day_suffix}_1"] = first_att
+            provider_fields[f"d_att{day_suffix}_1"] = first_att
     
-        # Second attending -> d_att{day}_2
         second_att = next(
             (day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]),
             None
         )
         if second_att:
-            redcap_row[f"d_att{day_suffix}_2"] = second_att
+            provider_fields[f"d_att{day_suffix}_2"] = second_att
     
-        # --- Fill the rest using your base_map, but skip the attending keys we just set ---
+        # Everything else (skip keys already handled above)
         for des, provs in day_data.items():
             if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
-                continue  # already handled
+                continue
     
-            # If you only want the FIRST app/fellow day entry per date, keep just one:
+            # Keep only the first app/fellow day, if desired
             if des == "app/fellow day 6:30a-6:30p":
                 provs = provs[:1]
     
-            # Build per-day prefixes like "d_app00_" / "n_att00_"
             prefs = base_map.get(des)
             if not prefs:
                 continue
-            if isinstance(prefs, str):
-                prefixes = [prefs + day_suffix + "_"]
-            else:
-                prefixes = [p + day_suffix + "_" for p in prefs]
+            prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) else [p + day_suffix + "_" for p in prefs]
     
             for i, name in enumerate(provs, start=1):
                 for prefix in prefixes:
-                    col_name = f"{prefix}{i}"  # e.g., d_app00_1, n_att01_1
-                    redcap_row[col_name] = name
-
+                    provider_fields[f"{prefix}{i}"] = name
+    
+    # Validate the student CSV has record_id
+    if "record_id" not in students_df.columns:
+        st.error("The student CSV must include a 'record_id' column.")
+        st.stop()
+    
+    # Build one row per student
+    rows = []
+    for _, srow in students_df.iterrows():
+        rid = str(srow["record_id"]).strip()
+        start_date_value = str(srow.get("start_date", "")).strip()
+        if not rid:
+            continue  # or raise/warn
+    
+        row = {
+            "record_id": rid,
+            "start_date": start_date_value,
+        }
+        row.update(provider_fields)  # add all schedule/provider columns
+        rows.append(row)
     
     # ─── 4. Display & download ────────────────────────────────────────────────────
-    out_df = pd.DataFrame([redcap_row])
+    out_df = pd.DataFrame(rows)
     csv_full = out_df.to_csv(index=False).encode("utf-8")
     
     st.subheader("✅ Full REDCap Import Preview")
