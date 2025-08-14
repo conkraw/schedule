@@ -190,7 +190,7 @@ if mode == "Format OPD + Summary":
                 if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
                     continue
                 if des == "app/fellow day 6:30a-6:30p":
-                    provs = provs[:1]  # keep only the first, per your rule
+                    provs = provs[:2]  # cap at two
     
                 prefs = base_map.get(des)
                 if not prefs:
