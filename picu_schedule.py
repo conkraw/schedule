@@ -79,6 +79,9 @@ if mode == "Format OPD + Summary":
         "app/fellow night 5p-7a":             "n_app_"}
 
     FIRST_APP_FELLOW_DAY = "app/fellow day 6:30a-6:30p"  # <-- add
+
+    FIRST_ATT_KEYS = {"1st picu attending 7:30a-4p", "1st picu attending 7:30a-2p", "1st picu attending 7:30a-5p"}
+    SECOND_ATT_KEYS = {"2nd picu attending 7:45a-12p"}
     
     # ─── 1. Aggregate schedule assignments by date ────────────────────────────────
     assignments_by_date = {}
@@ -135,20 +138,48 @@ if mode == "Format OPD + Summary":
     start_date_value = students_df.loc[0, "start_date"]  # first row
     redcap_row["start_date"] = start_date_value
     
-    for idx, date in enumerate(sorted_dates, start=0):  # start at 0 for 00
-        day_suffix = f"{idx:02}"  # zero-padded day index, e.g., "00", "01"
+    for idx, date in enumerate(sorted_dates, start=0):  # d00, d01, ...
+        day_suffix = f"{idx:02}"  # "00", "01", ...
+        day_data = assignments_by_date[date]
     
-        # Build a per-day prefix map: "d_att_" -> "d_att00_"
-        des_map = {
-            des: ([prefs + day_suffix + "_" ] if isinstance(prefs, str) else [p + day_suffix + "_" for p in prefs])
-            for des, prefs in base_map.items()
-        }
-        
-        # Fill provider columns
-        for des, provs in assignments_by_date[date].items():
+        # --- Hard-map attendings to fixed slots ---
+        # First attending -> d_att{day}_1 (take the first non-empty among variants)
+        first_att = next(
+            (day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]),
+            None
+        )
+        if first_att:
+            redcap_row[f"d_att{day_suffix}_1"] = first_att
+    
+        # Second attending -> d_att{day}_2
+        second_att = next(
+            (day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]),
+            None
+        )
+        if second_att:
+            redcap_row[f"d_att{day_suffix}_2"] = second_att
+    
+        # --- Fill the rest using your base_map, but skip the attending keys we just set ---
+        for des, provs in day_data.items():
+            if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
+                continue  # already handled
+    
+            # If you only want the FIRST app/fellow day entry per date, keep just one:
+            if des == "app/fellow day 6:30a-6:30p":
+                provs = provs[:1]
+    
+            # Build per-day prefixes like "d_app00_" / "n_att00_"
+            prefs = base_map.get(des)
+            if not prefs:
+                continue
+            if isinstance(prefs, str):
+                prefixes = [prefs + day_suffix + "_"]
+            else:
+                prefixes = [p + day_suffix + "_" for p in prefs]
+    
             for i, name in enumerate(provs, start=1):
-                for prefix in des_map[des]:
-                    col_name = f"{prefix}{i}"  # e.g., d_att00_1
+                for prefix in prefixes:
+                    col_name = f"{prefix}{i}"  # e.g., d_app00_1, n_att01_1
                     redcap_row[col_name] = name
 
     
