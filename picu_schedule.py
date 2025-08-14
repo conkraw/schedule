@@ -67,13 +67,15 @@ if mode == "Format OPD + Summary":
     # ─── Prep: Date regex & Hope Drive maps ────────────────────────────────────────
     date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
     base_map = {
-        "1st picu attending 7:30a-4p":    "d_att_",
-        "1st picu attending 7:30a-2p":    "d_att_",
-        "1st picu attending 7:30a-5p":    "d_att_",
-        "picu attending pm call 4p-8a":    "n_att_",
+        "1st picu attending 7:30a-4p":        "d_att_",
+        "1st picu attending 7:30a-2p":        "d_att_",
+        "1st picu attending 7:30a-5p":        "d_att_",
+        "picu attending pm call 4p-8a":       "n_att_",
         "picu attending pm call 5p-1130a":    "n_att_",
-        "app/fellow day 6:30a-6:30p": "d_app_",
-        "app/fellow night 5p-7a": "n_app_"}
+        "app/fellow day 6:30a-6:30p":         "d_app_",
+        "app/fellow night 5p-7a":             "n_app_"}
+
+    FIRST_APP_FELLOW_DAY = "app/fellow day 6:30a-6:30p"  # <-- add
     
     # ─── 1. Aggregate schedule assignments by date ────────────────────────────────
     assignments_by_date = {}
@@ -105,6 +107,8 @@ if mode == "Format OPD + Summary":
                 desc = raw.lower()
                 prov = str(df.iat[r, col0+1]).strip()
                 if desc in grp and prov:
+                    if desc == FIRST_APP_FELLOW_DAY and grp[desc]:
+                        continue  # skip any additional ones
                     grp[desc].append(prov)
     
     # ─── 2. Read student list ─────────────────────────────────────────────────────
