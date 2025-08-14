@@ -124,14 +124,12 @@ if mode == "Format OPD + Summary":
     start_date_value = students_df.loc[0, "start_date"]  # first row
     redcap_row["start_date"] = start_date_value
     
-    for idx, date in enumerate(sorted_dates, start=1):
-        d_str = f"{idx:02}"  # zero-pad to two digits: 00, 01, 02, ...
-        #redcap_row[d_str] = date
-        suffix = f"{d_str}_"
-            
-        # per-day prefixes
+    for idx, date in enumerate(sorted_dates, start=0):  # start=0 for d00
+        day_suffix = f"{idx:02}"  # 00, 01, 02...
+        
+        # per-day prefixes (e.g., "d_att" -> "d_att00")
         des_map = {
-            des: ([prefs + suffix] if isinstance(prefs, str) else [p + suffix for p in prefs])
+            des: ([prefs + day_suffix] if isinstance(prefs, str) else [p + day_suffix for p in prefs])
             for des, prefs in base_map.items()
         }
         
