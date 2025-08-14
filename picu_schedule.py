@@ -121,7 +121,7 @@ if mode == "Format OPD + Summary":
     sorted_dates = sorted(assignments_by_date.keys())
     
     for idx, date in enumerate(sorted_dates, start=1):
-        redcap_row[f"hd_day_date{idx}"] = date
+        redcap_row[f"d{idx}"] = date
         suffix = f"d{idx}_"
         
         # per-day prefixes
