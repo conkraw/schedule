@@ -25,7 +25,7 @@ mode = st.sidebar.radio("What do you want to do?", ("Format OPD + Summary",))
 
 if mode == "Format OPD + Summary":
     # ─── Inputs ────────────────────────────────────────────────────────────────────
-    required_keywords = ["academic general pediatrics"]
+    required_keywords = ["department of pediatrics"]
     found_keywords = set()
     
     schedule_files = st.file_uploader(
@@ -67,20 +67,13 @@ if mode == "Format OPD + Summary":
     # ─── Prep: Date regex & Hope Drive maps ────────────────────────────────────────
     date_pat = re.compile(r'^[A-Za-z]+ \d{1,2}, \d{4}$')
     base_map = {
-        "hope drive am continuity":    "hd_am_",
-        "hope drive pm continuity":    "hd_pm_",
-        "hope drive am acute precept": "hd_am_acute_",
-        "hope drive pm acute precept": "hd_pm_acute_",
-        "hope drive weekend acute 1":   "hd_wknd_acute_1_",
-        "hope drive weekend acute 2":   "hd_wknd_acute_2_",
-        "hope drive weekend continuity":"hd_wknd_am_",
-        "hope drive clinic am":         "complex_am_",
-        "hope drive clinic pm":         "complex_pm_",
-    }
-    min_required = {
-        "hope drive am acute precept": 2,
-        "hope drive pm acute precept": 2,
-    }
+        "1st picu attending 7:30a-4p":    "d_att_",
+        "1st picu attending 7:30a-2p":    "d_att_",
+        "1st picu attending 7:30a-5p":    "d_att_",
+        "picu attending pm call 4p-8a":    "n_att_",
+        "picu attending pm call 5p-1130a":    "n_att_",
+        "app/fellow day 6:30a-6:30p": "d_app_",
+        "app/fellow night 5p-7a ": "n_app_"}
     
     # ─── 1. Aggregate schedule assignments by date ────────────────────────────────
     assignments_by_date = {}
