@@ -16,6 +16,24 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from collections import Counter
 
+def to_date_or_none(x):
+    try:
+        return pd.to_datetime(x).date()
+    except Exception:
+        return None
+
+def window_dates(all_dates, start_date):
+    """Return sorted dates in [start_date, start_date + 4 weeks)."""
+    if not isinstance(start_date, datetime) and not isinstance(start_date, pd.Timestamp):
+        # allow date or string
+        sd = to_date_or_none(start_date)
+    else:
+        sd = start_date.date()
+    if sd is None:
+        return []
+    end = sd + timedelta(weeks=4)
+    return [d for d in sorted(all_dates) if sd <= d < end]
+
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
 
@@ -126,66 +144,69 @@ if mode == "Format OPD + Summary":
     students_df = pd.read_csv(student_file, dtype=str)
     legal_names = students_df["legal_name"].dropna().tolist()
     
-    # ─── 3. Build REDCap rows (one per student, record_id from CSV) ────────────────
-    sorted_dates = sorted(assignments_by_date.keys())
+    # ─── 3. Build REDCap rows (one per student, with per-student 4-week window) ───
+    all_dates = sorted(assignments_by_date.keys())
     
-    # Precompute provider fields once (same schedule for all students)
-    provider_fields = {}
-    for idx, date in enumerate(sorted_dates, start=0):  # d00, d01, ...
-        day_suffix = f"{idx:02}"  # "00", "01", ...
-        day_data = assignments_by_date[date]
-    
-        # First & second attending pinned to fixed slots
-        first_att = next(
-            (day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]),
-            None
-        )
-        if first_att:
-            provider_fields[f"d_att{day_suffix}_1"] = first_att
-    
-        second_att = next(
-            (day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]),
-            None
-        )
-        if second_att:
-            provider_fields[f"d_att{day_suffix}_2"] = second_att
-    
-        # Everything else (skip keys already handled above)
-        for des, provs in day_data.items():
-            if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
-                continue
-    
-            # Keep only the first app/fellow day, if desired
-            if des == "app/fellow day 6:30a-6:30p":
-                provs = provs[:1]
-    
-            prefs = base_map.get(des)
-            if not prefs:
-                continue
-            prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) else [p + day_suffix + "_" for p in prefs]
-    
-            for i, name in enumerate(provs, start=1):
-                for prefix in prefixes:
-                    provider_fields[f"{prefix}{i}"] = name
-    
-    # Validate the student CSV has record_id
     if "record_id" not in students_df.columns:
         st.error("The student CSV must include a 'record_id' column.")
         st.stop()
+    if "start_date" not in students_df.columns:
+        st.error("The student CSV must include a 'start_date' column.")
+        st.stop()
     
-    # Build one row per student
     rows = []
     for _, srow in students_df.iterrows():
         rid = str(srow["record_id"]).strip()
-        start_date_value = str(srow.get("start_date", "")).strip()
-        if not rid:
-            continue  # or raise/warn
+        sd_raw = str(srow["start_date"]).strip()
+        sd = to_date_or_none(sd_raw)
+        if not rid or sd is None:
+            # Skip or warn if missing/invalid
+            continue
     
+        # Dates to include for this student: [start_date, start_date + 4 weeks)
+        dates_for_student = window_dates(all_dates, sd)
+        if not dates_for_student:
+            # If QGenda doesn't contain that start_date window, you can warn/skip
+            # st.warning(f"No schedule dates found for {rid} from {sd} to {sd + timedelta(weeks=4)}")
+            continue
+    
+        # Build provider fields for this student's window only
+        provider_fields = {}
+        for day_idx, date in enumerate(dates_for_student, start=0):  # 00, 01, ...
+            day_suffix = f"{day_idx:02}"
+            day_data = assignments_by_date.get(date, {})
+    
+            # Pin first & second attending
+            first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
+            if first_att:
+                provider_fields[f"d_att{day_suffix}_1"] = first_att
+    
+            second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
+            if second_att:
+                provider_fields[f"d_att{day_suffix}_2"] = second_att
+    
+            # Everything else (skip the pinned attending keys)
+            for des, provs in day_data.items():
+                if des in FIRST_ATT_KEYS or des in SECOND_ATT_KEYS:
+                    continue
+                if des == "app/fellow day 6:30a-6:30p":
+                    provs = provs[:1]  # keep only the first, per your rule
+    
+                prefs = base_map.get(des)
+                if not prefs:
+                    continue
+                prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) \
+                           else [p + day_suffix + "_" for p in prefs]
+                for i, name in enumerate(provs, start=1):
+                    for prefix in prefixes:
+                        provider_fields[f"{prefix}{i}"] = name
+    
+        # Build the student row
         row = {
             "record_id": rid,
-            "start_date": start_date_value,
+            "start_date": sd_raw,  # keep the original string as provided
         }
-        row.update(provider_fields)  # add all schedule/provider columns
+        row.update(provider_fields)
         rows.append(row)
     
     # ─── 4. Display & download ────────────────────────────────────────────────────
