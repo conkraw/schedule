@@ -183,7 +183,7 @@ if mode == "Format OPD + Summary":
     
             second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
             if second_att:
-                provider_fields[f"d_att{day_suffix}_2"] = second_att
+                provider_fields[f"d_att_{day_suffix}_2"] = second_att
     
             # Everything else (skip the pinned attending keys)
             for des, provs in day_data.items():
@@ -195,7 +195,7 @@ if mode == "Format OPD + Summary":
                 prefs = base_map.get(des)
                 if not prefs:
                     continue
-                prefixes = [prefs + day_suffix + ""] if isinstance(prefs, str) \
+                prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) \
                            else [p + day_suffix + "_" for p in prefs]
                 for i, name in enumerate(provs, start=1):
                     for prefix in prefixes:
