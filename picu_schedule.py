@@ -94,6 +94,7 @@ if mode == "Format OPD + Summary":
         "picu attending pm call 2p-8a":       "n_att",
         "picu attending pm call 4p-8a":       "n_att",
         "picu attending pm call 5p-11:30a":    "n_att",
+        "picu attending pm call 5p-8a":    "n_att",
         
         "app/fellow day 6:30a-6:30p":         "d_app",
         "app/fellow night 5p-7a":             "n_app"}
