@@ -204,7 +204,7 @@ if mode == "Format OPD + Summary":
         # Build the student row
         row = {
             "record_id": rid,
-            "start_date": sd_raw,  # keep the original string as provided
+            "start_date": sd.strftime("%Y-%m-%d"),  # keep the original string as provided
         }
         row.update(provider_fields)
         rows.append(row)
