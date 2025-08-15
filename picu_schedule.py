@@ -321,27 +321,6 @@ elif mode == "Roster_HMC":
     renamed_cols_c = ["productivity_specialty","grade","status","student_level","weeks","credits","enrolled","actions","approved_by"]
 
     renamed_cols = renamed_cols_a + renamed_cols_b + renamed_cols_c
-    
-    # 0) ensure start_date is a true datetime
-    df_roster["start_date"] = pd.to_datetime(df_roster["start_date"], errors='coerce')
-    
-    # 1) grab each unique date, sorted oldest → newest
-    unique_dates = sorted(df_roster["start_date"].dropna().unique())
-    
-    # 2) for each one, make a new column rot_date_#
-    for idx, dt in enumerate(unique_dates, 1):
-        df_roster[f"rot_date_{idx}"] = df_roster["start_date"].apply(lambda x: dt.strftime("%m-%d-%Y") if pd.notna(x) and x == dt else "")
-
-    # 3) build a mapping from date → rotation code
-    rotation_map = {dt: f"r{idx:02}" for idx, dt in enumerate(unique_dates, 1)}
-    
-    # 4) assign each student’s rotation1 based on their start_date
-    df_roster["rotation1"] = df_roster["start_date"].map(rotation_map)
-
-    df_roster["rotation"] = df_roster["start_date"].map(rotation_map)
-
-    # 3) now drop your old columns
-    df_roster.drop(columns=renamed_cols, errors="ignore", inplace=True)
 
     #DUE DATES
     
