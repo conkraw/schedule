@@ -322,6 +322,8 @@ elif mode == "Roster_HMC":
 
     renamed_cols = renamed_cols_a + renamed_cols_b + renamed_cols_c
 
+    df_roster.drop(columns=renamed_cols, errors="ignore", inplace=True)
+
     #DUE DATES
     
     # ─── 1) Ensure start_date and end_date are datetime ─────────────────────────
