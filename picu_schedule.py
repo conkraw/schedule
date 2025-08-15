@@ -358,8 +358,8 @@ elif mode == "Roster_HMC":
     for col in due_cols:
         df_roster[col] = (df_roster[col].dt.normalize() + pd.Timedelta(hours=23, minutes=59)).dt.strftime("%m-%d-%Y 23:59")
 
-    df_roster["start_date"] = df_roster["start_date"].dt.strftime("%m-%d-%Y")
-    df_roster["end_date"] = df_roster["end_date"].dt.strftime("%m-%d-%Y")
+    df_roster["start_date"] = df_roster["start_date"].dt.strftime('%Y-%m-%d')  
+    df_roster["end_date"] = df_roster["end_date"].dt.strftime('%Y-%m-%d')
 
     
     df_roster["student_demographics_complete"] = 2 
