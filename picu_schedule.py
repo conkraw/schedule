@@ -372,14 +372,6 @@ elif mode == "Roster_HMC":
 elif mode == "Oasis_Eval_Redcap_Creator":
     oasis_files = st.file_uploader("Upload Oasis Evaluation Sample",type=["csv"],accept_multiple_files=False)
 
-
-# choose which instrument you want to format
-instrument = st.sidebar.selectbox(
-    "Select instrument", 
-    ["OASIS Evaluation", "Checklist Entry", "Email Record Mapper", "NBME Scores", "Preceptor Matching", "Roster_HMC", "Roster_KP", "SDOH Form", "Developmental Assessment Form", 
-     "Weekly Quiz Reports", "Documentation Submission #1", "Documentation Submission #2", "Practical Exam Codes #1", "Practical Exam Codes #2"]
-)
-
 elif mode == "OASIS Evaluation":
     st.header("📋 OASIS Evaluation Formatter")
     st.markdown("[Open OASIS Clinical Assessment of Student Setup](https://oasis.pennstatehealth.net/admin/course/e_manage/student_performance/setup_analysis_report.html)")
