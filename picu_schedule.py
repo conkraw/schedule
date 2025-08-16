@@ -407,7 +407,7 @@ elif mode == "OASIS Evaluation":
         "question_number","question_id","question","answer_text",
         "multiple_choice_order","multiple_choice_value","multiple_choice_label"
     ]
-    questions = [f"q{i}_{s}" for i in range(1,24) for s in q_sufs]
+    questions = [f"q{i}_{s}" for i in range(1,20) for s in q_sufs]
     tail = ["oasis_eval_complete"]
     master_cols = front + questions + tail
 
