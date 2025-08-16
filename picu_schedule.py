@@ -38,7 +38,7 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?", ("Roster_HMC","Format OPD + Summary"))
+mode = st.sidebar.radio("What do you want to do?", ("Roster_HMC","Format OPD + Summary","Oasis_Eval_Redcap_Creator"))
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
@@ -368,4 +368,10 @@ elif mode == "Roster_HMC":
     st.dataframe(df_roster, height=400)
     
     st.download_button("📥 Download formatted Roster CSV",df_roster.to_csv(index=False).encode("utf-8"),file_name="roster_formatted.csv",mime="text/csv")
+
+elif mode == "Oasis_Eval_Redcap_Creator":
+    oasis_files = st.file_uploader("Upload Oasis Evaluation Sample",type=["csv"],accept_multiple_files=False)
+    
+    
+
 
