@@ -20,7 +20,7 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule","OPD Check"))
+mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule","OPD Check","Create Individual Schedules"))
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
 if mode == "OPD Check":
@@ -1626,3 +1626,5 @@ elif mode == "Create Student Schedule":
     else:
         st.info("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
 
+elif mode == "Create Individual Schedules":
+    st.subheader("Individual Schedule Creator")
