@@ -1635,74 +1635,6 @@ elif mode == "Create Student Schedule":
     else:
         st.info("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
 
-def copy_sheet_to_new_wb(src_ws):
-    """Return a BytesIO of a new .xlsx containing src_ws with formatting."""
-    wb_new = Workbook()
-    ws_new = wb_new.active
-    ws_new.title = src_ws.title[:31]
-
-    # Copy dimensions (column widths, row heights)
-    for col_letter, dim in src_ws.column_dimensions.items():
-        ws_new.column_dimensions[col_letter].width = dim.width
-        ws_new.column_dimensions[col_letter].hidden = dim.hidden
-
-    for idx, dim in src_ws.row_dimensions.items():
-        ws_new.row_dimensions[idx].height = dim.height
-        ws_new.row_dimensions[idx].hidden = dim.hidden
-
-    # Copy sheet-level settings (simple/common ones)
-    ws_new.sheet_format.defaultColWidth = src_ws.sheet_format.defaultColWidth
-    ws_new.sheet_format.defaultRowHeight = src_ws.sheet_format.defaultRowHeight
-    ws_new.freeze_panes = src_ws.freeze_panes
-    try:
-        ws_new.page_setup.orientation = src_ws.page_setup.orientation
-        ws_new.page_setup.fitToWidth = src_ws.page_setup.fitToWidth
-        ws_new.page_setup.fitToHeight = src_ws.page_setup.fitToHeight
-        ws_new.page_margins = src_ws.page_margins
-        ws_new.print_options.horizontalCentered = src_ws.print_options.horizontalCentered
-        ws_new.print_options.verticalCentered = src_ws.print_options.verticalCentered
-        ws_new.print_area = src_ws.print_area
-    except Exception:
-        pass  # some props may be missing
-
-    # Copy cells (values, formulas, styles, number formats, etc.)
-    for row in src_ws.iter_rows():
-        for cell in row:
-            tgt = ws_new.cell(row=cell.row, column=cell.col_idx)
-            tgt.value = cell.value
-            # Copy style (these are immutable, so assign directly)
-            tgt.font = cell.font
-            tgt.fill = cell.fill
-            tgt.border = cell.border
-            tgt.alignment = cell.alignment
-            tgt.number_format = cell.number_format
-            tgt.protection = cell.protection
-
-        # Also replicate column outlines/levels (optional)
-        # ws_new.row_dimensions[row[0].row].outlineLevel = src_ws.row_dimensions[row[0].row].outlineLevel
-
-    # Copy merged cells
-    for merged in src_ws.merged_cells.ranges:
-        ws_new.merge_cells(str(merged))
-
-    # Copy data validations (common in templates)
-    try:
-        if src_ws.data_validations and src_ws.data_validations.dataValidation:
-            from copy import copy
-            for dv in src_ws.data_validations.dataValidation:
-                ws_new.add_data_validation(copy(dv))
-    except Exception:
-        pass
-
-    # Copy filters
-    ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
-
-    # Done → save to buffer
-    buf = BytesIO()
-    wb_new.save(buf)
-    buf.seek(0)
-    return buf
-
 elif mode == "Create Individual Schedules":
     st.subheader("Individual Schedule Creator")
 
@@ -1711,6 +1643,75 @@ elif mode == "Create Individual Schedules":
         type=["xlsx"]
     )
 
+    def copy_sheet_to_new_wb(src_ws):
+        """Return a BytesIO of a new .xlsx containing src_ws with formatting."""
+        wb_new = Workbook()
+        ws_new = wb_new.active
+        ws_new.title = src_ws.title[:31]
+    
+        # Copy dimensions (column widths, row heights)
+        for col_letter, dim in src_ws.column_dimensions.items():
+            ws_new.column_dimensions[col_letter].width = dim.width
+            ws_new.column_dimensions[col_letter].hidden = dim.hidden
+    
+        for idx, dim in src_ws.row_dimensions.items():
+            ws_new.row_dimensions[idx].height = dim.height
+            ws_new.row_dimensions[idx].hidden = dim.hidden
+    
+        # Copy sheet-level settings (simple/common ones)
+        ws_new.sheet_format.defaultColWidth = src_ws.sheet_format.defaultColWidth
+        ws_new.sheet_format.defaultRowHeight = src_ws.sheet_format.defaultRowHeight
+        ws_new.freeze_panes = src_ws.freeze_panes
+        try:
+            ws_new.page_setup.orientation = src_ws.page_setup.orientation
+            ws_new.page_setup.fitToWidth = src_ws.page_setup.fitToWidth
+            ws_new.page_setup.fitToHeight = src_ws.page_setup.fitToHeight
+            ws_new.page_margins = src_ws.page_margins
+            ws_new.print_options.horizontalCentered = src_ws.print_options.horizontalCentered
+            ws_new.print_options.verticalCentered = src_ws.print_options.verticalCentered
+            ws_new.print_area = src_ws.print_area
+        except Exception:
+            pass  # some props may be missing
+    
+        # Copy cells (values, formulas, styles, number formats, etc.)
+        for row in src_ws.iter_rows():
+            for cell in row:
+                tgt = ws_new.cell(row=cell.row, column=cell.col_idx)
+                tgt.value = cell.value
+                # Copy style (these are immutable, so assign directly)
+                tgt.font = cell.font
+                tgt.fill = cell.fill
+                tgt.border = cell.border
+                tgt.alignment = cell.alignment
+                tgt.number_format = cell.number_format
+                tgt.protection = cell.protection
+    
+            # Also replicate column outlines/levels (optional)
+            # ws_new.row_dimensions[row[0].row].outlineLevel = src_ws.row_dimensions[row[0].row].outlineLevel
+    
+        # Copy merged cells
+        for merged in src_ws.merged_cells.ranges:
+            ws_new.merge_cells(str(merged))
+    
+        # Copy data validations (common in templates)
+        try:
+            if src_ws.data_validations and src_ws.data_validations.dataValidation:
+                from copy import copy
+                for dv in src_ws.data_validations.dataValidation:
+                    ws_new.add_data_validation(copy(dv))
+        except Exception:
+            pass
+    
+        # Copy filters
+        ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
+    
+        # Done → save to buffer
+        buf = BytesIO()
+        wb_new.save(buf)
+        buf.seek(0)
+        return buf
+    
+        
     if uploaded is not None:
         # Keep formulas/formatting -> data_only=False
         wb = load_workbook(uploaded, data_only=False)
