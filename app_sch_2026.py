@@ -1681,6 +1681,19 @@ elif mode == "Create Individual Schedules":
             ws_new.print_area = src_ws.print_area
         except Exception:
             pass
+
+        try:
+            # Set zoom to 70%
+            ws_new.sheet_view.zoomScale = 70
+    
+            # Set column widths
+            ws_new.column_dimensions["A"].width = 20
+            ws_new.column_dimensions["B"].width = 30
+            for col in ["C", "D", "E", "F", "G"]:
+                ws_new.column_dimensions[col].width = 40
+            ws_new.column_dimensions["H"].width = 155
+        except Exception:
+            pass
     
         # Copy cells: values + (copied) styles
         for row in src_ws.iter_rows():
