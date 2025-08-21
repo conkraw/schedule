@@ -19,6 +19,7 @@ from io import BytesIO
 from zipfile import ZipFile, ZIP_DEFLATED
 import re
 from collections import defaultdict
+from copy import copy
 
 
 
@@ -1645,22 +1646,31 @@ elif mode == "Create Individual Schedules":
 
     def copy_sheet_to_new_wb(src_ws):
         """Return a BytesIO of a new .xlsx containing src_ws with formatting."""
+        from openpyxl import Workbook
+        from io import BytesIO
+    
         wb_new = Workbook()
         ws_new = wb_new.active
         ws_new.title = src_ws.title[:31]
     
-        # Copy dimensions (column widths, row heights)
+        # Column widths & visibility
         for col_letter, dim in src_ws.column_dimensions.items():
-            ws_new.column_dimensions[col_letter].width = dim.width
+            if dim.width is not None:
+                ws_new.column_dimensions[col_letter].width = dim.width
             ws_new.column_dimensions[col_letter].hidden = dim.hidden
     
+        # Row heights & visibility
         for idx, dim in src_ws.row_dimensions.items():
-            ws_new.row_dimensions[idx].height = dim.height
+            if dim.height is not None:
+                ws_new.row_dimensions[idx].height = dim.height
             ws_new.row_dimensions[idx].hidden = dim.hidden
     
-        # Copy sheet-level settings (simple/common ones)
-        ws_new.sheet_format.defaultColWidth = src_ws.sheet_format.defaultColWidth
-        ws_new.sheet_format.defaultRowHeight = src_ws.sheet_format.defaultRowHeight
+        # Sheet settings (best-effort)
+        try:
+            ws_new.sheet_format.defaultColWidth = src_ws.sheet_format.defaultColWidth
+            ws_new.sheet_format.defaultRowHeight = src_ws.sheet_format.defaultRowHeight
+        except Exception:
+            pass
         ws_new.freeze_panes = src_ws.freeze_panes
         try:
             ws_new.page_setup.orientation = src_ws.page_setup.orientation
@@ -1671,46 +1681,70 @@ elif mode == "Create Individual Schedules":
             ws_new.print_options.verticalCentered = src_ws.print_options.verticalCentered
             ws_new.print_area = src_ws.print_area
         except Exception:
-            pass  # some props may be missing
+            pass
     
-        # Copy cells (values, formulas, styles, number formats, etc.)
+        # Copy cells: values + (copied) styles
         for row in src_ws.iter_rows():
             for cell in row:
-                tgt = ws_new.cell(row=cell.row, column=cell.col_idx)
-                tgt.value = cell.value
-                # Copy style (these are immutable, so assign directly)
-                tgt.font = cell.font
-                tgt.fill = cell.fill
-                tgt.border = cell.border
-                tgt.alignment = cell.alignment
-                tgt.number_format = cell.number_format
-                tgt.protection = cell.protection
+                tgt = ws_new.cell(row=cell.row, column=cell.col_idx, value=cell.value)
     
-            # Also replicate column outlines/levels (optional)
-            # ws_new.row_dimensions[row[0].row].outlineLevel = src_ws.row_dimensions[row[0].row].outlineLevel
+                # Only assign styles if present; copy() to avoid StyleProxy issues
+                if getattr(cell, "has_style", False):
+                    try:
+                        if cell.font:        tgt.font        = copy(cell.font)
+                        if cell.fill:        tgt.fill        = copy(cell.fill)
+                        if cell.border:      tgt.border      = copy(cell.border)
+                        if cell.alignment:   tgt.alignment   = copy(cell.alignment)
+                        if cell.protection:  tgt.protection  = copy(cell.protection)
+                        # number_format is a string; no need to copy()
+                        tgt.number_format = cell.number_format
+                    except Exception:
+                        # If anything odd pops up, skip that style rather than crash
+                        pass
     
-        # Copy merged cells
-        for merged in src_ws.merged_cells.ranges:
-            ws_new.merge_cells(str(merged))
+        # Copy merged cell ranges (after values)
+        for merged in list(src_ws.merged_cells.ranges):
+            try:
+                ws_new.merge_cells(str(merged))
+            except Exception:
+                pass
     
-        # Copy data validations (common in templates)
+        # Copy data validations (best-effort)
         try:
             if src_ws.data_validations and src_ws.data_validations.dataValidation:
-                from copy import copy
+                from openpyxl.worksheet.datavalidation import DataValidation
                 for dv in src_ws.data_validations.dataValidation:
-                    ws_new.add_data_validation(copy(dv))
+                    dv_new = DataValidation(
+                        type=dv.type,
+                        formula1=dv.formula1,
+                        formula2=dv.formula2,
+                        allow_blank=dv.allow_blank,
+                        operator=dv.operator,
+                        showDropDown=dv.showDropDown,
+                        showErrorMessage=dv.showErrorMessage,
+                        errorTitle=dv.errorTitle,
+                        error=dv.error,
+                        promptTitle=dv.promptTitle,
+                        prompt=dv.prompt
+                    )
+                    # Copy cell refs
+                    for sqref in getattr(dv, "sqref", []):
+                        dv_new.add(sqref)
+                    ws_new.add_data_validation(dv_new)
         except Exception:
             pass
     
-        # Copy filters
-        ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
+        # Filters
+        try:
+            ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
+        except Exception:
+            pass
     
-        # Done → save to buffer
+        # Save to buffer
         buf = BytesIO()
         wb_new.save(buf)
         buf.seek(0)
         return buf
-    
         
     if uploaded is not None:
         # Keep formulas/formatting -> data_only=False
