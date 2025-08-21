@@ -20,6 +20,11 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import re
 from collections import defaultdict
 
+
+
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils import get_column_letter
+
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
 
@@ -1630,6 +1635,74 @@ elif mode == "Create Student Schedule":
     else:
         st.info("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
 
+def copy_sheet_to_new_wb(src_ws):
+    """Return a BytesIO of a new .xlsx containing src_ws with formatting."""
+    wb_new = Workbook()
+    ws_new = wb_new.active
+    ws_new.title = src_ws.title[:31]
+
+    # Copy dimensions (column widths, row heights)
+    for col_letter, dim in src_ws.column_dimensions.items():
+        ws_new.column_dimensions[col_letter].width = dim.width
+        ws_new.column_dimensions[col_letter].hidden = dim.hidden
+
+    for idx, dim in src_ws.row_dimensions.items():
+        ws_new.row_dimensions[idx].height = dim.height
+        ws_new.row_dimensions[idx].hidden = dim.hidden
+
+    # Copy sheet-level settings (simple/common ones)
+    ws_new.sheet_format.defaultColWidth = src_ws.sheet_format.defaultColWidth
+    ws_new.sheet_format.defaultRowHeight = src_ws.sheet_format.defaultRowHeight
+    ws_new.freeze_panes = src_ws.freeze_panes
+    try:
+        ws_new.page_setup.orientation = src_ws.page_setup.orientation
+        ws_new.page_setup.fitToWidth = src_ws.page_setup.fitToWidth
+        ws_new.page_setup.fitToHeight = src_ws.page_setup.fitToHeight
+        ws_new.page_margins = src_ws.page_margins
+        ws_new.print_options.horizontalCentered = src_ws.print_options.horizontalCentered
+        ws_new.print_options.verticalCentered = src_ws.print_options.verticalCentered
+        ws_new.print_area = src_ws.print_area
+    except Exception:
+        pass  # some props may be missing
+
+    # Copy cells (values, formulas, styles, number formats, etc.)
+    for row in src_ws.iter_rows():
+        for cell in row:
+            tgt = ws_new.cell(row=cell.row, column=cell.col_idx)
+            tgt.value = cell.value
+            # Copy style (these are immutable, so assign directly)
+            tgt.font = cell.font
+            tgt.fill = cell.fill
+            tgt.border = cell.border
+            tgt.alignment = cell.alignment
+            tgt.number_format = cell.number_format
+            tgt.protection = cell.protection
+
+        # Also replicate column outlines/levels (optional)
+        # ws_new.row_dimensions[row[0].row].outlineLevel = src_ws.row_dimensions[row[0].row].outlineLevel
+
+    # Copy merged cells
+    for merged in src_ws.merged_cells.ranges:
+        ws_new.merge_cells(str(merged))
+
+    # Copy data validations (common in templates)
+    try:
+        if src_ws.data_validations and src_ws.data_validations.dataValidation:
+            from copy import copy
+            for dv in src_ws.data_validations.dataValidation:
+                ws_new.add_data_validation(copy(dv))
+    except Exception:
+        pass
+
+    # Copy filters
+    ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
+
+    # Done → save to buffer
+    buf = BytesIO()
+    wb_new.save(buf)
+    buf.seek(0)
+    return buf
+
 elif mode == "Create Individual Schedules":
     st.subheader("Individual Schedule Creator")
 
@@ -1639,34 +1712,30 @@ elif mode == "Create Individual Schedules":
     )
 
     if uploaded is not None:
-        xls = pd.ExcelFile(uploaded)
-        st.write(f"Found **{len(xls.sheet_names)}** tabs.")
+        # Keep formulas/formatting -> data_only=False
+        wb = load_workbook(uploaded, data_only=False)
+        st.write(f"Found **{len(wb.sheetnames)}** tabs.")
 
-        if st.button("Split tabs and build ZIP"):
-            # Build the ZIP in memory
+        if st.button("Split tabs (preserve formatting) and build ZIP"):
             zip_buf = BytesIO()
             with ZipFile(zip_buf, mode="w", compression=ZIP_DEFLATED) as zf:
                 used_names = defaultdict(int)
 
-                for sheet in xls.sheet_names:
-                    # Read the sheet
-                    df = pd.read_excel(xls, sheet_name=sheet)
+                for sheet_name in wb.sheetnames:
+                    ws = wb[sheet_name]
 
-                    # Skip completely empty sheets
-                    if df.dropna(how="all").empty:
+                    # Skip truly empty sheets (no cells with value)
+                    has_any_value = any(cell.value is not None for row in ws.iter_rows() for cell in row)
+                    if not has_any_value:
                         continue
 
-                    # Safe file name from sheet name
-                    base = re.sub(r"[^A-Za-z0-9._-]+", "_", sheet).strip("_") or "sheet"
+                    # Safe file name
+                    base = re.sub(r"[^A-Za-z0-9._-]+", "_", sheet_name).strip("_") or "sheet"
                     used_names[base] += 1
                     safe_name = base if used_names[base] == 1 else f"{base}_{used_names[base]}"
 
-                    # Write this sheet into its own Excel file (in memory)
-                    out_buf = BytesIO()
-                    with pd.ExcelWriter(out_buf, engine="openpyxl") as writer:
-                        # Excel sheet names are limited to 31 chars
-                        df.to_excel(writer, index=False, sheet_name=sheet[:31])
-                    out_buf.seek(0)
+                    # Copy this sheet into its own new workbook (preserving formatting)
+                    out_buf = copy_sheet_to_new_wb(ws)
 
                     # Add to ZIP
                     zf.writestr(f"{safe_name}.xlsx", out_buf.getvalue())
@@ -1675,6 +1744,6 @@ elif mode == "Create Individual Schedules":
             st.download_button(
                 label="Download individual schedules (ZIP)",
                 data=zip_buf,
-                file_name="individual_schedules.zip",
+                file_name="individual_schedules_formatted.zip",
                 mime="application/zip",
             )
