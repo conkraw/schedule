@@ -1628,3 +1628,49 @@ elif mode == "Create Student Schedule":
 
 elif mode == "Create Individual Schedules":
     st.subheader("Individual Schedule Creator")
+
+    uploaded = st.file_uploader(
+        "Upload the master Excel (.xlsx) with one tab per person",
+        type=["xlsx"]
+    )
+
+    if uploaded is not None:
+        xls = pd.ExcelFile(uploaded)
+        st.write(f"Found **{len(xls.sheet_names)}** tabs.")
+
+        if st.button("Split tabs and build ZIP"):
+            # Build the ZIP in memory
+            zip_buf = BytesIO()
+            with ZipFile(zip_buf, mode="w", compression=ZIP_DEFLATED) as zf:
+                used_names = defaultdict(int)
+
+                for sheet in xls.sheet_names:
+                    # Read the sheet
+                    df = pd.read_excel(xls, sheet_name=sheet)
+
+                    # Skip completely empty sheets
+                    if df.dropna(how="all").empty:
+                        continue
+
+                    # Safe file name from sheet name
+                    base = re.sub(r"[^A-Za-z0-9._-]+", "_", sheet).strip("_") or "sheet"
+                    used_names[base] += 1
+                    safe_name = base if used_names[base] == 1 else f"{base}_{used_names[base]}"
+
+                    # Write this sheet into its own Excel file (in memory)
+                    out_buf = BytesIO()
+                    with pd.ExcelWriter(out_buf, engine="openpyxl") as writer:
+                        # Excel sheet names are limited to 31 chars
+                        df.to_excel(writer, index=False, sheet_name=sheet[:31])
+                    out_buf.seek(0)
+
+                    # Add to ZIP
+                    zf.writestr(f"{safe_name}.xlsx", out_buf.getvalue())
+
+            zip_buf.seek(0)
+            st.download_button(
+                label="Download individual schedules (ZIP)",
+                data=zip_buf,
+                file_name="individual_schedules.zip",
+                mime="application/zip",
+            )
