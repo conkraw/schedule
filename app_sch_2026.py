@@ -20,11 +20,10 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import re
 from collections import defaultdict
 from copy import copy
-
-
-
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
+from openpyxl.cell.cell import MergedCell
+from openpyxl.utils import column_index_from_string
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -1686,20 +1685,30 @@ elif mode == "Create Individual Schedules":
         # Copy cells: values + (copied) styles
         for row in src_ws.iter_rows():
             for cell in row:
-                tgt = ws_new.cell(row=cell.row, column=cell.col_idx, value=cell.value)
-    
-                # Only assign styles if present; copy() to avoid StyleProxy issues
+                # Skip non-master cells from merged ranges
+                if isinstance(cell, MergedCell):
+                    continue
+        
+                # Get a reliable numeric column index
+                col_idx = getattr(cell, "col_idx", None)
+                if col_idx is None:
+                    col = cell.column  # may be int or letter depending on version
+                    col_idx = col if isinstance(col, int) else column_index_from_string(col)
+        
+                # Create target cell with value (formula preserved if present)
+                tgt = ws_new.cell(row=cell.row, column=col_idx, value=cell.value)
+        
+                # Copy style safely
                 if getattr(cell, "has_style", False):
                     try:
+                        from copy import copy
                         if cell.font:        tgt.font        = copy(cell.font)
                         if cell.fill:        tgt.fill        = copy(cell.fill)
                         if cell.border:      tgt.border      = copy(cell.border)
                         if cell.alignment:   tgt.alignment   = copy(cell.alignment)
                         if cell.protection:  tgt.protection  = copy(cell.protection)
-                        # number_format is a string; no need to copy()
                         tgt.number_format = cell.number_format
                     except Exception:
-                        # If anything odd pops up, skip that style rather than crash
                         pass
     
         # Copy merged cell ranges (after values)
