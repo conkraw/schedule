@@ -1773,7 +1773,7 @@ elif mode == "Create Individual Schedules":
         wb = load_workbook(uploaded, data_only=False)
         st.write(f"Found **{len(wb.sheetnames)}** tabs.")
 
-        if st.button("Split tabs (preserve formatting) and build ZIP"):
+        if st.button("Split tabs and build ZIP"):
             zip_buf = BytesIO()
             with ZipFile(zip_buf, mode="w", compression=ZIP_DEFLATED) as zf:
                 used_names = defaultdict(int)
