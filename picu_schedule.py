@@ -24,16 +24,19 @@ def to_date_or_none(x):
 
 def window_dates(all_dates, start_date):
     """Return sorted dates in [start_date, start_date + 4 weeks)."""
-    if not isinstance(start_date, datetime) and not isinstance(start_date, pd.Timestamp):
-        # allow date or string
-        sd = to_date_or_none(start_date)
-    else:
-        sd = start_date.date()
-    if sd is None:
+    # Normalize start_date → Timestamp
+    sd = pd.to_datetime(start_date, errors="coerce")
+    if pd.isna(sd):
         return []
     end = sd + timedelta(weeks=4)
-    return [d for d in sorted(all_dates) if sd <= d < end]
-
+    # Normalize all_dates → Timestamps, drop NaT
+    clean = pd.to_datetime(all_dates, errors="coerce")
+    if isinstance(clean, pd.Series):
+        clean = clean.dropna()
+    else:
+        clean = pd.Series(clean, dtype="datetime64[ns]").dropna()
+    return sorted([d for d in clean if sd <= d < end])
+    
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
 
