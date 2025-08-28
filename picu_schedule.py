@@ -18,6 +18,38 @@ import datetime as dt
 from collections import Counter
 
 
+NAME_SEP_RE = re.compile(r"[;\n]|(?:\s+and\s+)|(?:\s*&\s*)|(?:\s*/\s*)", re.IGNORECASE)
+
+def format_name(name: str) -> str:
+    """Convert 'Last, First [Middle]' → 'First [Middle] Last', else return stripped."""
+    if not name or not isinstance(name, str):
+        return name
+    name = name.strip()
+    # If the pattern is Last, First [Middle ...], flip it
+    parts = [p.strip() for p in name.split(",")]
+    if len(parts) >= 2:
+        last = parts[0]
+        first = " ".join(parts[1:]).strip()
+        if first:  # avoid empty
+            return f"{first} {last}".strip()
+    return name
+
+def expand_providers(cell_value: str) -> list:
+    """
+    Take a raw cell like:
+      'Ceneviva, Gary; Even, Katelyn'  or
+      'Beal, James\nSchneider, Beth'  or
+      'Pinos, Emily & Kierys, Krista'
+    → ['Gary Ceneviva', 'Katelyn Even', 'James Beal', 'Beth Schneider', 'Emily Pinos', 'Krista Kierys']
+    """
+    if cell_value is None:
+        return []
+    s = str(cell_value).strip()
+    if not s:
+        return []
+    tokens = [t.strip() for t in NAME_SEP_RE.split(s) if t.strip()]
+    return [format_name(t) for t in tokens]
+    
 def to_date_or_none(x):
     ts = pd.to_datetime(x, errors="coerce")
     if pd.isna(ts):
@@ -64,16 +96,6 @@ mode = st.sidebar.radio("What do you want to do?", ("Roster_HMC","Format OPD + S
 
 if mode == "Format OPD + Summary":
     # ─── Inputs ────────────────────────────────────────────────────────────────────
-    
-    def format_name(name: str) -> str:
-        """Convert 'Last, First' → 'First Last'."""
-        if not name or not isinstance(name, str):
-            return name
-        parts = [p.strip() for p in name.split(",")]
-        if len(parts) == 2:
-            return f"{parts[1]} {parts[0]}"
-        return name.strip()
-        
     required_keywords = ["department of pediatrics"]
     found_keywords = set()
     
@@ -171,7 +193,8 @@ if mode == "Format OPD + Summary":
                     #IF ONLY WANT TO THE FIRST APP/FELLOW THEN UNHASH
                     #if desc == FIRST_APP_FELLOW_DAY and grp[desc]:
                     #    continue  # skip any additional ones
-                    grp[desc].append(prov)
+                    for person in expand_providers(prov):
+                        grp[desc].append(person)
     
     # ─── 2. Read student list ─────────────────────────────────────────────────────
     students_df = pd.read_csv(student_file, dtype=str)
@@ -213,14 +236,14 @@ if mode == "Format OPD + Summary":
             day_data = assignments_by_date.get(date, {})
     
             # Pin first & second attending
-            first_att = next((format_name(day_data[k][0]) for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
+            first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]),None)
             if first_att:
-                provider_fields[f"d_att{day_suffix}_1"] = first_att
+                provider_fields[f"d_att{day_suffix}_1"] = format_name(first_att)
     
-            second_att = next((format_name(day_data[k][0]) for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
+            second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]),None)
 
             if second_att:
-                provider_fields[f"d_att{day_suffix}_2"] = second_att
+                provider_fields[f"d_att{day_suffix}_2"] = format_name(second_att)
     
             # Everything else (skip the pinned attending keys)
             for des, provs in day_data.items():
