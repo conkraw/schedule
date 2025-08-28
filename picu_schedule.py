@@ -23,12 +23,14 @@ NAME_SEP_RE = re.compile(r"[;\n]|(?:\s+and\s+)|(?:\s*&\s*)|(?:\s*/\s*)", re.IGNO
 def propagate_d_att_blocks(provider_fields: dict):
     """
     Overwrite per-day d_att??_1 fields from block 'centers':
+      - d_att00_1 → days 01..02
       - d_att06_1 → days 03..09
       - d_att13_1 → days 10..16
       - d_att20_1 → days 17..23
       - d_att27_1 → days 24..27
     """
     blocks = {
+        "00": range(1, 3),    # 01..02
         "06": range(3, 10),   # 03..09
         "13": range(10, 17),  # 10..16
         "20": range(17, 24),  # 17..23
@@ -37,10 +39,10 @@ def propagate_d_att_blocks(provider_fields: dict):
     for center, days in blocks.items():
         src_key = f"d_att{center}_1"
         src_val = provider_fields.get(src_key, "")
-        # Only propagate a non-empty value
         if isinstance(src_val, str) and src_val.strip():
             for d in days:
                 provider_fields[f"d_att{d:02}_1"] = src_val
+
 
 def format_name(name: str) -> str:
     """Convert 'Last, First [Middle]' → 'First [Middle] Last', else return stripped."""
