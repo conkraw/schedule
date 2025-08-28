@@ -50,6 +50,15 @@ def window_dates(all_dates, start_date):
                 clean.append(dd)
 
     return [d for d in sorted(clean) if sd <= d < end]
+
+def format_name(name: str) -> str:
+    """Convert 'Last, First' → 'First Last'."""
+    if not name or not isinstance(name, str):
+        return name
+    parts = [p.strip() for p in name.split(",")]
+    if len(parts) == 2:
+        return f"{parts[1]} {parts[0]}"
+    return name.strip()
     
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -200,11 +209,12 @@ if mode == "Format OPD + Summary":
             day_data = assignments_by_date.get(date, {})
     
             # Pin first & second attending
-            first_att = next((day_data[k][0] for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
+            first_att = next((format_name(day_data[k][0]) for k in FIRST_ATT_KEYS if k in day_data and day_data[k]), None)
             if first_att:
                 provider_fields[f"d_att{day_suffix}_1"] = first_att
     
-            second_att = next((day_data[k][0] for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
+            second_att = next((format_name(day_data[k][0]) for k in SECOND_ATT_KEYS if k in day_data and day_data[k]), None)
+
             if second_att:
                 provider_fields[f"d_att{day_suffix}_2"] = second_att
     
@@ -224,6 +234,7 @@ if mode == "Format OPD + Summary":
                 prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) \
                            else [p + day_suffix + "_" for p in prefs]
                 for i, name in enumerate(provs, start=1):
+                    name = format_name(raw_name) #Reverses lastname, firstname to firstname lastname
                     for prefix in prefixes:
                         provider_fields[f"{prefix}{i}"] = name
     
