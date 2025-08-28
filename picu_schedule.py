@@ -20,32 +20,54 @@ from collections import Counter
 
 NAME_SEP_RE = re.compile(r"[;\n]|(?:\s+and\s+)|(?:\s*&\s*)|(?:\s*/\s*)", re.IGNORECASE)
 
+def fill_pre_rotation_attendings(provider_fields: dict, start_date, assignments_by_date: dict,
+                                 first_att_keys, name_formatter):
+    """
+    If possible, set d_att01_1 and d_att02_1 using the FIRST attending
+    from the day before start_date (typically Sunday). If not found, leave blank.
+    """
+    # default to blank
+    provider_fields["d_att01_1"] = ""
+    provider_fields["d_att02_1"] = ""
+
+    prev_date = start_date - timedelta(days=1)
+    day_data = assignments_by_date.get(prev_date)
+    if not day_data:
+        return  # nothing to do
+
+    # Find first attending from the prior day (same logic you use elsewhere)
+    prior_first = next(
+        (day_data[k][0] for k in first_att_keys if k in day_data and day_data[k]),
+        None
+    )
+    if prior_first:
+        prior_first = name_formatter(prior_first)  # e.g., format_name
+        provider_fields["d_att01_1"] = prior_first
+        provider_fields["d_att02_1"] = prior_first
+
+
 def propagate_d_att_blocks(provider_fields: dict):
     """
     Normalize d_att??_1 fields into canonical blocks:
-      - d_att01_1 and d_att02_1 are always blank
       - d_att06_1 → days 03..09
       - d_att13_1 → days 10..16
       - d_att20_1 → days 17..23
       - d_att27_1 → days 24..27
+    (Days 01–02 are handled separately by fill_pre_rotation_attendings.)
     """
-    # Force blanks for days 01, 02
-    provider_fields["d_att01_1"] = ""
-    provider_fields["d_att02_1"] = ""
-
     blocks = {
         "06": range(3, 10),   # 03..09
         "13": range(10, 17),  # 10..16
         "20": range(17, 24),  # 17..23
         "27": range(24, 28),  # 24..27
     }
-
     for center, days in blocks.items():
         src_key = f"d_att{center}_1"
         src_val = provider_fields.get(src_key, "")
         if isinstance(src_val, str) and src_val.strip():
             for d in days:
                 provider_fields[f"d_att{d:02}_1"] = src_val
+
 
 
 def format_name(name: str) -> str:
@@ -292,6 +314,16 @@ if mode == "Format OPD + Summary":
                     for prefix in prefixes:
                         provider_fields[f"{prefix}{i}"] = name
 
+
+        # 1) Fill 01/02 from the prior day (Sunday) if available
+        fill_pre_rotation_attendings(
+            provider_fields=provider_fields,
+            start_date=sd,
+            assignments_by_date=assignments_by_date,
+            first_att_keys=FIRST_ATT_KEYS,
+            name_formatter=format_name,   # your helper
+        )
+        
         # After building all day-specific provider_fields for this student... takes Saturday Attending and make sure that attending is primary. 
         propagate_d_att_blocks(provider_fields)
     
