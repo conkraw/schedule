@@ -261,7 +261,6 @@ if mode == "Format OPD + Summary":
                 prefixes = [prefs + day_suffix + "_"] if isinstance(prefs, str) \
                            else [p + day_suffix + "_" for p in prefs]
                 for i, name in enumerate(provs, start=1):
-                    name = format_name(raw_name) #Reverses lastname, firstname to firstname lastname
                     for prefix in prefixes:
                         provider_fields[f"{prefix}{i}"] = name
     
