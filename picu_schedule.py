@@ -25,31 +25,33 @@ def to_date_or_none(x):
 
 def window_dates(all_dates, start_date):
     """Return sorted dates in [start_date, start_date + 4 weeks)."""
-    sd = start_date if isinstance(start_date, date) else to_date_or_none(start_date)
+
+    # Accept dt.date, dt.datetime, pd.Timestamp, or string
+    if isinstance(start_date, dt.date):
+        sd = start_date if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime) else start_date.date()
+    else:
+        sd = to_date_or_none(start_date)
+
     if sd is None:
         return []
 
-    end = sd + timedelta(weeks=4)
+    end = sd + dt.timedelta(weeks=4)
 
-    # Normalize candidates to datetime.date and drop bad/NaT values
+    # Normalize candidates to dt.date and drop bad/NaT values
     clean = []
     for d in all_dates:
         if isinstance(d, pd.Timestamp):
             if pd.isna(d):
                 continue
-            d = d.date()
-        elif isinstance(d, str):
-            d = to_date_or_none(d)
-            if d is None:
-                continue
-        elif isinstance(d, date):
-            pass
+            clean.append(d.date())
+        elif isinstance(d, dt.datetime):
+            clean.append(d.date())
+        elif isinstance(d, dt.date):
+            clean.append(d)
         else:
-            # Unknown type; try coercion
-            d = to_date_or_none(d)
-            if d is None:
-                continue
-        clean.append(d)
+            dd = to_date_or_none(d)
+            if dd is not None:
+                clean.append(dd)
 
     return [d for d in sorted(clean) if sd <= d < end]
     
