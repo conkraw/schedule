@@ -13,7 +13,7 @@ from docx.enum.section import WD_ORIENT
 from datetime import timedelta
 from xlsxwriter import Workbook as Workbook
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from collections import Counter
 
 def to_date_or_none(x):
@@ -22,22 +22,17 @@ def to_date_or_none(x):
         return None
     return ts.date()  # always a datetime.date
 
-
 def window_dates(all_dates, start_date):
-    """Return sorted dates in [start_date, start_date + 4 weeks)."""
-
-    # Accept dt.date, dt.datetime, pd.Timestamp, or string
     if isinstance(start_date, dt.date):
-        sd = start_date if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime) else start_date.date()
+        # If it's a datetime, strip time → date
+        sd = start_date if not isinstance(start_date, dt.datetime) else start_date.date()
     else:
         sd = to_date_or_none(start_date)
-
     if sd is None:
         return []
 
     end = sd + dt.timedelta(weeks=4)
 
-    # Normalize candidates to dt.date and drop bad/NaT values
     clean = []
     for d in all_dates:
         if isinstance(d, pd.Timestamp):
@@ -50,7 +45,7 @@ def window_dates(all_dates, start_date):
             clean.append(d)
         else:
             dd = to_date_or_none(d)
-            if dd is not None:
+            if dd:
                 clean.append(dd)
 
     return [d for d in sorted(clean) if sd <= d < end]
