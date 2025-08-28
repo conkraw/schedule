@@ -20,31 +20,27 @@ from collections import Counter
 
 NAME_SEP_RE = re.compile(r"[;\n]|(?:\s+and\s+)|(?:\s*&\s*)|(?:\s*/\s*)", re.IGNORECASE)
 
-def set_block_canonical_d_att(provider_fields: dict):
+def propagate_d_att_blocks(provider_fields: dict):
     """
-    Map daily d_att??_1 fields to canonical block fields:
-      - days 03–09  → d_att06_1
-      - days 10–16  → d_att13_1
-      - days 17–23  → d_att20_1
-      - days 24–27  → d_att27_1
-    Uses the first non-empty value found in the range.
-    Leaves sources intact (copies). If none found, sets empty string.
+    Overwrite per-day d_att??_1 fields from block 'centers':
+      - d_att06_1 → days 03..09
+      - d_att13_1 → days 10..16
+      - d_att20_1 → days 17..23
+      - d_att27_1 → days 24..27
     """
-    blocks = [
-        ("06", range(3, 10)),   # 03..09
-        ("13", range(10, 17)),  # 10..16
-        ("20", range(17, 24)),  # 17..23
-        ("27", range(24, 28)),  # 24..27
-    ]
-    for target, rng in blocks:
-        val = ""
-        for d in rng:
-            k = f"d_att{d:02}_1"
-            v = provider_fields.get(k, "")
-            if isinstance(v, str) and v.strip():
-                val = v
-                break
-        provider_fields[f"d_att{target}_1"] = val
+    blocks = {
+        "06": range(3, 10),   # 03..09
+        "13": range(10, 17),  # 10..16
+        "20": range(17, 24),  # 17..23
+        "27": range(24, 28),  # 24..27
+    }
+    for center, days in blocks.items():
+        src_key = f"d_att{center}_1"
+        src_val = provider_fields.get(src_key, "")
+        # Only propagate a non-empty value
+        if isinstance(src_val, str) and src_val.strip():
+            for d in days:
+                provider_fields[f"d_att{d:02}_1"] = src_val
 
 def format_name(name: str) -> str:
     """Convert 'Last, First [Middle]' → 'First [Middle] Last', else return stripped."""
@@ -291,7 +287,7 @@ if mode == "Format OPD + Summary":
                         provider_fields[f"{prefix}{i}"] = name
 
         # After building all day-specific provider_fields for this student... takes Saturday Attending and make sure that attending is primary. 
-        set_block_canonical_d_att(provider_fields)
+        propagate_d_att_blocks(provider_fields)
     
         # Build the student row
         row = {
