@@ -17,14 +17,6 @@ from datetime import date, datetime, timedelta
 import datetime as dt
 from collections import Counter
 
-def format_name(name: str) -> str:
-    """Convert 'Last, First' → 'First Last'."""
-    if not name or not isinstance(name, str):
-        return name
-    parts = [p.strip() for p in name.split(",")]
-    if len(parts) == 2:
-        return f"{parts[1]} {parts[0]}"
-    return name.strip()
 
 def to_date_or_none(x):
     ts = pd.to_datetime(x, errors="coerce")
@@ -72,6 +64,16 @@ mode = st.sidebar.radio("What do you want to do?", ("Roster_HMC","Format OPD + S
 
 if mode == "Format OPD + Summary":
     # ─── Inputs ────────────────────────────────────────────────────────────────────
+    
+    def format_name(name: str) -> str:
+        """Convert 'Last, First' → 'First Last'."""
+        if not name or not isinstance(name, str):
+            return name
+        parts = [p.strip() for p in name.split(",")]
+        if len(parts) == 2:
+            return f"{parts[1]} {parts[0]}"
+        return name.strip()
+        
     required_keywords = ["department of pediatrics"]
     found_keywords = set()
     
