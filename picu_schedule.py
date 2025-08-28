@@ -22,20 +22,24 @@ NAME_SEP_RE = re.compile(r"[;\n]|(?:\s+and\s+)|(?:\s*&\s*)|(?:\s*/\s*)", re.IGNO
 
 def propagate_d_att_blocks(provider_fields: dict):
     """
-    Overwrite per-day d_att??_1 fields from block 'centers':
-      - d_att00_1 → days 01..02
+    Normalize d_att??_1 fields into canonical blocks:
+      - d_att01_1 and d_att02_1 are always blank
       - d_att06_1 → days 03..09
       - d_att13_1 → days 10..16
       - d_att20_1 → days 17..23
       - d_att27_1 → days 24..27
     """
+    # Force blanks for days 01, 02
+    provider_fields["d_att01_1"] = ""
+    provider_fields["d_att02_1"] = ""
+
     blocks = {
-        "00": range(1, 3),    # 01..02
         "06": range(3, 10),   # 03..09
         "13": range(10, 17),  # 10..16
         "20": range(17, 24),  # 17..23
         "27": range(24, 28),  # 24..27
     }
+
     for center, days in blocks.items():
         src_key = f"d_att{center}_1"
         src_val = provider_fields.get(src_key, "")
