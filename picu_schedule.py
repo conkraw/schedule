@@ -653,8 +653,156 @@ elif mode == "Preceptor Matching":
     )
 
 elif mode == "Survey Codes":
+    st.subheader("Build Survey Codes File")
+
     student_file = st.file_uploader("1) Upload Redcap Survey Participant List: https://redcap.ctsi.psu.edu/redcap_v15.0.31/Surveys/invite_participants.php?participant_list=1&pid=18276&pagenum=1",type=["csv"])
     rotation_list = st.file_uploader("2) Upload Rotation List: https://redcap.ctsi.psu.edu/redcap_v15.0.31/DataExport/index.php?pid=18276&report_id=64835",type=["csv"])
-    
+  
+    def clean_cols(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.columns = (
+            df.columns.str.strip()
+                      .str.lower()
+                      .str.replace(r"\s+", "_", regex=True)
+                      .str.replace(r"[^0-9a-zA-Z_]", "", regex=True)
+        )
+        return df
+
+    def coerce_date(series: pd.Series):
+        try:
+            s = pd.to_datetime(series, errors="coerce").dt.date
+            return s
+        except Exception:
+            return series
+
+    if student_file and rotation_file:
+        # Read
+        part_raw = pd.read_csv(student_file, dtype=str).fillna("")
+        rot_raw  = pd.read_csv(rotation_file, dtype=str).fillna("")
+
+        # Normalize headers
+        part = clean_cols(part_raw)
+        rot  = clean_cols(rot_raw)
+
+        # Try to standardize common fields
+        # Participant list: find survey access code
+        # Typical headers include 'survey_access_code' or 'survey_access_link'
+        # We only need the code.
+        if "survey_access_code" not in part.columns:
+            # try some common variants
+            cand = [c for c in part.columns if "access_code" in c]
+            if cand:
+                part = part.rename(columns={cand[0]: "survey_access_code"})
+
+        # Email fields for better join (optional)
+        if "email" not in part.columns:
+            cand = [c for c in part.columns if "email" in c]
+            if cand:
+                part = part.rename(columns={cand[0]: "email"})
+        if "email" not in rot.columns:
+            cand = [c for c in rot.columns if "email" in c]
+            if cand:
+                rot = rot.rename(columns={cand[0]: "email"})
+
+        # Build a legal_name in participant list if missing (from first/last)
+        if "legal_name" not in part.columns:
+            first = next((c for c in part.columns if c in ["first_name","firstname","first"]), None)
+            last  = next((c for c in part.columns if c in ["last_name","lastname","last"]), None)
+            if first and last:
+                part["legal_name"] = (part[first].str.strip() + " " + part[last].str.strip()).str.replace(r"\s+", " ", regex=True)
+        # Coerce rot legal_name column alternatives
+        if "legal_name" not in rot.columns:
+            # Try common variants
+            cand = [c for c in rot.columns if "legal" in c and "name" in c] or \
+                   [c for c in rot.columns if c in ["name","student_name","full_name"]]
+            if cand:
+                rot = rot.rename(columns={cand[0]: "legal_name"})
+
+        # Coerce/standardize start_date
+        if "start_date" not in rot.columns:
+            cand = [c for c in rot.columns if "start" in c and "date" in c]
+            if cand:
+                rot = rot.rename(columns={cand[0]: "start_date"})
+        if "start_date" not in part.columns:
+            cand = [c for c in part.columns if "start" in c and "date" in c]
+            if cand:
+                part = part.rename(columns={cand[0]: "start_date"})
+
+        # Parse dates if present
+        if "start_date" in rot.columns:
+            rot["start_date"] = coerce_date(rot["start_date"])
+        if "start_date" in part.columns:
+            part["start_date"] = coerce_date(part["start_date"])
+
+        # Make sure required output fields exist in rotation
+        required_rot = ["record_id", "legal_name", "start_date"]
+        missing_rot = [c for c in required_rot if c not in rot.columns]
+        if missing_rot:
+            st.error(f"Rotation list is missing required column(s): {', '.join(missing_rot)}")
+            st.stop()
+
+        # Make sure participant has access code
+        if "survey_access_code" not in part.columns:
+            st.error("Participant list is missing 'Survey Access Code' (or a recognizable variant).")
+            st.stop()
+
+        # Pick best join key
+        join_key = None
+        if "email" in rot.columns and "email" in part.columns:
+            join_key = "email"
+        elif all(c in part.columns for c in ["legal_name","start_date"]):
+            join_key = ["legal_name","start_date"]
+
+        if join_key is not None:
+            # Left merge to keep all rotation rows
+            if isinstance(join_key, list):
+                merged = rot.merge(
+                    part[[*join_key, "survey_access_code"]],
+                    on=join_key,
+                    how="left",
+                    validate="m:1"
+                )
+            else:
+                merged = rot.merge(
+                    part[[join_key, "survey_access_code"]],
+                    on=join_key,
+                    how="left",
+                    validate="m:1"
+                )
+        else:
+            # Fallback: align by order if same length
+            if len(rot) == len(part):
+                merged = rot.copy()
+                merged["survey_access_code"] = part["survey_access_code"].values
+                st.info("No shared join key found; matched rows by order as a fallback.")
+            else:
+                st.error(
+                    "Could not find a common join key (email or legal_name+start_date), "
+                    "and files are different lengths—cannot align by order."
+                )
+                st.stop()
+
+        # Final select & rename
+        final_df = merged[["record_id", "legal_name", "start_date", "survey_access_code"]].copy()
+        final_df = final_df.rename(columns={"survey_access_code": "access_code"})
+
+        # Preview
+        st.write("Preview (first 20 rows):")
+        st.dataframe(final_df.head(20), use_container_width=True)
+
+        # Download
+        out_buf = io.StringIO()
+        final_df.to_csv(out_buf, index=False)
+        st.download_button(
+            "⬇️ Download Survey Codes CSV",
+            data=out_buf.getvalue(),
+            file_name="survey_codes.csv",
+            mime="text/csv"
+        )
+
+        # Simple quality checks
+        missing_codes = final_df["access_code"].eq("").sum()
+        if missing_codes:
+            st.warning(f"{missing_codes} row(s) are missing an access_code. Check your join keys (email or legal_name + start_date).")
 
 
