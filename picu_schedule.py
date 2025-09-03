@@ -741,50 +741,54 @@ elif mode == "Survey Codes":
             st.error(f"Rotation list is missing required column(s): {', '.join(missing_rot)}")
             st.stop()
 
-        # Make sure participant has access code
+        # Make sure participant has access code and link
         if "survey_access_code" not in part.columns:
             st.error("Participant list is missing 'Survey Access Code' (or a recognizable variant).")
             st.stop()
+        if "survey_access_link" not in part.columns:
+            cand = [c for c in part.columns if "access_link" in c or "survey_link" in c]
+            if cand:
+                part = part.rename(columns={cand[0]: "survey_access_link"})
+        if "survey_access_link" not in part.columns:
+            st.error("Participant list is missing 'Survey Access Link' (or a recognizable variant).")
+            st.stop()
 
-        # Pick best join key
-        join_key = None
-        if "email" in rot.columns and "email" in part.columns:
-            join_key = "email"
-        elif all(c in part.columns for c in ["legal_name","start_date"]):
-            join_key = ["legal_name","start_date"]
-
+        # Merge (same as before, but now also keep survey_access_link)
         if join_key is not None:
-            # Left merge to keep all rotation rows
             if isinstance(join_key, list):
                 merged = rot.merge(
-                    part[[*join_key, "survey_access_code"]],
+                    part[[*join_key, "survey_access_code", "survey_access_link"]],
                     on=join_key,
                     how="left",
                     validate="m:1"
                 )
             else:
                 merged = rot.merge(
-                    part[[join_key, "survey_access_code"]],
+                    part[[join_key, "survey_access_code", "survey_access_link"]],
                     on=join_key,
                     how="left",
                     validate="m:1"
                 )
         else:
-            # Fallback: align by order if same length
             if len(rot) == len(part):
                 merged = rot.copy()
                 merged["survey_access_code"] = part["survey_access_code"].values
+                merged["survey_access_link"] = part["survey_access_link"].values
                 st.info("No shared join key found; matched rows by order as a fallback.")
             else:
-                st.error(
-                    "Could not find a common join key (email or legal_name+start_date), "
-                    "and files are different lengths—cannot align by order."
-                )
+                st.error("Could not align files by keys or length.")
                 st.stop()
 
         # Final select & rename
-        final_df = merged[["record_id", "legal_name", "start_date", "survey_access_code"]].copy()
-        final_df = final_df.rename(columns={"survey_access_code": "access_code"})
+        final_df = merged[
+            ["record_id", "legal_name", "start_date", "survey_access_code", "survey_access_link"]
+        ].copy()
+        final_df = final_df.rename(
+            columns={
+                "survey_access_code": "access_code",
+                "survey_access_link": "survey_link"
+            }
+        )
 
         # Preview
         st.write("Preview (first 20 rows):")
