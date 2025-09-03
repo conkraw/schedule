@@ -656,7 +656,7 @@ elif mode == "Survey Codes":
     st.subheader("Build Survey Codes File")
 
     student_file = st.file_uploader("1) Upload Redcap Survey Participant List: https://redcap.ctsi.psu.edu/redcap_v15.0.31/Surveys/invite_participants.php?participant_list=1&pid=18276&pagenum=1",type=["csv"])
-    rotation_list = st.file_uploader("2) Upload Rotation List: https://redcap.ctsi.psu.edu/redcap_v15.0.31/DataExport/index.php?pid=18276&report_id=64835",type=["csv"])
+    rotation_file = st.file_uploader("2) Upload Rotation List: https://redcap.ctsi.psu.edu/redcap_v15.0.31/DataExport/index.php?pid=18276&report_id=64835",type=["csv"])
   
     def clean_cols(df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
