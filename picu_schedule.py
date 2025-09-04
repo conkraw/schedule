@@ -674,19 +674,27 @@ elif mode == "Survey Codes":
         type=["csv"],
         help="Export that contains the Survey Link column"
     )
-    if part_file and rot_file and link_file:
+
+    cdi_file = st.file_uploader(
+        "4) Upload CDI Survey Links CSV: https://redcap.ctsi.psu.edu/redcap_v15.0.31/Surveys/invite_participants.php?pid=18276&participant_list=1&survey_id=80605&event_id=136595",
+      type=["csv"],
+      help="Export that contains the Survey Link column")
+
+    if part_file and rot_file and link_file and cdi_file:
         # Read
         part = pd.read_csv(part_file, dtype=str)
         rot = pd.read_csv(rot_file, dtype=str)
         links = pd.read_csv(link_file, dtype=str)
+        cdi = pd.read_csv(cdi_file, dtype=str)
 
         # Pick out only the columns you want
         rot_cols = rot[["record_id", "legal_name", "start_date"]]
         part_cols = part[["Survey Access Code"]].rename(columns={"Survey Access Code": "access_code"})
         link_cols = links[["Survey Link"]].rename(columns={"Survey Link": "survey_link"})
+        cdi_cols = cdi[["Survey Link"]].rename(columns={"Survey Link": "survey_link"})
 
         # Combine side by side
-        final_df = pd.concat([rot_cols, part_cols, link_cols], axis=1)
+        final_df = pd.concat([rot_cols, part_cols, link_cols,cdi_cols], axis=1)
 
         # Preview
         st.write("Preview (first 20 rows):")
