@@ -479,7 +479,7 @@ elif mode == "Roster_HMC":
     df_roster["end_date"] = df_roster["end_date"].dt.strftime('%Y-%m-%d')
 
     
-    df_roster["student_demographics_complete"] = 2 
+    df_roster["student_demographics_complete"] = 1 
 
     df_roster = pd.concat([df_roster, df_roster.iloc[[5]].assign(record_id="testing")], ignore_index=True)
   
@@ -489,6 +489,10 @@ elif mode == "Roster_HMC":
     st.dataframe(df_roster, height=400)
     
     st.download_button("📥 Download formatted Roster CSV",df_roster.to_csv(index=False).encode("utf-8"),file_name="roster_formatted.csv",mime="text/csv")
+
+    df_roster["student_demographics_complete"] = 2
+  
+    st.download_button("📥 Download formatted Roster CSV",df_roster.to_csv(index=False).encode("utf-8"),file_name="survey_link_activation.csv",mime="text/csv")
 
 elif mode == "OASIS Evaluation":
     st.header("📋 OASIS Evaluation Formatter")
