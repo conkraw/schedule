@@ -491,6 +491,8 @@ elif mode == "Roster_HMC":
     st.download_button("📥 Download formatted Roster CSV",df_roster.to_csv(index=False).encode("utf-8"),file_name="roster_formatted.csv",mime="text/csv")
 
     df_roster["student_demographics_complete"] = 2
+
+    dfx = df_roster[['record_id','student_demographics_complete']]
   
     st.download_button("📥 Download Survey Link Activation",df_roster.to_csv(index=False).encode("utf-8"),file_name="survey_link_activation.csv",mime="text/csv")
 
