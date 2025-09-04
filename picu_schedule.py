@@ -492,7 +492,7 @@ elif mode == "Roster_HMC":
 
     df_roster["student_demographics_complete"] = 2
   
-    st.download_button("📥 Download formatted Roster CSV",df_roster.to_csv(index=False).encode("utf-8"),file_name="survey_link_activation.csv",mime="text/csv")
+    st.download_button("📥 Download Survey Link Activation",df_roster.to_csv(index=False).encode("utf-8"),file_name="survey_link_activation.csv",mime="text/csv")
 
 elif mode == "OASIS Evaluation":
     st.header("📋 OASIS Evaluation Formatter")
