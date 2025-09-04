@@ -140,7 +140,7 @@ st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide"
 st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?", ("Roster_HMC","Format OPD + Summary","OASIS Evaluation","Preceptor Matching","Survey Codes"))
+mode = st.sidebar.radio("What do you want to do?", ("Roster_HMC","Format OPD + Summary","OASIS Evaluation","Preceptor Matching"))
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
