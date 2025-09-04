@@ -690,8 +690,8 @@ elif mode == "Survey Codes":
         # Pick out only the columns you want
         rot_cols = rot[["record_id", "legal_name", "start_date"]]
         part_cols = part[["Survey Access Code"]].rename(columns={"Survey Access Code": "access_code"})
-        link_cols = links[["Survey Link"]].rename(columns={"Survey Link": "survey_link"})
-        cdi_cols = cdi[["Survey Link"]].rename(columns={"Survey Link": "survey_link"})
+        link_cols = links[["Survey Link"]].rename(columns={"Survey Link": "survey_link_schedule"})
+        cdi_cols = cdi[["Survey Link"]].rename(columns={"Survey Link": "survey_link_cdi"})
 
         # Combine side by side
         final_df = pd.concat([rot_cols, part_cols, link_cols,cdi_cols], axis=1)
