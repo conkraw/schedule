@@ -674,205 +674,23 @@ elif mode == "Survey Codes":
         type=["csv"],
         help="Export that contains the Survey Link column"
     )
-   # --- Helpers ---
-    def clean_cols(df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df.columns = (
-            df.columns.str.strip()
-                      .str.lower()
-                      .str.replace(r"\s+", "_", regex=True)
-                      .str.replace(r"[^0-9a-zA-Z_]", "", regex=True)
-        )
-        return df
-
-    def coerce_date(series: pd.Series):
-        try:
-            return pd.to_datetime(series, errors="coerce").dt.date
-        except Exception:
-            return series
-
-    def normalize_text(s: pd.Series) -> pd.Series:
-        # strip, collapse internal spaces
-        return s.astype(str).str.strip().str.replace(r"\s+", " ", regex=True)
-
-    def normalize_email(s: pd.Series) -> pd.Series:
-        return s.astype(str).str.strip().str.lower()
-
-    def try_build_legal_name(df):
-        if "legal_name" in df.columns:
-            df["legal_name"] = normalize_text(df["legal_name"])
-            return df
-        first = next((c for c in df.columns if c in ["first_name","firstname","first"]), None)
-        last  = next((c for c in df.columns if c in ["last_name","lastname","last"]), None)
-        if first and last:
-            df["legal_name"] = normalize_text(df[first]) + " " + normalize_text(df[last])
-        return df
-
-    def extract_access_code_from_link(link: str) -> str:
-        """
-        Try common REDCap-ish patterns:
-         - ...?s=CODE
-         - .../s/CODE
-        Returns "" if not found.
-        """
-        if not isinstance(link, str):
-            return ""
-        m = re.search(r"[?&]s=([A-Za-z0-9_-]+)", link)
-        if m:
-            return m.group(1)
-        m = re.search(r"/s/([A-Za-z0-9_-]+)", link)
-        if m:
-            return m.group(1)
-        return ""
-
-    def best_join(left, right, keep_cols, prefer_code=True, label=""):
-        """
-        Attempt left join using best available key(s).
-        Order:
-          - If prefer_code: survey_access_code, then email, then legal_name+start_date
-          - Else: email, then legal_name+start_date
-          - Fallback: align by order if equal length
-        """
-        tried = []
-        if prefer_code and ("survey_access_code" in left.columns and "survey_access_code" in right.columns):
-            tried.append(("survey_access_code",))
-        if "email" in left.columns and "email" in right.columns:
-            tried.append(("email",))
-        if all(c in left.columns for c in ["legal_name","start_date"]) and \
-           all(c in right.columns for c in ["legal_name","start_date"]):
-            tried.append(("legal_name","start_date"))
-
-        for key in tried:
-            try:
-                if len(key) == 1:
-                    merged = left.merge(
-                        right[[key[0], *keep_cols]],
-                        on=key[0], how="left", validate="m:1"
-                    )
-                else:
-                    merged = left.merge(
-                        right[[*key, *keep_cols]],
-                        on=list(key), how="left", validate="m:1"
-                    )
-                st.caption(f"Joined {label} using key: {', '.join(key)}")
-                return merged
-            except Exception:
-                pass
-
-        if len(left) == len(right):
-            merged = left.copy()
-            for col in keep_cols:
-                merged[col] = right[col].values if col in right.columns else ""
-            st.info(f"No common keys for {label}; matched rows by order as fallback.")
-            return merged
-
-        st.error(
-            f"Could not join {label}. Tried keys: "
-            f"{['+'.join(k) for k in tried] or ['<none>']}. Files are different lengths."
-        )
-        st.stop()
-
-    # --- Main ---
     if part_file and rot_file and link_file:
         # Read
-        part_raw = pd.read_csv(part_file, dtype=str).fillna("")
-        rot_raw  = pd.read_csv(rot_file, dtype=str).fillna("")
-        link_raw = pd.read_csv(link_file, dtype=str).fillna("")
+        part = pd.read_csv(part_file, dtype=str)
+        rot = pd.read_csv(rot_file, dtype=str)
+        links = pd.read_csv(link_file, dtype=str)
 
-        # Clean headers
-        part  = clean_cols(part_raw)
-        rot   = clean_cols(rot_raw)
-        links = clean_cols(link_raw)
+        # Pick out only the columns you want
+        rot_cols = rot[["record_id", "legal_name", "start_date"]]
+        part_cols = part[["Survey Access Code"]].rename(columns={"Survey Access Code": "access_code"})
+        link_cols = links[["Survey Link"]].rename(columns={"Survey Link": "survey_link"})
 
-        # Normalize columns and values
-        # Participant: ensure survey_access_code
-        if "survey_access_code" not in part.columns:
-            cand = [c for c in part.columns if "access_code" in c]
-            if cand:
-                part = part.rename(columns={cand[0]: "survey_access_code"})
-        if "survey_access_code" not in part.columns:
-            st.error("Participant list missing Survey Access Code column.")
-            st.stop()
-        part["survey_access_code"] = normalize_text(part["survey_access_code"])
+        # Combine side by side
+        final_df = pd.concat([rot_cols, part_cols, link_cols], axis=1)
 
-        # Emails (optional but helpful)
-        for df in (part, rot, links):
-            if "email" in df.columns:
-                df["email"] = normalize_email(df["email"])
-
-        # Names
-        part  = try_build_legal_name(part)
-        rot   = try_build_legal_name(rot)
-        links = try_build_legal_name(links)
-
-        # Dates
-        for df in (part, rot, links):
-            if "start_date" not in df.columns:
-                cand = [c for c in df.columns if "start" in c and "date" in c]
-                if cand:
-                    df.rename(columns={cand[0]: "start_date"}, inplace=True)
-            if "start_date" in df.columns:
-                df["start_date"] = coerce_date(df["start_date"])
-
-        # Rotation must have these
-        for col in ["record_id","legal_name","start_date"]:
-            if col not in rot.columns:
-                st.error(f"Rotation list missing required column: {col}")
-                st.stop()
-
-        # Links: ensure survey_link
-        if "survey_link" not in links.columns:
-            # exact name promised, but just in case
-            cand = [c for c in links.columns if c.lower().strip() == "survey link".lower()]
-            if cand:
-                links = links.rename(columns={cand[0]: "survey_link"})
-            else:
-                cand = [c for c in links.columns if "link" in c]
-                if cand:
-                    links = links.rename(columns={cand[0]: "survey_link"})
-        if "survey_link" not in links.columns:
-            st.error("Survey links file missing 'Survey Link' column.")
-            st.stop()
-
-        # Extract survey_access_code from survey_link when not present
-        if "survey_access_code" not in links.columns:
-            links["survey_access_code"] = links["survey_link"].apply(extract_access_code_from_link)
-        else:
-            links["survey_access_code"] = normalize_text(links["survey_access_code"])
-
-        # Normalize link text (strip)
-        links["survey_link"] = links["survey_link"].astype(str).str.strip()
-
-        # --- Merge participant into rotation (prefer email/name+date here) ---
-        merged1 = best_join(
-            rot, part,
-            keep_cols=["survey_access_code", "email", "legal_name", "start_date"],
-            prefer_code=False,
-            label="Rotation + Participant"
-        )
-
-        # --- Merge links into merged1 (prefer access code) ---
-        merged2 = best_join(
-            merged1, links,
-            keep_cols=["survey_link"],
-            prefer_code=True,
-            label="Add Survey Link"
-        )
-
-        # Finalize
-        final_df = merged2[["record_id","legal_name","start_date","survey_access_code","survey_link"]].copy()
-        final_df = final_df.rename(columns={"survey_access_code":"access_code"})
-
-        # Preview (clickable)
+        # Preview
         st.write("Preview (first 20 rows):")
-        if not final_df.empty:
-            prev = final_df.head(20).copy()
-            prev["survey_link"] = prev["survey_link"].apply(
-                lambda x: f'<a href="{x}" target="_blank">{x}</a>' if isinstance(x, str) and x.startswith("http") else x
-            )
-            st.write(prev.to_html(escape=False, index=False), unsafe_allow_html=True)
-        else:
-            st.info("No rows to display.")
+        st.dataframe(final_df.head(20), use_container_width=True)
 
         # Download
         out_buf = io.StringIO()
@@ -883,4 +701,3 @@ elif mode == "Survey Codes":
             file_name="survey_codes.csv",
             mime="text/csv"
         )
-
