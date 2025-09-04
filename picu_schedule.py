@@ -692,18 +692,6 @@ elif mode == "Survey Codes":
         except Exception:
             return series
 
-    def ensure_col(df, target, candidates):
-        """
-        If `target` not in df, try to find a candidate and rename it to target.
-        Returns df (possibly renamed) and a bool whether target exists now.
-        """
-        if target in df.columns:
-            return df, True
-        cand = [c for c in df.columns if c in candidates or any(k in c for k in candidates)]
-        if cand:
-            df = df.rename(columns={cand[0]: target})
-        return df, (target in df.columns)
-
     def try_build_legal_name(df):
         if "legal_name" in df.columns:
             return df
@@ -716,12 +704,7 @@ elif mode == "Survey Codes":
     def best_join(left, right, keep_cols, prefer_code=True, label=""):
         """
         Attempt left join using best available key(s).
-        Order:
-          - If prefer_code: survey_access_code, then email, then legal_name+start_date
-          - Else: email, then legal_name+start_date
-          - Fallback: align by order if equal length
         """
-        # Decide candidate join keys
         tried = []
 
         if prefer_code and ("survey_access_code" in left.columns and "survey_access_code" in right.columns):
@@ -734,7 +717,6 @@ elif mode == "Survey Codes":
            all(c in right.columns for c in ["legal_name","start_date"]):
             tried.append(("legal_name","start_date"))
 
-        # Try keys in order
         for key in tried:
             try:
                 if len(key) == 1:
@@ -749,11 +731,9 @@ elif mode == "Survey Codes":
                     )
                 st.caption(f"Joined {label} using key: {', '.join(key)}")
                 return merged
-            except Exception as e:
-                # keep trying next key
+            except Exception:
                 pass
 
-        # Fallback: align by order if same length
         if len(left) == len(right):
             merged = left.copy()
             for col in keep_cols:
@@ -761,22 +741,15 @@ elif mode == "Survey Codes":
                     merged[col] = right[col].values
                 else:
                     merged[col] = ""
-            st.info(f"No common keys for {label}; matched rows by order as a fallback.")
+            st.info(f"No common keys for {label}; matched rows by order as fallback.")
             return merged
 
-        # If we get here, join failed
-        missing = ", ".join(keep_cols)
-        st.error(
-            f"Could not join {label}. "
-            f"Tried keys: {['+'.join(k) for k in tried] or ['<none>']}. "
-            f"Files are different lengths, so cannot align by order. "
-            f"Columns needed from right side: {missing}"
-        )
+        st.error(f"Could not join {label}. Tried keys {tried or '<none>'}. Files different lengths.")
         st.stop()
 
     # --- Main ---
     if part_file and rot_file and link_file:
-        # Read raw
+        # Read
         part_raw = pd.read_csv(part_file, dtype=str).fillna("")
         rot_raw  = pd.read_csv(rot_file, dtype=str).fillna("")
         link_raw = pd.read_csv(link_file, dtype=str).fillna("")
@@ -786,124 +759,84 @@ elif mode == "Survey Codes":
         rot  = clean_cols(rot_raw)
         links = clean_cols(link_raw)
 
-        # Normalize common columns across all three where possible
-        # participant: survey_access_code (required)
-        part, has_code = ensure_col(
-            part, "survey_access_code",
-            candidates=["survey_access_code","access_code","participant_access_code","code"]
-        )
-        if not has_code:
-            st.error("Participant list is missing 'Survey Access Code' (no recognizable column).")
+        # --- Normalize ---
+        if "survey_access_code" not in part.columns:
+            cand = [c for c in part.columns if "access_code" in c]
+            if cand:
+                part = part.rename(columns={cand[0]: "survey_access_code"})
+        if "survey_access_code" not in part.columns:
+            st.error("Participant list missing Survey Access Code column.")
             st.stop()
 
-        # optional email
-        part, _ = ensure_col(part, "email", candidates=["email"])
-        rot, _  = ensure_col(rot,  "email", candidates=["email"])
-        links, _ = ensure_col(links, "email", candidates=["email"])
-
-        # legal_name (try build if absent)
         part = try_build_legal_name(part)
         rot  = try_build_legal_name(rot)
         links = try_build_legal_name(links)
 
-        # start_date (normalize names)
         for df in (part, rot, links):
             if "start_date" not in df.columns:
                 cand = [c for c in df.columns if "start" in c and "date" in c]
                 if cand:
                     df.rename(columns={cand[0]: "start_date"}, inplace=True)
-
-        # parse dates
-        for df in (part, rot, links):
             if "start_date" in df.columns:
                 df["start_date"] = coerce_date(df["start_date"])
 
-        # rotation: must have record_id, legal_name, start_date
-        required_rot = ["record_id", "legal_name", "start_date"]
+        # Rotation required fields
+        required_rot = ["record_id","legal_name","start_date"]
         missing_rot = [c for c in required_rot if c not in rot.columns]
         if missing_rot:
-            st.error(f"Rotation list is missing required column(s): {', '.join(missing_rot)}")
+            st.error(f"Rotation list missing: {', '.join(missing_rot)}")
             st.stop()
 
-        # links file: survey link (required)
-        # Accept variants like survey_link, survey_access_link, link, url
-        links, has_link = ensure_col(
-            links, "survey_access_link",
-            candidates=["survey_access_link","survey_link","link","url"]
-        )
-        if not has_link:
-            st.error("Survey links file is missing a 'Survey Link' column (no recognizable column).")
+        # Links file: ensure Survey Link
+        if "survey_link" not in links.columns:
+            cand = [c for c in links.columns if "link" in c]
+            if cand:
+                links = links.rename(columns={cand[0]: "survey_link"})
+        if "survey_link" not in links.columns:
+            st.error("Survey links file missing 'Survey Link' column.")
             st.stop()
 
-        # links file: prefer having survey_access_code for robust join
-        links, _ = ensure_col(
-            links, "survey_access_code",
-            candidates=["survey_access_code","access_code","participant_access_code","code"]
-        )
+        # Optional: access code in links
+        if "survey_access_code" not in links.columns:
+            cand = [c for c in links.columns if "access_code" in c]
+            if cand:
+                links = links.rename(columns={cand[0]: "survey_access_code"})
 
-        # --- First merge: Rotation (left) ⟵ Participant (codes) ---
+        # --- Merge participant into rotation
         merged1 = best_join(
-            left=rot,
-            right=part,
-            keep_cols=["survey_access_code","email","legal_name","start_date"],  # pass-through for next join
-            prefer_code=False,  # here we prefer email or name+date (code may not be in rotation)
-            label="Participant → Rotation"
+            rot, part,
+            keep_cols=["survey_access_code"],
+            prefer_code=False,
+            label="Rotation + Participant"
         )
 
-        # --- Second merge: (merged1) ⟵ Links (prefer code) ---
+        # --- Merge links into merged1
         merged2 = best_join(
-            left=merged1,
-            right=links,
-            keep_cols=["survey_access_link"],
-            prefer_code=True,   # try to join by access_code first
-            label="Links → Merged"
+            merged1, links,
+            keep_cols=["survey_link"],
+            prefer_code=True,
+            label="Add Survey Link"
         )
 
-        # --- Final select & rename ---
-        final_df = merged2[["record_id", "legal_name", "start_date", "survey_access_code", "survey_access_link"]].copy()
-        final_df = final_df.rename(
-            columns={
-                "survey_access_code": "access_code",
-                "survey_access_link": "survey_link"
-            }
-        )
+        # --- Final output
+        final_df = merged2[["record_id","legal_name","start_date","survey_access_code","survey_link"]].copy()
+        final_df = final_df.rename(columns={"survey_access_code":"access_code"})
 
-        # --- Preview (make links clickable) ---
+        # Preview clickable
         st.write("Preview (first 20 rows):")
-        if not final_df.empty:
-            # Create a clickable HTML column for preview only
-            preview = final_df.head(20).copy()
-            if "survey_link" in preview.columns:
-                preview["survey_link"] = preview["survey_link"].apply(
-                    lambda x: f'<a href="{x}" target="_blank">{x}</a>' if isinstance(x, str) and x.startswith("http") else x
-                )
-            st.write(preview.to_html(escape=False, index=False), unsafe_allow_html=True)
-        else:
-            st.info("No rows to display.")
+        preview = final_df.head(20).copy()
+        preview["survey_link"] = preview["survey_link"].apply(
+            lambda x: f'<a href="{x}" target="_blank">{x}</a>' if isinstance(x,str) and x.startswith("http") else x
+        )
+        st.write(preview.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-        # --- Download ---
+        # Download
         out_buf = io.StringIO()
-        final_df.to_csv(out_buf, index=False)
+        final_df.to_csv(out_buf,index=False)
         st.download_button(
             "⬇️ Download Survey Codes CSV",
             data=out_buf.getvalue(),
             file_name="survey_codes.csv",
             mime="text/csv"
         )
-
-        # --- Quality checks ---
-        missing_codes = final_df["access_code"].eq("").sum()
-        missing_links = final_df["survey_link"].eq("").sum()
-        if missing_codes or missing_links:
-            st.warning(
-                f"Missing values → access_code: {missing_codes}, survey_link: {missing_links}. "
-                "If many are missing, verify join keys (prefer access_code in the links export)."
-            )
-
-        with st.expander("Debugging details"):
-            st.write("Participant columns:", list(part.columns))
-            st.write("Rotation columns:", list(rot.columns))
-            st.write("Links columns:", list(links.columns))
-            st.write("Row counts → participant:", len(part), "rotation:", len(rot), "links:", len(links))
-
 
