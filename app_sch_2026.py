@@ -1130,10 +1130,20 @@ elif mode == "Format OPD + Summary":
     
         for key in mapping_keys:
             val = base_map[key]
+        
+            # Decide which side(s) this key applies to
+            am_prefix = pm_prefix = None
             if isinstance(val, list):
                 am_prefix, pm_prefix = val
             else:
-                am_prefix = pm_prefix = val
+                k = key.lower()
+                if " am " in k:
+                    am_prefix = val
+                elif " pm " in k:
+                    pm_prefix = val
+                else:
+                    # keys that don't encode AM/PM (rare) write to both
+                    am_prefix = pm_prefix = val
     
             for week_idx in range(1, num_weeks + 1):
                 week_base  = (week_idx - 1) * 24
