@@ -725,30 +725,39 @@ elif mode == "PA OPD Creator":
                 ws.conditional_format(f"A{start+10}:H{start+19}", {"type":"no_errors","format":format5a})
                 ws.conditional_format(f"B{start}:H{start}",       {"type":"no_errors","format":format4})
                 ws.conditional_format(f"B{start+10}:H{start+10}", {"type":"no_errors","format":format4a})
+
+        # default 24-row weekly geometry used by primary sheets
+        DEF_BLOCK_HEIGHT = 24
+        def_blk_starts = [6 + i * DEF_BLOCK_HEIGHT for i in range(NUM_WEEKS)]   # 6,30,54,…
+        def_hdr_starts = [2 + i * DEF_BLOCK_HEIGHT for i in range(NUM_WEEKS)]   # 2,26,50,…
+        
+        # SUBSPECIALTY geometry: 2 * CAP rows per week (AM + PM)
+        SUB_BLOCK_HEIGHT = 2 * SUBSPECIALTY_CAP          # equals 24 if CAP=12
+        sub_blk_starts = [6 + i * SUB_BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+        sub_hdr_starts = [2 + i * SUB_BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+
     
         # ── SUBSPECIALTY: compact like ETOWN/NYES but with configurable row cap
         if "SUBSPECIALTY" in sheets:
             ws = sheets["SUBSPECIALTY"]
-    
-            # use default 24-row weekly geometry (6/16) but 12 rows per half
-            for start in def_blk_starts:
+            for start in sub_blk_starts:                 # ← use sub_blk_starts here
                 zero = start - 1
-    
-                # column A labels will be overwritten later with "AM – <GROUP>" / "PM – <GROUP>"
+        
+                # write column A labels (will get overwritten row-by-row by mappings if you do literal labels)
                 for i in range(SUBSPECIALTY_CAP):
-                    ws.write(zero + i,              0, "AM", format5a)
-                    ws.write(zero + SUBSPECIALTY_CAP + i, 0, "PM", format5a)
-    
-                # background bands + headers sized to SUBSPECIALTY_CAP
+                    ws.write(zero + i,                  0, "AM", format5a)
+                    ws.write(zero + SUBSPECIALTY_CAP+i, 0, "PM", format5a)
+        
+                # bands & header tints sized to CAP
                 ws.conditional_format(f"A{start}:H{start+SUBSPECIALTY_CAP-1}",
-                                      {"type":"no_errors","format":format1})
+                                      {"type": "no_errors", "format": format1})
                 ws.conditional_format(f"A{start+SUBSPECIALTY_CAP}:H{start+2*SUBSPECIALTY_CAP-1}",
-                                      {"type":"no_errors","format":format5a})
-    
+                                      {"type": "no_errors", "format": format5a})
                 ws.conditional_format(f"B{start}:H{start}",
-                                      {"type":"no_errors","format":format4})
+                                      {"type": "no_errors", "format": format4})
                 ws.conditional_format(f"B{start+SUBSPECIALTY_CAP}:H{start+SUBSPECIALTY_CAP}",
-                                      {"type":"no_errors","format":format4a})
+                                      {"type": "no_errors", "format": format4a})
+
 
     
             # headers/dates/bars for SUBSPECIALTY using its own geometry
@@ -768,34 +777,51 @@ elif mode == "PA OPD Creator":
                 ws.write(f"A{hstart+2}", "", format_date)
     
         # ── Universal header/dates/bars for all NON-SUBSPECIALTY sheets (default geometry)
-        for name, ws in sheets.items():
-            if name == "SUBSPECIALTY":  # already handled
-                continue
+        for sheet_name, ws in sheets.items():
+            # choose geometry per sheet
+            if sheet_name == "SUBSPECIALTY":
+                blk_starts = sub_blk_starts
+                hdr_starts = sub_hdr_starts
+                block_height = SUB_BLOCK_HEIGHT
+            else:
+                blk_starts = def_blk_starts
+                hdr_starts = def_hdr_starts
+                block_height = DEF_BLOCK_HEIGHT
+        
+            # common sizing
             ws.set_zoom(80)
             ws.set_column("A:A", 10)
             ws.set_column("B:H", 65)
             ws.set_row(0, 37.25)
-            for idx, hstart in enumerate(def_hdr_starts):
-                for c, dname in enumerate(days):
-                    ws.write(hstart, 1+c, dname, format3)
+        
+            # headers + dates per week
+            for idx, hstart in enumerate(hdr_starts):
+                for c, dname in enumerate(["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]):
+                    ws.write(hstart, 1 + c, dname, format3)
                 for c, val in enumerate(weeks[idx]):
                     if pd.notna(val):
-                        ws.write(hstart+1, 1+c, val, format_date)
+                        ws.write(hstart + 1, 1 + c, val, format_date)
                 ws.write_formula(f"A{hstart}", '""', format_label)
-                ws.conditional_format(f"A{hstart+3}:H{hstart+3}", {"type":"no_errors","format":format_label})
-            # black bars + top whites
-            for row in [2 + i*DEF_BLOCK_H for i in range(5)]:
-                ws.merge_range(f"A{row}:H{row}", " ", format2)
-                ws.write(f"A{row+1}", "", format_date)
-                ws.write(f"A{row+2}", "", format_date)
-    
-            # CRTS note
+                ws.conditional_format(f"A{hstart+3}:H{hstart+3}",
+                                      {"type":"no_errors","format": format_label})
+        
+            # black separator bars (per geometry)
+            for bar_row in [2 + i * block_height for i in range(NUM_WEEKS)]:
+                ws.merge_range(f"A{bar_row}:H{bar_row}", " ", format2)
+        
+            # top two “white” rows per block
+            for start in blk_starts:
+                ws.write(f"A{start-3}", "", format_date)
+                ws.write(f"A{start-2}", "", format_date)
+        
+            # CRTS banner
             text1 = ("Students are to alert their preceptors when they have a Clinical "
                      "Reasoning Teaching Session (CRTS). Please allow the students to "
                      "leave ~15 minutes prior to the start of their session so they can be prepared.")
             ws.merge_range("C1:F1", text1, merge_format)
             ws.write("G1", "", merge_format)
             ws.write("H1", "", merge_format)
+
     
         workbook.close()
         output.seek(0)
