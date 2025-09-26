@@ -528,7 +528,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         
         BLOCK_HEIGHT = 24
         BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]  # 6, 30, 54, 78, 102 ...
-        # HDR_STARTS already defined above
+        HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
         
         for start in BLOCK_STARTS:
             # Background fills for the AM and PM halves
