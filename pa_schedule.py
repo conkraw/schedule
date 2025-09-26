@@ -1289,13 +1289,33 @@ elif mode == "Create Student Schedule":
     _date_re = re.compile(r"^\s*\d{1,2}/\d{1,2}/\d{2,4}\s*$")
     
     def _is_date_like(v):
+        """True for datetime/date, mm/dd/yyyy-ish strings, or Excel serial dates."""
         from datetime import date, datetime
-        return isinstance(v, (date, datetime)) or (isinstance(v, str) and _date_re.match(v))
+        if isinstance(v, (date, datetime)):
+            return True
+        if isinstance(v, str) and _date_re.match(v):
+            return True
+        # Excel serial numbers (optional)
+        if isinstance(v, (int, float)):
+            try:
+                from openpyxl.utils.datetime import from_excel
+                _ = from_excel(v)  # just test convert
+                return True
+            except Exception:
+                return False
+        return False
     
     def _week_headers_by_column(ws, col_index=2):
-        """Return sorted row numbers of the header *date* cells in a given column (default: column B)."""
-        return sorted([cell.row for cell in ws.iter_rows(min_col=col_index, max_col=col_index)
-                       if _is_date_like(cell[0].value)])
+        """
+        Return sorted row numbers of the header *date* cells in a given column.
+        NOTE: iter_rows yields tuples; grab the first element.
+        """
+        rows = []
+        for row_tuple in ws.iter_rows(min_col=col_index, max_col=col_index, values_only=False):
+            cell = row_tuple[0]
+            if _is_date_like(cell.value):
+                rows.append(cell.row)
+        return sorted(rows)
     
     def _week_index_for_row(row_idx, header_rows):
         """
@@ -1321,29 +1341,31 @@ elif mode == "Create Student Schedule":
     def assign_preceptors_all_weeks_am(opd_file, ms_file):
         """
         Copy AM assignments from OPD (B..H) to each student's tab.
-        Week is determined by the nearest header *date* row above the cell (same column),
-        so SUBSPECIALTY blocks with extra rows map to the correct week.
+        Week is determined by the nearest header *date* row above (column B),
+        so SUBSPECIALTY extra rows still map to the correct week.
         Brackets show sheet name, except SUBSPECIALTY uses the column A designation.
         """
         opd_wb = load_workbook(opd_file, data_only=True)
         ms_wb  = load_workbook(ms_file)
     
-        target_ms_rows = _seq(6, BLOCK_HEIGHT, NUM_WEEKS)  # e.g., [6,14,22,30,38]
+        target_ms_rows = _seq(6, BLOCK_HEIGHT, NUM_WEEKS)  # [6,14,22,30,38]
     
         for site in opd_wb.sheetnames:
             ws_opd = opd_wb[site]
-            # Find all AM-labeled rows (column A)
+    
+            # header date rows (use Monday column B)
+            header_rows = _week_headers_by_column(ws_opd, col_index=2)
+            if not header_rows:
+                # No header dates found; skip this sheet to avoid wrong mapping
+                continue
+    
+            # All AM-labeled rows
             am_rows = [c.row for c in ws_opd['A']
                        if isinstance(c.value, str) and re.match(r"^\s*AM\b", c.value, re.IGNORECASE)]
             if not am_rows:
                 continue
     
-            # Build week header date rows once (use Monday column B)
-            header_rows = _week_headers_by_column(ws_opd, col_index=2)
-    
-            # Walk every AM row independently; compute its week from header rows
             for r in am_rows:
-                # Use Monday (B) header rows to get week; works for all columns
                 wk = _week_index_for_row(r, header_rows)
                 if wk is None or wk >= NUM_WEEKS:
                     continue
@@ -1370,21 +1392,24 @@ elif mode == "Create Student Schedule":
     def assign_preceptors_all_weeks_pm(opd_file, ms_file):
         """
         Copy PM assignments; week rows [7,15,23,31,39] for 5 weeks.
-        Uses header date rows to determine the correct week (robust to SUBSPECIALTY height).
+        Uses header date rows (column B) to determine week boundaries.
         """
         opd_wb = load_workbook(opd_file, data_only=True)
         ms_wb  = load_workbook(ms_file)
     
-        target_ms_rows = _seq(7, BLOCK_HEIGHT, NUM_WEEKS)  # e.g., [7,15,23,31,39]
+        target_ms_rows = _seq(7, BLOCK_HEIGHT, NUM_WEEKS)  # [7,15,23,31,39]
     
         for site in opd_wb.sheetnames:
             ws_opd = opd_wb[site]
+    
+            header_rows = _week_headers_by_column(ws_opd, col_index=2)
+            if not header_rows:
+                continue
+    
             pm_rows = [c.row for c in ws_opd['A']
                        if isinstance(c.value, str) and re.match(r"^\s*PM\b", c.value, re.IGNORECASE)]
             if not pm_rows:
                 continue
-    
-            header_rows = _week_headers_by_column(ws_opd, col_index=2)
     
             for r in pm_rows:
                 wk = _week_index_for_row(r, header_rows)
@@ -1407,7 +1432,7 @@ elif mode == "Create Student Schedule":
         ms_wb.save(out)
         out.seek(0)
         return out
-
+    
 
     def detect_shift_conflicts(opd_file):
         """Same as before, but scans NUM_WEEKS blocks instead of 4."""
