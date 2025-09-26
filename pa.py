@@ -241,7 +241,7 @@ elif mode == "Instructions":
     if d:
         try:
             s = datetime.strptime(d, '%m/%d/%Y')
-            e = s + timedelta(days=34)
+            e = s + timedelta(days=41)
             st.write(f"{s:%B %d, %Y} → {e:%B %d, %Y}")
     
             st.write('Please go to https://login.qgenda.com/')
