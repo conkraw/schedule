@@ -361,16 +361,69 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     import pandas as pd
     import streamlit as st
 
-    # ─── Inputs ──────────────────────────────────────────────────────────────────
-    required_keywords = [
-        "academic general pediatrics",  # Hope Drive
-        "complex care",                 # Complex clinic
-        # For ETOWN/NYES we don't have special keywords in the sample; keep two required to pass content check
-        "hospitalists",                 # kept only to pass the original 4-key check if desired
-        "adol med",                     # kept only to pass the original 4-key check if desired
-    ]
-    found_keywords = set()
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Parameterized site registry
+    # Add new sheets by appending entries to SITE_CONFIGS below — no other code edits.
+    # Each entry defines: Excel sheet name, title, type ("hope_drive" with acutes or
+    # generic "continuity"), the labels as they appear in QGenda (aliases allowed),
+    # and the REDCap column prefixes to write into.
+    # ─────────────────────────────────────────────────────────────────────────────
+    SITE_CONFIGS = {
+        # Special template with AM/PM acutes + continuity and weekend handling
+        "HOPE_DRIVE": {
+            "title": "Hope Drive",
+            "type": "hope_drive",
+            "keywords": ["academic general pediatrics", "hope drive"],
+            "designations": {
+                # aliases seen in QGenda → (canonical_key, redcap_prefix)
+                # Continuity
+                "hope drive am continuity": ("hd_am", "hd_am_"),
+                "hope drive pm continuity": ("hd_pm", "hd_pm_"),
+                # Weekday acutes
+                "hope drive am acute precept": ("hd_am_acute", "hd_am_acute_"),
+                "hope drive pm acute precept": ("hd_pm_acute", "hd_pm_acute_"),
+                # Weekend
+                "hope drive weekend acute 1": ("hd_wknd_acute_1", "hd_wknd_acute_1_"),
+                "hope drive weekend acute 2": ("hd_wknd_acute_2", "hd_wknd_acute_2_"),
+                "hope drive weekend continuity": ("hd_wknd_am", "hd_wknd_am_"),
+            },
+        },
+        # Generic continuity-only templates (10 AM rows, 10 PM rows)
+        "ETOWN": {
+            "title": "Elizabethtown",
+            "type": "continuity",
+            "keywords": ["etown", "elizabethtown"],
+            "am": {"aliases": ["etown am continuity"], "prefix": "etown_am_"},
+            "pm": {"aliases": ["etown pm continuity"], "prefix": "etown_pm_"},
+        },
+        "NYES": {
+            "title": "Nyes Road",
+            "type": "continuity",
+            "keywords": ["nyes", "nyes road"],
+            "am": {"aliases": ["nyes rd am continuity"], "prefix": "nyes_am_"},
+            "pm": {"aliases": ["nyes rd pm continuity"], "prefix": "nyes_pm_"},
+        },
+        "COMPLEX": {
+            "title": "Complex Care",
+            "type": "continuity",
+            "keywords": ["complex care", "complex"],
+            "am": {"aliases": ["hope drive clinic am"], "prefix": "complex_am_"},
+            "pm": {"aliases": ["hope drive clinic pm"], "prefix": "complex_pm_"},
+        },
+        # Example to add later (just copy and adjust aliases/prefixes):
+        # "ADOLMED": {
+        #     "title": "Adolescent Medicine",
+        #     "type": "continuity",
+        #     "keywords": ["adol med", "adolescent"],
+        #     "am": {"aliases": ["briarcrest clinic am"], "prefix": "adol_med_am_"},
+        #     "pm": {"aliases": ["briarcrest clinic pm"], "prefix": "adol_med_pm_"},
+        # },
+    }
 
+    # Build required keywords dynamically from the included sites
+    REQUIRED_KEYWORDS = sorted({kw for cfg in SITE_CONFIGS.values() for kw in cfg.get("keywords", [])})
+
+    # ─── Inputs ──────────────────────────────────────────────────────────────────
     schedule_files = st.file_uploader(
         "1) Upload one or more QGenda calendar Excel(s)",
         type=["xlsx", "xls"],
@@ -391,22 +444,19 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     # ─── Parse files ─────────────────────────────────────────────────────────────
     date_pat = re.compile(r"^[A-Za-z]+ \d{1,2}, \d{4}$")
 
-    base_map = {
-        "hope drive am continuity": "hd_am_",
-        "hope drive pm continuity": "hd_pm_",
-        "hope drive am acute precept": "hd_am_acute_",
-        "hope drive pm acute precept": "hd_pm_acute_",
-        "hope drive weekend acute 1": "hd_wknd_acute_1_",
-        "hope drive weekend acute 2": "hd_wknd_acute_2_",
-        "hope drive weekend continuity": "hd_wknd_am_",
-        "etown am continuity": "etown_am_",
-        "etown pm continuity": "etown_pm_",
-        "nyes rd am continuity": "nyes_am_",
-        "nyes rd pm continuity": "nyes_pm_",
-        "hope drive clinic am": "complex_am_",
-        "hope drive clinic pm": "complex_pm_",
-    }
+    # Build designation→prefix map from SITE_CONFIGS (supports aliases)
+    designation_map = {}
+    for sheet_name, cfg in SITE_CONFIGS.items():
+        if cfg["type"] == "continuity":
+            for alias in cfg["am"]["aliases"]:
+                designation_map[alias.lower()] = cfg["am"]["prefix"]
+            for alias in cfg["pm"]["aliases"]:
+                designation_map[alias.lower()] = cfg["pm"]["prefix"]
+        elif cfg["type"] == "hope_drive":
+            for alias, (_canon, prefix) in cfg["designations"].items():
+                designation_map[alias.lower()] = prefix
 
+    # Minimum headcount rules (per designation key as it appears in QGenda)
     min_required = {
         "hope drive am acute precept": 2,
         "hope drive pm acute precept": 2,
@@ -414,6 +464,8 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
 
     # Aggregate schedule assignments by date
     assignments_by_date = {}
+    found_keywords = set()
+
     for file in schedule_files:
         try:
             df = pd.read_excel(file, header=None, dtype=str)
@@ -421,6 +473,13 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             st.error(f"Error reading {file.name}: {e}")
             continue
 
+        # Detect keywords present in the file (for friendly warning if any missing)
+        flat_vals = df.astype(str).apply(lambda s: s.str.lower()).values.flatten().tolist()
+        for kw in REQUIRED_KEYWORDS:
+            if any(kw in v for v in flat_vals):
+                found_keywords.add(kw)
+
+        # Find date columns and collect provider rows under each date
         date_positions = []
         for r in range(df.shape[0]):
             for c in range(df.shape[1]):
@@ -432,13 +491,15 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                     except Exception:
                         pass
 
+        # Deduplicate to the topmost row per date value
         unique = {}
         for d, r, c in date_positions:
             if d not in unique or r < unique[d][0]:
                 unique[d] = (r, c)
 
         for d, (row0, col0) in unique.items():
-            grp = assignments_by_date.setdefault(d, {des: [] for des in base_map})
+            # Pre-seed with all known designations (so missing ones exist as empty lists)
+            grp = assignments_by_date.setdefault(d, {des: [] for des in designation_map})
             for r in range(row0 + 1, df.shape[0]):
                 raw = str(df.iat[r, col0]).replace("\xa0", " ").strip()
                 if raw == "":
@@ -450,14 +511,20 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                 if desc in grp and prov:
                     grp[desc].append(prov)
 
+    # Friendly notice if expected site keywords are missing across uploads
+    missing_keywords = [kw for kw in REQUIRED_KEYWORDS if kw not in found_keywords]
+    if missing_keywords:
+        st.warning("These site keywords weren’t detected in your uploads: " + ", ".join(missing_keywords))
+
     students_df = pd.read_csv(student_file, dtype=str)
     legal_names = students_df["legal_name"].dropna().tolist()
 
-    # ─── Provider filter UI (after parsing, before OPD build) ───────────────────
+    # ─── Provider filter UI ──────────────────────────────────────────────────────
+    # Build list of all providers seen; let user whitelist a subset before we fill
     all_providers = sorted({
         p.strip() for day in assignments_by_date.values() for provs in day.values() for p in provs if isinstance(p, str) and p.strip()
     })
-    # Provider filter UI (reordered to avoid state write errors)
+
     if "provider_filter" not in st.session_state:
         st.session_state["provider_filter"] = []
 
@@ -476,23 +543,21 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         help="Only selected providers will be written into the OPD sheets (others will be left blank).",
     )
 
-    # Build redcap_row
+    # ─── Build redcap_row (5 weeks fixed) ────────────────────────────────────────
     redcap_row = {"record_id": record_id}
     sorted_dates = sorted(assignments_by_date.keys())
-
-    # Force a 5-week grid regardless of count of detected dates; still fill what exists
     NUM_WEEKS = 5
     NUM_DAYS = NUM_WEEKS * 7
 
     for idx, date in enumerate(sorted_dates[:NUM_DAYS], start=1):
         redcap_row[f"hd_day_date{idx}"] = date
         suffix = f"d{idx}_"
-        des_map = {des: ([p + suffix for p in prefs] if isinstance(prefs, list) else [prefs + suffix]) for des, prefs in base_map.items()}
+        # Expand designation_map into actual column prefixes with current day suffix
+        des_map = {des: ([prefix + suffix]) for des, prefix in designation_map.items()}
         for des, provs in assignments_by_date[date].items():
-            # Filter providers by user selection
+            # Filter by allowed providers
             filtered = [p for p in provs if p in allowed_providers]
             req = min_required.get(des, len(filtered))
-            # If there are some providers, pad up to the required count; if none, leave blank
             if filtered:
                 while len(filtered) < req:
                     filtered.append(filtered[0])
@@ -500,7 +565,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
 
-    # Put students into s1..sn (not appended to cells in this 4-sheet build)
+    # Students list stored but not appended into cells in this 4-sheet build
     for i, name in enumerate(legal_names, start=1):
         redcap_row[f"s{i}"] = name
 
@@ -528,22 +593,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         format_label = workbook.add_format({"font_size": 12, "bold": 1, "align": "center", "valign": "vcenter", "font_color": "black", "bg_color": "#FFC7CE", "border": 1})
         merge_format = workbook.add_format({"bold": 1, "align": "center", "valign": "vcenter", "text_wrap": True, "font_color": "red", "bg_color": "#FEFFCC", "border": 1})
 
-        worksheet_names = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
-        site_list = ["Hope Drive", "Elizabethtown", "Nyes Road", "Complex Care"]
-        sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
-        for ws, site in zip(sheets.values(), site_list):
-            ws.write(0, 0, "Site:", format1)
-            ws.write(0, 1, site, format1)
-
-        # HOPE_DRIVE: dynamic blocks
-        hd = sheets["HOPE_DRIVE"]
-        ACUTE_COUNT = 2
-        CONTINUITY_COUNT = 8
-        BLOCK_SIZE = ACUTE_COUNT + CONTINUITY_COUNT  # 10
-        AM_COUNT = BLOCK_SIZE
-        PM_COUNT = BLOCK_SIZE
-
-        # Acute highlight formats
+        # Acute highlight formats (HOPE_DRIVE)
         format_am_acute = workbook.add_format({
             "font_size": 12, "bold": 1, "align": "center", "valign": "vcenter",
             "font_color": "black", "bg_color": "#8ccf6f", "border": 1  # green
@@ -553,65 +603,65 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             "font_color": "white", "bg_color": "#1f4e79", "border": 1  # dark blue
         })
 
+        # Create only the configured sheets (order is registry order)
+        worksheet_names = list(SITE_CONFIGS.keys())
+        site_list = [SITE_CONFIGS[name]["title"] for name in worksheet_names]
+        sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
+        for ws, site in zip(sheets.values(), site_list):
+            ws.write(0, 0, "Site:", format1)
+            ws.write(0, 1, site, format1)
+
+        # Block math shared by all
         BLOCK_HEIGHT = 24
-        BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]  # 6, 30, 54, 78, 102 ...
+        BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
         HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
 
-        for start in BLOCK_STARTS:
-            # PRIORITY 1: Acute stripes (win over everything)
-            hd.conditional_format(
-                f"A{start}:H{start+1}",
-                {"type": "no_errors", "format": format_am_acute}
-            )
-            hd.conditional_format(
-                f"A{start+10}:H{start+11}",
-                {"type": "no_errors", "format": format_pm_acute}
-            )
+        # HOPE_DRIVE styling (if present)
+        if "HOPE_DRIVE" in sheets and SITE_CONFIGS["HOPE_DRIVE"]["type"] == "hope_drive":
+            hd = sheets["HOPE_DRIVE"]
+            ACUTE_COUNT = 2
+            CONTINUITY_COUNT = 8
+            AM_COUNT = ACUTE_COUNT + CONTINUITY_COUNT  # 10
+            PM_COUNT = AM_COUNT
 
-            # PRIORITY 2: Header tints
-            hd.conditional_format(
-                f"B{start}:H{start}",
-                {"type": "no_errors", "format": format4}
-            )
-            hd.conditional_format(
-                f"B{start+10}:H{start+10}",
-                {"type": "no_errors", "format": format4a}
-            )
+            for start in BLOCK_STARTS:
+                # Priority 1: acutes (include column A for labels)
+                hd.conditional_format(f"A{start}:H{start+1}", {"type": "no_errors", "format": format_am_acute})
+                hd.conditional_format(f"A{start+10}:H{start+11}", {"type": "no_errors", "format": format_pm_acute})
+                # Priority 2: header tints
+                hd.conditional_format(f"B{start}:H{start}", {"type": "no_errors", "format": format4})
+                hd.conditional_format(f"B{start+10}:H{start+10}", {"type": "no_errors", "format": format4a})
+                # Priority 3: broad AM/PM fills
+                hd.conditional_format(f"A{start}:H{start+9}", {"type": "no_errors", "format": format1})
+                hd.conditional_format(f"A{start+10}:H{start+19}", {"type": "no_errors", "format": format5a})
+                # Column A labels for AM/PM sections
+                zero_row = start - 1
+                for i in range(AM_COUNT):
+                    label = "AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"
+                    hd.write(zero_row + i, 0, label, format5a)
+                for i in range(PM_COUNT):
+                    label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
+                    hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
 
-            # PRIORITY 3: Broad AM/PM block fills
-            hd.conditional_format(
-                f"A{start}:H{start+9}",
-                {"type": "no_errors", "format": format1}
-            )
-            hd.conditional_format(
-                f"A{start+10}:H{start+19}",
-                {"type": "no_errors", "format": format5a}
-            )
-
-            # Column A labels inside this block
-            zero_row = start - 1
-            for i in range(AM_COUNT):
-                label = "AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"
-                hd.write(zero_row + i, 0, label, format5a)
-            for i in range(PM_COUNT):
-                label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
-                hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
-
-        # Other three: continuity-only labels
-        for name in ("ETOWN", "NYES", "COMPLEX"):
+        # Continuity-only sheets (auto for anything in registry with type=continuity)
+        for name, cfg in SITE_CONFIGS.items():
+            if cfg["type"] != "continuity":
+                continue
             ws = sheets[name]
             for start in BLOCK_STARTS:
                 zero_row = start - 1
+                # AM/PM column A labels
                 for i in range(10):
                     ws.write(zero_row + i, 0, "AM", format5a)
                 for i in range(10):
                     ws.write(zero_row + 10 + i, 0, "PM", format5a)
+                # Background bands + headers
                 ws.conditional_format(f"A{start}:H{start+9}", {"type": "no_errors", "format": format1})
                 ws.conditional_format(f"A{start+10}:H{start+19}", {"type": "no_errors", "format": format5a})
                 ws.conditional_format(f"B{start}:H{start}", {"type": "no_errors", "format": format4})
                 ws.conditional_format(f"B{start+10}:H{start+10}", {"type": "no_errors", "format": format4a})
 
-        # headers, dates, separators, CRTS message
+        # Headers, dates, bars, CRTS — universal for all sheets
         date_cols = [f"hd_day_date{i}" for i in range(1, NUM_DAYS + 1)]
         dates = pd.to_datetime(full_df[date_cols].iloc[0], errors="coerce").tolist()
         weeks = [dates[i * 7 : (i + 1) * 7] for i in range(NUM_WEEKS)]
@@ -630,8 +680,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                         ws.write(start + 1, 1 + c, val, format_date)
                 ws.write_formula(f"A{start}", '""', format_label)
                 ws.conditional_format(f"A{start+3}:H{start+3}", {"type": "no_errors", "format": format_label})
-
-            # black bars (every 24 rows) and two white rows per block — apply to ALL sheets
+            # black bars and top two white rows per block (all sheets)
             for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
                 ws.merge_range(f"A{row}:H{row}", " ", format2)
             for i in range(NUM_WEEKS):
@@ -651,54 +700,58 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         output.seek(0)
         return output.read()
 
-    # ─── Build the CSV→Excel mappings for just these four sheets ─────────────────
+    # ─── CSV→Excel mappings built from registry ─────────────────────────────────
     def build_mappings(NUM_WEEKS: int) -> list:
         mappings = []
         excel_column_letters = ["B", "C", "D", "E", "F", "G", "H"]
-        hd_row_defs = {"AM": {"acute_start": 6, "cont_start": 8}, "PM": {"acute_start": 16, "cont_start": 18}}
         cont_row_defs = {"AM": 6, "PM": 16}
+        hd_row_defs = {"AM": {"acute_start": 6, "cont_start": 8}, "PM": {"acute_start": 16, "cont_start": 18}}
 
-        # HOPE_DRIVE (with acutes)
-        for week_idx in range(1, NUM_WEEKS + 1):
-            week_base = (week_idx - 1) * 24
-            day_offset = (week_idx - 1) * 7
-            for day_idx, col in enumerate(excel_column_letters, start=1):
-                is_weekday = day_idx <= 5
-                day_num = day_idx + day_offset
-                # AM
-                if is_weekday:
-                    for prov in range(1, 2 + 1):
-                        row = week_base + hd_row_defs["AM"]["acute_start"] + (prov - 1)
-                        mappings.append({"csv_column": f"hd_am_acute_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
-                    for prov in range(1, 8 + 1):
-                        row = week_base + hd_row_defs["AM"]["cont_start"] + (prov - 1)
-                        mappings.append({"csv_column": f"hd_am_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
-                else:
-                    for acute_type in (1, 2):
-                        row = week_base + hd_row_defs["AM"]["acute_start"] + (acute_type - 1)
-                        mappings.append({"csv_column": f"hd_wknd_acute_{acute_type}_d{day_num}_1", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
-                    for prov in range(1, 8 + 1):
-                        row = week_base + hd_row_defs["AM"]["cont_start"] + (prov - 1)
-                        mappings.append({"csv_column": f"hd_wknd_am_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
-                # PM
-                if is_weekday:
-                    for prov in range(1, 2 + 1):
-                        row = week_base + hd_row_defs["PM"]["acute_start"] + (prov - 1)
-                        mappings.append({"csv_column": f"hd_pm_acute_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
-                    for prov in range(1, 8 + 1):
-                        row = week_base + hd_row_defs["PM"]["cont_start"] + (prov - 1)
-                        mappings.append({"csv_column": f"hd_pm_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
-                else:
-                    for acute_type in (1, 2):
-                        row = week_base + hd_row_defs["PM"]["acute_start"] + (acute_type - 1)
-                        mappings.append({"csv_column": f"hd_wknd_pm_acute_{acute_type}_d{day_num}_1", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
-                    for prov in range(1, 8 + 1):
-                        row = week_base + hd_row_defs["PM"]["cont_start"] + (prov - 1)
-                        mappings.append({"csv_column": f"hd_wknd_pm_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+        # HOPE_DRIVE mappings
+        if "HOPE_DRIVE" in SITE_CONFIGS and SITE_CONFIGS["HOPE_DRIVE"]["type"] == "hope_drive":
+            for week_idx in range(1, NUM_WEEKS + 1):
+                week_base = (week_idx - 1) * 24
+                day_offset = (week_idx - 1) * 7
+                for day_idx, col in enumerate(excel_column_letters, start=1):
+                    is_weekday = day_idx <= 5
+                    day_num = day_idx + day_offset
+                    # AM
+                    if is_weekday:
+                        for prov in range(1, 2 + 1):
+                            row = week_base + hd_row_defs["AM"]["acute_start"] + (prov - 1)
+                            mappings.append({"csv_column": f"hd_am_acute_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+                        for prov in range(1, 8 + 1):
+                            row = week_base + hd_row_defs["AM"]["cont_start"] + (prov - 1)
+                            mappings.append({"csv_column": f"hd_am_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+                    else:
+                        for acute_type in (1, 2):
+                            row = week_base + hd_row_defs["AM"]["acute_start"] + (acute_type - 1)
+                            mappings.append({"csv_column": f"hd_wknd_acute_{acute_type}_d{day_num}_1", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+                        for prov in range(1, 8 + 1):
+                            row = week_base + hd_row_defs["AM"]["cont_start"] + (prov - 1)
+                            mappings.append({"csv_column": f"hd_wknd_am_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+                    # PM
+                    if is_weekday:
+                        for prov in range(1, 2 + 1):
+                            row = week_base + hd_row_defs["PM"]["acute_start"] + (prov - 1)
+                            mappings.append({"csv_column": f"hd_pm_acute_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+                        for prov in range(1, 8 + 1):
+                            row = week_base + hd_row_defs["PM"]["cont_start"] + (prov - 1)
+                            mappings.append({"csv_column": f"hd_pm_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+                    else:
+                        for acute_type in (1, 2):
+                            row = week_base + hd_row_defs["PM"]["acute_start"] + (acute_type - 1)
+                            mappings.append({"csv_column": f"hd_wknd_pm_acute_{acute_type}_d{day_num}_1", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
+                        for prov in range(1, 8 + 1):
+                            row = week_base + hd_row_defs["PM"]["cont_start"] + (prov - 1)
+                            mappings.append({"csv_column": f"hd_wknd_pm_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
 
-        # ETOWN, NYES, COMPLEX (continuity only)
-        cont_keys = [("ETOWN", "etown_am_", "etown_pm_"), ("NYES", "nyes_am_", "nyes_pm_"), ("COMPLEX", "complex_am_", "complex_pm_")]
-        for sheet_name, am_pref, pm_pref in cont_keys:
+        # Continuity-only sheets from registry (auto)
+        for sheet_name, cfg in SITE_CONFIGS.items():
+            if cfg["type"] != "continuity":
+                continue
+            am_prefix = cfg["am"]["prefix"]
+            pm_prefix = cfg["pm"]["prefix"]
             for week_idx in range(1, NUM_WEEKS + 1):
                 week_base = (week_idx - 1) * 24
                 day_offset = (week_idx - 1) * 7
@@ -706,10 +759,10 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                     day_num = day_idx + day_offset
                     for prov in range(1, 10 + 1):
                         row = week_base + cont_row_defs["AM"] + (prov - 1)
-                        mappings.append({"csv_column": f"{am_pref}d{day_num}_{prov}", "excel_sheet": sheet_name, "excel_cell": f"{col}{row}"})
+                        mappings.append({"csv_column": f"{am_prefix}d{day_num}_{prov}", "excel_sheet": sheet_name, "excel_cell": f"{col}{row}"})
                     for prov in range(1, 10 + 1):
                         row = week_base + cont_row_defs["PM"] + (prov - 1)
-                        mappings.append({"csv_column": f"{pm_pref}d{day_num}_{prov}", "excel_sheet": sheet_name, "excel_cell": f"{col}{row}"})
+                        mappings.append({"csv_column": f"{pm_prefix}d{day_num}_{prov}", "excel_sheet": sheet_name, "excel_cell": f"{col}{row}"})
         return mappings
 
     def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, mappings: list) -> bytes | None:
@@ -735,7 +788,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         except Exception:
             return None
 
-    st.subheader("Generate OPD.xlsx (4-sheet, 5-week)")
+    st.subheader("Generate OPD.xlsx (configurable, 5-week)")
 
     if st.button("Generate 4-Sheet OPD (5-week)"):
         excel_template_bytes = generate_opd_workbook(out_df)
