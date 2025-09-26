@@ -353,19 +353,6 @@ elif mode == "Instructions":
         buf.seek(0)
         st.download_button(label="📄 Download Instructions (Word)",data=buf.getvalue(),file_name="Qgenda_Report_Instructions.docx",mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
-
-# Drop-in replacement for your "elif mode == 'Format OPD + Summary':" block
-# Key changes:
-#  - Dynamic NUM_WEEKS derived from parsed dates (works for 5 weeks or any N)
-#  - All 4-week literals replaced by NUM_WEEKS-derived ranges
-#  - Workbook grids, headers, separators, and mapping loops scale automatically
-#  - Summary table shows all weeks
-
-# Minimal OPD generator restricted to HOPE_DRIVE, ETOWN, NYES, COMPLEX
-# 5-week rotation layout; no Ward A / Nursery / SJR / AAC / AdolMed sheets
-# Keeps your AM/PM acute/continuity structure for HOPE_DRIVE and continuity-only
-# structure for ETOWN, NYES, COMPLEX. Still reads providers from uploaded QGenda.
-
 elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     import math
     import re
@@ -526,16 +513,58 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
         HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
 
-        # HOPE_DRIVE labels
         hd = sheets["HOPE_DRIVE"]
-        ACUTE_COUNT, CONTINUITY_COUNT = 2, 8
-        AM_COUNT = PM_COUNT = ACUTE_COUNT + CONTINUITY_COUNT  # 10
+        ACUTE_COUNT = 2
+        CONTINUITY_COUNT = 8
+        BLOCK_SIZE = ACUTE_COUNT + CONTINUITY_COUNT # 10
+        AM_COUNT = BLOCK_SIZE
+        PM_COUNT = BLOCK_SIZE
+        
+        
+        BLOCK_HEIGHT = 24
+        BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+        HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+        
+        
         for start in BLOCK_STARTS:
-            zero_row = start - 1
-            for i in range(AM_COUNT):
-                hd.write(zero_row + i, 0, ("AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"), format5a)
-            for i in range(PM_COUNT):
-                hd.write(zero_row + AM_COUNT + i, 0, ("PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"), format5a)
+        # Apply conditional formats for AM and PM sections
+        hd.conditional_format(
+        f"A{start}:H{start+9}",
+        {"type": "cell", "criteria": ">=", "value": 0, "format": format1},
+        )
+        hd.conditional_format(
+        f"A{start+10}:H{start+19}",
+        {"type": "cell", "criteria": ">=", "value": 0, "format": format5a},
+        )
+        hd.conditional_format(
+        f"B{start}:H{start}",
+        {"type": "cell", "criteria": ">=", "value": 0, "format": format4},
+        )
+        hd.conditional_format(
+        f"B{start+10}:H{start+10}",
+        {"type": "cell", "criteria": ">=", "value": 0, "format": format4a},
+        )
+        
+        
+        # AM/PM label column for HOPE_DRIVE
+        zero_row = start - 1
+        for i in range(AM_COUNT):
+        label = "AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"
+        hd.write(zero_row + i, 0, label, format5a)
+        for i in range(PM_COUNT):
+        label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
+        hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
+        
+        
+        # Add black separator bars for HOPE_DRIVE
+        for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
+        hd.merge_range(f"A{row}:H{row}", " ", format2)
+        
+        
+        # Paint empty white spaces at the top of each block (two rows)
+        for i in range(NUM_WEEKS):
+        hd.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
+        hd.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
 
         # Other three: continuity-only labels
         for name in ("ETOWN", "NYES", "COMPLEX"):
