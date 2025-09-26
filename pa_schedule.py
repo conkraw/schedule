@@ -545,6 +545,8 @@ elif mode == "PA OPD Creator":
     assignments_by_date = {}
     found_keywords = set()
 
+    date_pat = re.compile(r"^[A-Za-z]+ \d{1,2}, \d{4}$")
+    
     for file in schedule_files:
         try:
             df = pd.read_excel(file, header=None, dtype=str)
