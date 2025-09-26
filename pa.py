@@ -453,6 +453,17 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     students_df = pd.read_csv(student_file, dtype=str)
     legal_names = students_df["legal_name"].dropna().tolist()
 
+    # ─── Provider filter UI (after parsing, before OPD build) ───────────────────
+    all_providers = sorted({
+        p.strip() for day in assignments_by_date.values() for provs in day.values() for p in provs if isinstance(p, str) and p.strip()
+    })
+    allowed_providers = st.multiselect(
+        "Limit providers included in OPD",
+        options=all_providers,
+        default=all_providers,
+        help="Only selected providers will be written into the OPD sheets (others will be left blank).",
+    )
+
     # Build redcap_row
     redcap_row = {"record_id": record_id}
     sorted_dates = sorted(assignments_by_date.keys())
@@ -466,10 +477,14 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         suffix = f"d{idx}_"
         des_map = {des: ([p + suffix for p in prefs] if isinstance(prefs, list) else [prefs + suffix]) for des, prefs in base_map.items()}
         for des, provs in assignments_by_date[date].items():
-            req = min_required.get(des, len(provs))
-            while len(provs) < req and provs:
-                provs.append(provs[0])
-            for i, name in enumerate(provs, start=1):
+            # Filter providers by user selection
+            filtered = [p for p in provs if p in allowed_providers]
+            req = min_required.get(des, len(filtered))
+            # If there are some providers, pad up to the required count; if none, leave blank
+            if filtered:
+                while len(filtered) < req:
+                    filtered.append(filtered[0])
+            for i, name in enumerate(filtered, start=1):
                 for prefix in des_map[des]:
                     redcap_row[f"{prefix}{i}"] = name
 
