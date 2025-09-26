@@ -460,9 +460,22 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     allowed_providers = st.multiselect(
         "Limit providers included in OPD",
         options=all_providers,
-        default=all_providers,
+        default=[],  # start empty
+        key="provider_filter",
         help="Only selected providers will be written into the OPD sheets (others will be left blank).",
     )
+
+    # Quick actions
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Select All Providers"):
+            st.session_state["provider_filter"] = all_providers
+    with col2:
+        if st.button("Clear Providers"):
+            st.session_state["provider_filter"] = []
+
+    # Use the latest selection from session state
+    allowed_providers = st.session_state.get("provider_filter", [])
 
     # Build redcap_row
     redcap_row = {"record_id": record_id}
@@ -739,7 +752,6 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             file_name="OPD_4_sheets_5_weeks.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-
 
 elif mode == "Create Individual Schedules":
     st.subheader("Individual Schedule Creator")
