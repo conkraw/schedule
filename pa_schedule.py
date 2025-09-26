@@ -729,7 +729,7 @@ elif mode == "PA OPD Creator":
             ws = sheets["SUBSPECIALTY"]
             # ✅ give SUBSPECIALTY the same worksheet sizing you give others
             ws.set_zoom(80)
-            ws.set_column("A:A", 10)
+            ws.set_column("A:A", 21)
             ws.set_column("B:H", 65)
             ws.set_row(0, 37.25)
     
