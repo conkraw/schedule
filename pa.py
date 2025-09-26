@@ -31,7 +31,7 @@ st.title("Batch Preceptor → REDCap Import Generator")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 #mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary (4-sheet, 5-week)", "Create Student Schedule","OPD Check","Create Individual Schedules"))
-mode = st.sidebar.radio("What do you want to do?",(""Format OPD + Summary (4-sheet, 5-week)", "Create Student Schedule","Create Individual Schedules"))
+mode = st.sidebar.radio("What do you want to do?",("Format OPD + Summary (4-sheet, 5-week)", "Create Student Schedule","Create Individual Schedules"))
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
 if mode == "OPD Check":
