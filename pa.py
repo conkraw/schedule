@@ -507,68 +507,58 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         for ws, site in zip(sheets.values(), site_list):
             ws.write(0, 0, "Site:", format1)
             ws.write(0, 1, site, format1)
-        # Define acute highlight formats (ensure they exist in this scope)
-        format_am_acute = workbook.add_format({
-            'font_size': 12,
-            'bold': 1,
-            'align': 'center',
-            'valign': 'vcenter',
-            'font_color': 'black',
-            'bg_color': '#8ccf6f',  # green
-            'border': 1,
-        })
-        format_pm_acute = workbook.add_format({
-            'font_size': 12,
-            'bold': 1,
-            'align': 'center',
-            'valign': 'vcenter',
-            'font_color': 'white',
-            'bg_color': '#1f4e79',  # dark blue
-            'border': 1,
-        })
 
-    # HOPE_DRIVE: dynamic blocks
-    hd = sheets["HOPE_DRIVE"]
-    ACUTE_COUNT = 2
-    CONTINUITY_COUNT = 8
-    BLOCK_SIZE = ACUTE_COUNT + CONTINUITY_COUNT  # 10
-    AM_COUNT = BLOCK_SIZE
-    PM_COUNT = BLOCK_SIZE
-    
-    BLOCK_HEIGHT = 24
-    BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
-    HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
-    
-    for start in BLOCK_STARTS:
-        # Apply conditional formats for AM and PM sections
-        hd.conditional_format(
+        # block math
+        BLOCK_HEIGHT = 24
+        BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+        HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+
+        # HOPE_DRIVE: dynamic blocks
+        hd = sheets["HOPE_DRIVE"]
+        ACUTE_COUNT = 2
+        CONTINUITY_COUNT = 8
+        BLOCK_SIZE = ACUTE_COUNT + CONTINUITY_COUNT # 10
+        AM_COUNT = BLOCK_SIZE
+        PM_COUNT = BLOCK_SIZE
+        
+        
+        BLOCK_HEIGHT = 24
+        BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+        HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
+        
+        
+        for start in BLOCK_STARTS:
+            # Apply conditional formats for AM and PM sections
+            hd.conditional_format(
             f"A{start}:H{start+9}",
-            {"type":"no_errors","format":format1},
-        )
-        hd.conditional_format(
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format1},
+            )
+            hd.conditional_format(
             f"A{start+10}:H{start+19}",
-            {"type":"no_errors","format":format5a},
-        )
-        hd.conditional_format(
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format5a},
+            )
+            hd.conditional_format(
             f"B{start}:H{start}",
-            {"type":"no_errors","format":format4},
-        )
-        hd.conditional_format(
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format4},
+            )
+            hd.conditional_format(
             f"B{start+10}:H{start+10}",
-            {"type":"no_errors","format":format4a},
-        )
-    
-        # AM acutes (rows start and start+1) in green
-        hd.conditional_format(
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format4a},
+            )
+            
+            
+            # AM acutes (rows start and start+1) in green
+            hd.conditional_format(
             f"B{start}:H{start+1}",
-            {"type":"no_errors","format":format_am_acute},
-        )
-        # PM acutes (rows start+10 and start+11) in dark blue
-        hd.conditional_format(
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format_am_acute},
+            )
+            # PM acutes (rows start+10 and start+11) in dark blue
+            hd.conditional_format(
             f"B{start+10}:H{start+11}",
-            {"type":"no_errors","format":format_pm_acute},
-        )
-    
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format_pm_acute},
+            )
+            
+        
         # AM/PM label column for HOPE_DRIVE
         zero_row = start - 1
         for i in range(AM_COUNT):
@@ -577,7 +567,17 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         for i in range(PM_COUNT):
             label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
             hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
-    
+        
+        
+        # Add black separator bars for HOPE_DRIVE
+        for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
+            hd.merge_range(f"A{row}:H{row}", " ", format2)
+        
+        
+        # Paint empty white spaces at the top of each block (two rows)
+        for i in range(NUM_WEEKS):
+            hd.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
+            hd.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
 
         # Other three: continuity-only labels
         for name in ("ETOWN", "NYES", "COMPLEX"):
