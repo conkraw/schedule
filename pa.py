@@ -544,7 +544,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                 {"type": "cell", "criteria": ">=", "value": 0, "format": format4a},
             )
 
-            )
+    
             hd.conditional_format(
                 f"B{start}:H{start}",
                 {"type": "cell", "criteria": ">=", "value": 0, "format": format4},
