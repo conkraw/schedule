@@ -1283,20 +1283,33 @@ elif mode == "Create Student Schedule":
                 curr = [r]
         blocks.append(curr)
         return blocks
-
+    
+    def _row_label_for_bracket(site_name: str, ws_opd, row_idx: int) -> str:
+        """Return the label to put in brackets. For SUBSPECIALTY use col A on that row; else the sheet name."""
+        if site_name != "SUBSPECIALTY":
+            return site_name
+        val = ws_opd.cell(row=row_idx, column=1).value  # column A
+        label = str(val).strip() if val is not None else ""
+        return label or "SUBSPECIALTY"
+    
     def assign_preceptors_all_weeks_am(opd_file, ms_file):
         """Copy AM 'Preceptor ~ Student' assignments from OPD (B..H) into each student's tab.
         Maps week blocks → target rows [6,14,22,30,38] for 5 weeks.
+        Bracket label: sheet name except SUBSPECIALTY, which uses the designation text in col A.
         """
         opd_wb = load_workbook(opd_file, data_only=True)
         ms_wb = load_workbook(ms_file)
-
+    
         target_ms_rows = _seq(6, BLOCK_HEIGHT, NUM_WEEKS)  # [6,14,22,30,38]
-
+    
         for site in opd_wb.sheetnames:
             ws_opd = opd_wb[site]
-            am_rows = [c.row for c in ws_opd['A'] if isinstance(c.value, str) and re.match(r"^\s*AM\b", c.value, re.IGNORECASE)]
+            am_rows = [
+                c.row for c in ws_opd["A"]
+                if isinstance(c.value, str) and re.match(r"^\s*AM\b", c.value, re.IGNORECASE)
+            ]
             blocks = _cluster_blocks(am_rows)
+    
             for week_idx, block in enumerate(blocks[:NUM_WEEKS]):
                 ms_row = target_ms_rows[week_idx]
                 for col in range(2, 9):  # B..H
@@ -1308,24 +1321,31 @@ elif mode == "Create Student Schedule":
                         if not student or student not in ms_wb.sheetnames:
                             continue
                         ws_ms = ms_wb[student]
-                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
-
+                        label = _row_label_for_bracket(site, ws_opd, r)
+                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{label}]"
+    
         out = io.BytesIO()
         ms_wb.save(out)
         out.seek(0)
         return out
-
+    
     def assign_preceptors_all_weeks_pm(opd_file, ms_file):
-        """Copy PM assignments; week rows [7,15,23,31,39] for 5 weeks."""
+        """Copy PM assignments; week rows [7,15,23,31,39] for 5 weeks.
+        Bracket label: sheet name except SUBSPECIALTY, which uses the designation text in col A.
+        """
         opd_wb = load_workbook(opd_file, data_only=True)
         ms_wb = load_workbook(ms_file)
-
+    
         target_ms_rows = _seq(7, BLOCK_HEIGHT, NUM_WEEKS)  # [7,15,23,31,39]
-
+    
         for site in opd_wb.sheetnames:
             ws_opd = opd_wb[site]
-            pm_rows = [c.row for c in ws_opd['A'] if isinstance(c.value, str) and re.match(r"^\s*PM\b", c.value, re.IGNORECASE)]
+            pm_rows = [
+                c.row for c in ws_opd["A"]
+                if isinstance(c.value, str) and re.match(r"^\s*PM\b", c.value, re.IGNORECASE)
+            ]
             blocks = _cluster_blocks(pm_rows)
+    
             for week_idx, block in enumerate(blocks[:NUM_WEEKS]):
                 ms_row = target_ms_rows[week_idx]
                 for col in range(2, 9):  # B..H
@@ -1337,12 +1357,14 @@ elif mode == "Create Student Schedule":
                         if not student or student not in ms_wb.sheetnames:
                             continue
                         ws_ms = ms_wb[student]
-                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
-
+                        label = _row_label_for_bracket(site, ws_opd, r)
+                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{label}]"
+    
         out = io.BytesIO()
         ms_wb.save(out)
         out.seek(0)
         return out
+
 
     def detect_shift_conflicts(opd_file):
         """Same as before, but scans NUM_WEEKS blocks instead of 4."""
