@@ -1006,7 +1006,6 @@ elif mode == "PA OPD Creator":
             st.stop()
 
         updated_excel_bytes, hidden_map, hidden_total = hide_blank_rows_all_sheets(updated_excel_bytes)
-        st.info(f"SUBSPECIALTY: hid {hidden} blank row(s).")
         
         st.success("✅ OPD.xlsx updated successfully!")
         st.download_button(
