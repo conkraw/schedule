@@ -549,11 +549,11 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             # AM/PM label column for HOPE_DRIVE
             zero_row = start - 1
             for i in range(AM_COUNT):
-            label = "AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"
-            hd.write(zero_row + i, 0, label, format5a)
+                label = "AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"
+                hd.write(zero_row + i, 0, label, format5a)
             for i in range(PM_COUNT):
-            label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
-            hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
+                label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
+                hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
         
         
         # Add black separator bars for HOPE_DRIVE
