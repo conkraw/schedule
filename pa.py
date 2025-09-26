@@ -403,6 +403,13 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             "am": {"aliases": ["nyes rd am continuity"], "prefix": "nyes_am_"},
             "pm": {"aliases": ["nyes rd pm continuity"], "prefix": "nyes_pm_"},
         },
+        "LANCASTER": {
+            "title": "Lancaster",
+            "type": "continuity",
+            "keywords": ["academic general pediatrics"],
+            "am": {"aliases": ["lancaster am"], "prefix": "lancaster_am_"},
+            "pm": {"aliases": ["lancaster pm"], "prefix": "lancaster_pm_"},
+        },
         "COMPLEX": {
             "title": "Complex Care",
             "type": "continuity",
@@ -411,7 +418,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             "pm": {"aliases": ["hope drive clinic pm"], "prefix": "complex_pm_"},
         },
         # Example to add later (just copy and adjust aliases/prefixes):
-        # "ADOLMED": {
+        #"ADOLMED": {
         #     "title": "Adolescent Medicine",
         #     "type": "continuity",
         #     "keywords": ["adol med", "adolescent"],
