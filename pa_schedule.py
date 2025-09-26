@@ -601,28 +601,40 @@ elif mode == "PA OPD Creator":
     legal_names = students_df["legal_name"].dropna().tolist()
 
     # ─── Provider filter UI ──────────────────────────────────────────────────────
-    # Build list of all providers seen; let user whitelist a subset before we fill
     all_providers = sorted({
-        p.strip() for day in assignments_by_date.values() for provs in day.values() for p in provs if isinstance(p, str) and p.strip()
+        p.strip()
+        for day in assignments_by_date.values()
+        for provs in day.values()
+        for p in provs
+        if isinstance(p, str) and p.strip()
     })
-
+    
+    # Multiselect persists in session; start empty by design
     if "provider_filter" not in st.session_state:
         st.session_state["provider_filter"] = []
-
-    col1, col2 = st.columns(2)
+    
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("Select All Providers"):
             st.session_state["provider_filter"] = all_providers
     with col2:
         if st.button("Clear Providers"):
             st.session_state["provider_filter"] = []
-
+    with col3:
+        # NEW: a switch to actually apply the filter. Off = treat as 'All'
+        apply_provider_filter = st.checkbox("Apply provider filter", value=False,
+            help="When OFF, everyone is included even if the multiselect is blank.")
+    
     allowed_providers = st.multiselect(
         "Limit providers included in OPD",
         options=all_providers,
         key="provider_filter",
-        help="Only selected providers will be written into the OPD sheets (others will be left blank).",
+        help="Only selected providers will be written when 'Apply provider filter' is ON.",
     )
+    
+    # Effective allow-list:
+    effective_allowed = set(allowed_providers) if (apply_provider_filter and allowed_providers) else set(all_providers)
+
 
     # ─── Build redcap_row (5 weeks fixed) ────────────────────────────────────────
     redcap_row = {"record_id": record_id}
@@ -636,16 +648,16 @@ elif mode == "PA OPD Creator":
         # Expand designation_map into actual column prefixes with current day suffix
         des_map = {alias: [pref + suffix for pref in prefs] for alias, prefs in designation_map.items()}
 
-    for des, provs in assignments_by_date[date].items():
-        filtered = [p for p in provs if p in allowed_providers]
-        req = min_required.get(des, len(filtered))
-        if filtered:
-            while len(filtered) < req:
-                filtered.append(filtered[0])
-        for i, name in enumerate(filtered, start=1):
-            # write to ALL prefixes for this alias (AM & PM if both configured)
-            for prefix in des_map[des]:
-                redcap_row[f"{prefix}{i}"] = name
+        for des, provs in assignments_by_date[date].items():
+            filtered = [p for p in provs if p in allowed_providers]
+            req = min_required.get(des, len(filtered))
+            if filtered:
+                while len(filtered) < req:
+                    filtered.append(filtered[0])
+            for i, name in enumerate(filtered, start=1):
+                # write to ALL prefixes for this alias (AM & PM if both configured)
+                for prefix in des_map[des]:
+                    redcap_row[f"{prefix}{i}"] = name
 
     # Students list stored but not appended into cells in this 4-sheet build
     for i, name in enumerate(legal_names, start=1):
