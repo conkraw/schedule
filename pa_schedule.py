@@ -471,7 +471,22 @@ elif mode == "PA OPD Creator":
             "am": {"aliases": ["st. joseph am"], "prefix": "endosjr_am_"},
             "pm": {"aliases": ["st. joseph pm"], "prefix": "endosjr_pm_"},
         },
-        
+
+        "HEMONC_CH1": {
+            "title": "Hematology Oncology Children's Hospital",
+            "type": "continuity",
+            "keywords": ["hemonc"],
+            "am": {"aliases": ["ch clinic am"], "prefix": "chclinic_am_"},
+            "pm": {"aliases": ["ch clinic pm"], "prefix": "chclinic_pm_"},
+        },
+
+        "HEMONC_CH2": {
+            "title": "Hematology Oncology",
+            "type": "continuity",
+            "keywords": ["hemonc"],
+            "am": {"aliases": ["clinic hemonc crnp"], "prefix": "hocrnpclinic_am_"},
+            "pm": {"aliases": ["clinic hemonc crnp"], "prefix": "hocrnpclinic_pm_"},  # ← fixed quote
+        },
         # Example to add later (just copy and adjust aliases/prefixes):
         #"ADOLMED": {
         #     "title": "Adolescent Medicine",
@@ -507,19 +522,18 @@ elif mode == "PA OPD Creator":
         st.stop()
 
     # ─── Parse files ─────────────────────────────────────────────────────────────
-    date_pat = re.compile(r"^[A-Za-z]+ \d{1,2}, \d{4}$")
-
-    # Build designation→prefix map from SITE_CONFIGS (supports aliases)
-    designation_map = {}
+    # alias (lowercased) -> list of prefixes (can contain both AM and PM)
+    designation_map = defaultdict(list)
+    
     for sheet_name, cfg in SITE_CONFIGS.items():
         if cfg["type"] == "continuity":
             for alias in cfg["am"]["aliases"]:
-                designation_map[alias.lower()] = cfg["am"]["prefix"]
+                designation_map[alias.lower()].append(cfg["am"]["prefix"])
             for alias in cfg["pm"]["aliases"]:
-                designation_map[alias.lower()] = cfg["pm"]["prefix"]
+                designation_map[alias.lower()].append(cfg["pm"]["prefix"])
         elif cfg["type"] == "hope_drive":
             for alias, (_canon, prefix) in cfg["designations"].items():
-                designation_map[alias.lower()] = prefix
+                designation_map[alias.lower()].append(prefix)
 
     # Minimum headcount rules (per designation key as it appears in QGenda)
     min_required = {
@@ -618,17 +632,18 @@ elif mode == "PA OPD Creator":
         redcap_row[f"hd_day_date{idx}"] = date
         suffix = f"d{idx}_"
         # Expand designation_map into actual column prefixes with current day suffix
-        des_map = {des: ([prefix + suffix]) for des, prefix in designation_map.items()}
-        for des, provs in assignments_by_date[date].items():
-            # Filter by allowed providers
-            filtered = [p for p in provs if p in allowed_providers]
-            req = min_required.get(des, len(filtered))
-            if filtered:
-                while len(filtered) < req:
-                    filtered.append(filtered[0])
-            for i, name in enumerate(filtered, start=1):
-                for prefix in des_map[des]:
-                    redcap_row[f"{prefix}{i}"] = name
+        des_map = {alias: [pref + suffix for pref in prefs] for alias, prefs in designation_map.items()}
+
+    for des, provs in assignments_by_date[date].items():
+        filtered = [p for p in provs if p in allowed_providers]
+        req = min_required.get(des, len(filtered))
+        if filtered:
+            while len(filtered) < req:
+                filtered.append(filtered[0])
+        for i, name in enumerate(filtered, start=1):
+            # write to ALL prefixes for this alias (AM & PM if both configured)
+            for prefix in des_map[des]:
+                redcap_row[f"{prefix}{i}"] = name
 
     # Students list stored but not appended into cells in this 4-sheet build
     for i, name in enumerate(legal_names, start=1):
