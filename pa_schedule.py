@@ -1435,48 +1435,104 @@ elif mode == "Create Student Schedule":
     
 
     def detect_shift_conflicts(opd_file):
-        """Same as before, but scans NUM_WEEKS blocks instead of 4."""
+        """
+        Finds students double-booked in the same WEEK/DAY/SHIFT across any sheet.
+        Week boundaries are determined by the header date rows in column B, so
+        SUBSPECIALTY (taller layout) works too. For SUBSPECIALTY, the 'sheet'
+        label in occurrences uses column A's designation (e.g., 'AM - ENDO_HOPE').
+        """
+        from datetime import date, datetime
+        from openpyxl.utils.datetime import from_excel
         wb = load_workbook(opd_file, data_only=True)
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        am_marker = re.compile(r"^\s*AM\b", re.IGNORECASE)
-        pm_marker = re.compile(r"^\s*PM\b", re.IGNORECASE)
+    
+        days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+        am_re = re.compile(r"^\s*AM\b", re.IGNORECASE)
+        pm_re = re.compile(r"^\s*PM\b", re.IGNORECASE)
+    
+        # ---- helpers (safe to keep local even if you already defined similar ones) ----
+        _date_re = re.compile(r"^\s*\d{1,2}/\d{1,2}/\d{2,4}\s*$")
+        def _is_date_like(v):
+            if isinstance(v, (date, datetime)):
+                return True
+            if isinstance(v, str) and _date_re.match(v):
+                return True
+            if isinstance(v, (int, float)):
+                try:
+                    _ = from_excel(v)
+                    return True
+                except Exception:
+                    return False
+            return False
+    
+        def _week_headers_by_column(ws, col_index=2):
+            rows = []
+            for row_tuple in ws.iter_rows(min_col=col_index, max_col=col_index, values_only=False):
+                cell = row_tuple[0]
+                if _is_date_like(cell.value):
+                    rows.append(cell.row)
+            return sorted(rows)
+    
+        def _week_index_for_row(row_idx, header_rows):
+            # return 0-based week index based on nearest header date row above
+            for i, hr in enumerate(header_rows):
+                nxt = header_rows[i+1] if i+1 < len(header_rows) else 10**9
+                if row_idx > hr and row_idx < nxt:
+                    return i
+            return None
+    
+        def _label_for_occurrence(sheet_name, ws, row_idx):
+            # Use sheet name normally; for SUBSPECIALTY use the designation in column A
+            if sheet_name != "SUBSPECIALTY":
+                return sheet_name
+            v = ws.cell(row=row_idx, column=1).value
+            return (str(v).strip() if v else "SUBSPECIALTY")
+    
+        # (week, day_name, shift, student) -> list[(label, coord)]
+        from collections import defaultdict
+        occurrences = defaultdict(list)
+    
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            header_rows = _week_headers_by_column(ws, col_index=2)
+            if not header_rows:
+                continue
+    
+            for shift, rx in (("AM", am_re), ("PM", pm_re)):
+                # find all AM/PM marker rows in column A
+                mark_rows = [c.row for c in ws["A"] if isinstance(c.value, str) and rx.match(c.value)]
+                for r in mark_rows:
+                    wk = _week_index_for_row(r, header_rows)
+                    if wk is None or wk >= NUM_WEEKS:
+                        continue
+                    # scan B..H for Monday..Sunday
+                    for day_idx in range(7):
+                        col = 2 + day_idx
+                        raw = ws.cell(row=r, column=col).value
+                        if not raw:
+                            continue
+                        text = str(raw)
+                        if "~" not in text:
+                            continue
+                        pre, student = [s.strip() for s in text.split("~", 1)]
+                        if not student:
+                            continue
+                        coord = ws.cell(row=r, column=col).coordinate
+                        label = _label_for_occurrence(sheet_name, ws, r)
+                        occurrences[(wk+1, days[day_idx], shift, student)].append((label, coord))
+    
+        # build conflict list in your existing shape
         conflicts = []
-
-        def find_blocks(ws, marker_re):
-            rows = [c.row for c in ws['A'] if isinstance(c.value, str) and marker_re.match(c.value)]
-            return _cluster_blocks(rows)[:NUM_WEEKS]
-
-        tpl = wb[wb.sheetnames[0]]
-        am_blocks = find_blocks(tpl, am_marker)
-        pm_blocks = find_blocks(tpl, pm_marker)
-
-        for shift, blocks in (("AM", am_blocks), ("PM", pm_blocks)):
-            for week_idx, block_rows in enumerate(blocks, start=1):
-                for day_idx, day_name in enumerate(days):
-                    col = 2 + day_idx
-                    locs = defaultdict(list)
-                    for sheet in wb.sheetnames:
-                        ws = wb[sheet]
-                        for r in block_rows:
-                            raw = ws.cell(row=r, column=col).value
-                            text = str(raw or "")
-                            if "~" not in text:
-                                continue
-                            pre, student = [s.strip() for s in text.split("~", 1)]
-                            if not student:
-                                continue
-                            coord = ws.cell(row=r, column=col).coordinate
-                            locs[student].append((sheet, coord))
-                    for student, occ in locs.items():
-                        if len(occ) > 1:
-                            conflicts.append({
-                                "student": student,
-                                "week": week_idx,
-                                "day": day_name,
-                                "shift": shift,
-                                "occurrences": occ,
-                            })
+        for (week, day_name, shift, student), occ in occurrences.items():
+            if len(occ) > 1:
+                conflicts.append({
+                    "student": student,
+                    "week": week,
+                    "day": day_name,
+                    "shift": shift,
+                    "occurrences": occ,  # list of (label, A1coord)
+                })
         return conflicts
+
 
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
