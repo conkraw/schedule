@@ -711,7 +711,7 @@ elif mode == "PA OPD Creator":
                     hd.write(zero+10+ i,           0, "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity", format5a)
     
         # ── ETOWN / NYES / COMPLEX (continuity-only, default geometry)
-        for name in ("ETOWN","NYES","COMPLEX"):
+        for name in ("ETOWN","NYES","COMPLEX","LANCASTER"):
             if name not in sheets: continue
             ws = sheets[name]
             for start in def_blk_starts:
@@ -728,8 +728,8 @@ elif mode == "PA OPD Creator":
         if "SUBSPECIALTY" in sheets:
             ws = sheets["SUBSPECIALTY"]
             # ✅ give SUBSPECIALTY the same worksheet sizing you give others
-            ws.set_zoom(80)
-            ws.set_column("A:A", 21)
+            ws.set_zoom(75)
+            ws.set_column("A:A", 30)
             ws.set_column("B:H", 65)
             ws.set_row(0, 37.25)
     
