@@ -725,64 +725,83 @@ elif mode == "PA OPD Creator":
                 ws.conditional_format(f"B{start+10}:H{start+10}", {"type":"no_errors","format":format4a})
     
         # ── SUBSPECIALTY: stack each group’s 10 AM + 10 PM inside each week
-
         if "SUBSPECIALTY" in sheets:
             ws = sheets["SUBSPECIALTY"]
-        
             # ✅ give SUBSPECIALTY the same worksheet sizing you give others
             ws.set_zoom(80)
             ws.set_column("A:A", 10)
             ws.set_column("B:H", 65)
             ws.set_row(0, 37.25)
-        
+    
             G = len(SUBSPECIALTY_GROUPS)
-            SUB_BLOCK_H = 4 + 20 * G  # 2 header rows + bars + (10 AM + 10 PM) per group
-            sub_hdr_starts = [2 + i * SUB_BLOCK_H for i in range(5)]
-            sub_blk_starts = [6 + i * SUB_BLOCK_H for i in range(5)]
-        
+            SUB_BLOCK_H = 4 + 20*G  # header rows (2) + 2 padding handled via bars + 20 per group
+            sub_hdr_starts = [2 + i*SUB_BLOCK_H for i in range(5)]
+            sub_blk_starts = [6 + i*SUB_BLOCK_H for i in range(5)]
+    
             # content per week
             for week_i, start in enumerate(sub_blk_starts):
                 for gi, group_name in enumerate(SUBSPECIALTY_GROUPS):
-                    am_start = start + gi * 20          # 10 rows AM
-                    pm_start = am_start + 10            # 10 rows PM
-        
+                    am_start = start + gi*20          # 10 rows AM
+                    pm_start = am_start + 10          # 10 rows PM
                     # labels in col A show the group key
                     for r in range(10):
-                        ws.write(am_start - 1 + r, 0, f"AM - {group_name}", format5a)
-                        ws.write(pm_start - 1 + r, 0, f"PM - {group_name}", format5a)
-        
+                        ws.write(am_start-1 + r, 0, f"AM - {group_name}", format5a)
+                        ws.write(pm_start-1 + r, 0, f"PM - {group_name}", format5a)
                     # background bands + header tints for each sub-block
-                    ws.conditional_format(f"A{am_start}:H{am_start+9}", {"type": "no_errors", "format": format1})
-                    ws.conditional_format(f"A{pm_start}:H{pm_start+9}", {"type": "no_errors", "format": format5a})
-                    ws.conditional_format(f"B{am_start}:H{am_start}",   {"type": "no_errors", "format": format4})
-                    ws.conditional_format(f"B{pm_start}:H{pm_start}",   {"type": "no_errors", "format": format4a})
-        
+                    ws.conditional_format(f"A{am_start}:H{am_start+9}",   {"type":"no_errors","format":format1})
+                    ws.conditional_format(f"A{pm_start}:H{pm_start+9}",   {"type":"no_errors","format":format5a})
+                    ws.conditional_format(f"B{am_start}:H{am_start}",     {"type":"no_errors","format":format4})
+                    ws.conditional_format(f"B{pm_start}:H{pm_start}",     {"type":"no_errors","format":format4a})
+    
             # headers/dates/bars for SUBSPECIALTY using its own geometry
             for idx, hstart in enumerate(sub_hdr_starts):
                 # day names
                 for c, dname in enumerate(days):
-                    ws.write(hstart, 1 + c, dname, format3)
+                    ws.write(hstart, 1+c, dname, format3)
                 # dates
                 for c, val in enumerate(weeks[idx]):
                     if pd.notna(val):
-                        ws.write(hstart + 1, 1 + c, val, format_date)
+                        ws.write(hstart+1, 1+c, val, format_date)
                 ws.write_formula(f"A{hstart}", '""', format_label)
-                ws.conditional_format(f"A{hstart+3}:H{hstart+3}", {"type": "no_errors", "format": format_label})
-        
-                # black bar + top two white rows (use sub geometry so no overlaps)
+                ws.conditional_format(f"A{hstart+3}:H{hstart+3}", {"type":"no_errors","format":format_label})
+                # black bar + top two white rows
                 ws.merge_range(f"A{hstart}:H{hstart}", " ", format2)
                 ws.write(f"A{hstart+1}", "", format_date)
                 ws.write(f"A{hstart+2}", "", format_date)
-        
-            # ✅ same CRTS banner you add to other sheets
-            text1 = (
-                "Students are to alert their preceptors when they have a Clinical "
-                "Reasoning Teaching Session (CRTS). Please allow the students to "
-                "leave ~15 minutes prior to the start of their session so they can be prepared."
-            )
+    
+        # ── Universal header/dates/bars for all NON-SUBSPECIALTY sheets (default geometry)
+        for name, ws in sheets.items():
+            if name == "SUBSPECIALTY":  # already handled
+                continue
+            ws.set_zoom(80)
+            ws.set_column("A:A", 10)
+            ws.set_column("B:H", 65)
+            ws.set_row(0, 37.25)
+            for idx, hstart in enumerate(def_hdr_starts):
+                for c, dname in enumerate(days):
+                    ws.write(hstart, 1+c, dname, format3)
+                for c, val in enumerate(weeks[idx]):
+                    if pd.notna(val):
+                        ws.write(hstart+1, 1+c, val, format_date)
+                ws.write_formula(f"A{hstart}", '""', format_label)
+                ws.conditional_format(f"A{hstart+3}:H{hstart+3}", {"type":"no_errors","format":format_label})
+            # black bars + top whites
+            for row in [2 + i*DEF_BLOCK_H for i in range(5)]:
+                ws.merge_range(f"A{row}:H{row}", " ", format2)
+                ws.write(f"A{row+1}", "", format_date)
+                ws.write(f"A{row+2}", "", format_date)
+    
+            # CRTS note
+            text1 = ("Students are to alert their preceptors when they have a Clinical "
+                     "Reasoning Teaching Session (CRTS). Please allow the students to "
+                     "leave ~15 minutes prior to the start of their session so they can be prepared.")
             ws.merge_range("C1:F1", text1, merge_format)
             ws.write("G1", "", merge_format)
             ws.write("H1", "", merge_format)
+    
+        workbook.close()
+        output.seek(0)
+        return output.read()
 
     # ─── CSV→Excel mappings built from registry ─────────────────────────────────
     def build_mappings(NUM_WEEKS: int) -> list:
