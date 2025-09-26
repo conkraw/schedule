@@ -859,8 +859,8 @@ elif mode == "PA OPD Creator":
                             row = week_base + hd_row_defs["PM"]["cont_start"] + (prov - 1)
                             mappings.append({"csv_column": f"hd_wknd_pm_d{day_num}_{prov}", "excel_sheet": "HOPE_DRIVE", "excel_cell": f"{col}{row}"})
     
-        # Primary continuity sheets (ETOWN, NYES, COMPLEX) use the default geometry
-        for sheet_name in ("ETOWN", "NYES", "COMPLEX"):
+        # Primary continuity sheets (ETOWN, NYES, COMPLEX, LANCASTER) use the default geometry
+        for sheet_name in ("ETOWN", "NYES", "COMPLEX","LANCASTER"):
             if sheet_name not in SITE_CONFIGS: continue
             am_pref = SITE_CONFIGS[sheet_name]["am"]["prefix"]
             pm_pref = SITE_CONFIGS[sheet_name]["pm"]["prefix"]
