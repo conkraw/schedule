@@ -568,12 +568,12 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             # AM acutes (rows start and start+1) in green
             hd.conditional_format(
             f"B{start}:H{start+1}",
-            {"type": "cell", "criteria": ">=", "value": 0, "format": format_am_acute},
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format5a},
             )
             # PM acutes (rows start+10 and start+11) in dark blue
             hd.conditional_format(
             f"B{start+10}:H{start+11}",
-            {"type": "cell", "criteria": ">=", "value": 0, "format": format_pm_acute},
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format5a},
             )
             
         
