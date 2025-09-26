@@ -563,14 +563,14 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                 label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
                 hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
         
-        # Add black separator bars for HOPE_DRIVE
-        for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
-            hd.merge_range(f"A{row}:H{row}", " ", format2)
-        
-        # Paint empty white spaces at the top of each block (two rows)
-        for i in range(NUM_WEEKS):
-            hd.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
-            hd.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
+            # Add black separator bars for HOPE_DRIVE
+            for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
+                hd.merge_range(f"A{row}:H{row}", " ", format2)
+            
+            # Paint empty white spaces at the top of each block (two rows)
+            for i in range(NUM_WEEKS):
+                hd.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
+                hd.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
 
 
         # Other three: continuity-only labels
