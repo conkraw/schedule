@@ -930,8 +930,11 @@ elif mode == "PA OPD Creator":
                             mappings.append({"csv_column": f"{pm_pref}d{day_num}_{prov}", "excel_sheet": "SUBSPECIALTY", "excel_cell": f"{col}{row}"})
         return mappings
 
-    def prune_subspecialty_blank_rows(excel_bytes: bytes) -> tuple[bytes, int]:
-        """Remove SUBSPECIALTY rows where B..H are empty and col A starts with AM/PM."""
+    def hide_subspecialty_blank_rows(excel_bytes: bytes) -> tuple[bytes, int]:
+        """
+        Hide SUBSPECIALTY rows where B..H are empty and col A starts with AM/PM.
+        Preserves row indices to keep xlsxwriter conditional formats aligned.
+        """
         import io, re
         from openpyxl import load_workbook
     
@@ -942,25 +945,25 @@ elif mode == "PA OPD Creator":
             return excel_bytes, 0
     
         ws = wb["SUBSPECIALTY"]
-        rows_to_delete = []
+        hidden = 0
     
         for r in range(1, ws.max_row + 1):
-            a = ws.cell(row=r, column=1).value  # col A label
+            a = ws.cell(row=r, column=1).value  # column A label
             if not (isinstance(a, str) and re.match(r"^\s*(AM|PM)\b", a, re.IGNORECASE)):
                 continue
     
-            # If ALL of B..H are empty on this row, mark for deletion
+            # If ALL of B..H are empty on this row, hide it
             if all(_empty(ws.cell(row=r, column=c).value) for c in range(2, 9)):
-                rows_to_delete.append(r)
-    
-        # Delete bottom→up so row indexes don’t shift
-        for r in reversed(rows_to_delete):
-            ws.delete_rows(r, 1)
+                ws.row_dimensions[r].hidden = True
+                # Optional: also collapse height so it’s invisible even if “show hidden” toggled off
+                ws.row_dimensions[r].height = 0
+                hidden += 1
     
         out = io.BytesIO()
         wb.save(out)
         out.seek(0)
-        return out.getvalue(), len(rows_to_delete)
+        return out.getvalue(), hidden
+
 
     def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, mappings: list) -> bytes | None:
         from openpyxl import load_workbook
@@ -996,8 +999,8 @@ elif mode == "PA OPD Creator":
             st.error("Failed to update OPD.xlsx with data.")
             st.stop()
 
-        updated_excel_bytes, removed = prune_subspecialty_blank_rows(updated_excel_bytes)
-        st.info(f"SUBSPECIALTY: removed {removed} blank row(s).")
+        updated_excel_bytes, hidden = hide_subspecialty_blank_rows(updated_excel_bytes)
+        st.info(f"SUBSPECIALTY: hid {hidden} blank row(s).")
         
         st.success("✅ OPD.xlsx updated successfully!")
         st.download_button(
