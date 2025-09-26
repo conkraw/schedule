@@ -752,7 +752,14 @@ elif mode == "PA OPD Creator":
                     ws.conditional_format(f"A{pm_start}:H{pm_start+9}",   {"type":"no_errors","format":format5a})
                     ws.conditional_format(f"B{am_start}:H{am_start}",     {"type":"no_errors","format":format4})
                     ws.conditional_format(f"B{pm_start}:H{pm_start}",     {"type":"no_errors","format":format4a})
-    
+            # CRTS note
+            text1 = ("Students are to alert their preceptors when they have a Clinical "
+                     "Reasoning Teaching Session (CRTS). Please allow the students to "
+                     "leave ~15 minutes prior to the start of their session so they can be prepared.")
+            ws.merge_range("C1:F1", text1, merge_format)
+            ws.write("G1", "", merge_format)
+            ws.write("H1", "", merge_format)
+            
             # headers/dates/bars for SUBSPECIALTY using its own geometry
             for idx, hstart in enumerate(sub_hdr_starts):
                 # day names
