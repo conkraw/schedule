@@ -867,65 +867,37 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
-# Drop-in replacement / extender for your "Create Individual Schedules" mode
-# Adds an optional post-step that converts 4-week tabs to a 5-week layout by
-# duplicating the last weekly block's *formatting* (not values) and appending it
-# as Week 5. Assumes the weekly block is 24 rows tall starting at row 6 and the
-# header (day names + dates) starts at row 2. Adjust the parameters if your
-# template differs.
 
 elif mode == "Create Individual Schedules":
-    import re
-    from collections import defaultdict
-    from io import BytesIO
-    from zipfile import ZipFile, ZIP_DEFLATED
-
-    import streamlit as st
-    from openpyxl import load_workbook, Workbook
-    from openpyxl.utils import column_index_from_string
-    from openpyxl.cell.cell import MergedCell
-
     st.subheader("Individual Schedule Creator")
 
     uploaded = st.file_uploader(
         "Upload the master Excel (.xlsx) with one tab per person",
-        type=["xlsx"],
-    )
-
-    # --- Parameters for the weekly grid (edit here if your template differs) ---
-    WEEK_BLOCK_HEIGHT = 24   # rows per week (AM 10 + PM 10, plus banding)
-    WEEK1_START_ROW   = 6    # first content row of Week 1 block
-    HEADER1_START_ROW = 2    # row with day names for Week 1 (dates are HEADER+1)
-    TARGET_WEEKS      = 5
-
-    extend_tabs = st.checkbox(
-        "Convert 4-week tabs to 5 weeks (append Week 5 layout)",
-        value=True,
-        help=(
-            "If your tabs are 4 weeks tall, this will add a 5th week by copying the "
-            "last week's *formatting* and leaving cells blank."
-        ),
+        type=["xlsx"]
     )
 
     def copy_sheet_to_new_wb(src_ws):
-        """Return BytesIO of a new .xlsx containing src_ws with formatting."""
+        """Return a BytesIO of a new .xlsx containing src_ws with formatting."""
+        from openpyxl import Workbook
+        from io import BytesIO
+    
         wb_new = Workbook()
         ws_new = wb_new.active
         ws_new.title = src_ws.title[:31]
-
+    
         # Column widths & visibility
         for col_letter, dim in src_ws.column_dimensions.items():
             if dim.width is not None:
                 ws_new.column_dimensions[col_letter].width = dim.width
             ws_new.column_dimensions[col_letter].hidden = dim.hidden
-
+    
         # Row heights & visibility
         for idx, dim in src_ws.row_dimensions.items():
             if dim.height is not None:
                 ws_new.row_dimensions[idx].height = dim.height
             ws_new.row_dimensions[idx].hidden = dim.hidden
-
-        # Basic sheet settings (best-effort)
+    
+        # Sheet settings (best-effort)
         try:
             ws_new.sheet_format.defaultColWidth = src_ws.sheet_format.defaultColWidth
             ws_new.sheet_format.defaultRowHeight = src_ws.sheet_format.defaultRowHeight
@@ -943,10 +915,11 @@ elif mode == "Create Individual Schedules":
         except Exception:
             pass
 
-        # Common viewport tweaks
         try:
-            # Zoom, widths
+            # Set zoom to 70%
             ws_new.sheet_view.zoomScale = 70
+    
+            # Set column widths
             ws_new.column_dimensions["A"].width = 20
             ws_new.column_dimensions["B"].width = 30
             for col in ["C", "D", "E", "F", "G"]:
@@ -954,43 +927,44 @@ elif mode == "Create Individual Schedules":
             ws_new.column_dimensions["H"].width = 155
         except Exception:
             pass
-
-        # Copy cells (values + styles)
+    
+        # Copy cells: values + (copied) styles
         for row in src_ws.iter_rows():
             for cell in row:
                 # Skip non-master cells from merged ranges
                 if isinstance(cell, MergedCell):
                     continue
+        
+                # Get a reliable numeric column index
                 col_idx = getattr(cell, "col_idx", None)
                 if col_idx is None:
-                    col = cell.column
+                    col = cell.column  # may be int or letter depending on version
                     col_idx = col if isinstance(col, int) else column_index_from_string(col)
+        
+                # Create target cell with value (formula preserved if present)
                 tgt = ws_new.cell(row=cell.row, column=col_idx, value=cell.value)
+        
+                # Copy style safely
                 if getattr(cell, "has_style", False):
                     try:
                         from copy import copy
-                        if cell.font:
-                            tgt.font = copy(cell.font)
-                        if cell.fill:
-                            tgt.fill = copy(cell.fill)
-                        if cell.border:
-                            tgt.border = copy(cell.border)
-                        if cell.alignment:
-                            tgt.alignment = copy(cell.alignment)
-                        if cell.protection:
-                            tgt.protection = copy(cell.protection)
+                        if cell.font:        tgt.font        = copy(cell.font)
+                        if cell.fill:        tgt.fill        = copy(cell.fill)
+                        if cell.border:      tgt.border      = copy(cell.border)
+                        if cell.alignment:   tgt.alignment   = copy(cell.alignment)
+                        if cell.protection:  tgt.protection  = copy(cell.protection)
                         tgt.number_format = cell.number_format
                     except Exception:
                         pass
-
-        # Copy merged ranges
+    
+        # Copy merged cell ranges (after values)
         for merged in list(src_ws.merged_cells.ranges):
             try:
                 ws_new.merge_cells(str(merged))
             except Exception:
                 pass
-
-        # Copy data validations
+    
+        # Copy data validations (best-effort)
         try:
             if src_ws.data_validations and src_ws.data_validations.dataValidation:
                 from openpyxl.worksheet.datavalidation import DataValidation
@@ -1006,125 +980,27 @@ elif mode == "Create Individual Schedules":
                         errorTitle=dv.errorTitle,
                         error=dv.error,
                         promptTitle=dv.promptTitle,
-                        prompt=dv.prompt,
+                        prompt=dv.prompt
                     )
+                    # Copy cell refs
                     for sqref in getattr(dv, "sqref", []):
                         dv_new.add(sqref)
                     ws_new.add_data_validation(dv_new)
         except Exception:
             pass
-
+    
         # Filters
         try:
             ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
         except Exception:
             pass
-
+    
+        # Save to buffer
         buf = BytesIO()
         wb_new.save(buf)
         buf.seek(0)
         return buf
-
-    def _copy_row_styles(src_ws, dst_ws, src_r, dst_r, max_col):
-        from copy import copy
-        for c in range(1, max_col + 1):
-            s = src_ws.cell(row=src_r, column=c)
-            d = dst_ws.cell(row=dst_r, column=c)
-            # copy styles
-            if getattr(s, "has_style", False):
-                if s.font:
-                    d.font = copy(s.font)
-                if s.fill:
-                    d.fill = copy(s.fill)
-                if s.border:
-                    d.border = copy(s.border)
-                if s.alignment:
-                    d.alignment = copy(s.alignment)
-                if s.protection:
-                    d.protection = copy(s.protection)
-                d.number_format = s.number_format
-            # clear value by default
-            d.value = None
-
-    def extend_sheet_to_5_weeks(xlsx_bytes: bytes,
-                                block_height=WEEK_BLOCK_HEIGHT,
-                                week1_start=WEEK1_START_ROW,
-                                header1_start=HEADER1_START_ROW,
-                                target_weeks=TARGET_WEEKS) -> bytes:
-        """Append a Week 5 band by cloning the last week's formatting.
-        Leaves values blank, preserves styles/merges as best as openpyxl allows.
-        Safe to call on already-5+ week sheets (no-op).
-        """
-        bio = BytesIO(xlsx_bytes)
-        wb = load_workbook(bio)
-        ws = wb.active
-
-        # Estimate existing weeks from height
-        used_last_row = ws.max_row or 0
-        if used_last_row < week1_start:
-            out = BytesIO()
-            wb.save(out)
-            out.seek(0)
-            return out.getvalue()
-
-        # Heuristic: assume there are 4 weeks if the fifth block start would be beyond max_row
-        # You can tighten this by scanning for your black bars or headers.
-        week4_start = week1_start + 3 * block_height
-        week5_start = week1_start + 4 * block_height
-        hdr4_start  = header1_start + 3 * block_height
-        hdr5_start  = header1_start + 4 * block_height
-
-        # If there is already a 5th block (content or header rows extend that far), skip.
-        if used_last_row >= week5_start + 1:
-            out = BytesIO()
-            wb.save(out)
-            out.seek(0)
-            return out.getvalue()
-
-        max_col = ws.max_column or 8
-
-        # Make space for: 2 header rows + one content block
-        ws.insert_rows(hdr5_start, amount=2)
-        ws.insert_rows(week5_start, amount=block_height)
-
-        # Copy header (day names) row styles from week 4's header row
-        _copy_row_styles(ws, ws, hdr4_start, hdr5_start, max_col)
-        # Copy date row styles from week 4's date row; leave values empty
-        _copy_row_styles(ws, ws, hdr4_start + 1, hdr5_start + 1, max_col)
-
-        # Copy AM/PM band (24 rows) styles from week 4 to week 5; keep col A labels
-        for i in range(block_height):
-            _copy_row_styles(ws, ws, week4_start + i, week5_start + i, max_col)
-            # copy column A label text (e.g., AM/PM bands) if present
-            src_label = ws.cell(row=week4_start + i, column=1).value
-            ws.cell(row=week5_start + i, column=1).value = src_label
-
-        # Replicate merged ranges that fall entirely within the copied regions
-        def _shift_range(rng, row_delta):
-            # rng like 'A6:H6' or 'C80:D80'
-            from openpyxl.utils.cell import range_boundaries, get_column_letter
-            min_col, min_row, max_coln, max_row = range_boundaries(str(rng))
-            return f"{get_column_letter(min_col)}{min_row + row_delta}:{get_column_letter(max_coln)}{max_row + row_delta}"
-
-        merged_to_add = []
-        for rng in list(ws.merged_cells.ranges):
-            # Header row merge copy
-            if hdr4_start <= rng.min_row <= rng.max_row <= hdr4_start + 1:
-                merged_to_add.append(_shift_range(rng, hdr5_start - hdr4_start))
-            # Content block merge copy
-            if week4_start <= rng.min_row <= rng.max_row <= week4_start + block_height - 1:
-                merged_to_add.append(_shift_range(rng, week5_start - week4_start))
-        for addr in merged_to_add:
-            try:
-                ws.merge_cells(addr)
-            except Exception:
-                pass
-
-        out = BytesIO()
-        wb.save(out)
-        out.seek(0)
-        return out.getvalue()
-
+        
     if uploaded is not None:
         # Keep formulas/formatting -> data_only=False
         wb = load_workbook(uploaded, data_only=False)
@@ -1151,14 +1027,6 @@ elif mode == "Create Individual Schedules":
                     # Copy this sheet into its own new workbook (preserving formatting)
                     out_buf = copy_sheet_to_new_wb(ws)
 
-                    # Optional: append Week 5 band
-                    if extend_tabs:
-                        try:
-                            out_buf = BytesIO(extend_sheet_to_5_weeks(out_buf.getvalue()))
-                        except Exception:
-                            # On any error, fall back to the original copy
-                            pass
-
                     # Add to ZIP
                     zf.writestr(f"{safe_name}.xlsx", out_buf.getvalue())
 
@@ -1169,10 +1037,6 @@ elif mode == "Create Individual Schedules":
                 file_name="individual_schedules_formatted.zip",
                 mime="application/zip",
             )
-
-# Drop‑in replacement for your "Create Student Schedule" mode
-# Converts the whole flow from fixed 4 weeks → configurable N weeks (default 5).
-# It keeps your structure, colors, and AM/PM parsing logic — only the math is dynamic.
 
 elif mode == "Create Student Schedule":
     import io
