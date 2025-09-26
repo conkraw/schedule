@@ -26,7 +26,7 @@ from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import column_index_from_string
 import math
 
-st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
+st.set_page_config(page_title="PSUCOM PA SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PA SCHEDULE CREATOR")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
