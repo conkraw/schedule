@@ -774,7 +774,7 @@ elif mode == "PA OPD Creator":
             if name == "SUBSPECIALTY":  # already handled
                 continue
             ws.set_zoom(80)
-            ws.set_column("A:A", 10)
+            ws.set_column("A:A", 15)
             ws.set_column("B:H", 65)
             ws.set_row(0, 37.25)
             for idx, hstart in enumerate(def_hdr_starts):
