@@ -599,8 +599,10 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                         ws.write(start + 1, 1 + c, val, format_date)
                 ws.write_formula(f"A{start}", '""', format_label)
                 ws.conditional_format(f"A{start+3}:H{start+3}", {"type": "cell", "criteria": ">=", "value": 0, "format": format_label})
-            for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
-                ws.merge_range(f"A{row}:H{row}", " ", format2)
+            if ws is not hd:   # ← prevent overlapping merges on HOPE_DRIVE
+                for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
+                    ws.merge_range(f"A{row}:H{row}", " ", format2)
+
             text1 = (
                 "Students are to alert their preceptors when they have a Clinical "
                 "Reasoning Teaching Session (CRTS). Please allow the students to "
@@ -609,9 +611,10 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             ws.merge_range("C1:F1", text1, merge_format)
             ws.write("G1", "", merge_format)
             ws.write("H1", "", merge_format)
-            for i in range(NUM_WEEKS):
-                ws.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
-                ws.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
+            if ws is not hd:   # ← HOPE_DRIVE already wrote its own two rows
+                for i in range(NUM_WEEKS):
+                    ws.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
+                    ws.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
 
         workbook.close()
         output.seek(0)
