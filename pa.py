@@ -417,6 +417,27 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             "am": {"aliases": ["hope drive clinic am"], "prefix": "complex_am_"},
             "pm": {"aliases": ["hope drive clinic pm"], "prefix": "complex_pm_"},
         },
+        "NEURO_HOPE": {
+            "title": "Neurology Hope Drive",
+            "type": "continuity",
+            "keywords": ["neurology"],
+            "am": {"aliases": ["35 hope drive am"], "prefix": "neurohd_am_"},
+            "pm": {"aliases": ["35 hope drive pm"], "prefix": "neurohd_pm_"},
+        },
+        "NEURO_LANCASTER": {
+            "title": "Neurology Lancaster",
+            "type": "continuity",
+            "keywords": ["neurology"],
+            "am": {"aliases": ["lanc spec am"], "prefix": "neurolanc_am_"},
+            "pm": {"aliases": ["lanc spec pm"], "prefix": "neurolanc_pm_"},
+        },
+        "NEURO_READING": {
+            "title": "Neurology Reading",
+            "type": "continuity",
+            "keywords": ["neurology"],
+            "am": {"aliases": ["reading am"], "prefix": "neuroread_am_"},
+            "pm": {"aliases": ["reading pm"], "prefix": "neuroread_pm_"},
+        },
         # Example to add later (just copy and adjust aliases/prefixes):
         #"ADOLMED": {
         #     "title": "Adolescent Medicine",
