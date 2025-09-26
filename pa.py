@@ -501,6 +501,8 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         format_label = workbook.add_format({"font_size": 12, "bold": 1, "align": "center", "valign": "vcenter", "font_color": "black", "bg_color": "#FFC7CE", "border": 1})
         merge_format = workbook.add_format({"bold": 1, "align": "center", "valign": "vcenter", "text_wrap": True, "font_color": "red", "bg_color": "#FEFFCC", "border": 1})
 
+        format_am_acute = workbook.add_format({'font_size': 12,'bold': 1,'align': 'center','valign': 'vcenter','font_color': 'black','bg_color': '#8ccf6f', # green'border': 1,})
+        format_pm_acute = workbook.add_format({'font_size': 12,'bold': 1,'align': 'center','valign': 'vcenter','font_color': 'white','bg_color': '#1f4e79', # dark blue'border': 1,})
         worksheet_names = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
         site_list = ["Hope Drive", "Elizabethtown", "Nyes Road", "Complex Care"]
         sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
@@ -563,10 +565,10 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         zero_row = start - 1
         for i in range(AM_COUNT):
             label = "AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"
-            hd.write(zero_row + i, 0, label, format5a)
+            hd.write(zero_row + i, 0, label, format_am_acute)
         for i in range(PM_COUNT):
             label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
-            hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
+            hd.write(zero_row + AM_COUNT + i, 0, label, format_pm_acute)
         
         
         # Add black separator bars for HOPE_DRIVE
