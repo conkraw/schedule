@@ -373,7 +373,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         "HOPE_DRIVE": {
             "title": "Hope Drive",
             "type": "hope_drive",
-            "keywords": ["academic general pediatrics", "hope drive"],
+            "keywords": ["academic general pediatrics"],
             "designations": {
                 # aliases seen in QGenda → (canonical_key, redcap_prefix)
                 # Continuity
@@ -392,21 +392,21 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         "ETOWN": {
             "title": "Elizabethtown",
             "type": "continuity",
-            "keywords": ["etown", "elizabethtown"],
+            "keywords": ["academic general pediatrics"],
             "am": {"aliases": ["etown am continuity"], "prefix": "etown_am_"},
             "pm": {"aliases": ["etown pm continuity"], "prefix": "etown_pm_"},
         },
         "NYES": {
             "title": "Nyes Road",
             "type": "continuity",
-            "keywords": ["nyes", "nyes road"],
+            "keywords": ["academic general pediatrics"],
             "am": {"aliases": ["nyes rd am continuity"], "prefix": "nyes_am_"},
             "pm": {"aliases": ["nyes rd pm continuity"], "prefix": "nyes_pm_"},
         },
         "COMPLEX": {
             "title": "Complex Care",
             "type": "continuity",
-            "keywords": ["complex care", "complex"],
+            "keywords": ["complex care"],
             "am": {"aliases": ["hope drive clinic am"], "prefix": "complex_am_"},
             "pm": {"aliases": ["hope drive clinic pm"], "prefix": "complex_pm_"},
         },
