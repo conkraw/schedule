@@ -473,7 +473,7 @@ elif mode == "PA OPD Creator":
         name for name, cfg in SITE_CONFIGS.items()
         if cfg["type"] == "continuity" and name not in PRIMARY_SHEETS
     ]
-    SUBSPECIALTY_CAP = 12  # rows per shift/week on SUBSPECIALTY (AM cap + PM cap)
+    SUBSPECIALTY_CAP = 10  # rows per shift/week on SUBSPECIALTY (AM cap + PM cap)
 
     # Build required keywords dynamically
     REQUIRED_KEYWORDS = sorted({kw for cfg in SITE_CONFIGS.values() for kw in cfg.get("keywords", [])})
