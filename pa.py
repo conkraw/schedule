@@ -1168,3 +1168,325 @@ elif mode == "Create Individual Schedules":
                 file_name="individual_schedules_formatted.zip",
                 mime="application/zip",
             )
+
+# Drop‑in replacement for your "Create Student Schedule" mode
+# Converts the whole flow from fixed 4 weeks → configurable N weeks (default 5).
+# It keeps your structure, colors, and AM/PM parsing logic — only the math is dynamic.
+
+elif mode == "Create Student Schedule":
+    import io
+    import re
+    import pandas as pd
+    import xlsxwriter
+    from collections import defaultdict
+    from datetime import timedelta
+    import streamlit as st
+    from openpyxl import load_workbook
+
+    st.subheader("Create Student Schedule")
+
+    # ========= Configure here =========
+    NUM_WEEKS = 5  # ← change to 4/5/6... if ever needed
+    BLOCK_HEIGHT = 8  # visual rows per week segment in your template pattern
+    # ==================================
+
+    def save_to_session(filename, fileobj, namespace="uploaded_files"):
+        st.session_state.setdefault(namespace, {})[filename] = fileobj
+
+    # ───────── Helper to load & stash uploads ─────────
+    def load_workbook_df(label, types, key):
+        upload = st.file_uploader(label, type=types, key=key)
+        if not upload:
+            st.info(f"Please upload {label}.")
+            return None
+        st.session_state[f"{key}_file"] = upload
+        try:
+            if upload.name.lower().endswith(".csv"):
+                return pd.read_csv(upload)
+            else:
+                return pd.read_excel(upload)
+        except Exception as e:
+            st.error(f"Error loading {upload.name}: {e}")
+            return None
+
+    def _seq(start, step, n):
+        """Helper: n values starting at start, step apart (1‑based row numbers)."""
+        return [start + i * step for i in range(n)]
+
+    def create_ms_schedule_template(students, dates):
+        buf = io.BytesIO()
+        wb = xlsxwriter.Workbook(buf, {"in_memory": True})
+
+        # — Formats — (unchanged palette)
+        f1 = wb.add_format({"font_size": 14, "bold": 1, "align": "center", "valign": "vcenter",
+                            "font_color": "black", "text_wrap": True, "bg_color": "#FEFFCC", "border": 1})
+        f2 = wb.add_format({"font_size": 10, "bold": 1, "align": "center", "valign": "vcenter",
+                            "font_color": "yellow", "bg_color": "black", "border": 1, "text_wrap": True})
+        f3 = wb.add_format({"font_size": 12, "bold": 1, "align": "center", "valign": "vcenter",
+                            "font_color": "black", "bg_color": "#FFC7CE", "border": 1})
+        f4 = wb.add_format({"num_format": "mm/dd/yyyy", "font_size": 12, "bold": 1, "align": "center",
+                            "valign": "vcenter", "font_color": "black", "bg_color": "#F4F6F7", "border": 1})
+        f5 = wb.add_format({"font_size": 12, "bold": 1, "align": "center", "valign": "vcenter",
+                            "font_color": "black", "bg_color": "#F4F6F7", "border": 1})
+        f6 = wb.add_format({"bg_color": "black", "border": 1})
+        f7 = wb.add_format({"font_size": 12, "bold": 1, "align": "center", "valign": "vcenter",
+                            "font_color": "black", "bg_color": "#90EE90", "border": 1})
+        f8 = wb.add_format({"font_size": 12, "bold": 1, "align": "center", "valign": "vcenter",
+                            "font_color": "black", "bg_color": "#89CFF0", "border": 1})
+
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        # Derive all row anchors for N weeks (1‑based for A1 merges; numeric writes may be slightly offset like your original)
+        start_rows = _seq(2, BLOCK_HEIGHT, NUM_WEEKS)           # day headers row per week (2,10,18,26,34)
+        week_label_rows = _seq(4, BLOCK_HEIGHT, NUM_WEEKS)      # "Week i" labels (4,12,20,28,36)
+        am_rows = _seq(6, BLOCK_HEIGHT, NUM_WEEKS)              # AM label row (6,14,22,30,38)
+        pm_rows = _seq(7, BLOCK_HEIGHT, NUM_WEEKS)              # PM label row (7,15,23,31,39)
+        green_fillers = _seq(8, BLOCK_HEIGHT, NUM_WEEKS)        # green row anchors (8,16,24,32,40)
+        separators = _seq(10, BLOCK_HEIGHT, NUM_WEEKS)          # black bar rows (10,18,26,34,42)
+
+        # Optional: extend your due text list to 5, with a safe fallback
+        due_texts = [
+            "Quiz 1 Due",
+            "Quiz 2, Pediatric Documentation #1, 1 Clinical Encounter Log Due",
+            "Quiz 3 Due",
+            "Quiz 4, Pediatric Documentation #2, Social Drivers of Health Assessment Form, Developmental Assessment of Pediatric Patient Form, All Clinical Encounter Logs are Due!",
+            "Final Evaluations & Wrap‑Up Due",  # Week 5 (new)
+        ]
+
+        for name in students:
+            title = name[:31].replace("/", "-").replace("\\", "-")
+            ws = wb.add_worksheet(title)
+            ws.set_zoom(70)
+
+            # Header
+            ws.merge_range("A1:A2", "Student Name:", f1)
+            ws.merge_range("B1:B2", title, f1)
+            note = (
+                "*Note* Asynchronous time is for coursework only. During this time period, "
+                "we expect students to do coursework, be available for any additional educational "
+                "activities, and any extra clinical time that may be available. If the student is not "
+                "available during this time period and has not made an absence request, the student "
+                "will be cited for unprofessionalism and will risk failing the course."
+            )
+            ws.merge_range("C1:H2", note, f2)
+
+            # Column widths & row height
+            ws.set_column("A:A", 20)
+            ws.set_column("B:B", 30)
+            ws.set_column("C:G", 40)
+            ws.set_column("H:H", 155)
+            ws.set_row(0, 37.25)
+
+            # Day names + dates
+            date_idx = 0
+            for row in start_rows:
+                # day names (row, B..H). Using numeric write like your original
+                for col_offset, day in enumerate(days, start=1):
+                    ws.write(row, col_offset, day, f3)
+                # dates directly beneath
+                for col_offset in range(7):
+                    if date_idx < len(dates):
+                        ws.write(row + 1, col_offset + 1, dates[date_idx], f4)
+                        date_idx += 1
+
+            # Week labels
+            for i, row in enumerate(week_label_rows):
+                ws.write(f"A{row}", f"Week {i+1}", f3)
+
+            # AM / PM labels
+            for r in am_rows:
+                ws.write(f"A{r}", "AM", f3)
+            for r in pm_rows:
+                ws.write(f"A{r}", "PM", f3)
+
+            # Fill AM/PM blocks with Asynchronous Time (cols B..H)
+            for i in range(NUM_WEEKS):
+                am_r = 5 + i * BLOCK_HEIGHT  # keep your original indexing style
+                pm_r = 6 + i * BLOCK_HEIGHT
+                for col in range(1, 8):
+                    ws.write(am_r, col, "Asynchronous Time", f5)
+                    ws.write(pm_r, col, "Asynchronous Time", f5)
+
+            # Separators (black bars)
+            for sep in separators:
+                ws.merge_range(f"A{sep}:H{sep}", "", f6)
+
+            # Green filler rows
+            for filler in green_fillers:
+                for col in range(8):
+                    ws.write(filler, col, " ", f7)
+
+            # Assignment‑due rows
+            for i, base in enumerate(green_fillers):
+                ws.write(f"A{base}", "ASSIGNMENT DUE:", f8)
+                for col in range(1, 8):
+                    if col == 5:
+                        ws.write(base - 1, col, "Ask for Feedback!", f8)
+                    elif col == 7:
+                        ws.write(base - 1, col, due_texts[i] if i < len(due_texts) else "", f8)
+                    else:
+                        ws.write(base - 1, col, " ", f8)
+
+        wb.close()
+        buf.seek(0)
+        return buf
+
+    def _cluster_blocks(marker_rows):
+        marker_rows = sorted(marker_rows)
+        if not marker_rows:
+            return []
+        blocks, curr = [], [marker_rows[0]]
+        for r in marker_rows[1:]:
+            if r == curr[-1] + 1:
+                curr.append(r)
+            else:
+                blocks.append(curr)
+                curr = [r]
+        blocks.append(curr)
+        return blocks
+
+    def assign_preceptors_all_weeks_am(opd_file, ms_file):
+        """Copy AM 'Preceptor ~ Student' assignments from OPD (B..H) into each student's tab.
+        Maps week blocks → target rows [6,14,22,30,38] for 5 weeks.
+        """
+        opd_wb = load_workbook(opd_file, data_only=True)
+        ms_wb = load_workbook(ms_file)
+
+        target_ms_rows = _seq(6, BLOCK_HEIGHT, NUM_WEEKS)  # [6,14,22,30,38]
+
+        for site in opd_wb.sheetnames:
+            ws_opd = opd_wb[site]
+            am_rows = [c.row for c in ws_opd['A'] if isinstance(c.value, str) and re.match(r"^\s*AM\b", c.value, re.IGNORECASE)]
+            blocks = _cluster_blocks(am_rows)
+            for week_idx, block in enumerate(blocks[:NUM_WEEKS]):
+                ms_row = target_ms_rows[week_idx]
+                for col in range(2, 9):  # B..H
+                    for r in block:
+                        val = ws_opd.cell(row=r, column=col).value
+                        if not val or "~" not in str(val):
+                            continue
+                        pre, student = [s.strip() for s in str(val).split("~", 1)]
+                        if not student or student not in ms_wb.sheetnames:
+                            continue
+                        ws_ms = ms_wb[student]
+                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
+
+        out = io.BytesIO()
+        ms_wb.save(out)
+        out.seek(0)
+        return out
+
+    def assign_preceptors_all_weeks_pm(opd_file, ms_file):
+        """Copy PM assignments; week rows [7,15,23,31,39] for 5 weeks."""
+        opd_wb = load_workbook(opd_file, data_only=True)
+        ms_wb = load_workbook(ms_file)
+
+        target_ms_rows = _seq(7, BLOCK_HEIGHT, NUM_WEEKS)  # [7,15,23,31,39]
+
+        for site in opd_wb.sheetnames:
+            ws_opd = opd_wb[site]
+            pm_rows = [c.row for c in ws_opd['A'] if isinstance(c.value, str) and re.match(r"^\s*PM\b", c.value, re.IGNORECASE)]
+            blocks = _cluster_blocks(pm_rows)
+            for week_idx, block in enumerate(blocks[:NUM_WEEKS]):
+                ms_row = target_ms_rows[week_idx]
+                for col in range(2, 9):  # B..H
+                    for r in block:
+                        val = ws_opd.cell(row=r, column=col).value
+                        if not val or "~" not in str(val):
+                            continue
+                        pre, student = [s.strip() for s in str(val).split("~", 1)]
+                        if not student or student not in ms_wb.sheetnames:
+                            continue
+                        ws_ms = ms_wb[student]
+                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
+
+        out = io.BytesIO()
+        ms_wb.save(out)
+        out.seek(0)
+        return out
+
+    def detect_shift_conflicts(opd_file):
+        """Same as before, but scans NUM_WEEKS blocks instead of 4."""
+        wb = load_workbook(opd_file, data_only=True)
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        am_marker = re.compile(r"^\s*AM\b", re.IGNORECASE)
+        pm_marker = re.compile(r"^\s*PM\b", re.IGNORECASE)
+        conflicts = []
+
+        def find_blocks(ws, marker_re):
+            rows = [c.row for c in ws['A'] if isinstance(c.value, str) and marker_re.match(c.value)]
+            return _cluster_blocks(rows)[:NUM_WEEKS]
+
+        tpl = wb[wb.sheetnames[0]]
+        am_blocks = find_blocks(tpl, am_marker)
+        pm_blocks = find_blocks(tpl, pm_marker)
+
+        for shift, blocks in (("AM", am_blocks), ("PM", pm_blocks)):
+            for week_idx, block_rows in enumerate(blocks, start=1):
+                for day_idx, day_name in enumerate(days):
+                    col = 2 + day_idx
+                    locs = defaultdict(list)
+                    for sheet in wb.sheetnames:
+                        ws = wb[sheet]
+                        for r in block_rows:
+                            raw = ws.cell(row=r, column=col).value
+                            text = str(raw or "")
+                            if "~" not in text:
+                                continue
+                            pre, student = [s.strip() for s in text.split("~", 1)]
+                            if not student:
+                                continue
+                            coord = ws.cell(row=r, column=col).coordinate
+                            locs[student].append((sheet, coord))
+                    for student, occ in locs.items():
+                        if len(occ) > 1:
+                            conflicts.append({
+                                "student": student,
+                                "week": week_idx,
+                                "day": day_name,
+                                "shift": shift,
+                                "occurrences": occ,
+                            })
+        return conflicts
+
+    # ───────── Load OPD & Rotation Schedule ─────────
+    df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
+    df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
+
+    # ───────── Check for duplicates ─────────
+    if df_opd is not None:
+        conflicts = detect_shift_conflicts(st.session_state["opd_main_file"])
+        if conflicts:
+            for c in conflicts:
+                occ_str = "; ".join(f"{sheet}@{coord}" for sheet, coord in c["occurrences"])
+                st.warning(
+                    f"⚠️ Week {c['week']} {c['day']} {c['shift']}: "
+                    f"{c['student']} double‑booked ({occ_str})"
+                )
+        else:
+            st.success("No AM/PM shift conflicts detected.")
+
+    # ───────── Build, Assign & Download ─────────
+    if df_opd is not None and df_rot is not None:
+        df_rot["start_date"] = pd.to_datetime(df_rot["start_date"])
+        monday = df_rot["start_date"].min()
+        monday = monday - pd.Timedelta(days=monday.weekday())  # normalize to Monday
+        dates = pd.date_range(start=monday, periods=NUM_WEEKS * 7, freq="D").tolist()
+
+        students = df_rot["legal_name"].dropna().unique().tolist()
+
+        if st.button("Create & Download Fully‑Populated MS_Schedule"):
+            blank_buf = create_ms_schedule_template(students, dates)
+            am_buf = assign_preceptors_all_weeks_am(
+                opd_file=st.session_state["opd_main_file"], ms_file=blank_buf
+            )
+            full_buf = assign_preceptors_all_weeks_pm(
+                opd_file=st.session_state["opd_main_file"], ms_file=am_buf
+            )
+            st.download_button(
+                "Download MS_Schedule.xlsx",
+                data=full_buf.getvalue(),
+                file_name="MS_Schedule.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+    else:
+        st.info("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
