@@ -568,12 +568,12 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             # AM acutes (rows start and start+1) in green
             hd.conditional_format(
             f"B{start}:H{start+1}",
-            {"type": "cell", "criteria": ">=", "value": 0, "format": format5a},
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format_am_acute},
             )
             # PM acutes (rows start+10 and start+11) in dark blue
             hd.conditional_format(
             f"B{start+10}:H{start+11}",
-            {"type": "cell", "criteria": ">=", "value": 0, "format": format5a},
+            {"type": "cell", "criteria": ">=", "value": 0, "format": format_pm_acute},
             )
             
         
@@ -581,10 +581,10 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         zero_row = start - 1
         for i in range(AM_COUNT):
             label = "AM - ACUTES" if i < ACUTE_COUNT else "AM - Continuity"
-            hd.write(zero_row + i, 0, label, format_am_acute)
+            hd.write(zero_row + i, 0, label, format5a)
         for i in range(PM_COUNT):
             label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
-            hd.write(zero_row + AM_COUNT + i, 0, label, format_pm_acute)
+            hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
         
         
         # Add black separator bars for HOPE_DRIVE
