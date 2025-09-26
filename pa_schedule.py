@@ -1284,81 +1284,124 @@ elif mode == "Create Student Schedule":
         blocks.append(curr)
         return blocks
     
+    # --- helpers ---------------------------------------------------------------
+    
+    _date_re = re.compile(r"^\s*\d{1,2}/\d{1,2}/\d{2,4}\s*$")
+    
+    def _is_date_like(v):
+        from datetime import date, datetime
+        return isinstance(v, (date, datetime)) or (isinstance(v, str) and _date_re.match(v))
+    
+    def _week_headers_by_column(ws, col_index=2):
+        """Return sorted row numbers of the header *date* cells in a given column (default: column B)."""
+        return sorted([cell.row for cell in ws.iter_rows(min_col=col_index, max_col=col_index)
+                       if _is_date_like(cell[0].value)])
+    
+    def _week_index_for_row(row_idx, header_rows):
+        """
+        Given a row and a sorted list of header date row indices, return 0-based week index.
+        The content for a week lies strictly below its header row and above the next header row.
+        """
+        for i, hr in enumerate(header_rows):
+            nxt = header_rows[i+1] if i+1 < len(header_rows) else 10**9
+            if row_idx > hr and row_idx < nxt:
+                return i
+        return None
+    
     def _row_label_for_bracket(site_name: str, ws_opd, row_idx: int) -> str:
-        """Return the label to put in brackets. For SUBSPECIALTY use col A on that row; else the sheet name."""
+        """Bracket label: sheet name except SUBSPECIALTY, which uses the text in column A for that row."""
         if site_name != "SUBSPECIALTY":
             return site_name
-        val = ws_opd.cell(row=row_idx, column=1).value  # column A
-        label = str(val).strip() if val is not None else ""
-        return label or "SUBSPECIALTY"
+        val = ws_opd.cell(row=row_idx, column=1).value  # col A
+        label = (str(val).strip() if val is not None else "") or "SUBSPECIALTY"
+        return label
+    
+    # --- AM copy ---------------------------------------------------------------
     
     def assign_preceptors_all_weeks_am(opd_file, ms_file):
-        """Copy AM 'Preceptor ~ Student' assignments from OPD (B..H) into each student's tab.
-        Maps week blocks → target rows [6,14,22,30,38] for 5 weeks.
-        Bracket label: sheet name except SUBSPECIALTY, which uses the designation text in col A.
+        """
+        Copy AM assignments from OPD (B..H) to each student's tab.
+        Week is determined by the nearest header *date* row above the cell (same column),
+        so SUBSPECIALTY blocks with extra rows map to the correct week.
+        Brackets show sheet name, except SUBSPECIALTY uses the column A designation.
         """
         opd_wb = load_workbook(opd_file, data_only=True)
-        ms_wb = load_workbook(ms_file)
+        ms_wb  = load_workbook(ms_file)
     
-        target_ms_rows = _seq(6, BLOCK_HEIGHT, NUM_WEEKS)  # [6,14,22,30,38]
+        target_ms_rows = _seq(6, BLOCK_HEIGHT, NUM_WEEKS)  # e.g., [6,14,22,30,38]
     
         for site in opd_wb.sheetnames:
             ws_opd = opd_wb[site]
-            am_rows = [
-                c.row for c in ws_opd["A"]
-                if isinstance(c.value, str) and re.match(r"^\s*AM\b", c.value, re.IGNORECASE)
-            ]
-            blocks = _cluster_blocks(am_rows)
+            # Find all AM-labeled rows (column A)
+            am_rows = [c.row for c in ws_opd['A']
+                       if isinstance(c.value, str) and re.match(r"^\s*AM\b", c.value, re.IGNORECASE)]
+            if not am_rows:
+                continue
     
-            for week_idx, block in enumerate(blocks[:NUM_WEEKS]):
-                ms_row = target_ms_rows[week_idx]
+            # Build week header date rows once (use Monday column B)
+            header_rows = _week_headers_by_column(ws_opd, col_index=2)
+    
+            # Walk every AM row independently; compute its week from header rows
+            for r in am_rows:
+                # Use Monday (B) header rows to get week; works for all columns
+                wk = _week_index_for_row(r, header_rows)
+                if wk is None or wk >= NUM_WEEKS:
+                    continue
+                ms_row = target_ms_rows[wk]
+    
                 for col in range(2, 9):  # B..H
-                    for r in block:
-                        val = ws_opd.cell(row=r, column=col).value
-                        if not val or "~" not in str(val):
-                            continue
-                        pre, student = [s.strip() for s in str(val).split("~", 1)]
-                        if not student or student not in ms_wb.sheetnames:
-                            continue
-                        ws_ms = ms_wb[student]
-                        label = _row_label_for_bracket(site, ws_opd, r)
-                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{label}]"
+                    raw = ws_opd.cell(row=r, column=col).value
+                    if not raw or "~" not in str(raw):
+                        continue
+                    pre, student = [s.strip() for s in str(raw).split("~", 1)]
+                    if not student or student not in ms_wb.sheetnames:
+                        continue
+                    ws_ms = ms_wb[student]
+                    label = _row_label_for_bracket(site, ws_opd, r)
+                    ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{label}]"
     
         out = io.BytesIO()
         ms_wb.save(out)
         out.seek(0)
         return out
     
+    # --- PM copy ---------------------------------------------------------------
+    
     def assign_preceptors_all_weeks_pm(opd_file, ms_file):
-        """Copy PM assignments; week rows [7,15,23,31,39] for 5 weeks.
-        Bracket label: sheet name except SUBSPECIALTY, which uses the designation text in col A.
+        """
+        Copy PM assignments; week rows [7,15,23,31,39] for 5 weeks.
+        Uses header date rows to determine the correct week (robust to SUBSPECIALTY height).
         """
         opd_wb = load_workbook(opd_file, data_only=True)
-        ms_wb = load_workbook(ms_file)
+        ms_wb  = load_workbook(ms_file)
     
-        target_ms_rows = _seq(7, BLOCK_HEIGHT, NUM_WEEKS)  # [7,15,23,31,39]
+        target_ms_rows = _seq(7, BLOCK_HEIGHT, NUM_WEEKS)  # e.g., [7,15,23,31,39]
     
         for site in opd_wb.sheetnames:
             ws_opd = opd_wb[site]
-            pm_rows = [
-                c.row for c in ws_opd["A"]
-                if isinstance(c.value, str) and re.match(r"^\s*PM\b", c.value, re.IGNORECASE)
-            ]
-            blocks = _cluster_blocks(pm_rows)
+            pm_rows = [c.row for c in ws_opd['A']
+                       if isinstance(c.value, str) and re.match(r"^\s*PM\b", c.value, re.IGNORECASE)]
+            if not pm_rows:
+                continue
     
-            for week_idx, block in enumerate(blocks[:NUM_WEEKS]):
-                ms_row = target_ms_rows[week_idx]
+            header_rows = _week_headers_by_column(ws_opd, col_index=2)
+    
+            for r in pm_rows:
+                wk = _week_index_for_row(r, header_rows)
+                if wk is None or wk >= NUM_WEEKS:
+                    continue
+                ms_row = target_ms_rows[wk]
+    
                 for col in range(2, 9):  # B..H
-                    for r in block:
-                        val = ws_opd.cell(row=r, column=col).value
-                        if not val or "~" not in str(val):
-                            continue
-                        pre, student = [s.strip() for s in str(val).split("~", 1)]
-                        if not student or student not in ms_wb.sheetnames:
-                            continue
-                        ws_ms = ms_wb[student]
-                        label = _row_label_for_bracket(site, ws_opd, r)
-                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{label}]"
+                    raw = ws_opd.cell(row=r, column=col).value
+                    if not raw or "~" not in str(raw):
+                        continue
+                    pre, student = [s.strip() for s in str(raw).split("~", 1)]
+                    if not student or student not in ms_wb.sheetnames:
+                        continue
+                    ws_ms = ms_wb[student]
+                    label = _row_label_for_bracket(site, ws_opd, r)
+                    ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{label}]"
     
         out = io.BytesIO()
         ms_wb.save(out)
