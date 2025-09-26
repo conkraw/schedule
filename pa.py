@@ -457,15 +457,10 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     all_providers = sorted({
         p.strip() for day in assignments_by_date.values() for provs in day.values() for p in provs if isinstance(p, str) and p.strip()
     })
-    allowed_providers = st.multiselect(
-        "Limit providers included in OPD",
-        options=all_providers,
-        default=[],  # start empty
-        key="provider_filter",
-        help="Only selected providers will be written into the OPD sheets (others will be left blank).",
-    )
+    # Provider filter UI (reordered to avoid state write errors)
+    if "provider_filter" not in st.session_state:
+        st.session_state["provider_filter"] = []
 
-    # Quick actions
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Select All Providers"):
@@ -474,8 +469,12 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         if st.button("Clear Providers"):
             st.session_state["provider_filter"] = []
 
-    # Use the latest selection from session state
-    allowed_providers = st.session_state.get("provider_filter", [])
+    allowed_providers = st.multiselect(
+        "Limit providers included in OPD",
+        options=all_providers,
+        key="provider_filter",
+        help="Only selected providers will be written into the OPD sheets (others will be left blank).",
+    )
 
     # Build redcap_row
     redcap_row = {"record_id": record_id}
