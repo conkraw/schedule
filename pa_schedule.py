@@ -482,7 +482,7 @@ elif mode == "PA OPD Creator":
         # },
     }
 
-    PRIMARY_SHEETS = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX"]
+    PRIMARY_SHEETS = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX", "LANCASTER"]
     SUBSPECIALTY_GROUPS = [name for name, cfg in SITE_CONFIGS.items() if cfg["type"] == "continuity" and name not in PRIMARY_SHEETS]
 
     # Build required keywords dynamically from the included sites
