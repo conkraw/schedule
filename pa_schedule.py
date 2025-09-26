@@ -521,6 +521,8 @@ elif mode == "PA OPD Creator":
         st.info("Please upload schedule Excel(s), student CSV")
         st.stop()
 
+    date_pat = re.compile(r"^[A-Za-z]+ \d{1,2}, \d{4}$")
+
     # ─── Parse files ─────────────────────────────────────────────────────────────
     # alias (lowercased) -> list of prefixes (can contain both AM and PM)
     designation_map = defaultdict(list)
@@ -544,8 +546,6 @@ elif mode == "PA OPD Creator":
     # Aggregate schedule assignments by date
     assignments_by_date = {}
     found_keywords = set()
-
-    date_pat = re.compile(r"^[A-Za-z]+ \d{1,2}, \d{4}$")
     
     for file in schedule_files:
         try:
