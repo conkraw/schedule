@@ -727,6 +727,12 @@ elif mode == "PA OPD Creator":
         # ── SUBSPECIALTY: stack each group’s 10 AM + 10 PM inside each week
         if "SUBSPECIALTY" in sheets:
             ws = sheets["SUBSPECIALTY"]
+            # ✅ give SUBSPECIALTY the same worksheet sizing you give others
+            ws.set_zoom(80)
+            ws.set_column("A:A", 10)
+            ws.set_column("B:H", 65)
+            ws.set_row(0, 37.25)
+    
             G = len(SUBSPECIALTY_GROUPS)
             SUB_BLOCK_H = 4 + 20*G  # header rows (2) + 2 padding handled via bars + 20 per group
             sub_hdr_starts = [2 + i*SUB_BLOCK_H for i in range(5)]
