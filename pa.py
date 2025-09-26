@@ -364,7 +364,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     # ─── Inputs ──────────────────────────────────────────────────────────────────
     required_keywords = [
         "academic general pediatrics",  # Hope Drive
-        "complex care",                 # Complex clinic]
+        "complex care"]                 # Complex clinic]
     found_keywords = set()
 
     schedule_files = st.file_uploader(
