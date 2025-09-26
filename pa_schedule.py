@@ -996,8 +996,8 @@ elif mode == "PA OPD Creator":
             st.error("Failed to update OPD.xlsx with data.")
             st.stop()
 
-        updated_excel_bytes, removed = prune_subspecialty_blank_rows(updated_excel_bytes)
-        st.info(f"SUBSPECIALTY: removed {removed} blank row(s).")
+        #updated_excel_bytes, removed = prune_subspecialty_blank_rows(updated_excel_bytes)
+        #st.info(f"SUBSPECIALTY: removed {removed} blank row(s).")
         
         st.success("✅ OPD.xlsx updated successfully!")
         st.download_button(
