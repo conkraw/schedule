@@ -438,6 +438,39 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             "am": {"aliases": ["reading am"], "prefix": "neuroread_am_"},
             "pm": {"aliases": ["reading pm"], "prefix": "neuroread_pm_"},
         },
+
+        "ENDO_HOPE": {
+            "title": "Endocrinology Hope Drive",
+            "type": "continuity",
+            "keywords": ["endo"],
+            "am": {"aliases": ["hope drive am"], "prefix": "endohope_am_"},
+            "pm": {"aliases": ["hope drive pm"], "prefix": "endohope_pm_"},
+        },
+
+        "ENDO_CAMPHILL": {
+            "title": "Endocrinology Camp Hill",
+            "type": "continuity",
+            "keywords": ["endo"],
+            "am": {"aliases": ["camp hill clinic am"], "prefix": "endocamp_am_"},
+            "pm": {"aliases": ["camp hill clinic pm"], "prefix": "endocamp_pm_"},
+        },
+
+        "ENDO_LANCASTER": {
+            "title": "Endocrinology Lancaster",
+            "type": "continuity",
+            "keywords": ["endo"],
+            "am": {"aliases": ["lanc ped center am"], "prefix": "endolanc_am_"},
+            "pm": {"aliases": ["lanc ped center pm"], "prefix": "endolanc_pm_"},
+        },
+
+        "ENDO_SJR": {
+            "title": "Endocrinology SJR",
+            "type": "continuity",
+            "keywords": ["endo"],
+            "am": {"aliases": ["st. joseph am"], "prefix": "endosjr_am_"},
+            "pm": {"aliases": ["st. joseph pm"], "prefix": "endosjr_pm_"},
+        },
+        
         # Example to add later (just copy and adjust aliases/prefixes):
         #"ADOLMED": {
         #     "title": "Adolescent Medicine",
