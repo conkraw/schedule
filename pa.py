@@ -364,11 +364,7 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
     # ─── Inputs ──────────────────────────────────────────────────────────────────
     required_keywords = [
         "academic general pediatrics",  # Hope Drive
-        "complex care",                 # Complex clinic
-        # For ETOWN/NYES we don't have special keywords in the sample; keep two required to pass content check
-        "hospitalists",                 # kept only to pass the original 4-key check if desired
-        "adol med",                     # kept only to pass the original 4-key check if desired
-    ]
+        "complex care",                 # Complex clinic]
     found_keywords = set()
 
     schedule_files = st.file_uploader(
@@ -515,8 +511,8 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
         BLOCK_SIZE = ACUTE_COUNT + CONTINUITY_COUNT  # 10
         AM_COUNT = BLOCK_SIZE
         PM_COUNT = BLOCK_SIZE
-        
-        # (Re)define formats for acute highlight (ensure they exist here)
+
+        # Acute highlight formats
         format_am_acute = workbook.add_format({
             "font_size": 12, "bold": 1, "align": "center", "valign": "vcenter",
             "font_color": "black", "bg_color": "#8ccf6f", "border": 1  # green
@@ -525,42 +521,42 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             "font_size": 12, "bold": 1, "align": "center", "valign": "vcenter",
             "font_color": "white", "bg_color": "#1f4e79", "border": 1  # dark blue
         })
-        
+
         BLOCK_HEIGHT = 24
         BLOCK_STARTS = [6 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]  # 6, 30, 54, 78, 102 ...
         HDR_STARTS = [2 + i * BLOCK_HEIGHT for i in range(NUM_WEEKS)]
-        
+
         for start in BLOCK_STARTS:
-            # Background fills for the AM and PM halves
-            hd.conditional_format(
-                f"A{start}:H{start+9}",
-                {"type": "no_errors", "format": format1}      # AM block fill
-            )
-            hd.conditional_format(
-                f"A{start+10}:H{start+19}",
-                {"type": "no_errors", "format": format5a}     # PM block fill
-            )
-        
-            # Header tints for the first row of each half
-            hd.conditional_format(
-                f"B{start}:H{start}",
-                {"type": "no_errors", "format": format4}      # AM header tint
-            )
-            hd.conditional_format(
-                f"B{start+10}:H{start+10}",
-                {"type": "no_errors", "format": format4a}     # PM header tint
-            )
-        
-            # Acute stripes: first 2 rows of each half
+            # PRIORITY 1: Acute stripes (win over everything)
             hd.conditional_format(
                 f"B{start}:H{start+1}",
-                {"type": "no_errors", "format": format_am_acute}  # AM-Acutes (green)
+                {"type": "no_errors", "format": format_am_acute}
             )
             hd.conditional_format(
                 f"B{start+10}:H{start+11}",
-                {"type": "no_errors", "format": format_pm_acute}  # PM-Acutes (dark blue)
+                {"type": "no_errors", "format": format_pm_acute}
             )
-        
+
+            # PRIORITY 2: Header tints
+            hd.conditional_format(
+                f"B{start}:H{start}",
+                {"type": "no_errors", "format": format4}
+            )
+            hd.conditional_format(
+                f"B{start+10}:H{start+10}",
+                {"type": "no_errors", "format": format4a}
+            )
+
+            # PRIORITY 3: Broad AM/PM block fills
+            hd.conditional_format(
+                f"A{start}:H{start+9}",
+                {"type": "no_errors", "format": format1}
+            )
+            hd.conditional_format(
+                f"A{start+10}:H{start+19}",
+                {"type": "no_errors", "format": format5a}
+            )
+
             # Column A labels inside this block
             zero_row = start - 1
             for i in range(AM_COUNT):
@@ -569,13 +565,6 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             for i in range(PM_COUNT):
                 label = "PM - ACUTES" if i < ACUTE_COUNT else "PM - Continuity"
                 hd.write(zero_row + AM_COUNT + i, 0, label, format5a)
-        
-            # Per-block black separator + top two “white” rows
-            bar_row = start - 4      # yields 2, 26, 50, 74, 98 ...
-            hd.merge_range(f"A{bar_row}:H{bar_row}", " ", format2)
-            hd.write(f"A{start-3}", "", format_date)  # e.g., 3, 27, 51, 75, 99
-            hd.write(f"A{start-2}", "", format_date)  # e.g., 4, 28, 52, 76, 100
-
 
         # Other three: continuity-only labels
         for name in ("ETOWN", "NYES", "COMPLEX"):
@@ -586,10 +575,10 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                     ws.write(zero_row + i, 0, "AM", format5a)
                 for i in range(10):
                     ws.write(zero_row + 10 + i, 0, "PM", format5a)
-                ws.conditional_format(f"A{start}:H{start+9}", {"type": "cell", "criteria": ">=", "value": 0, "format": format1})
-                ws.conditional_format(f"A{start+10}:H{start+19}", {"type": "cell", "criteria": ">=", "value": 0, "format": format5a})
-                ws.conditional_format(f"B{start}:H{start}", {"type": "cell", "criteria": ">=", "value": 0, "format": format4})
-                ws.conditional_format(f"B{start+10}:H{start+10}", {"type": "cell", "criteria": ">=", "value": 0, "format": format4a})
+                ws.conditional_format(f"A{start}:H{start+9}", {"type": "no_errors", "format": format1})
+                ws.conditional_format(f"A{start+10}:H{start+19}", {"type": "no_errors", "format": format5a})
+                ws.conditional_format(f"B{start}:H{start}", {"type": "no_errors", "format": format4})
+                ws.conditional_format(f"B{start+10}:H{start+10}", {"type": "no_errors", "format": format4a})
 
         # headers, dates, separators, CRTS message
         date_cols = [f"hd_day_date{i}" for i in range(1, NUM_DAYS + 1)]
@@ -609,10 +598,14 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
                     if pd.notna(val):
                         ws.write(start + 1, 1 + c, val, format_date)
                 ws.write_formula(f"A{start}", '""', format_label)
-                ws.conditional_format(f"A{start+3}:H{start+3}", {"type": "cell", "criteria": ">=", "value": 0, "format": format_label})
-            if ws is not hd:   # ← prevent overlapping merges on HOPE_DRIVE
-                for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
-                    ws.merge_range(f"A{row}:H{row}", " ", format2)
+                ws.conditional_format(f"A{start+3}:H{start+3}", {"type": "no_errors", "format": format_label})
+
+            # black bars (every 24 rows) and two white rows per block — apply to ALL sheets
+            for row in range(2, 2 + BLOCK_HEIGHT * NUM_WEEKS, BLOCK_HEIGHT):
+                ws.merge_range(f"A{row}:H{row}", " ", format2)
+            for i in range(NUM_WEEKS):
+                ws.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
+                ws.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
 
             text1 = (
                 "Students are to alert their preceptors when they have a Clinical "
@@ -622,10 +615,6 @@ elif mode == "Format OPD + Summary (4-sheet, 5-week)":
             ws.merge_range("C1:F1", text1, merge_format)
             ws.write("G1", "", merge_format)
             ws.write("H1", "", merge_format)
-            if ws is not hd:   # ← HOPE_DRIVE already wrote its own two rows
-                for i in range(NUM_WEEKS):
-                    ws.write(f"A{3 + i*BLOCK_HEIGHT}", "", format_date)
-                    ws.write(f"A{4 + i*BLOCK_HEIGHT}", "", format_date)
 
         workbook.close()
         output.seek(0)
