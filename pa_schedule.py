@@ -930,39 +930,45 @@ elif mode == "PA OPD Creator":
                             mappings.append({"csv_column": f"{pm_pref}d{day_num}_{prov}", "excel_sheet": "SUBSPECIALTY", "excel_cell": f"{col}{row}"})
         return mappings
 
-    def hide_subspecialty_blank_rows(excel_bytes: bytes) -> tuple[bytes, int]:
+    def hide_blank_rows_all_sheets(excel_bytes: bytes):
         """
-        Hide SUBSPECIALTY rows where B..H are empty and col A starts with AM/PM.
-        Preserves row indices to keep xlsxwriter conditional formats aligned.
+        Hide rows where col A starts with AM/PM and ALL of B..H are empty.
+        Works for every sheet (HOPE_DRIVE, ETOWN, NYES, COMPLEX, SUBSPECIALTY, etc.).
+        Preserves row indices → your conditional formats & black bars stay aligned.
+    
+        Returns (new_excel_bytes, per_sheet_hidden_counts, total_hidden)
         """
         import io, re
         from openpyxl import load_workbook
     
-        def _empty(v): return v is None or (isinstance(v, str) and v.strip() == "")
+        def _empty(v):
+            # treat None or whitespace-only as empty
+            return v is None or (isinstance(v, str) and v.strip() == "")
     
         wb = load_workbook(io.BytesIO(excel_bytes))
-        if "SUBSPECIALTY" not in wb.sheetnames:
-            return excel_bytes, 0
+        per_sheet = {}
+        total = 0
     
-        ws = wb["SUBSPECIALTY"]
-        hidden = 0
-    
-        for r in range(1, ws.max_row + 1):
-            a = ws.cell(row=r, column=1).value  # column A label
-            if not (isinstance(a, str) and re.match(r"^\s*(AM|PM)\b", a, re.IGNORECASE)):
-                continue
-    
-            # If ALL of B..H are empty on this row, hide it
-            if all(_empty(ws.cell(row=r, column=c).value) for c in range(2, 9)):
-                ws.row_dimensions[r].hidden = True
-                # Optional: also collapse height so it’s invisible even if “show hidden” toggled off
-                ws.row_dimensions[r].height = 0
-                hidden += 1
+        for ws in wb.worksheets:
+            hidden = 0
+            for r in range(1, ws.max_row + 1):
+                a1 = ws.cell(row=r, column=1).value
+                if not (isinstance(a1, str) and re.match(r"^\s*(AM|PM)\b", a1, re.IGNORECASE)):
+                    # Only touch AM/PM data rows; skip headers, bars, etc.
+                    continue
+                # If ALL B..H are empty, hide the row
+                if all(_empty(ws.cell(row=r, column=c).value) for c in range(2, 9)):
+                    ws.row_dimensions[r].hidden = True
+                    ws.row_dimensions[r].height = 0  # extra collapse (optional)
+                    hidden += 1
+            per_sheet[ws.title] = hidden
+            total += hidden
     
         out = io.BytesIO()
         wb.save(out)
         out.seek(0)
-        return out.getvalue(), hidden
+        return out.getvalue(), per_sheet, total
+
 
 
     def update_excel_from_csv(excel_template_bytes: bytes, csv_data_bytes: bytes, mappings: list) -> bytes | None:
@@ -999,7 +1005,7 @@ elif mode == "PA OPD Creator":
             st.error("Failed to update OPD.xlsx with data.")
             st.stop()
 
-        updated_excel_bytes, hidden = hide_subspecialty_blank_rows(updated_excel_bytes)
+        updated_excel_bytes, hidden_map, hidden_total = hide_blank_rows_all_sheets(updated_excel_bytes)
         st.info(f"SUBSPECIALTY: hid {hidden} blank row(s).")
         
         st.success("✅ OPD.xlsx updated successfully!")
