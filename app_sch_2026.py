@@ -1306,7 +1306,7 @@ elif mode == "Format OPD + Summary":
         # 5) Package into a ZIP
         zip_io = io.BytesIO()
         with zipfile.ZipFile(zip_io, "w") as z:
-            z.writestr("Updated_OPD.xlsx", updated_excel_bytes)
+            z.writestr("Updated_OPD.xlsx", cleaned_bytes)
             z.writestr("Assignment_Summary.docx", word_bytes)
         zip_io.seek(0)
         
