@@ -362,6 +362,20 @@ elif mode == "PA OPD Creator":
     import pandas as pd
     import streamlit as st
 
+    def _slugify(name: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+    def _title_from_designation(des: str) -> str:
+        # e.g., "reading am" -> "Reading"
+        base = re.sub(r"\b(am|pm)\b", "", des, flags=re.I).strip()
+        return " ".join(w.capitalize() for w in base.split()) or "Auto Group"
+    
+    def _has_am(text: str) -> bool:
+        return bool(re.search(r"\bam\b", text, flags=re.I))
+    
+    def _has_pm(text: str) -> bool:
+        return bool(re.search(r"\bpm\b", text, flags=re.I))
+    
     # ─────────────────────────────────────────────────────────────────────────────
     # Parameterized site registry
     # Add new sheets by appending entries to SITE_CONFIGS below — no other code edits.
@@ -592,6 +606,66 @@ elif mode == "PA OPD Creator":
                 if desc in grp and prov:
                     grp[desc].append(prov)
 
+    # ─────────────────────────────────────────────────────────────────────────────
+    # AUTO-ADD: any designation strings seen in uploads but not declared in SITE_CONFIGS
+    # Result: new continuity groups named AUTO_<slug>, routed to SUBSPECIALTY
+    # ─────────────────────────────────────────────────────────────────────────────
+    # 1) Collect all designations we actually saw in the files
+    seen_designations = set()
+    for day_map in assignments_by_date.values():
+        for des in day_map.keys():
+            if isinstance(des, str) and des.strip():
+                seen_designations.add(des.strip().lower())
+    
+    # 2) Build a set of all known aliases already declared in SITE_CONFIGS
+    known_aliases = set()
+    for name, cfg in SITE_CONFIGS.items():
+        if cfg["type"] == "continuity":
+            for al in cfg["am"]["aliases"]:
+                known_aliases.add(al.strip().lower())
+            for al in cfg["pm"]["aliases"]:
+                known_aliases.add(al.strip().lower())
+        elif cfg["type"] == "hope_drive":
+            for al in cfg["designations"].keys():
+                known_aliases.add(al.strip().lower())
+    
+    # 3) For any 'seen' designation not in known aliases, create a new AUTO_* continuity group
+    auto_added = 0
+    for des in sorted(seen_designations):
+        if des in known_aliases:
+            continue
+    
+        slug = _slugify(des)
+        key = f"AUTO_{slug[:40].upper()}"  # keep key readable/short; unique per designation string
+        # Skip if we already created it in a prior file (or name collision)
+        if key in SITE_CONFIGS:
+            continue
+    
+        title = _title_from_designation(des)  # nice human title
+        am_aliases = [des] if _has_am(des) else [f"{des} am"]
+        pm_aliases = [des] if _has_pm(des) else [f"{des} pm"]
+    
+        SITE_CONFIGS[key] = {
+            "title": title,
+            "type": "continuity",
+            "keywords": [],  # no keyword gating needed for auto groups
+            "am": {"aliases": am_aliases, "prefix": f"{_slugify(title)}_am_"},
+            "pm": {"aliases": pm_aliases, "prefix": f"{_slugify(title)}_pm_"},
+        }
+        auto_added += 1
+    
+    # 4) Recompute SUBSPECIALTY_GROUPS now that SITE_CONFIGS includes AUTO_* groups
+    PRIMARY_SHEETS = ["HOPE_DRIVE", "ETOWN", "NYES", "COMPLEX", "LANCASTER"]  # keep your original
+    SUBSPECIALTY_GROUPS = [
+        name for name, cfg in SITE_CONFIGS.items()
+        if cfg["type"] == "continuity" and name not in PRIMARY_SHEETS
+    ]
+    
+    # 5) OPTIONAL: friendlier heads-up
+    if auto_added:
+        st.info(f"Auto-added {auto_added} site group(s) into SUBSPECIALTY from your uploads.")
+
+    
     # Friendly notice if expected site keywords are missing across uploads
     missing_keywords = [kw for kw in REQUIRED_KEYWORDS if kw not in found_keywords]
     if missing_keywords:
