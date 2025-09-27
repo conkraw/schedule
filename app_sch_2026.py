@@ -1170,7 +1170,41 @@ elif mode == "Format OPD + Summary":
                             'excel_cell': f"{col}{row}",
                         })
     
-    
+        def hide_blank_rows_all_sheets(excel_bytes: bytes):
+            """
+            Hide rows where col A starts with AM/PM and ALL of B..H are empty.
+            Works for every sheet. Preserves row indices so conditional formats stay aligned.
+        
+            Returns (new_excel_bytes, per_sheet_hidden_counts, total_hidden)
+            """
+            import io, re
+            from openpyxl import load_workbook
+        
+            def _empty(v):
+                return v is None or (isinstance(v, str) and v.strip() == "")
+        
+            wb = load_workbook(io.BytesIO(excel_bytes))
+            per_sheet = {}
+            total = 0
+        
+            for ws in wb.worksheets:
+                hidden = 0
+                for r in range(1, ws.max_row + 1):
+                    a1 = ws.cell(row=r, column=1).value
+                    if not (isinstance(a1, str) and re.match(r"^\s*(AM|PM)\b", a1, re.IGNORECASE)):
+                        continue
+                    if all(_empty(ws.cell(row=r, column=c).value) for c in range(2, 9)):
+                        ws.row_dimensions[r].hidden = True
+                        ws.row_dimensions[r].height = 0
+                        hidden += 1
+                per_sheet[ws.title] = hidden
+                total += hidden
+        
+            out = io.BytesIO()
+            wb.save(out)
+            out.seek(0)
+            return out.getvalue(), per_sheet, total
+                
     # --- Main execution flow for generating and then updating the workbook ---
     st.subheader("Generate & Update OPD.xlsx + Summary")
     
@@ -1186,6 +1220,8 @@ elif mode == "Format OPD + Summary":
         if not updated_excel_bytes:
             st.error("Failed to update OPD.xlsx with data.")
             st.stop()
+
+        cleaned_bytes, hidden_map, hidden_total = hide_blank_rows_all_sheets(updated_excel_bytes)
         st.success("✅ OPD.xlsx updated successfully!")
     
         # 3) Build your summary DataFrame (reuse your df_summary logic)
@@ -1601,7 +1637,7 @@ elif mode == "Create Student Schedule":
     
         return conflicts
 
-                    
+
     # ───────── Load OPD & Rotation Schedule ─────────
     df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
     df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
