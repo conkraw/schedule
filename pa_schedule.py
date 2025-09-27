@@ -560,44 +560,50 @@ elif mode == "PA OPD Creator":
         extra_separate_tabs = [s.strip() for s in extra_separate_tabs_txt.split(",") if s.strip()]
 
         st.write("Select routing for each designation:")
-        for des in unique_designations:
+        for i, des in enumerate(unique_designations):
             prev = st.session_state["route_map"].get(des, {})
+            slug = slugify(des) or f"item{i}"
+            keybase = f"route_{i}_{slug}"
+        
             colA, colB, colC, colD = st.columns([0.42, 0.24, 0.2, 0.14])
-
+        
             include = colA.checkbox(
                 f"{des}",
                 value=prev.get("include", True),
                 help="Uncheck to ignore this designation everywhere.",
+                key=f"{keybase}_include",
             )
-
+        
             suggested = guess_site_bucket(des)
             bucket_choices = ["HOPE_DRIVE", "LANCASTER", "NYES", "ETOWN", "SUBSPECIALTY"] + extra_separate_tabs
             try_idx = bucket_choices.index(prev.get("sheet", suggested)) if prev.get("sheet") in bucket_choices else bucket_choices.index(suggested)
-
+        
             sheet_choice = colB.selectbox(
                 "Sheet",
                 options=bucket_choices,
                 index=try_idx,
-                key=f"sheet_{des}",
+                key=f"{keybase}_sheet",
             )
-
+        
             gslot = guess_slot(des)  # "AM"/"PM"/"NONE"
             slot_default = "Auto (from name)" if gslot in ("AM", "PM") else "Use default"
             slot_choice = colC.selectbox(
                 "Slot",
                 options=["Auto (from name)", "AM", "PM", "Both", "Use default"],
                 index=["Auto (from name)", "AM", "PM", "Both", "Use default"].index(prev.get("slot", slot_default)),
+                key=f"{keybase}_slot",
             )
-
+        
             # sample providers
             colD.write("Sample:")
             colD.caption(", ".join(sorted(list(designation_prov_sample[des]))))
-
+        
             st.session_state["route_map"][des] = {
                 "include": include,
                 "sheet": sheet_choice,
                 "slot": slot_choice,
             }
+
 
     # ─────────────────────────────────────────────────────────────────────────────
     # Build sheet definitions (prefix registry)
