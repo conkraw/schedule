@@ -429,6 +429,9 @@ elif mode == "Format OPD + Summary":
         
         "briarcrest clinic am":       "adol_med_am_",
         "briarcrest clinic pm":       "adol_med_pm_",
+
+        "lancaster am":       "lancaster_am_",
+        "lancaster pm":       "lancaster_pm_",
     
     }
     
@@ -732,12 +735,12 @@ elif mode == "Format OPD + Summary":
         merge_format= workbook.add_format({'bold':1,'align':'center','valign':'vcenter','text_wrap':True,'font_color':'red','bg_color':'#FEFFCC','border':1})
     
         # ─── Worksheets ─────────────────────────────────────────────────────────────
-        worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
+        worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','LANCASTER','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
         
         sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
     
         # ─── Site headers ────────────────────────────────────────────────────────────
-        site_list = ['Hope Drive','Elizabethtown','Nyes Road','Complex Care','WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','AHOLOUKPE','ADOLMED']
+        site_list = ['Hope Drive','Elizabethtown','Nyes Road','Lancaster','Complex Care','WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','AHOLOUKPE','ADOLMED']
         
         for ws, site in zip(sheets.values(), site_list):
             ws.write(0, 0, 'Site:', format1)
@@ -1011,6 +1014,9 @@ elif mode == "Format OPD + Summary":
         
         "briarcrest clinic am":          "adol_med_am_",
         "briarcrest clinic pm":          "adol_med_pm_",
+
+        "lancaster am":          "lancaster_am_",
+        "lancaster pm":          "lancaster_pm_",
     
         'hampden_nursery_print':    'custom_print_hampden_nursery_',
         'sjr_hospitalist_print':    'custom_print_sjr_hospitalist_',
@@ -1024,6 +1030,7 @@ elif mode == "Format OPD + Summary":
     sheet_map = {
         'ETOWN':           ('etown am continuity','etown pm continuity'),
         'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
+        'LANCASTER':            ('lancaster am','lancaster pm'),
         'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
         'WARD A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
         'PSHCH_NURSERY':    ("nursery weekday 8a-6p","nursery weekday 8a-6p"),
@@ -1036,7 +1043,7 @@ elif mode == "Format OPD + Summary":
         'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
     }
     
-    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
+    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','LANCASTER','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
     
     for ws in worksheet_names:
         # ─── HOPE_DRIVE ───────────────────────────────────────────
