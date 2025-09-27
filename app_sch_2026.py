@@ -502,6 +502,47 @@ elif mode == "Format OPD + Summary":
                 if desc in grp and prov:
                     grp[desc].append(prov)
     
+    # ─── Provider filter UI ──────────────────────────────────────────────────────
+    all_providers = sorted({
+        p.strip()
+        for day in assignments_by_date.values()
+        for provs in day.values()
+        for p in provs
+        if isinstance(p, str) and p.strip()
+    })
+    
+    # Multiselect persists in session; start empty by design
+    if "provider_filter" not in st.session_state:
+        st.session_state["provider_filter"] = []
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("Select All Providers", key="prov_select_all"):
+            st.session_state["provider_filter"] = all_providers
+    with col2:
+        if st.button("Clear Providers", key="prov_clear_all"):
+            st.session_state["provider_filter"] = []
+    with col3:
+        # Switch to actually apply the filter. Off = treat as 'All'
+        apply_provider_filter = st.checkbox(
+            "Apply provider filter",
+            value=False,
+            key="prov_apply_filter",
+            help="When OFF, everyone is included even if the multiselect is blank."
+        )
+    
+    allowed_providers = st.multiselect(
+        "Limit providers included in OPD",
+        options=all_providers,
+        key="provider_filter",
+        help="Only selected providers will be written when 'Apply provider filter' is ON.",
+    )
+    
+    # Effective allow-list:
+    effective_allowed = (
+        set(allowed_providers) if (apply_provider_filter and allowed_providers) else set(all_providers)
+    )
+
     # ─── 2. Read student list and prepare s1, s2, … ───────────────────────────────
     students_df = pd.read_csv(student_file, dtype=str)
     legal_names = students_df["legal_name"].dropna().tolist()
@@ -521,23 +562,35 @@ elif mode == "Format OPD + Summary":
             for des, prefs in base_map.items()
         }
     
-        # 3a) schedule providers (your existing hd_am_, ward_a_am_, etc.)
+        # 3a) schedule providers (respect provider filter)
         for des, provs in assignments_by_date[date].items():
-            req = min_required.get(des, len(provs))
-            while len(provs) < req and provs:
-                provs.append(provs[0])
-    
+            # Do not mutate the original list
+            filtered = [p for p in provs if p in effective_allowed]
+        
+            # If the group has a minimum requirement, pad by repeating the first allowed provider
+            req = min_required.get(des, len(filtered))
+            if filtered and len(filtered) < req:
+                filtered = filtered + [filtered[0]] * (req - len(filtered))
+        
+            # If nothing allowed and no minimum → skip write
+            if not filtered:
+                continue
+        
             if des.startswith("rounder"):
-                team_idx = int(des.split()[1]) - 1
-                for i, name in enumerate(provs, start=1):
-                    slot = team_idx * req + i
+                # rounder N 7a-7p → slot math
+                # NOTE: req here is the number of providers per team (usually 2)
+                team_idx = int(des.split()[1]) - 1  # 0-based team index
+                for i, name in enumerate(filtered, start=1):
+                    slot = team_idx * req + i  # team1→1..req, team2→req+1..2*req, etc.
                     for prefix in des_map[des]:
-                        redcap_row[f"{prefix}{slot}"] = name
+                        redcap_row[f"{prefix}{i if prefix.endswith('_am_') or prefix.endswith('_pm_') else slot}"] = name
+                        # ^ If your rounder prefixes are lists like ["ward_a_am_","ward_a_pm_"],
+                        #   they'll be in des_map[des] already; the index logic above preserves slots.
             else:
-                for i, name in enumerate(provs, start=1):
+                for i, name in enumerate(filtered, start=1):
                     for prefix in des_map[des]:
                         redcap_row[f"{prefix}{i}"] = name
-    
+
         # 3b) custom_print names — once per date, using the SAME suffix
         for fname, cfg in file_configs.items():
             sheet = cfg["title"]          
@@ -656,12 +709,6 @@ elif mode == "Format OPD + Summary":
     
     out_df = pd.DataFrame([redcap_row])
     csv_full = out_df.to_csv(index=False).encode("utf-8")
-    
-    # ─── File to Check Column Assignments ─────────────────────────────────────────────────────────────────
-    #st.subheader("✅ Full REDCap Import Preview")
-    #st.dataframe(out_df)
-    
-    #st.download_button("⬇️ Download Full CSV", csv_full, "batch_import_full.csv", "text/csv")
     
     def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
         import io
