@@ -450,6 +450,7 @@ elif mode == "Format OPD + Summary":
     file_configs = {"HAMPDEN_NURSERY.xlsx": {"title": "HAMPDEN_NURSERY","custom_text": "CUSTOM_PRINT","names": ["Folaranmi, Oluwamayoda","Alur, Pradeep","Nanda, Sharmilarani","HAMPDEN_NURSERY"]},
                     "SJR_HOSP.xlsx": {"title": "SJR_HOSPITALIST","custom_text": "CUSTOM_PRINT","names": ["Spangola, Haley","Gubitosi, Terry","SJR_1","SJR_2"]},
                     "AAC.xlsx": {"title": "AAC","custom_text": "CUSTOM_PRINT","names": ["Vaishnavi Harding","Abimbola Ajayi","Shilu Joshi","Desiree Webb","Amy Zisa","Abdullah Sakarcan","Anna Karasik","AAC_1","AAC_2","AAC_3",]},
+                    "LANCASTER_CMG.xlsx": {"title": "LANCASTER_CMG","custom_text": "CUSTOM_PRINT","names": ["Ashleigh Sobotka","Susannah Christman"]},
                     "MAHOUSSI_AHOLOUKPE.xlsx": {"title": "MAHOUSSI_AHOLOUKPE","custom_text": "CUSTOM_PRINT","names": ["Mahoussi Aholoukpe"]},
                     #"REPLACE.xlsx": {"title": "REPLACE","custom_text": "CUSTOM_PRINT","names": ["ReplaceFirstName ReplaceLastName"]},
                    }
@@ -735,12 +736,12 @@ elif mode == "Format OPD + Summary":
         merge_format= workbook.add_format({'bold':1,'align':'center','valign':'vcenter','text_wrap':True,'font_color':'red','bg_color':'#FEFFCC','border':1})
     
         # ─── Worksheets ─────────────────────────────────────────────────────────────
-        worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','LANCASTER','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
+        worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','LANCASTER','LANCASTER_CMG','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
         
         sheets = {name: workbook.add_worksheet(name) for name in worksheet_names}
     
         # ─── Site headers ────────────────────────────────────────────────────────────
-        site_list = ['Hope Drive','Elizabethtown','Nyes Road','Lancaster','Complex Care','WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','AHOLOUKPE','ADOLMED']
+        site_list = ['Hope Drive','Elizabethtown','Nyes Road','Lancaster','Lancaster CMG','Complex Care','WARD A','PSHCH NURSERY','HAMPDEN NURSERY','SJR HOSPITALIST','AAC','AHOLOUKPE','ADOLMED']
         
         for ws, site in zip(sheets.values(), site_list):
             ws.write(0, 0, 'Site:', format1)
@@ -1021,6 +1022,7 @@ elif mode == "Format OPD + Summary":
         'hampden_nursery_print':    'custom_print_hampden_nursery_',
         'sjr_hospitalist_print':    'custom_print_sjr_hospitalist_',
         'aac_print':                'custom_print_aac_',
+        'lancaster_cmg_print':      'custom_print_lancastercmg_',
     
         'mahoussi_aholoukpe_print': 'custom_print_mahoussi_aholoukpe_',
         
@@ -1031,6 +1033,8 @@ elif mode == "Format OPD + Summary":
         'ETOWN':           ('etown am continuity','etown pm continuity'),
         'NYES':            ('nyes rd am continuity','nyes rd pm continuity'),
         'LANCASTER':            ('lancaster am','lancaster pm'),
+        'LANCASTER_CMG':        ('lancaster_cmg_print',),
+        
         'COMPLEX':         ('hope drive clinic am','hope drive clinic pm'),
         'WARD A':             ('rounder 1 7a-7p','rounder 2 7a-7p','rounder 3 7a-7p'),
         'PSHCH_NURSERY':    ("nursery weekday 8a-6p","nursery weekday 8a-6p"),
@@ -1043,7 +1047,7 @@ elif mode == "Format OPD + Summary":
         'ADOLMED':             ('briarcrest clinic am','briarcrest clinic pm'),
     }
     
-    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','LANCASTER','COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
+    worksheet_names = ['HOPE_DRIVE','ETOWN','NYES','LANCASTER', 'LANCASTER_CMG', 'COMPLEX','WARD A','PSHCH_NURSERY','HAMPDEN_NURSERY','SJR_HOSP','AAC','AHOLOUKPE','ADOLMED']
     
     for ws in worksheet_names:
         # ─── HOPE_DRIVE ───────────────────────────────────────────
