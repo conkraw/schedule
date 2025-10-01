@@ -1022,7 +1022,7 @@ elif mode == "Format OPD + Summary":
         'hampden_nursery_print':    'custom_print_hampden_nursery_',
         'sjr_hospitalist_print':    'custom_print_sjr_hospitalist_',
         'aac_print':                'custom_print_aac_',
-        'lancaster_cmg_print':      'custom_print_lancastercmg_',
+        'lancaster_cmg_print':      'custom_print_lancaster_cmg_',
     
         'mahoussi_aholoukpe_print': 'custom_print_mahoussi_aholoukpe_',
         
