@@ -1911,7 +1911,7 @@ elif mode == "Create Individual Schedules":
             )
 
 elif mode == "OPD MD PA Conflict Detector":
-        def detect_shift_conflicts(opd_file):
+    def detect_shift_conflicts(opd_file):
         """
         Scans both AM and PM shifts, week 1–4, day Mon–Sun, and flags any student
         who appears more than once in the same shift/day/week.
