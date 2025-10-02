@@ -356,7 +356,8 @@ elif mode == "Instructions":
 elif mode == "Format OPD + Summary":
     # ─── Inputs ────────────────────────────────────────────────────────────────────
     # Required keywords to look for in the content
-    required_keywords = ["academic general pediatrics", "hospitalists", "complex care", "adol med"]
+    #required_keywords = ["academic general pediatrics", "hospitalists", "complex care", "adol med"]
+    required_keywords = ["academic general pediatrics", "hospitalists", "complex care"]
     found_keywords = set()
     
     schedule_files = st.file_uploader("1) Upload one or more QGenda calendar Excel(s)",type=["xlsx", "xls"],accept_multiple_files=True)
@@ -382,7 +383,7 @@ elif mode == "Format OPD + Summary":
         missing_keywords = [k for k in required_keywords if k not in found_keywords]
     
         if missing_keywords:
-            st.warning(f"Missing required calendar(s): {', '.join(missing_keywords)}. Please upload all four.")
+            st.warning(f"Missing required calendar(s): {', '.join(missing_keywords)}. Please upload all required calendars.")
         else:
             st.success("All required calendars uploaded and verified by content.")
     
