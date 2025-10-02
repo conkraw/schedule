@@ -1984,12 +1984,80 @@ elif mode == "OPD MD PA Conflict Detector":
           mapping: {(monday_date, period, day, preceptor) -> {'student': str|None, 'cell': 'B12', 'date': date}}
           roster: {(monday_date, period) -> set(preceptor names seen somewhere in that week's block)}
           week_dates: {(monday_date) -> {day -> actual date}}
+    
+        Notes:
+          - We IGNORE entries that have no student after the tilde (e.g., "Lastname, Firstname ~" or no tilde at all)
+            for the purpose of double-booking detection. They still contribute to the weekly roster
+            so they can show up as available.
+          - We IGNORE placeholder/administrative rows (e.g., Closed, Vacation, Admin) as preceptors.
         """
+        def is_placeholder_preceptor(text: str) -> bool:
+            if not text:
+                return True
+            t = text.strip().upper()
+            EXCLUDE_PREFIXES = [
+                'CLOSED', 'CLOSE', 'BLOCK', 'VACATION', 'ADMIN', 'MEETING', 'NO CLINIC',
+                'CLINIC CANCELLED', 'CANCELLED', 'HOLIDAY', 'OFF', 'PTO', 'SICK'
+            ]
+            return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
+    
+        def parse_cell(val: str):
+            """Return (preceptor, student) with whitespace normalized.
+            Examples:
+              "Doe, Jane ~ Smith, Alex" -> ("Doe, Jane", "Smith, Alex")
+              "Doe, Jane ~    "         -> ("Doe, Jane", None)
+              "Doe, Jane"                -> ("Doe, Jane", None)
+            """
+            if not isinstance(val, str):
+                return None, None
+            parts = val.split('~', 1)
+            pre = parts[0].strip()
+            stu = parts[1].strip() if len(parts) == 2 else None
+            if stu is not None and stu.strip() == '':
+                stu = None
+            return pre, stu
+    
         headers = find_week_headers(df)
         runs = detect_am_pm_runs(df, start_row=0)
         mapping = {}
         roster = defaultdict(set)
         week_dates = defaultdict(dict)
+    
+        # capture the calendar row (day -> date) per week
+        for (day_row, date_row, monday_date) in headers:
+            if monday_date is None:
+                continue
+            for col_idx, day in enumerate(DAYS, start=1):
+                if col_idx < df.shape[1]:
+                    val = df.iat[date_row, col_idx]
+                    try:
+                        week_dates[monday_date][day] = pd.to_datetime(val).date()
+                    except Exception:
+                        week_dates[monday_date][day] = None
+    
+        for period, rstart, rend in runs:
+            monday_date = row_to_week_monday(rstart, headers)
+            if monday_date is None:
+                continue
+            for col_idx, day in enumerate(DAYS, start=1):
+                for row in range(rstart, rend+1):
+                    if col_idx >= df.shape[1]:
+                        continue
+                    val = df.iat[row, col_idx]
+                    if pd.isna(val) or not isinstance(val, str):
+                        continue
+                    pre, stu = parse_cell(val)
+                    if not pre or is_placeholder_preceptor(pre):
+                        continue
+                    # Always add to roster so we can mark availability
+                    roster[(monday_date, period)].add(pre)
+                    # For conflicts, only keep if there is a student actually listed
+                    if stu is None:
+                        continue
+                    cell = f"{chr(ord('A')+col_idx)}{row+1}"
+                    key = (monday_date, period, day, pre)
+                    mapping.setdefault(key, {'student': stu, 'cell': cell, 'date': week_dates[monday_date].get(day)})
+        return mapping, roster, week_dates
     
         # capture the calendar row (day -> date) per week
         for (day_row, date_row, monday_date) in headers:
