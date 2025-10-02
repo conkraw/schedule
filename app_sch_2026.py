@@ -1910,7 +1910,7 @@ elif mode == "Create Individual Schedules":
                 mime="application/zip",
             )
 
-elif mode == "OPD MD PA Conflict Detector":
+elif mode == "OPD MD PA Conflict Detector":    
     st.title("OPD MD/PA Double-Booking & Availability")
     st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
     
@@ -2174,7 +2174,42 @@ elif mode == "OPD MD PA Conflict Detector":
                                 })
     
         conflicts_df = pd.DataFrame(conflict_rows)
-        availability_df = pd.DataFrame(availability_rows)
+    availability_df = pd.DataFrame(availability_rows)
+    
+    # --- Prioritize availability for known conflicts and build targeted suggestions ---
+    if not conflicts_df.empty and not availability_df.empty:
+        # Mark availability rows that share (site, date, period) with any conflict
+        conflict_keys = set(zip(conflicts_df['site'], conflicts_df['date'], conflicts_df['period']))
+        availability_df['priority'] = availability_df.apply(
+            lambda x: (x['site'], x['date'], x['period']) in conflict_keys, axis=1
+        )
+        availability_df = availability_df.sort_values(
+            ['priority','site','date','period','preceptor'], ascending=[False, True, True, True, True]
+        ).reset_index(drop=True)
+    
+        # Build suggestions: for each conflict, list available alternative preceptors same site/date/period
+        suggestions = []
+        for _, r in conflicts_df.iterrows():
+            same_slot = availability_df[(availability_df['site']==r['site']) &
+                                        (availability_df['date']==r['date']) &
+                                        (availability_df['period']==r['period'])]
+            # exclude the conflicted preceptor itself
+            candidates = same_slot[same_slot['preceptor'] != r['preceptor']]
+            for _, a in candidates.sort_values('preceptor').head(10).iterrows():
+                suggestions.append({
+                    'site': r['site'],
+                    'date': r['date'],
+                    'day': r['day'],
+                    'period': r['period'],
+                    'conflict_preceptor': r['preceptor'],
+                    'md_student': r['md_student'],
+                    'pa_student': r['pa_student'],
+                    'suggested_preceptor': a['preceptor']
+                })
+        suggestions_df = pd.DataFrame(suggestions)
+    else:
+        availability_df['priority'] = False if not availability_df.empty else pd.Series(dtype=bool)
+        suggestions_df = pd.DataFrame()
     
         st.subheader("Results")
         c1, c2, c3 = st.columns(3)
@@ -2184,6 +2219,10 @@ elif mode == "OPD MD PA Conflict Detector":
             st.metric("Double bookings found", 0 if conflicts_df.empty else len(conflicts_df))
         with c3:
             st.metric("Availability rows", 0 if availability_df.empty else len(availability_df))
+    
+    # Extra metric for suggestions
+    suggest_count = 0 if 'suggestions_df' not in locals() or suggestions_df.empty else len(suggestions_df)
+    st.metric("Targeted suggestions", suggest_count)
     
         st.markdown("**Double-booked preceptors (MD & PA in same slot)**")
         if conflicts_df.empty:
@@ -2204,7 +2243,23 @@ elif mode == "OPD MD PA Conflict Detector":
             st.dataframe(availability_df, use_container_width=True)
             st.download_button(
                 label="Download availability CSV",
-                data=availability_df.to_csv(index=False).encode('utf-8'),
+                data=availability_df.drop(columns=['priority'], errors='ignore').to_csv(index=False).encode('utf-8'),
+                file_name="opd_availability_proxy.csv",
+                mime="text/csv"
+            )
+    
+        # Suggestions block
+        st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the **same site/date/period** (top 10).")
+        if suggestions_df.empty:
+            st.info("No suggestions available (no conflicts found or no alternatives in the same slot).")
+        else:
+            st.dataframe(suggestions_df, use_container_width=True)
+            st.download_button(
+                label="Download suggestions CSV",
+                data=suggestions_df.to_csv(index=False).encode('utf-8'),
+                file_name="opd_targeted_suggestions.csv",
+                mime="text/csv"
+            ).encode('utf-8'),
                 file_name="opd_availability_proxy.csv",
                 mime="text/csv"
             )
