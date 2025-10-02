@@ -1911,68 +1911,235 @@ elif mode == "Create Individual Schedules":
             )
 
 elif mode == "OPD MD PA Conflict Detector":
-    def detect_shift_conflicts(opd_file):
+    st.title("OPD MD/PA Double-Booking & Availability")
+    st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
+    
+    # -----------------------------
+    # Helpers
+    # -----------------------------
+    DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+    DEFAULT_FOCUS = ['HOPE_DRIVE','NYES','ETOWN']
+    
+    @st.cache_data(show_spinner=False)
+    def read_sheet_names(file):
+        try:
+            xl = pd.ExcelFile(file)
+            return xl.sheet_names
+        except Exception as e:
+            st.error(f"Failed to read sheet names: {e}")
+            return []
+    
+    @st.cache_data(show_spinner=False)
+    def load_sheet(file, sheet_name):
+        return pd.read_excel(file, sheet_name=sheet_name, header=None)
+    
+    def find_week_headers(df: pd.DataFrame):
+        """Return [(day_header_row, date_row, monday_date)] using column B (index 1)."""
+        day_rows = df.index[df.iloc[:,1].astype(str).str.strip().eq('Monday')].tolist()
+        headers = []
+        for dr in day_rows:
+            date_r = dr + 1
+            monday_val = df.iat[date_r, 1] if date_r < len(df) else None
+            md = None
+            if pd.notna(monday_val):
+                try:
+                    md = pd.to_datetime(monday_val).date()
+                except Exception:
+                    md = None
+            headers.append((dr, date_r, md))
+        return headers
+    
+    def row_to_week_monday(row_idx: int, headers):
+        prev = [h for h in headers if h[0] <= row_idx]
+        if not prev:
+            return None
+        prev.sort(key=lambda x: x[0])
+        return prev[-1][2]  # monday_date
+    
+    def detect_am_pm_runs(df: pd.DataFrame, start_row: int = 0):
+        """Find consecutive AM/PM blocks by scanning column A (index 0)."""
+        runs, current, run_start, prev_idx = [], None, None, None
+        for idx in range(start_row, len(df)):
+            raw = df.iat[idx, 0]
+            label = None
+            if isinstance(raw, str):
+                ru = raw.strip().upper()
+                if ru.startswith('AM'): label = 'AM'
+                elif ru.startswith('PM'): label = 'PM'
+            if label is None:
+                continue
+            if current is None:
+                current, run_start = label, idx
+            elif label != current or (prev_idx is not None and idx != prev_idx + 1):
+                runs.append((current, run_start, prev_idx))
+                current, run_start = label, idx
+            prev_idx = idx
+        if current is not None:
+            runs.append((current, run_start, prev_idx))
+        return runs
+    
+    def build_maps_and_roster(df: pd.DataFrame):
         """
-        Scans both AM and PM shifts, week 1–4, day Mon–Sun, and flags any student
-        who appears more than once in the same shift/day/week.
-        Only ignores entries where there is no text after the '~'.
+        Returns:
+          mapping: {(monday_date, period, day, preceptor) -> {'student': str|None, 'cell': 'B12', 'date': date}}
+          roster: {(monday_date, period) -> set(preceptor names seen somewhere in that week's block)}
+          week_dates: {(monday_date) -> {day -> actual date}}
         """
-        wb = load_workbook(opd_file, data_only=True)
-        days      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-        am_marker = re.compile(r"^\s*AM\b", re.IGNORECASE)
-        pm_marker = re.compile(r"^\s*PM\b", re.IGNORECASE)
-        conflicts = []
+        headers = find_week_headers(df)
+        runs = detect_am_pm_runs(df, start_row=0)
+        mapping = {}
+        roster = defaultdict(set)
+        week_dates = defaultdict(dict)
     
-        def find_blocks(ws, marker_re):
-            rows = [c.row for c in ws['A']
-                    if isinstance(c.value, str) and marker_re.match(c.value)]
-            rows.sort()
-            blocks, curr = [], []
-            for r in rows:
-                if not curr or r == curr[-1] + 1:
-                    curr.append(r)
-                else:
-                    blocks.append(curr)
-                    curr = [r]
-            if curr:
-                blocks.append(curr)
-            return blocks[:4]
+        # capture the calendar row (day -> date) per week
+        for (day_row, date_row, monday_date) in headers:
+            if monday_date is None:
+                continue
+            for col_idx, day in enumerate(DAYS, start=1):
+                if col_idx < df.shape[1]:
+                    val = df.iat[date_row, col_idx]
+                    try:
+                        week_dates[monday_date][day] = pd.to_datetime(val).date()
+                    except Exception:
+                        week_dates[monday_date][day] = None
     
-        # derive AM/PM blocks from first sheet
-        tpl      = wb[wb.sheetnames[0]]
-        am_blocks = find_blocks(tpl, am_marker)
-        pm_blocks = find_blocks(tpl, pm_marker)
+        for period, rstart, rend in runs:
+            monday_date = row_to_week_monday(rstart, headers)
+            if monday_date is None:
+                continue
+            for col_idx, day in enumerate(DAYS, start=1):
+                for row in range(rstart, rend+1):
+                    if col_idx >= df.shape[1]:
+                        continue
+                    val = df.iat[row, col_idx]
+                    if pd.isna(val) or not isinstance(val, str):
+                        continue
+                    parts = val.split('~', 1)
+                    pre = parts[0].strip()
+                    stu = parts[1].strip() if len(parts) == 2 else None
+                    if not pre:
+                        continue
+                    cell = f"{chr(ord('A')+col_idx)}{row+1}"
+                    key = (monday_date, period, day, pre)
+                    # first occurrence wins
+                    if key not in mapping:
+                        mapping[key] = {'student': stu, 'cell': cell, 'date': week_dates[monday_date].get(day)}
+                    # build roster for this week's period
+                    roster[(monday_date, period)].add(pre)
+        return mapping, roster, week_dates
     
-        for shift, blocks in (("AM", am_blocks), ("PM", pm_blocks)):
-            for week_idx, block_rows in enumerate(blocks, start=1):
-                for day_idx, day_name in enumerate(days):
-                    col = 2 + day_idx
-                    locs = defaultdict(list)
+    # -----------------------------
+    # UI - File uploads
+    # -----------------------------
+    col1, col2 = st.columns(2)
+    with col1:
+        md_file = st.file_uploader("Upload MD OPD (xlsx)", type=["xlsx"], key="md")
+    with col2:
+        pa_file = st.file_uploader("Upload PA OPD (xlsx)", type=["xlsx"], key="pa")
     
-                    # collect all assignments in this shift
-                    for sheet in wb.sheetnames:
-                        ws = wb[sheet]
-                        for r in block_rows:
-                            raw = ws.cell(row=r, column=col).value
-                            text = str(raw or "")
-                            if "~" not in text:
-                                continue
-                            pre, student = [s.strip() for s in text.split("~",1)]
-                            if not student:
-                                continue
-                            coord = ws.cell(row=r, column=col).coordinate
-                            locs[student].append((sheet, coord))
+    if md_file and pa_file:
+        md_sheets = read_sheet_names(md_file)
+        pa_sheets = read_sheet_names(pa_file)
     
-                    # flag duplicates
-                    for student, occ in locs.items():
-                        if len(occ) > 1:
-                            conflicts.append({
-                                "student":     student,
-                                "week":        week_idx,
-                                "day":         day_name,
-                                "shift":       shift,
-                                "occurrences": occ
-                            })
+        common_sheets = sorted([s for s in DEFAULT_FOCUS if s in md_sheets and s in pa_sheets])
+        # Let user adjust the subset if desired (but default to the 3 focus tabs)
+        selected_sheets = st.multiselect(
+            "Sites (tabs) to compare",
+            options=sorted(list(set(md_sheets) & set(pa_sheets))),
+            default=common_sheets or sorted(list(set(md_sheets) & set(pa_sheets)))
+        )
     
-        return conflicts
-
+        if not selected_sheets:
+            st.warning("No common sheets selected.")
+            st.stop()
+    
+        conflict_rows = []
+        availability_rows = []
+    
+        for sheet in selected_sheets:
+            df_md = load_sheet(md_file, sheet)
+            df_pa = load_sheet(pa_file, sheet)
+            md_map, md_roster, md_week_dates = build_maps_and_roster(df_md)
+            pa_map, pa_roster, pa_week_dates = build_maps_and_roster(df_pa)
+    
+            # Conflicts: same (week, period, day, preceptor) exists in both maps
+            keys_intersection = set(md_map.keys()) & set(pa_map.keys())
+            for key in sorted(keys_intersection):
+                monday_date, period, day, pre = key
+                md_entry = md_map[key]
+                pa_entry = pa_map[key]
+                conflict_rows.append({
+                    'site': sheet,
+                    'week_monday': monday_date,
+                    'date': md_entry['date'] or pa_entry['date'],
+                    'day': day,
+                    'period': period,
+                    'preceptor': pre,
+                    'md_student': md_entry['student'],
+                    'md_cell': md_entry['cell'],
+                    'pa_student': pa_entry['student'],
+                    'pa_cell': pa_entry['cell'],
+                })
+    
+            # Availability proxy: union roster across MD/PA for each (week, period)
+            all_weeks = set(md_week_dates.keys()) | set(pa_week_dates.keys())
+            for monday_date in sorted(all_weeks):
+                for period in ['AM','PM']:
+                    candidate_preceptors = sorted((md_roster.get((monday_date, period)) or set()) |
+                                                  (pa_roster.get((monday_date, period)) or set()))
+                    if not candidate_preceptors:
+                        continue
+                    week_dates = md_week_dates.get(monday_date, {}) or pa_week_dates.get(monday_date, {})
+                    for day in DAYS:
+                        date_obj = week_dates.get(day)
+                        for pre in candidate_preceptors:
+                            key = (monday_date, period, day, pre)
+                            if key not in md_map and key not in pa_map:
+                                availability_rows.append({
+                                    'site': sheet,
+                                    'week_monday': monday_date,
+                                    'date': date_obj,
+                                    'day': day,
+                                    'period': period,
+                                    'preceptor': pre,
+                                    'status': 'available'
+                                })
+    
+        conflicts_df = pd.DataFrame(conflict_rows)
+        availability_df = pd.DataFrame(availability_rows)
+    
+        st.subheader("Results")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("Sites compared", len(selected_sheets))
+        with c2:
+            st.metric("Double bookings found", 0 if conflicts_df.empty else len(conflicts_df))
+        with c3:
+            st.metric("Availability rows", 0 if availability_df.empty else len(availability_df))
+    
+        st.markdown("**Double-booked preceptors (MD & PA in same slot)**")
+        if conflicts_df.empty:
+            st.info("No double-bookings found for the selected sites.")
+        else:
+            st.dataframe(conflicts_df, use_container_width=True)
+            st.download_button(
+                label="Download double-bookings CSV",
+                data=conflicts_df.to_csv(index=False).encode('utf-8'),
+                file_name="opd_double_bookings.csv",
+                mime="text/csv"
+            )
+    
+        st.markdown("**Availability (proxy)** – Preceptors seen in the week's AM/PM roster but **not** booked in MD or PA for that day/period.")
+        if availability_df.empty:
+            st.info("No availability found (or no roster detected for the selected weeks).")
+        else:
+            st.dataframe(availability_df, use_container_width=True)
+            st.download_button(
+                label="Download availability CSV",
+                data=availability_df.to_csv(index=False).encode('utf-8'),
+                file_name="opd_availability_proxy.csv",
+                mime="text/csv"
+            )
+    
+    else:
+        st.info("Upload both the MD and PA OPD files to begin.")
