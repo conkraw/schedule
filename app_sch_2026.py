@@ -1914,17 +1914,6 @@ elif mode == "OPD MD PA Conflict Detector":
     st.title("OPD MD/PA Double-Booking & Availability")
     st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
     
-    import streamlit as st
-    import pandas as pd
-    import numpy as np
-    from pathlib import Path
-    from collections import defaultdict
-    
-    st.set_page_config(page_title="OPD MD/PA Double-Booking & Availability", layout="wide")
-    
-    st.title("OPD MD/PA Double-Booking & Availability")
-    st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
-    
     # -----------------------------
     # Helpers
     # -----------------------------
