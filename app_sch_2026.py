@@ -1914,9 +1914,22 @@ elif mode == "OPD MD PA Conflict Detector":
     st.title("OPD MD/PA Double-Booking & Availability")
     st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
     
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    from pathlib import Path
+    from collections import defaultdict
+    
+    st.set_page_config(page_title="OPD MD/PA Double-Booking & Availability", layout="wide")
+    
+    st.title("OPD MD/PA Double-Booking & Availability")
+    st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
+    
     # -----------------------------
     # Helpers
     # -----------------------------
+    TRUST_ONLY_AM_PM = True          # Only parse rows that are inside AM/PM runs (Column A starts with AM/PM)
+    REQUIRE_VALID_DATE = True        # Skip any assignment that lacks a valid date anchor for that (week, day)
     DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
     DEFAULT_FOCUS = ['HOPE_DRIVE','NYES','ETOWN']
     
@@ -1956,15 +1969,24 @@ elif mode == "OPD MD PA Conflict Detector":
         return prev[-1][2]
     
     def detect_am_pm_runs(df: pd.DataFrame, start_row: int = 0):
+        """Find consecutive AM/PM blocks by scanning column A (index 0).
+        Only rows that begin with AM/PM (e.g., 'AM', 'AM - Continuity', 'PM - Acutes') are considered part of runs.
+        """
         runs, current, run_start, prev_idx = [], None, None, None
         for idx in range(start_row, len(df)):
             raw = df.iat[idx, 0]
             label = None
             if isinstance(raw, str):
                 ru = raw.strip().upper()
-                if ru.startswith('AM'): label = 'AM'
-                elif ru.startswith('PM'): label = 'PM'
+                if ru.startswith('AM'):
+                    label = 'AM'
+                elif ru.startswith('PM'):
+                    label = 'PM'
+            if TRUST_ONLY_AM_PM and label is None:
+                # hard-skip rows that aren't inside AM/PM runs
+                continue
             if label is None:
+                # If we aren't enforcing trust-only mode, we simply ignore non-AM/PM rows
                 continue
             if current is None:
                 current, run_start = label, idx
@@ -1975,17 +1997,6 @@ elif mode == "OPD MD PA Conflict Detector":
         if current is not None:
             runs.append((current, run_start, prev_idx))
         return runs
-    
-    def build_maps_and_roster(df: pd.DataFrame):
-        def is_placeholder_preceptor(text: str) -> bool:
-            if not text:
-                return True
-            t = text.strip().upper()
-            EXCLUDE_PREFIXES = [
-                'CLOSED', 'CLOSE', 'BLOCK', 'VACATION', 'ADMIN', 'MEETING', 'NO CLINIC',
-                'CLINIC CANCELLED', 'CANCELLED', 'HOLIDAY', 'OFF', 'PTO', 'SICK'
-            ]
-            return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
     
         def parse_cell(val: str):
             if not isinstance(val, str):
@@ -2017,8 +2028,11 @@ elif mode == "OPD MD PA Conflict Detector":
         for period, rstart, rend in runs:
             monday_date = row_to_week_monday(rstart, headers)
             if monday_date is None:
+                # Skip any rows that are not preceded by a valid Monday/date header block
                 continue
             for col_idx, day in enumerate(DAYS, start=1):
+                # Derive the actual calendar date for this week/day
+                date_anchor = week_dates[monday_date].get(day)
                 for row in range(rstart, rend+1):
                     if col_idx >= df.shape[1]:
                         continue
@@ -2028,12 +2042,20 @@ elif mode == "OPD MD PA Conflict Detector":
                     pre, stu = parse_cell(val)
                     if not pre or is_placeholder_preceptor(pre):
                         continue
+                    # Always track who's on the week's roster for availability purposes
                     roster[(monday_date, period)].add(pre)
+    
+                    # For conflicts & concrete bookings, we require a real student AND a valid date anchor
                     if stu is None:
                         continue
+                    if REQUIRE_VALID_DATE and not pd.notna(pd.to_datetime(date_anchor, errors='coerce')):
+                        # If we can't tie this to a real date (e.g., admin-inserted blocks without valid header), skip
+                        continue
+    
                     cell = f"{chr(ord('A')+col_idx)}{row+1}"
                     key = (monday_date, period, day, pre)
-                    mapping.setdefault(key, {'student': stu, 'cell': cell, 'date': week_dates[monday_date].get(day)})
+                    # first occurrence wins; duplicates of the same preceptor (e.g., deliberate Acutes dupes) are OK
+                    mapping.setdefault(key, {'student': stu, 'cell': cell, 'date': date_anchor})
         return mapping, roster, week_dates
     
     # -----------------------------
