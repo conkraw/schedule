@@ -2188,8 +2188,13 @@ elif mode == "OPD MD PA Conflict Detector":
             st.info("No availability found (or no roster detected for the selected weeks).")
         else:
             st.dataframe(availability_df.drop(columns=['priority'], errors='ignore'), use_container_width=True)
-            st.download_button(label="Download availability CSV",data=availability_df.drop(columns=['priority'], errors='ignore').to_csv(index=False).encode('utf-8'),file_name="opd_availability_proxy.csv",mime="text/csv").to_csv(index=False).encode('utf-8'),file_name="opd_availability_proxy.csv",mime="text/csv"))
-    
+            st.download_button(
+                label="Download availability CSV",
+                data=availability_df.drop(columns=['priority'], errors='ignore').to_csv(index=False).encode('utf-8'),
+                file_name="opd_availability_proxy.csv",
+                mime="text/csv"
+            )
+                
         show_sugg = st.toggle("Show targeted suggestions", value=False)
     if show_sugg:
         st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 10).")
