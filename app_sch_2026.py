@@ -1946,7 +1946,7 @@ elif mode == "OPD MD PA Conflict Detector":
         headers = []
         for dr in day_rows:
             date_r = dr + 1
-            monday_val = df.iat[date_r, 1] if date_r < len(df) else None
+            monday_val = df.iat[date_r, 1] if dr + 1 < len(df) else None
             md = None
             if pd.notna(monday_val):
                 try:
@@ -1996,13 +1996,10 @@ elif mode == "OPD MD PA Conflict Detector":
         """
         Returns:
           mapping: {(monday_date, period, day, preceptor) -> {'student': str|None, 'cell': 'B12', 'date': date}}
+                   (only when a real student exists)
           roster: {(monday_date, period) -> set(preceptor names seen somewhere in that week's block)}
           week_dates: {(monday_date) -> {day -> actual date}}
-    
-        Notes:
-          - IGNORE entries that have no student after the tilde (e.g., "Lastname, Firstname ~") for double-book detection.
-            They still contribute to the weekly roster so they can show up as available.
-          - IGNORE placeholder/administrative rows (e.g., Closed, Vacation, Admin, Notes).
+          occupied: set of (monday_date, period, day, preceptor) even if student is blank
         """
         def is_placeholder_preceptor(text: str) -> bool:
             if not text:
@@ -2031,6 +2028,7 @@ elif mode == "OPD MD PA Conflict Detector":
         mapping = {}
         roster = defaultdict(set)
         week_dates = defaultdict(dict)
+        occupied = set()
     
         # capture the calendar row (day -> date) per week
         for (_, date_row, monday_date) in headers:
@@ -2059,17 +2057,22 @@ elif mode == "OPD MD PA Conflict Detector":
                     pre, stu = parse_cell(val)
                     if not pre or is_placeholder_preceptor(pre):
                         continue
-                    # roster is for availability pool
+    
+                    # Always: roster for week/period; occupied for this exact slot (even if student is blank)
                     roster[(monday_date, period)].add(pre)
-                    # keep booking only if real student AND valid date
+                    occupied.add((monday_date, period, day, pre))
+    
+                    # Bookings require real student + valid date
                     if stu is None:
                         continue
                     if REQUIRE_VALID_DATE and not pd.notna(pd.to_datetime(date_anchor, errors='coerce')):
                         continue
+    
                     cell = f"{chr(ord('A')+col_idx)}{row+1}"
                     key = (monday_date, period, day, pre)
                     mapping.setdefault(key, {'student': stu, 'cell': cell, 'date': date_anchor})
-        return mapping, roster, week_dates
+    
+        return mapping, roster, week_dates, occupied
     
     # -----------------------------
     # UI - File uploads
@@ -2097,15 +2100,16 @@ elif mode == "OPD MD PA Conflict Detector":
     
         conflict_rows = []
         availability_rows = []
+        suggestions = []              # collect here; always define DataFrame later
     
         for sheet in selected_sheets:
             df_md = load_sheet(md_file, sheet)
             df_pa = load_sheet(pa_file, sheet)
     
-            md_map, md_roster, md_week_dates = build_maps_and_roster(df_md)
-            pa_map, pa_roster, pa_week_dates = build_maps_and_roster(df_pa)
+            md_map, md_roster, md_week_dates, md_occupied = build_maps_and_roster(df_md)
+            pa_map, pa_roster, pa_week_dates, pa_occupied = build_maps_and_roster(df_pa)
     
-            # Conflicts: same (week, period, day, preceptor) exists in both maps
+            # Conflicts: same (week, period, day, preceptor) exists in both maps (i.e., real student on both sides)
             keys_intersection = set(md_map.keys()) & set(pa_map.keys())
             for key in sorted(keys_intersection):
                 monday_date, period, day, pre = key
@@ -2125,6 +2129,7 @@ elif mode == "OPD MD PA Conflict Detector":
                 })
     
             # Availability proxy: union roster across MD/PA for each (week, period)
+            # A preceptor is available iff NOT in md_occupied and NOT in pa_occupied for that exact slot.
             all_weeks = set(md_week_dates.keys()) | set(pa_week_dates.keys())
             for monday_date in sorted(all_weeks):
                 for period in ['AM','PM']:
@@ -2137,7 +2142,7 @@ elif mode == "OPD MD PA Conflict Detector":
                         date_obj = week_dates.get(day)
                         for pre in candidate_preceptors:
                             key = (monday_date, period, day, pre)
-                            if key not in md_map and key not in pa_map:
+                            if key not in md_occupied and key not in pa_occupied:
                                 availability_rows.append({
                                     'site': sheet,
                                     'week_monday': monday_date,
@@ -2151,7 +2156,7 @@ elif mode == "OPD MD PA Conflict Detector":
         conflicts_df = pd.DataFrame(conflict_rows)
         availability_df = pd.DataFrame(availability_rows)
     
-        # Prioritize availability for conflicts and build same-slot suggestions
+        # Prioritize availability for conflicts and build same-slot suggestions (top 3)
         if not conflicts_df.empty and not availability_df.empty:
             conflict_keys = set(zip(conflicts_df['site'], conflicts_df['date'], conflicts_df['period']))
             availability_df['priority'] = availability_df.apply(
@@ -2161,7 +2166,6 @@ elif mode == "OPD MD PA Conflict Detector":
                 ['priority','site','date','period','preceptor'], ascending=[False, True, True, True, True]
             ).reset_index(drop=True)
     
-            suggestions = []
             for _, r in conflicts_df.iterrows():
                 same_slot = availability_df[
                     (availability_df['site'] == r['site']) &
@@ -2169,7 +2173,7 @@ elif mode == "OPD MD PA Conflict Detector":
                     (availability_df['period'] == r['period'])
                 ]
                 candidates = same_slot[same_slot['preceptor'] != r['preceptor']]
-            
+    
                 if not candidates.empty:
                     for _, a in candidates.sort_values('preceptor').head(3).iterrows():
                         suggestions.append({
@@ -2183,7 +2187,6 @@ elif mode == "OPD MD PA Conflict Detector":
                             'suggested_preceptor': a['preceptor']
                         })
                 else:
-                    # Highlight when no alternatives exist
                     suggestions.append({
                         'site': r['site'],
                         'date': r['date'],
@@ -2194,11 +2197,9 @@ elif mode == "OPD MD PA Conflict Detector":
                         'pa_student': r['pa_student'],
                         'suggested_preceptor': '⚠️ No alternative preceptors available'
                     })
-            suggestions_df = pd.DataFrame(suggestions)
-        else:
-            if not availability_df.empty:
-                availability_df['priority'] = False
-            suggestions_df = pd.DataFrame()
+    
+        # Ensure suggestions_df always exists
+        suggestions_df = pd.DataFrame(suggestions) if suggestions else pd.DataFrame()
     
         # -----------------------------
         # Results UI
@@ -2212,8 +2213,7 @@ elif mode == "OPD MD PA Conflict Detector":
         with c3:
             st.metric("Availability rows", 0 if availability_df.empty else len(availability_df))
         with c4:
-            suggest_count = 0 if suggestions_df.empty else len(suggestions_df)
-            st.metric("Targeted suggestions", suggest_count)
+            st.metric("Targeted suggestions", 0 if suggestions_df.empty else len(suggestions_df))
     
         st.markdown("**Double-booked preceptors (MD & PA in same slot)**")
         if conflicts_df.empty:
@@ -2226,25 +2226,9 @@ elif mode == "OPD MD PA Conflict Detector":
                 file_name="opd_double_bookings.csv",
                 mime="text/csv"
             )
-
-        # Targeted suggestions behind a toggle
-        show_sugg = st.toggle("Show Suggestions to Resolve Found Conflicts", value=False)
-        if show_sugg:
-            st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 3).")
-            if suggestions_df.empty:
-                st.info("No suggestions available (no conflicts found or no alternatives in the same slot).")
-            else:
-                st.dataframe(suggestions_df, use_container_width=True)
-                st.download_button(
-                    label="Download suggestions CSV",
-                    data=suggestions_df.to_csv(index=False).encode('utf-8'),
-                    file_name="opd_targeted_suggestions.csv",
-                    mime="text/csv"
-                )
-
-        
+    
         # Availability behind a toggle
-        show_avail = st.toggle("Show Preceptor Availability", value=False)
+        show_avail = st.toggle("Show availability (proxy)", value=False)
         if show_avail:
             st.markdown("**Availability (proxy)** – Preceptors seen in the week's AM/PM roster but not booked in MD or PA for that day/period.")
             if availability_df.empty:
@@ -2258,7 +2242,22 @@ elif mode == "OPD MD PA Conflict Detector":
                     mime="text/csv"
                 )
     
-
+        # Targeted suggestions behind a toggle
+        show_sugg = st.toggle("Click to see suggested alternative preceptors (for conflicts) — top 3", value=False)
+        if show_sugg:
+            st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 3).")
+            if suggestions_df.empty:
+                st.info("No suggestions available (no conflicts found, or no alternatives in the same slot).")
+            else:
+                st.dataframe(suggestions_df, use_container_width=True)
+                st.download_button(
+                    label="Download suggestions CSV",
+                    data=suggestions_df.to_csv(index=False).encode('utf-8'),
+                    file_name="opd_targeted_suggestions.csv",
+                    mime="text/csv"
+                )
+    
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
+
 
