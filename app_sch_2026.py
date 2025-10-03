@@ -2211,5 +2211,5 @@ elif mode == "OPD MD PA Conflict Detector":
                     mime="text/csv"
                 )
         else:
-        st.info("Upload both the MD and PA OPD files to begin.")
+            st.info("Upload both the MD and PA OPD files to begin.")
 
