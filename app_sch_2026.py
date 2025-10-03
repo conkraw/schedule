@@ -2163,27 +2163,11 @@ elif mode == "OPD MD PA Conflict Detector":
     
             suggestions = []
             for _, r in conflicts_df.iterrows():
-                same_slot = availability_df[
-                    (availability_df['site'] == r['site']) &
-                    (availability_df['date'] == r['date']) &
-                    (availability_df['period'] == r['period'])
-                ]
+                same_slot = availability_df[(availability_df['site']==r['site']) &
+                                            (availability_df['date']==r['date']) &
+                                            (availability_df['period']==r['period'])]
                 candidates = same_slot[same_slot['preceptor'] != r['preceptor']]
-            
-                if not candidates.empty:
-                    for _, a in candidates.sort_values('preceptor').head(3).iterrows():
-                        suggestions.append({
-                            'site': r['site'],
-                            'date': r['date'],
-                            'day': r['day'],
-                            'period': r['period'],
-                            'conflict_preceptor': r['preceptor'],
-                            'md_student': r['md_student'],
-                            'pa_student': r['pa_student'],
-                            'suggested_preceptor': a['preceptor']
-                        })
-                else:
-                    # Highlight when no alternatives exist
+                for _, a in candidates.sort_values('preceptor').head(3).iterrows():
                     suggestions.append({
                         'site': r['site'],
                         'date': r['date'],
@@ -2192,10 +2176,13 @@ elif mode == "OPD MD PA Conflict Detector":
                         'conflict_preceptor': r['preceptor'],
                         'md_student': r['md_student'],
                         'pa_student': r['pa_student'],
-                        'suggested_preceptor': '⚠️ No alternative preceptors available'
+                        'suggested_preceptor': a['preceptor']
                     })
-
-
+            suggestions_df = pd.DataFrame(suggestions)
+        else:
+            if not availability_df.empty:
+                availability_df['priority'] = False
+            suggestions_df = pd.DataFrame()
     
         # -----------------------------
         # Results UI
