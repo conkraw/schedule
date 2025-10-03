@@ -1910,7 +1910,7 @@ elif mode == "Create Individual Schedules":
                 mime="application/zip",
             )
 
-elif mode == "OPD MD PA Conflict Detector":    
+elif mode == "OPD MD PA Conflict Detector":       
     st.title("OPD MD/PA Double-Booking & Availability")
     st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
     
@@ -2216,3 +2216,4 @@ elif mode == "OPD MD PA Conflict Detector":
             )
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
+
