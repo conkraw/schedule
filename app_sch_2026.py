@@ -2210,9 +2210,25 @@ elif mode == "OPD MD PA Conflict Detector":
                 file_name="opd_double_bookings.csv",
                 mime="text/csv"
             )
-    
+
+        # Targeted suggestions behind a toggle
+        show_sugg = st.toggle("Show Suggestions to Resolve Found Conflict", value=False)
+        if show_sugg:
+            st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 10).")
+            if suggestions_df.empty:
+                st.info("No suggestions available (no conflicts found or no alternatives in the same slot).")
+            else:
+                st.dataframe(suggestions_df, use_container_width=True)
+                st.download_button(
+                    label="Download suggestions CSV",
+                    data=suggestions_df.to_csv(index=False).encode('utf-8'),
+                    file_name="opd_targeted_suggestions.csv",
+                    mime="text/csv"
+                )
+
+        
         # Availability behind a toggle
-        show_avail = st.toggle("Show availability (proxy)", value=False)
+        show_avail = st.toggle("Show Preceptor Availability", value=False)
         if show_avail:
             st.markdown("**Availability (proxy)** – Preceptors seen in the week's AM/PM roster but not booked in MD or PA for that day/period.")
             if availability_df.empty:
@@ -2226,21 +2242,7 @@ elif mode == "OPD MD PA Conflict Detector":
                     mime="text/csv"
                 )
     
-        # Targeted suggestions behind a toggle
-        show_sugg = st.toggle("Show targeted suggestions", value=False)
-        if show_sugg:
-            st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 10).")
-            if suggestions_df.empty:
-                st.info("No suggestions available (no conflicts found or no alternatives in the same slot).")
-            else:
-                st.dataframe(suggestions_df, use_container_width=True)
-                st.download_button(
-                    label="Download suggestions CSV",
-                    data=suggestions_df.to_csv(index=False).encode('utf-8'),
-                    file_name="opd_targeted_suggestions.csv",
-                    mime="text/csv"
-                )
-    
+
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
 
