@@ -1910,18 +1910,23 @@ elif mode == "Create Individual Schedules":
                 mime="application/zip",
             )
 
-elif mode == "OPD MD PA Conflict Detector":       
+elif mode == "OPD MD PA Conflict Detector":           
     st.title("OPD MD/PA Double-Booking & Availability")
     st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
     
     # -----------------------------
-    # Helpers
+    # Config & Constants
     # -----------------------------
-    TRUST_ONLY_AM_PM = True          # Only parse rows that are inside AM/PM runs (Column A starts with AM/PM)
-    REQUIRE_VALID_DATE = True        # Skip any assignment that lacks a valid date anchor for that (week, day)
     DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
     DEFAULT_FOCUS = ['HOPE_DRIVE','NYES','ETOWN']
     
+    # Parser behavior flags
+    TRUST_ONLY_AM_PM = True          # Only parse rows that are inside AM/PM runs (Column A starts with AM/PM)
+    REQUIRE_VALID_DATE = True        # Skip any booking that lacks a valid date anchor for that (week, day)
+    
+    # -----------------------------
+    # Helpers (must be top-level, above UI)
+    # -----------------------------
     @st.cache_data(show_spinner=False)
     def read_sheet_names(file):
         try:
@@ -1936,6 +1941,7 @@ elif mode == "OPD MD PA Conflict Detector":
         return pd.read_excel(file, sheet_name=sheet_name, header=None)
     
     def find_week_headers(df: pd.DataFrame):
+        """Return [(day_header_row, date_row, monday_date)] using column B (index 1)."""
         day_rows = df.index[df.iloc[:,1].astype(str).str.strip().eq('Monday')].tolist()
         headers = []
         for dr in day_rows:
@@ -1951,6 +1957,7 @@ elif mode == "OPD MD PA Conflict Detector":
         return headers
     
     def row_to_week_monday(row_idx: int, headers):
+        """Return the monday_date for the most recent header above row_idx."""
         prev = [h for h in headers if h[0] <= row_idx]
         if not prev:
             return None
@@ -1972,10 +1979,8 @@ elif mode == "OPD MD PA Conflict Detector":
                 elif ru.startswith('PM'):
                     label = 'PM'
             if TRUST_ONLY_AM_PM and label is None:
-                # hard-skip rows that aren't inside AM/PM runs
                 continue
             if label is None:
-                # If we aren't enforcing trust-only mode, we simply ignore non-AM/PM rows
                 continue
             if current is None:
                 current, run_start = label, idx
@@ -1987,7 +1992,31 @@ elif mode == "OPD MD PA Conflict Detector":
             runs.append((current, run_start, prev_idx))
         return runs
     
+    def build_maps_and_roster(df: pd.DataFrame):
+        """
+        Returns:
+          mapping: {(monday_date, period, day, preceptor) -> {'student': str|None, 'cell': 'B12', 'date': date}}
+          roster: {(monday_date, period) -> set(preceptor names seen somewhere in that week's block)}
+          week_dates: {(monday_date) -> {day -> actual date}}
+    
+        Notes:
+          - IGNORE entries that have no student after the tilde (e.g., "Lastname, Firstname ~") for double-book detection.
+            They still contribute to the weekly roster so they can show up as available.
+          - IGNORE placeholder/administrative rows (e.g., Closed, Vacation, Admin, Notes).
+        """
+        def is_placeholder_preceptor(text: str) -> bool:
+            if not text:
+                return True
+            t = text.strip().upper()
+            EXCLUDE_PREFIXES = [
+                'CLOSED', 'CLOSE', 'BLOCK', 'VACATION', 'ADMIN', 'MEETING', 'NO CLINIC',
+                'CLINIC CANCELLED', 'CANCELLED', 'HOLIDAY', 'OFF', 'PTO', 'SICK',
+                'NOTE', 'NOTES', 'REFERENCE', 'INFO', 'FYI', 'ORIENTATION'
+            ]
+            return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
+    
         def parse_cell(val: str):
+            """Return (preceptor, student) with whitespace normalized."""
             if not isinstance(val, str):
                 return None, None
             parts = val.split('~', 1)
@@ -2003,7 +2032,8 @@ elif mode == "OPD MD PA Conflict Detector":
         roster = defaultdict(set)
         week_dates = defaultdict(dict)
     
-        for (day_row, date_row, monday_date) in headers:
+        # capture the calendar row (day -> date) per week
+        for (_, date_row, monday_date) in headers:
             if monday_date is None:
                 continue
             for col_idx, day in enumerate(DAYS, start=1):
@@ -2017,10 +2047,8 @@ elif mode == "OPD MD PA Conflict Detector":
         for period, rstart, rend in runs:
             monday_date = row_to_week_monday(rstart, headers)
             if monday_date is None:
-                # Skip any rows that are not preceded by a valid Monday/date header block
                 continue
             for col_idx, day in enumerate(DAYS, start=1):
-                # Derive the actual calendar date for this week/day
                 date_anchor = week_dates[monday_date].get(day)
                 for row in range(rstart, rend+1):
                     if col_idx >= df.shape[1]:
@@ -2031,19 +2059,15 @@ elif mode == "OPD MD PA Conflict Detector":
                     pre, stu = parse_cell(val)
                     if not pre or is_placeholder_preceptor(pre):
                         continue
-                    # Always track who's on the week's roster for availability purposes
+                    # roster is for availability pool
                     roster[(monday_date, period)].add(pre)
-    
-                    # For conflicts & concrete bookings, we require a real student AND a valid date anchor
+                    # keep booking only if real student AND valid date
                     if stu is None:
                         continue
                     if REQUIRE_VALID_DATE and not pd.notna(pd.to_datetime(date_anchor, errors='coerce')):
-                        # If we can't tie this to a real date (e.g., admin-inserted blocks without valid header), skip
                         continue
-    
                     cell = f"{chr(ord('A')+col_idx)}{row+1}"
                     key = (monday_date, period, day, pre)
-                    # first occurrence wins; duplicates of the same preceptor (e.g., deliberate Acutes dupes) are OK
                     mapping.setdefault(key, {'student': stu, 'cell': cell, 'date': date_anchor})
         return mapping, roster, week_dates
     
@@ -2077,9 +2101,11 @@ elif mode == "OPD MD PA Conflict Detector":
         for sheet in selected_sheets:
             df_md = load_sheet(md_file, sheet)
             df_pa = load_sheet(pa_file, sheet)
+    
             md_map, md_roster, md_week_dates = build_maps_and_roster(df_md)
             pa_map, pa_roster, pa_week_dates = build_maps_and_roster(df_pa)
     
+            # Conflicts: same (week, period, day, preceptor) exists in both maps
             keys_intersection = set(md_map.keys()) & set(pa_map.keys())
             for key in sorted(keys_intersection):
                 monday_date, period, day, pre = key
@@ -2098,6 +2124,7 @@ elif mode == "OPD MD PA Conflict Detector":
                     'pa_cell': pa_entry['cell'],
                 })
     
+            # Availability proxy: union roster across MD/PA for each (week, period)
             all_weeks = set(md_week_dates.keys()) | set(pa_week_dates.keys())
             for monday_date in sorted(all_weeks):
                 for period in ['AM','PM']:
@@ -2124,7 +2151,7 @@ elif mode == "OPD MD PA Conflict Detector":
         conflicts_df = pd.DataFrame(conflict_rows)
         availability_df = pd.DataFrame(availability_rows)
     
-        # Prioritize availability for conflicts
+        # Prioritize availability for conflicts and build same-slot suggestions
         if not conflicts_df.empty and not availability_df.empty:
             conflict_keys = set(zip(conflicts_df['site'], conflicts_df['date'], conflicts_df['period']))
             availability_df['priority'] = availability_df.apply(
@@ -2157,17 +2184,20 @@ elif mode == "OPD MD PA Conflict Detector":
                 availability_df['priority'] = False
             suggestions_df = pd.DataFrame()
     
+        # -----------------------------
+        # Results UI
+        # -----------------------------
         st.subheader("Results")
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.metric("Sites compared", len(selected_sheets))
         with c2:
             st.metric("Double bookings found", 0 if conflicts_df.empty else len(conflicts_df))
         with c3:
             st.metric("Availability rows", 0 if availability_df.empty else len(availability_df))
-    
-        suggest_count = 0 if suggestions_df.empty else len(suggestions_df)
-        st.metric("Targeted suggestions", suggest_count)
+        with c4:
+            suggest_count = 0 if suggestions_df.empty else len(suggestions_df)
+            st.metric("Targeted suggestions", suggest_count)
     
         st.markdown("**Double-booked preceptors (MD & PA in same slot)**")
         if conflicts_df.empty:
@@ -2181,39 +2211,36 @@ elif mode == "OPD MD PA Conflict Detector":
                 mime="text/csv"
             )
     
+        # Availability behind a toggle
         show_avail = st.toggle("Show availability (proxy)", value=False)
-    if show_avail:
-        st.markdown("**Availability (proxy)** – Preceptors seen in the week's AM/PM roster but not booked in MD or PA for that day/period.")
-        if availability_df.empty:
-            st.info("No availability found (or no roster detected for the selected weeks).")
-        else:
-            st.dataframe(availability_df.drop(columns=['priority'], errors='ignore'), use_container_width=True)
-            st.download_button(
-                label="Download availability CSV",
-                data=availability_df.drop(columns=['priority'], errors='ignore').to_csv(index=False).encode('utf-8'),
-                file_name="opd_availability_proxy.csv",
-                mime="text/csv"
-            ).to_csv(index=False).encode('utf-8'),
-                file_name="opd_availability_proxy.csv",
-                mime="text/csv"
-            )
+        if show_avail:
+            st.markdown("**Availability (proxy)** – Preceptors seen in the week's AM/PM roster but not booked in MD or PA for that day/period.")
+            if availability_df.empty:
+                st.info("No availability found (or no roster detected for the selected weeks).")
+            else:
+                st.dataframe(availability_df.drop(columns=['priority'], errors='ignore'), use_container_width=True)
+                st.download_button(
+                    label="Download availability CSV",
+                    data=availability_df.drop(columns=['priority'], errors='ignore').to_csv(index=False).encode('utf-8'),
+                    file_name="opd_availability_proxy.csv",
+                    mime="text/csv"
+                )
     
+        # Targeted suggestions behind a toggle
         show_sugg = st.toggle("Show targeted suggestions", value=False)
-    if show_sugg:
-        st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 10).")
-        if suggestions_df.empty:
-            st.info("No suggestions available (no conflicts found or no alternatives in the same slot).")
-        else:
-            st.dataframe(suggestions_df, use_container_width=True)
-            st.download_button(
-                label="Download suggestions CSV",
-                data=suggestions_df.to_csv(index=False).encode('utf-8'),
-                file_name="opd_targeted_suggestions.csv",
-                mime="text/csv"
-            ).encode('utf-8'),
-                file_name="opd_targeted_suggestions.csv",
-                mime="text/csv"
-            )
+        if show_sugg:
+            st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 10).")
+            if suggestions_df.empty:
+                st.info("No suggestions available (no conflicts found or no alternatives in the same slot).")
+            else:
+                st.dataframe(suggestions_df, use_container_width=True)
+                st.download_button(
+                    label="Download suggestions CSV",
+                    data=suggestions_df.to_csv(index=False).encode('utf-8'),
+                    file_name="opd_targeted_suggestions.csv",
+                    mime="text/csv"
+                )
+    
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
 
