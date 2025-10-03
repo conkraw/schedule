@@ -2167,7 +2167,7 @@ elif mode == "OPD MD PA Conflict Detector":
                                             (availability_df['date']==r['date']) &
                                             (availability_df['period']==r['period'])]
                 candidates = same_slot[same_slot['preceptor'] != r['preceptor']]
-                for _, a in candidates.sort_values('preceptor').head(10).iterrows():
+                for _, a in candidates.sort_values('preceptor').head(3).iterrows():
                     suggestions.append({
                         'site': r['site'],
                         'date': r['date'],
@@ -2212,7 +2212,7 @@ elif mode == "OPD MD PA Conflict Detector":
             )
 
         # Targeted suggestions behind a toggle
-        show_sugg = st.toggle("Show Suggestions to Resolve Found Conflict", value=False)
+        show_sugg = st.toggle("Show Suggestions to Resolve Found Conflicts", value=False)
         if show_sugg:
             st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 10).")
             if suggestions_df.empty:
