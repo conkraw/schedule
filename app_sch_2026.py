@@ -2214,7 +2214,7 @@ elif mode == "OPD MD PA Conflict Detector":
         # Targeted suggestions behind a toggle
         show_sugg = st.toggle("Show Suggestions to Resolve Found Conflicts", value=False)
         if show_sugg:
-            st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 10).")
+            st.markdown("**Targeted availability suggestions** — For each conflict, possible alternative preceptors in the same site/date/period (top 3).")
             if suggestions_df.empty:
                 st.info("No suggestions available (no conflicts found or no alternatives in the same slot).")
             else:
