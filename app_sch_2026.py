@@ -2203,20 +2203,55 @@ elif mode == "OPD MD PA Conflict Detector":
         # Results UI
         # -----------------------------
         st.subheader("Results")
-        st.metric("Double bookings found", 0 if conflicts_df.empty else len(conflicts_df))
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("Double bookings found", 0 if conflicts_df.empty else len(conflicts_df))
+        with c2:
+            st.metric("Availability rows", 0 if availability_df.empty else len(availability_df))
+        with c3:
+            st.metric("Targeted suggestions", 0 if suggestions_df.empty else len(suggestions_df))
     
-        if not conflicts_df.empty:
-            st.markdown("**Double-booked Acutes preceptors (MD & PA in same slot)**")
+        # Conflicts
+        st.markdown("**Double-booked Acutes preceptors (MD & PA in same slot)**")
+        if conflicts_df.empty:
+            st.info("No double-bookings found for the selected sites.")
+        else:
             st.dataframe(conflicts_df, use_container_width=True)
+            st.download_button(
+                label="Download double-bookings CSV",
+                data=conflicts_df.to_csv(index=False).encode("utf-8"),
+                file_name="opd_double_bookings.csv",
+                mime="text/csv"
+            )
     
-        if not availability_df.empty:
-            st.markdown("**Available Acutes preceptors**")
-            st.dataframe(availability_df, use_container_width=True)
+        # Availability toggle
+        show_avail = st.toggle("Show availability (Acutes only)", value=False)
+        if show_avail:
+            if availability_df.empty:
+                st.info("No availability found (Acutes only).")
+            else:
+                st.markdown("**Available Acutes preceptors**")
+                st.dataframe(availability_df, use_container_width=True)
+                st.download_button(
+                    label="Download availability CSV",
+                    data=availability_df.to_csv(index=False).encode("utf-8"),
+                    file_name="opd_availability_acutes.csv",
+                    mime="text/csv"
+                )
     
-        if not suggestions_df.empty:
-            st.markdown("**Targeted Acutes suggestions (top 3)**")
-            st.dataframe(suggestions_df, use_container_width=True)
+        # Suggestions toggle
+        show_sugg = st.toggle("Show targeted Acutes suggestions (top 3)", value=False)
+        if show_sugg:
+            if suggestions_df.empty:
+                st.info("No suggestions available (Acutes only).")
+            else:
+                st.markdown("**Targeted availability suggestions (Acutes only)**")
+                st.dataframe(suggestions_df, use_container_width=True)
+                st.download_button(
+                    label="Download suggestions CSV",
+                    data=suggestions_df.to_csv(index=False).encode("utf-8"),
+                    file_name="opd_targeted_suggestions_acutes.csv",
+                    mime="text/csv"
+                )
     
-    else:
-        st.info("Upload both the MD and PA OPD files to begin.")
 
