@@ -24,6 +24,7 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import column_index_from_string
+from openpyxl.styles import Font, PatternFill, Color
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -2561,14 +2562,21 @@ elif mode == "OPD MD PA Conflict Detector":
                             # RED if other file has a real booking (student present) for this (date, period, preceptor)
                             if (dt, period, pre) in other_idx:
                                 cell_addr = f"{chr(ord('A')+c_idx)}{row+1}"
+
+
+                                # inside your conflict loop:
                                 cell = ws[cell_addr]
                                 f = cell.font or Font()
+                                
+                                # opaque RED font
                                 cell.font = Font(
                                     name=f.name, size=f.size, bold=f.bold, italic=f.italic,
-                                    underline=f.underline, color=RED
+                                    underline=f.underline, color=Color(rgb="FFFF0000")  # opaque red
                                 )
-                                if add_fill:
-                                    cell.fill = PatternFill(fill_type="solid", start_color=YELLOW, end_color=YELLOW)
+                                
+                                # optional: bright yellow fill to make it pop
+                                cell.fill = PatternFill(fill_type="solid", fgColor="FFFFFF00")  # opaque yellow
+
 
             bio = BytesIO()
             wb.save(bio)
