@@ -1941,20 +1941,45 @@ elif mode == "OPD MD PA Conflict Detector":
         return pd.read_excel(file, sheet_name=sheet_name, header=None)
     
     def find_week_headers(df: pd.DataFrame):
-        """Return [(day_header_row, date_row, monday_date)] using column B (index 1)."""
-        day_rows = df.index[df.iloc[:,1].astype(str).str.strip().eq('Monday')].tolist()
+        """
+        Return [(day_header_row, date_row, monday_date)].
+        - Detects 'Monday' case-insensitively in Column B (index 1)
+        - Allows up to 3 spacer rows before the actual dates row
+        - Parses the Monday DATE from the dates row (col B) if present; otherwise None
+        """
+        col = 1  # Column B
+        # case-insensitive match for 'Monday'
+        s = df.iloc[:, col].astype(str).str.strip().str.lower()
+        day_rows = df.index[s.eq('monday')].tolist()
+    
         headers = []
         for dr in day_rows:
-            date_r = dr + 1
-            monday_val = df.iat[date_r, 1] if dr + 1 < len(df) else None
+            # look ahead up to 3 rows to find a row where col B parses as a date
+            date_r = None
+            monday_val = None
+            for look_ahead in range(1, 4):  # +1, +2, +3
+                r = dr + look_ahead
+                if r >= len(df):
+                    break
+                val = df.iat[r, col]
+                # accept anything that can parse to a date
+                try:
+                    parsed = pd.to_datetime(val)
+                    if pd.notna(parsed):
+                        date_r = r
+                        monday_val = parsed
+                        break
+                except Exception:
+                    continue
             md = None
-            if pd.notna(monday_val):
+            if monday_val is not None:
                 try:
                     md = pd.to_datetime(monday_val).date()
                 except Exception:
                     md = None
             headers.append((dr, date_r, md))
         return headers
+
     
     def row_to_week_monday(row_idx: int, headers):
         """Return the monday_date for the most recent header above row_idx."""
@@ -2033,16 +2058,22 @@ elif mode == "OPD MD PA Conflict Detector":
     
         # calendar anchors
         for (_, date_row, monday_date) in headers:
-            if monday_date is None:
+            if monday_date is None or date_row is None:
                 continue
-            for col_idx, day in enumerate(DAYS, start=1):
+            for i, day in enumerate(DAYS, start=0):
+                col_idx = 1 + i  # days spread across columns B..H
                 if col_idx < df.shape[1]:
                     val = df.iat[date_row, col_idx]
-                    try:
-                        week_dates[monday_date][day] = pd.to_datetime(val).date()
-                    except Exception:
-                        week_dates[monday_date][day] = None
-    
+                    parsed = pd.to_datetime(val, errors='coerce')
+                    if pd.notna(parsed):
+                        week_dates[monday_date][day] = parsed.date()
+                    else:
+                        # Fallback: infer from the monday_date + i days
+                        try:
+                            week_dates[monday_date][day] = (pd.to_datetime(monday_date) + pd.Timedelta(days=i)).date()
+                        except Exception:
+                            week_dates[monday_date][day] = None
+            
         # parse inside AM/PM runs
         for period, rstart, rend in runs:
             monday_date = row_to_week_monday(rstart, headers)
