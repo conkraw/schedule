@@ -2448,40 +2448,34 @@ elif mode == "OPD MD PA Conflict Detector":
                     file_name="opd_targeted_suggestions_cross_site.csv",
                     mime="text/csv"
                 )
-
     # -----------------------------
     # Annotated copies (MD/PA) with conflicts highlighted in RED
     # -----------------------------
     from io import BytesIO
     from openpyxl import load_workbook
     from openpyxl.styles import Font
-    
+
     def _annot_make_copy(uploaded_file, other_idx_by_site: dict, selected_sheets: list) -> bytes:
         """
-        Return an .xlsx bytes blob with cells highlighted RED when the *other* file
-        already has a booking for (same site, same DATE, same AM/PM, same PRECEPTOR).
-        We do NOT remove or change text; we simply color the font red.
+        Make an .xlsx where cells are red if the *other* file already books the same
+        (site, DATE, AM/PM, preceptor). We don't change text; only font color.
         """
         raw = uploaded_file.getvalue()
         wb = load_workbook(BytesIO(raw))
-    
-        # helpers for parsing (match main parser behavior)
+
+        # helpers to mirror your parser
         import re, unicodedata
         def _norm(s: str) -> str:
-            s = unicodedata.normalize("NFKC", s)
-            s = s.replace("\u00A0", " ")
-            s = s.replace("\u2013", "-").replace("\u2014", "-")
-            s = re.sub(r"\s+", " ", s.strip())
-            return s
+            s = unicodedata.normalize("NFKC", s).replace("\u00A0"," ")
+            s = s.replace("\u2013","-").replace("\u2014","-")
+            return re.sub(r"\s+"," ", s.strip())
         def _parse_cell(val: str):
             if not isinstance(val, str): return None, None
             raw = _norm(val)
             if "~" not in raw:
-                pre = _norm(raw)
-                return (pre if pre else None), None
+                pre = _norm(raw); return (pre if pre else None), None
             pre, rhs = re.split(r"\s*~\s*", raw, maxsplit=1)
-            pre = _norm(pre)
-            rhs = _norm(rhs)
+            pre = _norm(pre); rhs = _norm(rhs)
             if rhs.lower() in {"", "nan", "n/a", "na", "-", "--", "—", "none", "null"}:
                 rhs = None
             return (pre if pre else None), rhs
@@ -2494,18 +2488,16 @@ elif mode == "OPD MD PA Conflict Detector":
                 'NOTE','NOTES','REFERENCE','INFO','FYI','ORIENTATION'
             ]
             return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
-    
+
         for sheet in selected_sheets:
             if sheet not in wb.sheetnames:
                 continue
             ws = wb[sheet]
-    
-            # Recreate date mapping from the uploaded file for this sheet
+
+            # rebuild date mapping for this uploaded file
             df = load_sheet(uploaded_file, sheet)
             headers = find_week_headers(df)
             runs = detect_am_pm_runs(df, start_row=0)
-    
-            # Build week_dates: monday_date -> {Day -> date}
             week_dates = {}
             for (_day_row, date_row, monday_date) in headers:
                 if monday_date is None or date_row is None:
@@ -2518,11 +2510,9 @@ elif mode == "OPD MD PA Conflict Detector":
                     parsed = pd.to_datetime(df.iat[date_row, col_idx], errors='coerce')
                     if pd.notna(parsed):
                         week_dates[monday_date][day] = parsed.date()
-    
-            # Index of the other file (per site)
+
             other_idx = other_idx_by_site.get(sheet, {})
-    
-            # Walk AM/PM runs and mark cells that the other file already books
+
             for period, rstart, rend in runs:
                 monday_date = row_to_week_monday(rstart, headers)
                 if monday_date is None:
@@ -2540,28 +2530,29 @@ elif mode == "OPD MD PA Conflict Detector":
                         pre, _stu = _parse_cell(val)
                         if not pre or _is_placeholder_preceptor(pre):
                             continue
-                        # RED if other file has a real booking (student present) for this (date, period, preceptor)
+                        # Mark red if the other file really books this (date, period, preceptor)
                         if (dt, period, pre) in other_idx:
                             cell_addr = f"{chr(ord('A')+c_idx)}{row+1}"
                             cell = ws[cell_addr]
                             f = cell.font or Font()
-                            cell.font = Font(name=f.name, size=f.size, bold=f.bold, italic=f.italic,
-                                             underline=f.underline, color="00FF0000")
-    
+                            cell.font = Font(
+                                name=f.name, size=f.size, bold=f.bold, italic=f.italic,
+                                underline=f.underline, color="FFFF0000"  # opaque red
+                            )
+
         bio = BytesIO()
         wb.save(bio)
         bio.seek(0)
         return bio.getvalue()
-    
+
     st.markdown("---")
     st.subheader("Download annotated OPDs (conflicts highlighted in RED)")
     st.caption("Cells are red when the *other* OPD already has that preceptor booked for the same site, date, and AM/PM.")
-    
-    # Build per-site indices so each file can be colored against the other
-    # site_ctx[...] was built above in your loop
-    md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}  # MD cells red if booked in PA
-    pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}  # PA cells red if booked in MD
-    
+
+    # Compare each file against the other
+    md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}
+    pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}
+
     col_md, col_pa = st.columns(2)
     with col_md:
         try:
@@ -2585,6 +2576,7 @@ elif mode == "OPD MD PA Conflict Detector":
             )
         except Exception as e:
             st.error(f"PA annotate failed: {e}")
+
 
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
