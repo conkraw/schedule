@@ -1983,25 +1983,25 @@ elif mode == "OPD MD PA Conflict Detector":
         return prev[-1][2]
     
     def detect_am_pm_runs(df: pd.DataFrame, start_row: int = 0):
+        """Find consecutive AM/PM blocks by scanning column A (index 0)."""
         runs, current, run_start, prev_idx = [], None, None, None
         for idx in range(start_row, len(df)):
             raw = df.iat[idx, 0]
+            label = None
             if isinstance(raw, str):
                 ru = raw.strip().upper()
-                if ru.startswith("AM"): label = "AM"
-                elif ru.startswith("PM"): label = "PM"
-                else: label = None
-            else:
-                label = None
+                if ru.startswith('AM'):
+                    label = 'AM'
+                elif ru.startswith('PM'):
+                    label = 'PM'
     
             if TRUST_ONLY_AM_PM and label is None:
                 continue
             if label is None:
                 continue
     
-            # Hard-code: only keep rows labeled Acutes
-            if "ACUTE" not in raw.upper():
-                continue
+            # IMPORTANT: Do NOT filter here by "ACUTE".
+            # We want all AM/PM runs so non-Acute providers can appear as available.
     
             if current is None:
                 current, run_start = label, idx
@@ -2009,9 +2009,11 @@ elif mode == "OPD MD PA Conflict Detector":
                 runs.append((current, run_start, prev_idx))
                 current, run_start = label, idx
             prev_idx = idx
+    
         if current is not None:
             runs.append((current, run_start, prev_idx))
         return runs
+
     
     def build_maps_and_roster(df: pd.DataFrame):
         def is_placeholder_preceptor(text: str) -> bool:
@@ -2141,60 +2143,89 @@ elif mode == "OPD MD PA Conflict Detector":
                 })
     
             # Availability = all Acutes preceptors present
+            # --------- AVAILABILITY by exact date (ALL providers) ---------
+            # Candidate pool = day-level roster union (MD ∪ PA) for that (monday, period, day)
             all_weeks = set(md_week_dates.keys()) | set(pa_week_dates.keys())
             for monday_date in sorted(all_weeks):
                 week_dates = md_week_dates.get(monday_date, {}) or pa_week_dates.get(monday_date, {})
-                for period in ['AM','PM']:
+                for period in ['AM', 'PM']:
                     for day in DAYS:
                         date_obj = week_dates.get(day)
-                        if date_obj is None: continue
+                        if date_obj is None:
+                            continue
                         day_pool = (md_day_roster.get((monday_date, period, day)) or set()) | \
                                    (pa_day_roster.get((monday_date, period, day)) or set())
+                        if not day_pool:
+                            continue
+            
                         for pre in sorted(day_pool):
-                            # Count how many actual students are assigned in MD + PA
+                            # Count how many real students preceptor already has this date/period (MD+PA)
                             md_booked = (date_obj, period, pre) in md_idx_date
                             pa_booked = (date_obj, period, pre) in pa_idx_date
                             total_assigned = int(md_booked) + int(pa_booked)
-                        
-                            # Detect if preceptor name contains "ACUTE"
+            
+                            # "Acutes" if the PRECEPTOR TEXT contains "ACUTE"
                             is_acute = "ACUTE" in pre.upper()
-                        
-                            if is_acute:
-                                # Acutes preceptors are available if they have fewer than 2 students
-                                if total_assigned < 2:
-                                    availability_rows.append({
-                                        'site': sheet,
-                                        'date': date_obj,
-                                        'day': day,
-                                        'period': period,
-                                        'preceptor': pre,
-                                        'status': 'available'
-                                    })
-                            else:
-                                # Non-Acutes preceptors available only if totally unbooked
-                                if total_assigned == 0:
-                                    availability_rows.append({
-                                        'site': sheet,
-                                        'date': date_obj,
-                                        'day': day,
-                                        'period': period,
-                                        'preceptor': pre,
-                                        'status': 'available'
-                                    })
+            
+                            # Availability rule:
+                            # - Acutes: available if total_assigned < 2 (0 or 1)
+                            # - Non-Acutes: available only if total_assigned == 0
+                            if (is_acute and total_assigned < 2) or (not is_acute and total_assigned == 0):
+                                availability_rows.append({
+                                    'site': sheet,
+                                    'date': date_obj,
+                                    'day': day,
+                                    'period': period,
+                                    'preceptor': pre,
+                                    'status': 'available'
+                                })
 
-    
         conflicts_df = pd.DataFrame(conflict_rows)
         availability_df = pd.DataFrame(availability_rows)
     
-        # Suggestions: only Acutes preceptors
-        for _, r in conflicts_df.iterrows():
-            same_slot = availability_df[
-                (availability_df['site'] == r['site']) &
-                (availability_df['date'] == r['date']) &
-                (availability_df['period'] == r['period'])
-            ]
-            if not same_slot.empty:
-                for _, a in same_slot.head(3).iterrows():
+        suggestions = []
+        if not conflicts_df.empty and not availability_df.empty:
+            # Prioritize availability rows that match a conflict slot
+            conflict_keys = set(zip(conflicts_df['site'], conflicts_df['date'], conflicts_df['period']))
+            availability_df['priority'] = availability_df.apply(
+                lambda x: (x['site'], x['date'], x['period']) in conflict_keys, axis=1
+            )
+            availability_df = availability_df.sort_values(
+                ['priority', 'site', 'date', 'period', 'preceptor'],
+                ascending=[False, True, True, True, True]
+            ).reset_index(drop=True)
+        
+            for _, r in conflicts_df.iterrows():
+                same_slot = availability_df[
+                    (availability_df['site'] == r['site']) &
+                    (availability_df['date'] == r['date']) &
+                    (availability_df['period'] == r['period'])
+                ]
+        
+                # Include the same preceptor too (so Acutes with 1 student can be suggested again)
+                candidates = same_slot.copy()
+        
+                if not candidates.empty:
+                    # Put the conflicted preceptor first if they’re in the list
+                    candidates = candidates.assign(
+                        _self=(candidates['preceptor'] == r['preceptor'])
+                    ).sort_values(['_self','preceptor'], ascending=[False, True]).drop(columns=['_self'])
+        
+                    for _, a in candidates.head(3).iterrows():
+                        suggestions.append({
+                            'site': r['site'],
+                            'date': r['date'],
+                            'day': r['day'],
+                            'period': r['period'],
+                            'conflict_preceptor': r['preceptor'],
+                            'md_student': r['md_student'],
+                            'pa_student': r['pa_student'],
+                            'suggested_preceptor': (
+                                f"{a['preceptor']} (currently assigned)"
+                                if a['preceptor'] == r['preceptor'] else a['preceptor']
+                            )
+                        })
+                else:
                     suggestions.append({
                         'site': r['site'],
                         'date': r['date'],
@@ -2203,24 +2234,16 @@ elif mode == "OPD MD PA Conflict Detector":
                         'conflict_preceptor': r['preceptor'],
                         'md_student': r['md_student'],
                         'pa_student': r['pa_student'],
-                        'suggested_preceptor': (
-                            f"{a['preceptor']} (currently assigned)" 
-                            if a['preceptor'] == r['preceptor'] else a['preceptor']
-                        )
+                        'suggested_preceptor': '⚠️ No alternative preceptors available'
                     })
-            else:
-                suggestions.append({
-                    'site': r['site'],
-                    'date': r['date'],
-                    'day': r['day'],
-                    'period': r['period'],
-                    'conflict_preceptor': r['preceptor'],
-                    'md_student': r['md_student'],
-                    'pa_student': r['pa_student'],
-                    'suggested_preceptor': '⚠️ No alternative preceptors available'
-                })
-    
-        suggestions_df = pd.DataFrame(suggestions)
+        
+        suggestions_df = pd.DataFrame(suggestions) if suggestions else pd.DataFrame()
+        if not suggestions_df.empty:
+            suggestions_df = suggestions_df.drop_duplicates(
+                subset=['site','date','period','conflict_preceptor','suggested_preceptor'],
+                keep='first'
+            )
+
     
         # -----------------------------
         # Results UI
