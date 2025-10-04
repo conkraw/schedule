@@ -2156,12 +2156,11 @@ elif mode == "OPD MD PA Conflict Detector":
                             pa_booked = (date_obj, period, pre) in pa_idx_date
                             total_assigned = int(md_booked) + int(pa_booked)
                         
-                            # Detect if this is an "Acutes" preceptor row
-                            is_acute = any("ACUTE" in str(df_md.iat[r,0]).upper() for r in range(df_md.shape[0]) if pre in str(df_md.values))
-                            # ^ can be optimized: you probably already know which runs are Acutes from detect_am_pm_runs
+                            # Detect if preceptor name contains "ACUTE"
+                            is_acute = "ACUTE" in pre.upper()
                         
                             if is_acute:
-                                # Acutes rule: allow if they have fewer than 2 students
+                                # Acutes preceptors are available if they have fewer than 2 students
                                 if total_assigned < 2:
                                     availability_rows.append({
                                         'site': sheet,
@@ -2172,7 +2171,7 @@ elif mode == "OPD MD PA Conflict Detector":
                                         'status': 'available'
                                     })
                             else:
-                                # Other preceptors: allow only if completely unbooked
+                                # Non-Acutes preceptors available only if totally unbooked
                                 if total_assigned == 0:
                                     availability_rows.append({
                                         'site': sheet,
