@@ -2588,32 +2588,26 @@ elif mode == "OPD MD PA Conflict Detector":
             
         # Build per-site indices so each file can be colored against the other
         # site_ctx[...] was built above in your loop
-        md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}  # MD cells red if booked in PA
-        pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}  # PA cells red if booked in MD
-
+        md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}
+        pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}
+        
         col_md, col_pa = st.columns(2)
         with col_md:
-            try:
-                md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets, add_fill=use_yellow_fill)
-                st.download_button(
-                    label="Download annotated MD OPD (RED = booked in PA)",
-                    data=md_bytes,
-                    file_name="md_opd_annotated.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            except Exception as e:
-                st.error(f"MD annotate failed: {e}")
+            md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets)
+            st.download_button(
+                label="Download annotated MD OPD (RED = booked in PA)",
+                data=md_bytes,
+                file_name="md_opd_annotated.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         with col_pa:
-            try:
-                pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets, add_fill=use_yellow_fill)
-                st.download_button(
-                    label="Download annotated PA OPD (RED = booked in MD)",
-                    data=pa_bytes,
-                    file_name="pa_opd_annotated.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            except Exception as e:
-                st.error(f"PA annotate failed: {e}")
+            pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets)
+            st.download_button(
+                label="Download annotated PA OPD (RED = booked in MD)",
+                data=pa_bytes,
+                file_name="pa_opd_annotated.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
