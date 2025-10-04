@@ -2043,12 +2043,18 @@ elif mode == "OPD MD PA Conflict Detector":
             return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
 
         def parse_cell(val: str):
-            if not isinstance(val, str): return None, None
+            if not isinstance(val, str): 
+                return None, None
             parts = val.split('~', 1)
             pre = parts[0].strip()
             stu = parts[1].strip() if len(parts) == 2 else None
-            if stu == '': 
-                stu = None
+
+            # Treat blank-ish RHS as no student
+            if stu:
+                norm = stu.strip().lower()
+                if norm in {"", "nan", "n/a", "na", "-", "--", "—", "none"}:
+                    stu = None
+
             return pre, stu
 
         headers = find_week_headers(df)
@@ -2277,12 +2283,11 @@ elif mode == "OPD MD PA Conflict Detector":
                     # Slot-level acute flag: true if either sheet has pre in an "Acutes" run for this slot
                     is_acute = (pre in md_acute_pre_today) or (pre in pa_acute_pre_today)
 
-                    # Availability rule:
-                    # - Acutes: available if they have 0 or 1 students (<2)
-                    # - Non-Acutes: available only if 0 students
-                    eligible = (is_acute and total_assigned < 2) or (not is_acute and total_assigned == 0)
+                    # Capacity rule + seats left
+                    capacity = 2 if is_acute else 1
+                    seats_left = max(0, capacity - total_assigned)
 
-                    if eligible:
+                    if seats_left > 0:
                         availability_rows.append({
                             'site': site,
                             'date': date_o,
@@ -2292,11 +2297,14 @@ elif mode == "OPD MD PA Conflict Detector":
                             'preceptor': pre,
                             'is_acute': is_acute,
                             'current_students': total_assigned,
+                            'capacity': capacity,
+                            'seats_left': seats_left,
                             'status': 'available'
                         })
 
         availability_df = pd.DataFrame(availability_rows) if availability_rows else pd.DataFrame(
-            columns=['site','date','day','period','conflict_preceptor','preceptor','is_acute','current_students','status']
+            columns=['site','date','day','period','conflict_preceptor','preceptor','is_acute',
+                     'current_students','capacity','seats_left','status']
         )
 
         # --------- SUGGESTIONS (top-3) for each conflict slot from targeted availability ---------
@@ -2327,7 +2335,9 @@ elif mode == "OPD MD PA Conflict Detector":
                             'pa_student': r['pa_student'],
                             'suggested_preceptor': label,
                             'suggested_is_acute': bool(a['is_acute']),
-                            'suggested_current_students': int(a['current_students'])
+                            'suggested_current_students': int(a['current_students']),
+                            'suggested_capacity': int(a['capacity']),
+                            'suggested_seats_left': int(a['seats_left'])
                         })
                 else:
                     suggestions.append({
@@ -2340,7 +2350,9 @@ elif mode == "OPD MD PA Conflict Detector":
                         'pa_student': r['pa_student'],
                         'suggested_preceptor': '⚠️ No alternative preceptors available',
                         'suggested_is_acute': None,
-                        'suggested_current_students': None
+                        'suggested_current_students': None,
+                        'suggested_capacity': None,
+                        'suggested_seats_left': None
                     })
 
         suggestions_df = pd.DataFrame(suggestions) if suggestions else pd.DataFrame()
@@ -2379,7 +2391,8 @@ elif mode == "OPD MD PA Conflict Detector":
             else:
                 st.markdown("**Available preceptors for conflicted slots** — Acutes shown if they have fewer than 2 students; others only if unbooked.")
                 st.dataframe(
-                    availability_df[['site','date','day','period','conflict_preceptor','preceptor','is_acute','current_students','status']],
+                    availability_df[['site','date','day','period','conflict_preceptor',
+                                     'preceptor','is_acute','current_students','capacity','seats_left','status']],
                     use_container_width=True
                 )
                 st.download_button(
@@ -2397,7 +2410,9 @@ elif mode == "OPD MD PA Conflict Detector":
             else:
                 st.markdown("**Targeted suggestions** — Limited to the same site/date/AM-PM; may include the same Acute preceptor if they only have one student.")
                 st.dataframe(
-                    suggestions_df[['site','date','day','period','conflict_preceptor','md_student','pa_student','suggested_preceptor','suggested_is_acute','suggested_current_students']],
+                    suggestions_df[['site','date','day','period','conflict_preceptor','md_student','pa_student',
+                                    'suggested_preceptor','suggested_is_acute','suggested_current_students',
+                                    'suggested_capacity','suggested_seats_left']],
                     use_container_width=True
                 )
                 st.download_button(
@@ -2409,4 +2424,3 @@ elif mode == "OPD MD PA Conflict Detector":
 
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
-
