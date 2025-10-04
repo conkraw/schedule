@@ -1926,7 +1926,7 @@ elif mode == "OPD MD PA Conflict Detector":
     # Config & Constants
     # -----------------------------
     DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-    DEFAULT_FOCUS = ['HOPE_DRIVE','NYES','ETOWN']
+    DEFAULT_FOCUS = ['HOPE_DRIVE','NYES','ETOWN','LANCASTER']
 
     TRUST_ONLY_AM_PM = True          # Only parse rows with Column A starting AM/PM
     REQUIRE_VALID_DATE = True        # Bookings require a valid date anchor
