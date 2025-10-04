@@ -2325,40 +2325,7 @@ elif mode == "OPD MD PA Conflict Detector":
                     mime="text/csv"
                 )
     
-        # In-slot duplicate rows (FYI)
-        show_dups = st.toggle("Show in-slot duplicate rows (FYI)", value=False)
-        if show_dups:
-            if dup_rows_all:
-                dups_df = pd.DataFrame(dup_rows_all).sort_values(['site','date','period','preceptor','sheet'])
-                st.markdown("**In-slot duplicate rows** — same preceptor appears on multiple rows for the same site/date/AM-PM.")
-                st.dataframe(dups_df, use_container_width=True)
-                st.download_button(
-                    label="Download duplicate-rows CSV",
-                    data=dups_df.to_csv(index=False).encode('utf-8'),
-                    file_name="opd_in_slot_duplicates.csv",
-                    mime="text/csv"
-                )
-            else:
-                st.info("No in-slot duplicate rows found.")
-    
-        # Diagnostics
-        with st.expander("Diagnostics: detected weeks & inferred days"):
-            if not diagnostics:
-                st.write("No diagnostics.")
-            else:
-                for site_diag in diagnostics:
-                    st.write(f"**Site:** {site_diag['site']}")
-                    for who in ['md','pa']:
-                        st.write(f"- {who.upper()} sheet:")
-                        rows = site_diag[who]
-                        if not rows:
-                            st.write("  (no week headers found)")
-                            continue
-                        for r in rows:
-                            md = r.get('monday_date')
-                            inferred = r.get('inferred_days', [])
-                            dr = r.get('date_row')
-                            st.write(f"  • monday_date={md}, date_row={dr}, inferred_days={inferred}")
+
     
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
