@@ -2151,14 +2151,38 @@ elif mode == "OPD MD PA Conflict Detector":
                         day_pool = (md_day_roster.get((monday_date, period, day)) or set()) | \
                                    (pa_day_roster.get((monday_date, period, day)) or set())
                         for pre in sorted(day_pool):
-                            availability_rows.append({
-                                'site': sheet,
-                                'date': date_obj,
-                                'day': day,
-                                'period': period,
-                                'preceptor': pre,
-                                'status': 'available'
-                            })
+                            # Count how many actual students are assigned in MD + PA
+                            md_booked = (date_obj, period, pre) in md_idx_date
+                            pa_booked = (date_obj, period, pre) in pa_idx_date
+                            total_assigned = int(md_booked) + int(pa_booked)
+                        
+                            # Detect if this is an "Acutes" preceptor row
+                            is_acute = any("ACUTE" in str(df_md.iat[r,0]).upper() for r in range(df_md.shape[0]) if pre in str(df_md.values))
+                            # ^ can be optimized: you probably already know which runs are Acutes from detect_am_pm_runs
+                        
+                            if is_acute:
+                                # Acutes rule: allow if they have fewer than 2 students
+                                if total_assigned < 2:
+                                    availability_rows.append({
+                                        'site': sheet,
+                                        'date': date_obj,
+                                        'day': day,
+                                        'period': period,
+                                        'preceptor': pre,
+                                        'status': 'available'
+                                    })
+                            else:
+                                # Other preceptors: allow only if completely unbooked
+                                if total_assigned == 0:
+                                    availability_rows.append({
+                                        'site': sheet,
+                                        'date': date_obj,
+                                        'day': day,
+                                        'period': period,
+                                        'preceptor': pre,
+                                        'status': 'available'
+                                    })
+
     
         conflicts_df = pd.DataFrame(conflict_rows)
         availability_df = pd.DataFrame(availability_rows)
