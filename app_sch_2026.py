@@ -1912,7 +1912,7 @@ elif mode == "Create Individual Schedules":
 
 elif mode == "OPD MD PA Conflict Detector":               
     st.title("OPD MD/PA Double-Booking & Availability")
-    st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
+    st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period (including other sites).")
 
     # -----------------------------
     # Config & Constants
@@ -2031,6 +2031,8 @@ elif mode == "OPD MD PA Conflict Detector":
           occupied:        set((monday_date, period, day, preceptor)) even w/o student
           diag_weeks:      diagnostics list
         """
+        import re, unicodedata
+
         def is_placeholder_preceptor(text: str) -> bool:
             if not text: return True
             t = text.strip().upper()
@@ -2041,14 +2043,32 @@ elif mode == "OPD MD PA Conflict Detector":
             ]
             return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
 
+        def _norm(s: str) -> str:
+            s = unicodedata.normalize("NFKC", s)
+            s = s.replace("\u00A0", " ")                    # NBSP -> space
+            s = s.replace("\u2013", "-").replace("\u2014", "-")  # en/em dash -> '-'
+            s = re.sub(r"\s+", " ", s.strip())
+            return s
+
         def parse_cell(val: str):
+            """Robust split on '~'. RHS counts as student only if alphanumeric & not a placeholder."""
             if not isinstance(val, str): return None, None
-            parts = val.split('~', 1)
-            pre = parts[0].strip()
-            stu = parts[1].strip() if len(parts) == 2 else None
-            if stu == '': 
-                stu = None
-            return pre, stu
+            raw = _norm(val)
+            if "~" not in raw:
+                pre = _norm(raw)
+                return (pre if pre else None), None
+            pre, rhs = re.split(r"\s*~\s*", raw, maxsplit=1)
+            pre = _norm(pre)
+            rhs = _norm(rhs)
+
+            BLANK_TOKENS = {"", "nan", "n/a", "na", "-", "--", "—", "none", "null"}
+            PLACEHOLDER_HINTS = {"note", "notes", "ref", "reference", "info", "fyi"}
+
+            rhs_l = rhs.lower()
+            # treat as empty unless it has at least one letter/number and is not a placeholder
+            if (rhs_l in BLANK_TOKENS) or (not re.search(r"[a-z0-9]", rhs_l)) or any(h in rhs_l for h in PLACEHOLDER_HINTS):
+                rhs = None
+            return (pre if pre else None), rhs
 
         headers = find_week_headers(df)
         runs = detect_am_pm_runs(df, start_row=0)
@@ -2149,11 +2169,11 @@ elif mode == "OPD MD PA Conflict Detector":
             st.warning("No common sheets selected.")
             st.stop()
 
+        # Keep per-site context so we can search "other sites"
+        site_ctx = {}
+
         conflict_rows = []
         diagnostics = []
-
-        # We'll build availability/suggestions ONLY for conflicted slots later
-        # so we won't compute global availability first.
 
         for sheet in selected_sheets:
             df_md = load_sheet(md_file, sheet)
@@ -2164,6 +2184,16 @@ elif mode == "OPD MD PA Conflict Detector":
             (pa_map_wk, pa_idx_date, pa_roster_wk, pa_day_roster, pa_week_dates,
              pa_occupied, pa_diag) = build_maps_and_roster(df_pa)
             diagnostics.append({'site': sheet, 'md': md_diag, 'pa': pa_diag})
+
+            # Save for cross-site availability
+            site_ctx[sheet] = dict(
+                md_idx_date=md_idx_date,
+                pa_idx_date=pa_idx_date,
+                md_week_dates=md_week_dates,
+                pa_week_dates=pa_week_dates,
+                md_day_roster=md_day_roster,
+                pa_day_roster=pa_day_roster
+            )
 
             # --------- CONFLICTS by actual date ---------
             md_keys = set(md_idx_date.keys())
@@ -2178,28 +2208,19 @@ elif mode == "OPD MD PA Conflict Detector":
                     'period': period,
                     'preceptor': pre,
                     'md_student': md_entry['student'],
-                    'pa_student': pa_entry['student'],
-                    # Keep per-sheet maps handy for the targeted availability step:
-                    'md_week_dates': md_week_dates,
-                    'md_day_roster': md_day_roster,
-                    'pa_week_dates': pa_week_dates,
-                    'pa_day_roster': pa_day_roster,
-                    'md_idx_date_ref': md_idx_date,
-                    'pa_idx_date_ref': pa_idx_date
+                    'pa_student': pa_entry['student']
                 })
 
         # Conflicts dataframe
         conflicts_df = pd.DataFrame(conflict_rows)
 
-        # --------- AVAILABILITY limited to conflict slots (ALL providers) ---------
-        def _pool_for_conflict_slot(day_name, period, date_obj,
-                                    md_week_dates, md_day_roster,
-                                    pa_week_dates, pa_day_roster):
-            """
-            Return the union of preceptors present for (day_name, period, date_obj)
-            across both MD and PA sheets, regardless of different Monday anchors.
-            """
+        # --------- helpers to build pools ---------
+        def pool_for_site_day(site, day_name, period, date_obj):
+            """Union of preceptors present in THIS site for (day, period, date)."""
+            ctx = site_ctx[site]
             pool = set()
+            md_week_dates, pa_week_dates = ctx['md_week_dates'], ctx['pa_week_dates']
+            md_day_roster, pa_day_roster = ctx['md_day_roster'], ctx['pa_day_roster']
             # MD
             for m in md_week_dates.keys():
                 if md_week_dates[m].get(day_name) == date_obj:
@@ -2210,8 +2231,29 @@ elif mode == "OPD MD PA Conflict Detector":
                     pool |= (pa_day_roster.get((m, period, day_name)) or set())
             return pool
 
-        availability_rows = []
-        suggestions = []
+        def pool_for_other_sites(current_site, day_name, period, date_obj):
+            """Union of preceptors present in ALL OTHER sites for (day, period, date)."""
+            pool = set()
+            for site in site_ctx.keys():
+                if site == current_site:
+                    continue
+                pool |= pool_for_site_day(site, day_name, period, date_obj)
+            return pool
+
+        def count_assigned_any_site(pre, date_obj, period):
+            """How many students (MD+PA) does preceptor have across all sites at this date/period?"""
+            total = 0
+            for s, ctx in site_ctx.items():
+                if (date_obj, period, pre) in ctx['md_idx_date']:
+                    total += 1
+                if (date_obj, period, pre) in ctx['pa_idx_date']:
+                    total += 1
+            return total
+
+        # --------- AVAILABILITY (same-site & other-sites) for conflict slots ---------
+        availability_same_rows = []
+        availability_other_rows = []
+        suggestions_rows = []
 
         if not conflicts_df.empty:
             for _, r in conflicts_df.iterrows():
@@ -2220,76 +2262,74 @@ elif mode == "OPD MD PA Conflict Detector":
                 day_nm = r['day']         # 'Monday'...'Sunday'
                 period = r['period']
 
-                # Pull the per-site sheet mappings we stashed in conflicts_df row
-                md_week_dates = r['md_week_dates']
-                md_day_roster = r['md_day_roster']
-                pa_week_dates = r['pa_week_dates']
-                pa_day_roster = r['pa_day_roster']
-                md_idx_date   = r['md_idx_date_ref']
-                pa_idx_date   = r['pa_idx_date_ref']
+                # Pools
+                same_pool  = pool_for_site_day(site, day_nm, period, date_o)
+                other_pool = pool_for_other_sites(site, day_nm, period, date_o)
 
-                # candidate pool present that exact date/period
-                day_pool = _pool_for_conflict_slot(
-                    day_nm, period, date_o,
-                    md_week_dates, md_day_roster,
-                    pa_week_dates, pa_day_roster
-                )
-                if not day_pool:
-                    continue
+                # Build availability function
+                def add_pool(pool, dest_list, pool_site_label):
+                    for pre in sorted(pool):
+                        total_assigned = count_assigned_any_site(pre, date_o, period)
+                        is_acute = ("ACUTE" in str(pre).upper())
+                        capacity = 2 if is_acute else 1
+                        seats_left = max(0, capacity - total_assigned)
+                        if seats_left > 0:
+                            dest_list.append({
+                                'site_of_conflict': site,
+                                'candidate_site': pool_site_label,
+                                'date': date_o,
+                                'day': day_nm,
+                                'period': period,
+                                'conflict_preceptor': r['preceptor'],
+                                'preceptor': pre,
+                                'is_acute': is_acute,
+                                'current_students': total_assigned,
+                                'capacity': capacity,
+                                'seats_left': seats_left,
+                                'status': 'available'
+                            })
 
-                for pre in sorted(day_pool):
-                    # Count how many real students this preceptor already has that date/period
-                    md_booked = (date_o, period, pre) in md_idx_date
-                    pa_booked = (date_o, period, pre) in pa_idx_date
-                    total_assigned = int(md_booked) + int(pa_booked)
+                add_pool(same_pool, availability_same_rows, site)
+                # For other sites, we want to keep which site each candidate belongs to.
+                # We'll loop sites to know where each preceptor came from.
+                for other_site in site_ctx.keys():
+                    if other_site == site:
+                        continue
+                    pool = pool_for_site_day(other_site, day_nm, period, date_o)
+                    add_pool(pool, availability_other_rows, other_site)
 
-                    # "Acute" if preceptor cell contains "ACUTE"
-                    is_acute = "ACUTE" in pre.upper()
+        avail_same_df = pd.DataFrame(availability_same_rows)
+        avail_other_df = pd.DataFrame(availability_other_rows)
 
-                    # Availability rule:
-                    # - Acutes: available if they have 0 or 1 students (<2)
-                    # - Non-Acutes: available only if 0 students
-                    eligible = (is_acute and total_assigned < 2) or (not is_acute and total_assigned == 0)
-
-                    if eligible:
-                        availability_rows.append({
-                            'site': site,
-                            'date': date_o,
-                            'day': day_nm,
-                            'period': period,
-                            'conflict_preceptor': r['preceptor'],
-                            'preceptor': pre,
-                            'is_acute': is_acute,
-                            'current_students': total_assigned,   # 0 or 1 (Acutes) / must be 0 (non-Acutes)
-                            'status': 'available'
-                        })
-
-            availability_df = pd.DataFrame(availability_rows)
-        else:
-            availability_df = pd.DataFrame(columns=[
-                'site','date','day','period','conflict_preceptor','preceptor','is_acute','current_students','status'
-            ])
-
-        # --------- SUGGESTIONS (top-3) for each conflict slot from targeted availability ---------
+        # --------- SUGGESTIONS (top-3) prefer same-site, then other-sites ---------
         if not conflicts_df.empty:
             for _, r in conflicts_df.iterrows():
-                same_slot = availability_df[
-                    (availability_df['site'] == r['site']) &
-                    (availability_df['date'] == r['date']) &
-                    (availability_df['period'] == r['period'])
+                in_slot_same  = avail_same_df[
+                    (avail_same_df['site_of_conflict'] == r['site']) &
+                    (avail_same_df['date'] == r['date']) &
+                    (avail_same_df['period'] == r['period'])
                 ].copy()
 
-                if not same_slot.empty:
-                    # Put the conflicted preceptor first if they’re available (so Acute with 1 student is suggested)
-                    same_slot['_self'] = (same_slot['preceptor'] == r['preceptor'])
-                    same_slot = same_slot.sort_values(['_self','preceptor'], ascending=[False, True]).drop(columns=['_self'])
+                in_slot_other = avail_other_df[
+                    (avail_other_df['site_of_conflict'] == r['site']) &
+                    (avail_other_df['date'] == r['date']) &
+                    (avail_other_df['period'] == r['period'])
+                ].copy()
 
-                    for _, a in same_slot.head(3).iterrows():
+                # Put same preceptor first if eligible (Acute w/ 1 student)
+                def order(df):
+                    df['_self'] = (df['preceptor'] == r['preceptor'])
+                    return df.sort_values(['_self','candidate_site','preceptor'], ascending=[False, True, True]).drop(columns=['_self'])
+
+                ordered = pd.concat([order(in_slot_same), order(in_slot_other)], ignore_index=True)
+
+                if not ordered.empty:
+                    for _, a in ordered.head(3).iterrows():
                         label = a['preceptor']
                         if a['preceptor'] == r['preceptor']:
                             label = f"{a['preceptor']} (currently assigned)"
-                        suggestions.append({
-                            'site': r['site'],
+                        suggestions_rows.append({
+                            'conflict_site': r['site'],
                             'date': r['date'],
                             'day': r['day'],
                             'period': r['period'],
@@ -2297,12 +2337,15 @@ elif mode == "OPD MD PA Conflict Detector":
                             'md_student': r['md_student'],
                             'pa_student': r['pa_student'],
                             'suggested_preceptor': label,
+                            'suggested_site': a['candidate_site'],
                             'suggested_is_acute': bool(a['is_acute']),
-                            'suggested_current_students': int(a['current_students'])
+                            'suggested_current_students': int(a['current_students']),
+                            'suggested_capacity': int(a['capacity']),
+                            'suggested_seats_left': int(a['seats_left'])
                         })
                 else:
-                    suggestions.append({
-                        'site': r['site'],
+                    suggestions_rows.append({
+                        'conflict_site': r['site'],
                         'date': r['date'],
                         'day': r['day'],
                         'period': r['period'],
@@ -2310,11 +2353,14 @@ elif mode == "OPD MD PA Conflict Detector":
                         'md_student': r['md_student'],
                         'pa_student': r['pa_student'],
                         'suggested_preceptor': '⚠️ No alternative preceptors available',
+                        'suggested_site': None,
                         'suggested_is_acute': None,
-                        'suggested_current_students': None
+                        'suggested_current_students': None,
+                        'suggested_capacity': None,
+                        'suggested_seats_left': None
                     })
 
-        suggestions_df = pd.DataFrame(suggestions) if suggestions else pd.DataFrame()
+        suggestions_df = pd.DataFrame(suggestions_rows)
 
         # -----------------------------
         # Results UI (conflict-focused)
@@ -2326,9 +2372,9 @@ elif mode == "OPD MD PA Conflict Detector":
         with c2:
             st.metric("Double bookings found", 0 if conflicts_df.empty else len(conflicts_df))
         with c3:
-            st.metric("Avail. rows (conflict slots only)", 0 if availability_df.empty else len(availability_df))
+            st.metric("Avail. (same-site)", 0 if avail_same_df.empty else len(avail_same_df))
         with c4:
-            st.metric("Targeted suggestions", 0 if suggestions_df.empty else len(suggestions_df))
+            st.metric("Avail. (other-sites)", 0 if avail_other_df.empty else len(avail_other_df))
 
         st.markdown("**Double-booked preceptors (MD & PA in same slot)**")
         if conflicts_df.empty:
@@ -2342,39 +2388,64 @@ elif mode == "OPD MD PA Conflict Detector":
                 mime="text/csv"
             )
 
-        # Availability (conflict slots only) behind a toggle
-        show_avail = st.toggle("Show available preceptors for the conflicted slots (Acutes can take 2)", value=False)
-        if show_avail:
-            if availability_df.empty:
-                st.info("No availability found for the conflicted slots.")
+        # Availability (same site)
+        show_same = st.toggle("Show available preceptors in the SAME site (Acutes can take 2)", value=False)
+        if show_same:
+            if avail_same_df.empty:
+                st.info("No same-site availability for the conflicted slots.")
             else:
-                st.markdown("**Available preceptors for conflicted slots** — Acutes shown if they have fewer than 2 students; others only if unbooked.")
+                st.markdown("**Available preceptors (same site as conflict)** — Acutes shown if <2 students; others only if unbooked.")
                 st.dataframe(
-                    availability_df[['site','date','day','period','conflict_preceptor','preceptor','is_acute','current_students','status']],
+                    avail_same_df[['site_of_conflict','candidate_site','date','day','period',
+                                   'conflict_preceptor','preceptor','is_acute',
+                                   'current_students','capacity','seats_left','status']],
                     use_container_width=True
                 )
                 st.download_button(
-                    label="Download availability CSV (conflict slots)",
-                    data=availability_df.to_csv(index=False).encode('utf-8'),
-                    file_name="opd_availability_conflict_slots.csv",
+                    label="Download same-site availability CSV",
+                    data=avail_same_df.to_csv(index=False).encode('utf-8'),
+                    file_name="opd_availability_same_site.csv",
                     mime="text/csv"
                 )
 
-        # Targeted suggestions behind a toggle
-        show_sugg = st.toggle("Show suggestions to resolve each conflict (top 3 per slot)", value=False)
+        # Availability (other sites)
+        show_other = st.toggle("Show available preceptors in OTHER sites (Acutes can take 2)", value=False)
+        if show_other:
+            if avail_other_df.empty:
+                st.info("No other-site availability for the conflicted slots.")
+            else:
+                st.markdown("**Available preceptors (other sites)** — same date & AM/PM, different site.")
+                st.dataframe(
+                    avail_other_df[['site_of_conflict','candidate_site','date','day','period',
+                                    'conflict_preceptor','preceptor','is_acute',
+                                    'current_students','capacity','seats_left','status']],
+                    use_container_width=True
+                )
+                st.download_button(
+                    label="Download other-site availability CSV",
+                    data=avail_other_df.to_csv(index=False).encode('utf-8'),
+                    file_name="opd_availability_other_sites.csv",
+                    mime="text/csv"
+                )
+
+        # Suggestions
+        show_sugg = st.toggle("Show suggestions to resolve each conflict (prefers same site, then other sites)", value=False)
         if show_sugg:
             if suggestions_df.empty:
                 st.info("No suggestions available.")
             else:
-                st.markdown("**Targeted suggestions** — Limited to the same site/date/AM-PM; may include the same Acute preceptor if they only have one student.")
+                st.markdown("**Targeted suggestions** — same site first; if none, suggests from other sites on the same date & AM/PM.")
                 st.dataframe(
-                    suggestions_df[['site','date','day','period','conflict_preceptor','md_student','pa_student','suggested_preceptor','suggested_is_acute','suggested_current_students']],
+                    suggestions_df[['conflict_site','date','day','period','conflict_preceptor',
+                                    'md_student','pa_student','suggested_preceptor','suggested_site',
+                                    'suggested_is_acute','suggested_current_students',
+                                    'suggested_capacity','suggested_seats_left']],
                     use_container_width=True
                 )
                 st.download_button(
                     label="Download suggestions CSV",
                     data=suggestions_df.to_csv(index=False).encode('utf-8'),
-                    file_name="opd_targeted_suggestions_conflicts.csv",
+                    file_name="opd_targeted_suggestions_cross_site.csv",
                     mime="text/csv"
                 )
 
