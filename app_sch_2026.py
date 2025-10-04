@@ -2396,7 +2396,7 @@ elif mode == "OPD MD PA Conflict Detector":
             )
 
         # Availability (same site)
-        show_same = st.toggle("Show available preceptors in the SAME site (Acutes can take 2)", value=False)
+        show_same  = st.toggle("Show available preceptors in the SAME site (Acutes can take 2)",value=False, key="tog_same_site")
         if show_same:
             if avail_same_df.empty:
                 st.info("No same-site availability for the conflicted slots.")
@@ -2416,7 +2416,7 @@ elif mode == "OPD MD PA Conflict Detector":
                 )
 
         # Availability (other sites)
-        show_other = st.toggle("Show available preceptors in OTHER sites (Acutes can take 2)", value=False)
+        show_other = st.toggle("Show available preceptors in OTHER sites (Acutes can take 2)",value=False, key="tog_other_site")
         if show_other:
             if avail_other_df.empty:
                 st.info("No other-site availability for the conflicted slots.")
@@ -2436,7 +2436,8 @@ elif mode == "OPD MD PA Conflict Detector":
                 )
 
         # Suggestions
-        show_sugg = st.toggle("Show suggestions to resolve each conflict (prefers same site, then other sites)", value=False)
+        show_sugg  = st.toggle("Show suggestions to resolve each conflict (prefers same site, then other sites)",
+                       value=False, key="tog_suggestions")
         if show_sugg:
             if suggestions_df.empty:
                 st.info("No suggestions available.")
@@ -2459,7 +2460,8 @@ elif mode == "OPD MD PA Conflict Detector":
         # -----------------------------
         # Optional Annotated Downloads Toggle
         # -----------------------------
-        show_annotated = st.toggle("Generate annotated OPD files (highlight conflicts in RED)", value=False)
+        show_annotated = st.toggle("Generate annotated OPD files (highlight conflicts in RED)",
+                           value=False, key="tog_annotated_downloads")
         
         if show_annotated:
             st.markdown("---")
