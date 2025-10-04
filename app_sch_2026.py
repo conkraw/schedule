@@ -2248,20 +2248,15 @@ elif mode == "OPD MD PA Conflict Detector":
             )
     
         # Availability toggle
-        show_avail = st.toggle("Show availability (Acutes only)", value=False)
+        show_avail = st.toggle("Show all available preceptors (Acutes can take 2)", value=False)
         if show_avail:
             if availability_df.empty:
-                st.info("No availability found (Acutes only).")
+                st.info("No availability found.")
             else:
-                st.markdown("**Available Acutes preceptors**")
+                st.markdown("**Available preceptors** — Acutes are shown as available if they have fewer than 2 students; others only if unbooked.")
                 st.dataframe(availability_df, use_container_width=True)
-                st.download_button(
-                    label="Download availability CSV",
-                    data=availability_df.to_csv(index=False).encode("utf-8"),
-                    file_name="opd_availability_acutes.csv",
-                    mime="text/csv"
-                )
-    
+        
+            
         # Suggestions toggle
         show_sugg = st.toggle("Show targeted Acutes suggestions (top 3)", value=False)
         if show_sugg:
