@@ -24,7 +24,6 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import column_index_from_string
-import re, unicodedata
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -1911,7 +1910,7 @@ elif mode == "Create Individual Schedules":
                 mime="application/zip",
             )
 
-elif mode == "OPD MD PA Conflict Detector":           
+elif mode == "OPD MD PA Conflict Detector":               
     st.title("OPD MD/PA Double-Booking & Availability")
     st.write("Upload the MD and PA OPD Excel files to scan for double-booked preceptors and to list availability by site/date/period.")
 
@@ -2031,7 +2030,6 @@ elif mode == "OPD MD PA Conflict Detector":
           week_dates:      {monday_date -> {day -> date}}
           occupied:        set((monday_date, period, day, preceptor)) even w/o student
           diag_weeks:      diagnostics list
-          acute_slots:     set((monday_date, period, day, preceptor))  # “Acutes” based on Column A run label
         """
         def is_placeholder_preceptor(text: str) -> bool:
             if not text: return True
@@ -2043,50 +2041,14 @@ elif mode == "OPD MD PA Conflict Detector":
             ]
             return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
 
-    def parse_cell(val: str):
-        """
-        Returns (preceptor, student_or_None).
-    
-        Robust to weird whitespace and 'blank-ish' RHS after '~'
-        (e.g. '~', '~   ', '~—', '~nan', '~ref').
-        """
-        if not isinstance(val, str):
-            return None, None
-    
-        def norm(s: str) -> str:
-            s = unicodedata.normalize("NFKC", s)        # normalize unicode
-            s = s.replace("\u00A0", " ")               # NBSP -> space
-            s = s.replace("\u2013", "-").replace("\u2014", "-")  # en/em dash -> hyphen
-            s = s.strip()
-            s = re.sub(r"\s+", " ", s)                 # collapse spaces
-            return s
-    
-        BLANK_TOKENS = {"", "nan", "n/a", "na", "-", "--", "—", "none", "null"}
-        PLACEHOLDER_HINTS = {"note", "notes", "ref", "reference", "info", "fyi"}
-    
-        raw = norm(val)
-    
-        # No tilde: just a preceptor name (no student)
-        if "~" not in raw:
-            pre = norm(raw)
-            return (pre if pre else None), None
-    
-        # Split on ~ with optional surrounding spaces
-        pre, rhs = re.split(r"\s*~\s*", raw, maxsplit=1)
-        pre = norm(pre)
-        rhs = norm(rhs)
-    
-        # Treat RHS as no student unless it has at least one letter/number
-        rhs_lower = rhs.lower()
-        if (
-            rhs_lower in BLANK_TOKENS
-            or not re.search(r"[a-z0-9]", rhs_lower)
-            or any(h in rhs_lower for h in PLACEHOLDER_HINTS)
-        ):
-            rhs = None
-    
-        return (pre if pre else None), rhs
-
+        def parse_cell(val: str):
+            if not isinstance(val, str): return None, None
+            parts = val.split('~', 1)
+            pre = parts[0].strip()
+            stu = parts[1].strip() if len(parts) == 2 else None
+            if stu == '': 
+                stu = None
+            return pre, stu
 
         headers = find_week_headers(df)
         runs = detect_am_pm_runs(df, start_row=0)
@@ -2098,7 +2060,6 @@ elif mode == "OPD MD PA Conflict Detector":
         week_dates = defaultdict(dict)
         occupied = set()
         diag_weeks = []
-        acute_slots = set()  # NEW
 
         # Build date anchors with fallback
         for (day_row, date_row, monday_date) in headers:
@@ -2131,11 +2092,6 @@ elif mode == "OPD MD PA Conflict Detector":
             monday_date = row_to_week_monday(rstart, headers)
             if monday_date is None:
                 continue
-
-            # Row label for this AM/PM run (Col A)
-            run_label = str(df.iat[rstart, 0]).upper() if rstart < len(df) else ""
-            run_is_acute = "ACUTE" in run_label  # NEW: decide by the AM/PM row label
-
             for col_idx, day in enumerate(DAYS, start=1):
                 date_anchor = week_dates[monday_date].get(day)
                 for row in range(rstart, rend+1):
@@ -2148,30 +2104,26 @@ elif mode == "OPD MD PA Conflict Detector":
                     if not pre or is_placeholder_preceptor(pre): 
                         continue
 
-                    key_wk = (monday_date, period, day, pre)
-
                     # Present in week & specific day
                     roster_week[(monday_date, period)].add(pre)
                     day_roster[(monday_date, period, day)].add(pre)
-                    occupied.add(key_wk)
+                    occupied.add((monday_date, period, day, pre))  # presence marker
 
-                    # Mark this slot as an "Acutes" slot for this preceptor if the run is Acutes
-                    if run_is_acute:
-                        acute_slots.add(key_wk)  # NEW
-
-                    # Only store booking if real student + valid date
+                    # Keep booking only if real student + valid date
                     if stu is None: 
                         continue
                     if REQUIRE_VALID_DATE and _try_parse_date(date_anchor) is None:
                         continue
 
                     cell = f"{chr(ord('A')+col_idx)}{row+1}"
-                    mapping_by_week.setdefault(key_wk, {'student': stu, 'cell': cell, 'date': date_anchor})
+                    wk_key = (monday_date, period, day, pre)
+                    mapping_by_week.setdefault(wk_key, {'student': stu, 'cell': cell, 'date': date_anchor})
                     # date-based index for cross-file matching
                     dt_key = (pd.to_datetime(date_anchor).date(), period, pre)
+                    # prefer first seen student for stability
                     index_by_date.setdefault(dt_key, {'student': stu, 'cell': cell, 'day': day})
 
-        return mapping_by_week, index_by_date, roster_week, day_roster, week_dates, occupied, diag_weeks, acute_slots
+        return mapping_by_week, index_by_date, roster_week, day_roster, week_dates, occupied, diag_weeks
 
     # -----------------------------
     # UI - File uploads
@@ -2200,16 +2152,17 @@ elif mode == "OPD MD PA Conflict Detector":
         conflict_rows = []
         diagnostics = []
 
-        # We'll compute availability/suggestions ONLY for conflicted slots later.
+        # We'll build availability/suggestions ONLY for conflicted slots later
+        # so we won't compute global availability first.
 
         for sheet in selected_sheets:
             df_md = load_sheet(md_file, sheet)
             df_pa = load_sheet(pa_file, sheet)
 
             (md_map_wk, md_idx_date, md_roster_wk, md_day_roster, md_week_dates,
-             md_occupied, md_diag, md_acute_slots) = build_maps_and_roster(df_md)
+             md_occupied, md_diag) = build_maps_and_roster(df_md)
             (pa_map_wk, pa_idx_date, pa_roster_wk, pa_day_roster, pa_week_dates,
-             pa_occupied, pa_diag, pa_acute_slots) = build_maps_and_roster(df_pa)
+             pa_occupied, pa_diag) = build_maps_and_roster(df_pa)
             diagnostics.append({'site': sheet, 'md': md_diag, 'pa': pa_diag})
 
             # --------- CONFLICTS by actual date ---------
@@ -2226,15 +2179,13 @@ elif mode == "OPD MD PA Conflict Detector":
                     'preceptor': pre,
                     'md_student': md_entry['student'],
                     'pa_student': pa_entry['student'],
-                    # Stash per-sheet maps for targeted availability:
+                    # Keep per-sheet maps handy for the targeted availability step:
                     'md_week_dates': md_week_dates,
                     'md_day_roster': md_day_roster,
                     'pa_week_dates': pa_week_dates,
                     'pa_day_roster': pa_day_roster,
                     'md_idx_date_ref': md_idx_date,
-                    'pa_idx_date_ref': pa_idx_date,
-                    'md_acute_slots': md_acute_slots,    # NEW
-                    'pa_acute_slots': pa_acute_slots     # NEW
+                    'pa_idx_date_ref': pa_idx_date
                 })
 
         # Conflicts dataframe
@@ -2276,49 +2227,31 @@ elif mode == "OPD MD PA Conflict Detector":
                 pa_day_roster = r['pa_day_roster']
                 md_idx_date   = r['md_idx_date_ref']
                 pa_idx_date   = r['pa_idx_date_ref']
-                md_acute_slots = r['md_acute_slots']
-                pa_acute_slots = r['pa_acute_slots']
 
-                # candidate pool present that exact date/period (union MD+PA)
-                pool = set()
-                md_keys_for_day = []
-                pa_keys_for_day = []
-
-                # MD presence + remember keys for acute lookup
-                for m in md_week_dates.keys():
-                    if md_week_dates[m].get(day_nm) == date_o:
-                        pres = md_day_roster.get((m, period, day_nm)) or set()
-                        pool |= pres
-                        md_keys_for_day.extend([(m, period, day_nm, p) for p in pres])
-
-                # PA presence + remember keys for acute lookup
-                for m in pa_week_dates.keys():
-                    if pa_week_dates[m].get(day_nm) == date_o:
-                        pres = pa_day_roster.get((m, period, day_nm)) or set()
-                        pool |= pres
-                        pa_keys_for_day.extend([(m, period, day_nm, p) for p in pres])
-
-                if not pool:
+                # candidate pool present that exact date/period
+                day_pool = _pool_for_conflict_slot(
+                    day_nm, period, date_o,
+                    md_week_dates, md_day_roster,
+                    pa_week_dates, pa_day_roster
+                )
+                if not day_pool:
                     continue
 
-                # Build quick lookup of which preceptors are in acute slots this day/period
-                md_acute_pre_today = set(k[3] for k in md_keys_for_day if k in md_acute_slots)
-                pa_acute_pre_today = set(k[3] for k in pa_keys_for_day if k in pa_acute_slots)
-
-                for pre in sorted(pool):
-                    # How many students already this date/period?
+                for pre in sorted(day_pool):
+                    # Count how many real students this preceptor already has that date/period
                     md_booked = (date_o, period, pre) in md_idx_date
                     pa_booked = (date_o, period, pre) in pa_idx_date
                     total_assigned = int(md_booked) + int(pa_booked)
 
-                    # Slot-level acute flag: true if either sheet has pre in an "Acutes" run for this slot
-                    is_acute = (pre in md_acute_pre_today) or (pre in pa_acute_pre_today)
+                    # "Acute" if preceptor cell contains "ACUTE"
+                    is_acute = "ACUTE" in pre.upper()
 
-                    # Capacity rule + seats left
-                    capacity = 2 if is_acute else 1
-                    seats_left = max(0, capacity - total_assigned)
+                    # Availability rule:
+                    # - Acutes: available if they have 0 or 1 students (<2)
+                    # - Non-Acutes: available only if 0 students
+                    eligible = (is_acute and total_assigned < 2) or (not is_acute and total_assigned == 0)
 
-                    if seats_left > 0:
+                    if eligible:
                         availability_rows.append({
                             'site': site,
                             'date': date_o,
@@ -2327,16 +2260,15 @@ elif mode == "OPD MD PA Conflict Detector":
                             'conflict_preceptor': r['preceptor'],
                             'preceptor': pre,
                             'is_acute': is_acute,
-                            'current_students': total_assigned,
-                            'capacity': capacity,
-                            'seats_left': seats_left,
+                            'current_students': total_assigned,   # 0 or 1 (Acutes) / must be 0 (non-Acutes)
                             'status': 'available'
                         })
 
-        availability_df = pd.DataFrame(availability_rows) if availability_rows else pd.DataFrame(
-            columns=['site','date','day','period','conflict_preceptor','preceptor','is_acute',
-                     'current_students','capacity','seats_left','status']
-        )
+            availability_df = pd.DataFrame(availability_rows)
+        else:
+            availability_df = pd.DataFrame(columns=[
+                'site','date','day','period','conflict_preceptor','preceptor','is_acute','current_students','status'
+            ])
 
         # --------- SUGGESTIONS (top-3) for each conflict slot from targeted availability ---------
         if not conflicts_df.empty:
@@ -2366,9 +2298,7 @@ elif mode == "OPD MD PA Conflict Detector":
                             'pa_student': r['pa_student'],
                             'suggested_preceptor': label,
                             'suggested_is_acute': bool(a['is_acute']),
-                            'suggested_current_students': int(a['current_students']),
-                            'suggested_capacity': int(a['capacity']),
-                            'suggested_seats_left': int(a['seats_left'])
+                            'suggested_current_students': int(a['current_students'])
                         })
                 else:
                     suggestions.append({
@@ -2381,9 +2311,7 @@ elif mode == "OPD MD PA Conflict Detector":
                         'pa_student': r['pa_student'],
                         'suggested_preceptor': '⚠️ No alternative preceptors available',
                         'suggested_is_acute': None,
-                        'suggested_current_students': None,
-                        'suggested_capacity': None,
-                        'suggested_seats_left': None
+                        'suggested_current_students': None
                     })
 
         suggestions_df = pd.DataFrame(suggestions) if suggestions else pd.DataFrame()
@@ -2422,8 +2350,7 @@ elif mode == "OPD MD PA Conflict Detector":
             else:
                 st.markdown("**Available preceptors for conflicted slots** — Acutes shown if they have fewer than 2 students; others only if unbooked.")
                 st.dataframe(
-                    availability_df[['site','date','day','period','conflict_preceptor',
-                                     'preceptor','is_acute','current_students','capacity','seats_left','status']],
+                    availability_df[['site','date','day','period','conflict_preceptor','preceptor','is_acute','current_students','status']],
                     use_container_width=True
                 )
                 st.download_button(
@@ -2441,9 +2368,7 @@ elif mode == "OPD MD PA Conflict Detector":
             else:
                 st.markdown("**Targeted suggestions** — Limited to the same site/date/AM-PM; may include the same Acute preceptor if they only have one student.")
                 st.dataframe(
-                    suggestions_df[['site','date','day','period','conflict_preceptor','md_student','pa_student',
-                                    'suggested_preceptor','suggested_is_acute','suggested_current_students',
-                                    'suggested_capacity','suggested_seats_left']],
+                    suggestions_df[['site','date','day','period','conflict_preceptor','md_student','pa_student','suggested_preceptor','suggested_is_acute','suggested_current_students']],
                     use_container_width=True
                 )
                 st.download_button(
