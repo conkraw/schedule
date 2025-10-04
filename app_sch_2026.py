@@ -2188,16 +2188,19 @@ elif mode == "OPD MD PA Conflict Detector":
                         if not day_pool:
                             continue
                         for pre in sorted(day_pool):
-                            key_wk = (monday_date, period, day, pre)
-                            if key_wk not in md_occupied and key_wk not in pa_occupied:
+                            # booked = has a student in MD or PA on this exact date/period
+                            booked = ((date_obj, period, pre) in md_idx_date) or ((date_obj, period, pre) in pa_idx_date)
+                            if not booked:
                                 availability_rows.append({
                                     'site': sheet,
+                                    'week_monday': monday_date,
                                     'date': date_obj,
                                     'day': day,
                                     'period': period,
                                     'preceptor': pre,
                                     'status': 'available'
                                 })
+
     
         conflicts_df = pd.DataFrame(conflict_rows)
         availability_df = pd.DataFrame(availability_rows)
