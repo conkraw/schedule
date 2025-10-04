@@ -2025,6 +2025,7 @@ elif mode == "OPD MD PA Conflict Detector":
           week_dates:      {monday_date -> {day -> date}}
           occupied:        set((monday_date, period, day, preceptor)) even w/o student
           diag_weeks:      diagnostics list
+          slot_counts:     {(monday_date, period, day, preceptor) -> int}           # occurrences in the slot (rows)
         """
         def is_placeholder_preceptor(text: str) -> bool:
             if not text: return True
@@ -2054,6 +2055,7 @@ elif mode == "OPD MD PA Conflict Detector":
         week_dates = defaultdict(dict)
         occupied = set()
         diag_weeks = []
+        slot_counts = defaultdict(int)
     
         # Build date anchors with fallback
         for (day_row, date_row, monday_date) in headers:
@@ -2095,26 +2097,27 @@ elif mode == "OPD MD PA Conflict Detector":
                     pre, stu = parse_cell(val)
                     if not pre or is_placeholder_preceptor(pre): continue
     
-                    # Present in week & specific day
+                    key_wk = (monday_date, period, day, pre)
+    
+                    # Present in week & specific day; count row occurrences
                     roster_week[(monday_date, period)].add(pre)
                     day_roster[(monday_date, period, day)].add(pre)
-                    occupied.add((monday_date, period, day, pre))  # blocks availability
+                    slot_counts[key_wk] += 1
+                    occupied.add(key_wk)  # blocks availability if we were using presence; we'll use booking check instead
     
                     # Keep booking only if real student + valid date
-                    if stu is None: 
+                    if stu is None:
                         continue
                     if REQUIRE_VALID_DATE and _try_parse_date(date_anchor) is None:
                         continue
     
                     cell = f"{chr(ord('A')+col_idx)}{row+1}"
-                    wk_key = (monday_date, period, day, pre)
-                    mapping_by_week.setdefault(wk_key, {'student': stu, 'cell': cell, 'date': date_anchor})
+                    mapping_by_week.setdefault(key_wk, {'student': stu, 'cell': cell, 'date': date_anchor})
                     # date-based index for cross-file matching
                     dt_key = (pd.to_datetime(date_anchor).date(), period, pre)
-                    # prefer first seen student for stability
                     index_by_date.setdefault(dt_key, {'student': stu, 'cell': cell, 'day': day})
     
-        return mapping_by_week, index_by_date, roster_week, day_roster, week_dates, occupied, diag_weeks
+        return mapping_by_week, index_by_date, roster_week, day_roster, week_dates, occupied, diag_weeks, slot_counts
     
     # -----------------------------
     # UI - File uploads
@@ -2144,25 +2147,24 @@ elif mode == "OPD MD PA Conflict Detector":
         availability_rows = []
         suggestions = []
         diagnostics = []
+        dup_rows_all = []  # accumulate in-slot duplicates FYI
     
         for sheet in selected_sheets:
             df_md = load_sheet(md_file, sheet)
             df_pa = load_sheet(pa_file, sheet)
     
             (md_map_wk, md_idx_date, md_roster_wk, md_day_roster, md_week_dates,
-             md_occupied, md_diag) = build_maps_and_roster(df_md)
+             md_occupied, md_diag, md_slot_counts) = build_maps_and_roster(df_md)
             (pa_map_wk, pa_idx_date, pa_roster_wk, pa_day_roster, pa_week_dates,
-             pa_occupied, pa_diag) = build_maps_and_roster(df_pa)
+             pa_occupied, pa_diag, pa_slot_counts) = build_maps_and_roster(df_pa)
             diagnostics.append({'site': sheet, 'md': md_diag, 'pa': pa_diag})
     
             # --------- CONFLICTS by actual date ---------
-            # intersect by (date, period, preceptor)
             md_keys = set(md_idx_date.keys())
             pa_keys = set(pa_idx_date.keys())
             for (date_obj, period, pre) in sorted(md_keys & pa_keys):
                 md_entry = md_idx_date[(date_obj, period, pre)]
                 pa_entry = pa_idx_date[(date_obj, period, pre)]
-                # Build row (site/date/day/period/preceptor + both students)
                 conflict_rows.append({
                     'site': sheet,
                     'date': date_obj,
@@ -2188,25 +2190,38 @@ elif mode == "OPD MD PA Conflict Detector":
                         if not day_pool:
                             continue
                         for pre in sorted(day_pool):
-                            # booked = has a student in MD or PA on this exact date/period
+                            # AVAILABLE if present but NOT booked with a student in MD or PA on this exact date/period
                             booked = ((date_obj, period, pre) in md_idx_date) or ((date_obj, period, pre) in pa_idx_date)
                             if not booked:
                                 availability_rows.append({
                                     'site': sheet,
-                                    'week_monday': monday_date,
                                     'date': date_obj,
                                     'day': day,
                                     'period': period,
                                     'preceptor': pre,
                                     'status': 'available'
                                 })
-
+    
+            # --------- In-slot duplicates FYI (same preceptor on multiple rows for same slot) ---------
+            for (monday_date, period, day, pre), cnt in md_slot_counts.items():
+                if cnt > 1:
+                    date_obj = (md_week_dates.get(monday_date, {}) or pa_week_dates.get(monday_date, {})).get(day)
+                    dup_rows_all.append({
+                        'site': sheet, 'sheet': 'MD', 'date': date_obj, 'day': day, 'period': period,
+                        'preceptor': pre, 'rows_in_slot': cnt
+                    })
+            for (monday_date, period, day, pre), cnt in pa_slot_counts.items():
+                if cnt > 1:
+                    date_obj = (md_week_dates.get(monday_date, {}) or pa_week_dates.get(monday_date, {})).get(day)
+                    dup_rows_all.append({
+                        'site': sheet, 'sheet': 'PA', 'date': date_obj, 'day': day, 'period': period,
+                        'preceptor': pre, 'rows_in_slot': cnt
+                    })
     
         conflicts_df = pd.DataFrame(conflict_rows)
         availability_df = pd.DataFrame(availability_rows)
     
         # --------- SUGGESTIONS (top-3) by same site/date/period ---------
-        suggestions = []
         if not conflicts_df.empty and not availability_df.empty:
             # prioritize availability rows that match a conflict slot
             conflict_keys = set(zip(conflicts_df['site'], conflicts_df['date'], conflicts_df['period']))
@@ -2250,6 +2265,11 @@ elif mode == "OPD MD PA Conflict Detector":
                     })
     
         suggestions_df = pd.DataFrame(suggestions) if suggestions else pd.DataFrame()
+        if not suggestions_df.empty:
+            suggestions_df = suggestions_df.drop_duplicates(
+                subset=['site','date','period','conflict_preceptor','suggested_preceptor'],
+                keep='first'
+            )
     
         # -----------------------------
         # Results UI
@@ -2306,7 +2326,41 @@ elif mode == "OPD MD PA Conflict Detector":
                     file_name="opd_targeted_suggestions.csv",
                     mime="text/csv"
                 )
-
+    
+        # In-slot duplicate rows (FYI)
+        show_dups = st.toggle("Show in-slot duplicate rows (FYI)", value=False)
+        if show_dups:
+            if dup_rows_all:
+                dups_df = pd.DataFrame(dup_rows_all).sort_values(['site','date','period','preceptor','sheet'])
+                st.markdown("**In-slot duplicate rows** — same preceptor appears on multiple rows for the same site/date/AM-PM.")
+                st.dataframe(dups_df, use_container_width=True)
+                st.download_button(
+                    label="Download duplicate-rows CSV",
+                    data=dups_df.to_csv(index=False).encode('utf-8'),
+                    file_name="opd_in_slot_duplicates.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.info("No in-slot duplicate rows found.")
+    
+        # Diagnostics
+        with st.expander("Diagnostics: detected weeks & inferred days"):
+            if not diagnostics:
+                st.write("No diagnostics.")
+            else:
+                for site_diag in diagnostics:
+                    st.write(f"**Site:** {site_diag['site']}")
+                    for who in ['md','pa']:
+                        st.write(f"- {who.upper()} sheet:")
+                        rows = site_diag[who]
+                        if not rows:
+                            st.write("  (no week headers found)")
+                            continue
+                        for r in rows:
+                            md = r.get('monday_date')
+                            inferred = r.get('inferred_days', [])
+                            dr = r.get('date_row')
+                            st.write(f"  • monday_date={md}, date_row={dr}, inferred_days={inferred}")
+    
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
-
