@@ -1918,6 +1918,7 @@ elif mode == "OPD MD PA Conflict Detector":
     # Config & Constants
     # -----------------------------
     DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+    DAY_TO_IDX = {d:i for i,d in enumerate(DAYS)}  # Monday -> 0, ... Sunday -> 6
     DEFAULT_FOCUS = ['HOPE_DRIVE','NYES','ETOWN']
     
     # Parser behavior flags
@@ -1940,46 +1941,73 @@ elif mode == "OPD MD PA Conflict Detector":
     def load_sheet(file, sheet_name):
         return pd.read_excel(file, sheet_name=sheet_name, header=None)
     
+    def _try_parse_date(x):
+        try:
+            d = pd.to_datetime(x, errors='coerce')
+            if pd.notna(d):
+                return d
+            return None
+        except Exception:
+            return None
+    
     def find_week_headers(df: pd.DataFrame):
         """
-        Return [(day_header_row, date_row, monday_date)].
-        - Detects 'Monday' case-insensitively in Column B (index 1)
-        - Allows up to 3 spacer rows before the actual dates row
-        - Parses the Monday DATE from the dates row (col B) if present; otherwise None
+        Robustly find week header blocks.
+        Returns a list of tuples: (day_header_row_index, date_row_index, monday_date[date])
+        Rules:
+          - Search Column B (index 1) for a cell equal to 'monday' (case-insensitive, trimmed)
+          - Within the next 10 rows, pick the first row where B..H has >=2 parseable dates => that's the dates row
+          - Derive monday_date:
+               * If column B of the dates row parses, use that as Monday.
+               * Else, if any other day column parses (e.g., Thursday), infer Monday by subtracting its weekday offset.
+          - If no usable dates row is found, we still return (day_row, None, None) so caller can skip cleanly.
         """
         col = 1  # Column B
-        # case-insensitive match for 'Monday'
         s = df.iloc[:, col].astype(str).str.strip().str.lower()
         day_rows = df.index[s.eq('monday')].tolist()
     
         headers = []
         for dr in day_rows:
-            # look ahead up to 3 rows to find a row where col B parses as a date
             date_r = None
-            monday_val = None
-            for look_ahead in range(1, 4):  # +1, +2, +3
+            monday_date = None
+    
+            # search up to 10 rows below "Monday" for a plausible dates row (>=2 real dates in B..H)
+            for look_ahead in range(1, 11):
                 r = dr + look_ahead
                 if r >= len(df):
                     break
-                val = df.iat[r, col]
-                # accept anything that can parse to a date
-                try:
-                    parsed = pd.to_datetime(val)
-                    if pd.notna(parsed):
-                        date_r = r
-                        monday_val = parsed
-                        break
-                except Exception:
-                    continue
-            md = None
-            if monday_val is not None:
-                try:
-                    md = pd.to_datetime(monday_val).date()
-                except Exception:
-                    md = None
-            headers.append((dr, date_r, md))
+                parsed_flags = []
+                parsed_dates = {}
+                for i, day in enumerate(DAYS, start=0):
+                    c = 1 + i  # B..H
+                    if c >= df.shape[1]:
+                        continue
+                    val = df.iat[r, c]
+                    parsed = _try_parse_date(val)
+                    if parsed is not None:
+                        parsed_flags.append(True)
+                        parsed_dates[i] = parsed
+                    else:
+                        parsed_flags.append(False)
+                if sum(parsed_flags) >= 2:  # good enough to treat as dates row
+                    date_r = r
+                    # derive monday_date:
+                    if 0 in parsed_dates:
+                        monday_date = parsed_dates[0].date()
+                    else:
+                        # infer Monday from any known date in the row
+                        # choose the leftmost parsed date for stability
+                        idxs_sorted = sorted(parsed_dates.keys())
+                        if idxs_sorted:
+                            i0 = idxs_sorted[0]
+                            d0 = parsed_dates[i0]
+                            # i0 is offset from Monday; go backwards i0 days to get Monday
+                            monday_candidate = (d0 - pd.Timedelta(days=i0)).date()
+                            monday_date = monday_candidate
+                    break
+    
+            headers.append((dr, date_r, monday_date))
         return headers
-
     
     def row_to_week_monday(row_idx: int, headers):
         """Return the monday_date for the most recent header above row_idx."""
@@ -2025,6 +2053,7 @@ elif mode == "OPD MD PA Conflict Detector":
           week_dates:{(monday_date) -> {day -> actual date}}
           occupied:  set of (monday_date, period, day, preceptor) even if student is blank
           day_roster:{(monday_date, period, day) -> set(preceptors present that day/period)}          # day-level
+          diag_weeks: list of diagnostics dicts for UI (which days were inferred, etc.)
         """
         def is_placeholder_preceptor(text: str) -> bool:
             if not text:
@@ -2055,25 +2084,35 @@ elif mode == "OPD MD PA Conflict Detector":
         day_roster = defaultdict(set)    # day-level
         week_dates = defaultdict(dict)
         occupied = set()
+        diag_weeks = []
     
-        # calendar anchors
-        for (_, date_row, monday_date) in headers:
+        # calendar anchors (with inference fallback)
+        for (day_row, date_row, monday_date) in headers:
             if monday_date is None or date_row is None:
                 continue
+            inferred_days = []
             for i, day in enumerate(DAYS, start=0):
-                col_idx = 1 + i  # days spread across columns B..H
+                col_idx = 1 + i  # B..H
                 if col_idx < df.shape[1]:
                     val = df.iat[date_row, col_idx]
-                    parsed = pd.to_datetime(val, errors='coerce')
-                    if pd.notna(parsed):
+                    parsed = _try_parse_date(val)
+                    if parsed is not None:
                         week_dates[monday_date][day] = parsed.date()
                     else:
-                        # Fallback: infer from the monday_date + i days
+                        # fallback to Monday + i days
                         try:
-                            week_dates[monday_date][day] = (pd.to_datetime(monday_date) + pd.Timedelta(days=i)).date()
+                            fallback = (pd.to_datetime(monday_date) + pd.Timedelta(days=i)).date()
+                            week_dates[monday_date][day] = fallback
+                            inferred_days.append(day)
                         except Exception:
                             week_dates[monday_date][day] = None
-            
+                            inferred_days.append(day)
+            diag_weeks.append({
+                'monday_date': monday_date,
+                'date_row': date_row,
+                'inferred_days': inferred_days
+            })
+    
         # parse inside AM/PM runs
         for period, rstart, rend in runs:
             monday_date = row_to_week_monday(rstart, headers)
@@ -2101,14 +2140,14 @@ elif mode == "OPD MD PA Conflict Detector":
                     # keep booking only if real student + valid date
                     if stu is None:
                         continue
-                    if REQUIRE_VALID_DATE and pd.to_datetime(date_anchor, errors='coerce') is pd.NaT:
+                    if REQUIRE_VALID_DATE and _try_parse_date(date_anchor) is None:
                         continue
     
                     cell = f"{chr(ord('A')+col_idx)}{row+1}"
                     key = (monday_date, period, day, pre)
                     mapping.setdefault(key, {'student': stu, 'cell': cell, 'date': date_anchor})
     
-        return mapping, roster, week_dates, occupied, day_roster
+        return mapping, roster, week_dates, occupied, day_roster, diag_weeks
     
     # -----------------------------
     # UI - File uploads
@@ -2136,14 +2175,16 @@ elif mode == "OPD MD PA Conflict Detector":
     
         conflict_rows = []
         availability_rows = []
-        suggestions = []              # collect here; always define DataFrame later
+        suggestions = []
+        diagnostics = []  # collect diag info from each sheet
     
         for sheet in selected_sheets:
             df_md = load_sheet(md_file, sheet)
             df_pa = load_sheet(pa_file, sheet)
     
-            md_map, md_roster, md_week_dates, md_occupied, md_day_roster = build_maps_and_roster(df_md)
-            pa_map, pa_roster, pa_week_dates, pa_occupied, pa_day_roster = build_maps_and_roster(df_pa)
+            md_map, md_roster, md_week_dates, md_occupied, md_day_roster, md_diag = build_maps_and_roster(df_md)
+            pa_map, pa_roster, pa_week_dates, pa_occupied, pa_day_roster, pa_diag = build_maps_and_roster(df_pa)
+            diagnostics.append({'site': sheet, 'md': md_diag, 'pa': pa_diag})
     
             # Conflicts: same (week, period, day, preceptor) exists in both maps (i.e., real student on both sides)
             keys_intersection = set(md_map.keys()) & set(pa_map.keys())
@@ -2291,6 +2332,25 @@ elif mode == "OPD MD PA Conflict Detector":
                     file_name="opd_targeted_suggestions.csv",
                     mime="text/csv"
                 )
+    
+        # Diagnostics
+        with st.expander("Diagnostics: detected weeks & inferred days"):
+            if not diagnostics:
+                st.write("No diagnostics.")
+            else:
+                for site_diag in diagnostics:
+                    st.write(f"**Site:** {site_diag['site']}")
+                    for who in ['md','pa']:
+                        st.write(f"- {who.upper()} sheet:")
+                        rows = site_diag[who]
+                        if not rows:
+                            st.write("  (no week headers found)")
+                            continue
+                        for r in rows:
+                            md = r.get('monday_date')
+                            inferred = r.get('inferred_days', [])
+                            dr = r.get('date_row')
+                            st.write(f"  • monday_date={md}, date_row={dr}, inferred_days={inferred}")
     
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
