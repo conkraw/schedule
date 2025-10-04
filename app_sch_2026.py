@@ -2191,17 +2191,15 @@ elif mode == "OPD MD PA Conflict Detector":
                             continue
                         for pre in sorted(day_pool):
                             # AVAILABLE if present but NOT booked with a student in MD or PA on this exact date/period
-                            booked = ((date_obj, period, pre) in md_idx_date) or ((date_obj, period, pre) in pa_idx_date)
-                            if not booked:
-                                availability_rows.append({
-                                    'site': sheet,
-                                    'date': date_obj,
-                                    'day': day,
-                                    'period': period,
-                                    'preceptor': pre,
-                                    'status': 'available'
-                                })
-    
+                            availability_rows.append({
+                            'site': sheet,
+                            'date': date_obj,
+                            'day': day,
+                            'period': period,
+                            'preceptor': pre,
+                            'status': 'available'
+                        })
+                            
             # --------- In-slot duplicates FYI (same preceptor on multiple rows for same slot) ---------
             for (monday_date, period, day, pre), cnt in md_slot_counts.items():
                 if cnt > 1:
