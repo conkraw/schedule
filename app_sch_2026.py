@@ -2456,26 +2456,16 @@ elif mode == "OPD MD PA Conflict Detector":
                     mime="text/csv"
                 )
 
-        # -----------------------------
-        # Annotated copies (MD/PA) with conflicts highlighted in RED
-        # -----------------------------
         from io import BytesIO
         from openpyxl import load_workbook
-        from openpyxl.styles import Font, PatternFill, Color
-
-        st.markdown("---")
-        st.subheader("Download annotated OPDs (conflicts highlighted in RED)")
-        use_yellow_fill = st.toggle("Also highlight cells with pale yellow fill", value=False)
-        st.caption(
-            "Cells are red when the *other* OPD already has that preceptor booked for the same site, date, and AM/PM. "
-            "Fill is optional."
-        )
-
+        from openpyxl.styles import Font, Color, Border, Side, PatternFill
+        from openpyxl.comments import Comment
+        
         def _annot_make_copy(uploaded_file, other_idx_by_site: dict, selected_sheets: list) -> bytes:
             """
-            Create an annotated .xlsx: cells turn RED (font) when the *other* OPD
-            already books (same site, same DATE, same AM/PM, same PRECEPTOR).
-            No fills, no deletions—just red text.
+            Create an annotated .xlsx: cells get RED font (if not CF-overridden),
+            PLUS a thick RED BORDER and a small comment so the conflict is always visible
+            even when Conditional Formatting forces a different font color.
             """
             raw = uploaded_file.getvalue()
             wb = load_workbook(BytesIO(raw))
@@ -2511,7 +2501,9 @@ elif mode == "OPD MD PA Conflict Detector":
                 ]
                 return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
         
-            OPAQUE_RED = Color(rgb="FFFF0000")  # ARGB: FF alpha + FF0000 red
+            OPAQUE_RED = Color(rgb="FFFF0000")  # ARGB
+            RED_SIDE   = Side(style="thick", color="FFFF0000")
+            RED_BORDER = Border(left=RED_SIDE, right=RED_SIDE, top=RED_SIDE, bottom=RED_SIDE)
         
             for sheet in selected_sheets:
                 if sheet not in wb.sheetnames:
@@ -2538,7 +2530,7 @@ elif mode == "OPD MD PA Conflict Detector":
         
                 other_idx = other_idx_by_site.get(sheet, {})  # {(date, period, pre): {...}}
         
-                # walk AM/PM runs and mark red if the other file books the same slot
+                # walk AM/PM runs and mark visually if the other file books the same slot
                 for period, rstart, rend in runs:
                     monday_date = row_to_week_monday(rstart, headers)
                     if monday_date is None:
@@ -2561,30 +2553,35 @@ elif mode == "OPD MD PA Conflict Detector":
                                 addr = f"{chr(ord('A')+c_idx)}{row+1}"
                                 cell = ws[addr]
         
-                                # Clear any existing fill (keeps background neutral)
-                                cell.fill = PatternFill(fill_type=None)
-        
-                                # Optional: reset style to avoid theme/CF overrides
-                                try:
-                                    cell.style = "Normal"
-                                except Exception:
-                                    pass
-        
-                                # Preserve existing font props, set opaque red
+                                # Try to ensure the font is red (may be visually overridden by CF)
                                 f = cell.font or Font()
                                 try:
-                                    # works on newer openpyxl: copy returns a new Font
-                                    cell.font = f.copy(color="FFFF0000")
+                                    cell.font = f.copy(color="FFFF0000", bold=f.bold)  # keep bold if present
                                 except Exception:
                                     cell.font = Font(
                                         name=f.name, size=f.size or 11, bold=f.bold,
                                         italic=f.italic, underline=f.underline, color=OPAQUE_RED
                                     )
         
+                                # Add a thick red border (rarely overridden by CF)
+                                cell.border = RED_BORDER
+        
+                                # Add a small comment (red triangle) to make the conflict obvious
+                                # (Excel shows an indicator even if the comment is not opened)
+                                if cell.comment is None:
+                                    who = "MD↔PA conflict"
+                                    txt = f"Already booked in the other OPD\n{sheet} — {day} {dt} — {period}\nPreceptor: {pre}"
+                                    try:
+                                        cell.comment = Comment(txt, who)
+                                    except Exception:
+                                        # Some very old Excel versions can be finicky; safe to ignore
+                                        pass
+        
             out = BytesIO()
             wb.save(out)
             out.seek(0)
             return out.getvalue()
+
             
         # Build per-site indices so each file can be colored against the other
         # site_ctx[...] was built above in your loop
