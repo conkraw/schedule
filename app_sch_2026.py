@@ -24,6 +24,7 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import column_index_from_string
+import re, unicodedata
 
 st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
 st.title("Batch Preceptor → REDCap Import Generator")
@@ -2042,20 +2043,50 @@ elif mode == "OPD MD PA Conflict Detector":
             ]
             return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
 
-        def parse_cell(val: str):
-            if not isinstance(val, str): 
-                return None, None
-            parts = val.split('~', 1)
-            pre = parts[0].strip()
-            stu = parts[1].strip() if len(parts) == 2 else None
+    def parse_cell(val: str):
+        """
+        Returns (preceptor, student_or_None).
+    
+        Robust to weird whitespace and 'blank-ish' RHS after '~'
+        (e.g. '~', '~   ', '~—', '~nan', '~ref').
+        """
+        if not isinstance(val, str):
+            return None, None
+    
+        def norm(s: str) -> str:
+            s = unicodedata.normalize("NFKC", s)        # normalize unicode
+            s = s.replace("\u00A0", " ")               # NBSP -> space
+            s = s.replace("\u2013", "-").replace("\u2014", "-")  # en/em dash -> hyphen
+            s = s.strip()
+            s = re.sub(r"\s+", " ", s)                 # collapse spaces
+            return s
+    
+        BLANK_TOKENS = {"", "nan", "n/a", "na", "-", "--", "—", "none", "null"}
+        PLACEHOLDER_HINTS = {"note", "notes", "ref", "reference", "info", "fyi"}
+    
+        raw = norm(val)
+    
+        # No tilde: just a preceptor name (no student)
+        if "~" not in raw:
+            pre = norm(raw)
+            return (pre if pre else None), None
+    
+        # Split on ~ with optional surrounding spaces
+        pre, rhs = re.split(r"\s*~\s*", raw, maxsplit=1)
+        pre = norm(pre)
+        rhs = norm(rhs)
+    
+        # Treat RHS as no student unless it has at least one letter/number
+        rhs_lower = rhs.lower()
+        if (
+            rhs_lower in BLANK_TOKENS
+            or not re.search(r"[a-z0-9]", rhs_lower)
+            or any(h in rhs_lower for h in PLACEHOLDER_HINTS)
+        ):
+            rhs = None
+    
+        return (pre if pre else None), rhs
 
-            # Treat blank-ish RHS as no student
-            if stu:
-                norm = stu.strip().lower()
-                if norm in {"", "nan", "n/a", "na", "-", "--", "—", "none"}:
-                    stu = None
-
-            return pre, stu
 
         headers = find_week_headers(df)
         runs = detect_am_pm_runs(df, start_row=0)
