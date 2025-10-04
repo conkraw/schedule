@@ -2306,26 +2306,7 @@ elif mode == "OPD MD PA Conflict Detector":
                     file_name="opd_targeted_suggestions.csv",
                     mime="text/csv"
                 )
-    
-        # Diagnostics
-        with st.expander("Diagnostics: detected weeks & inferred days"):
-            if not diagnostics:
-                st.write("No diagnostics.")
-            else:
-                for site_diag in diagnostics:
-                    st.write(f"**Site:** {site_diag['site']}")
-                    for who in ['md','pa']:
-                        st.write(f"- {who.upper()} sheet:")
-                        rows = site_diag[who]
-                        if not rows:
-                            st.write("  (no week headers found)")
-                            continue
-                        for r in rows:
-                            md = r.get('monday_date')
-                            inferred = r.get('inferred_days', [])
-                            dr = r.get('date_row')
-                            st.write(f"  • monday_date={md}, date_row={dr}, inferred_days={inferred}")
-    
+
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
 
