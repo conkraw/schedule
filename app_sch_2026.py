@@ -2103,7 +2103,7 @@ elif mode == "OPD MD PA Conflict Detector":
                     roster_week[(monday_date, period)].add(pre)
                     day_roster[(monday_date, period, day)].add(pre)
                     slot_counts[key_wk] += 1
-                    occupied.add(key_wk)  # blocks availability if we were using presence; we'll use booking check instead
+                    occupied.add(key_wk)  # presence marker
     
                     # Keep booking only if real student + valid date
                     if stu is None:
@@ -2142,6 +2142,17 @@ elif mode == "OPD MD PA Conflict Detector":
         if not selected_sheets:
             st.warning("No common sheets selected.")
             st.stop()
+    
+        # Admin controls for suggestions/availability behavior
+        st.markdown("### Options")
+        allow_double = st.checkbox(
+            "Allow suggesting preceptors even if they already have one student in that slot",
+            value=True
+        )
+        allow_same_preceptor = st.checkbox(
+            "Allow suggesting the same preceptor (they can take both learners)",
+            value=True
+        )
     
         conflict_rows = []
         availability_rows = []
@@ -2190,16 +2201,29 @@ elif mode == "OPD MD PA Conflict Detector":
                         if not day_pool:
                             continue
                         for pre in sorted(day_pool):
-                            # AVAILABLE if present but NOT booked with a student in MD or PA on this exact date/period
-                            availability_rows.append({
-                            'site': sheet,
-                            'date': date_obj,
-                            'day': day,
-                            'period': period,
-                            'preceptor': pre,
-                            'status': 'available'
-                        })
-                            
+                            if allow_double:
+                                # Everyone present is eligible (even if already has one student)
+                                availability_rows.append({
+                                    'site': sheet,
+                                    'date': date_obj,
+                                    'day': day,
+                                    'period': period,
+                                    'preceptor': pre,
+                                    'status': 'available'
+                                })
+                            else:
+                                # Only present-and-unbooked are eligible
+                                booked = ((date_obj, period, pre) in md_idx_date) or ((date_obj, period, pre) in pa_idx_date)
+                                if not booked:
+                                    availability_rows.append({
+                                        'site': sheet,
+                                        'date': date_obj,
+                                        'day': day,
+                                        'period': period,
+                                        'preceptor': pre,
+                                        'status': 'available'
+                                    })
+    
             # --------- In-slot duplicates FYI (same preceptor on multiple rows for same slot) ---------
             for (monday_date, period, day, pre), cnt in md_slot_counts.items():
                 if cnt > 1:
@@ -2220,6 +2244,7 @@ elif mode == "OPD MD PA Conflict Detector":
         availability_df = pd.DataFrame(availability_rows)
     
         # --------- SUGGESTIONS (top-3) by same site/date/period ---------
+        suggestions = []
         if not conflicts_df.empty and not availability_df.empty:
             # prioritize availability rows that match a conflict slot
             conflict_keys = set(zip(conflicts_df['site'], conflicts_df['date'], conflicts_df['period']))
@@ -2237,9 +2262,20 @@ elif mode == "OPD MD PA Conflict Detector":
                     (availability_df['date'] == r['date']) &
                     (availability_df['period'] == r['period'])
                 ]
-                candidates = same_slot[same_slot['preceptor'] != r['preceptor']]
+    
+                if allow_same_preceptor:
+                    candidates = same_slot  # include the same preceptor too
+                else:
+                    candidates = same_slot[same_slot['preceptor'] != r['preceptor']]
+    
                 if not candidates.empty:
-                    for _, a in candidates.sort_values('preceptor').head(3).iterrows():
+                    # If including same preceptor, show them first
+                    if allow_same_preceptor:
+                        candidates = candidates.assign(
+                            _self=(candidates['preceptor'] == r['preceptor'])
+                        ).sort_values(['_self','preceptor'], ascending=[False, True]).drop(columns=['_self'])
+    
+                    for _, a in candidates.head(3).iterrows():
                         suggestions.append({
                             'site': r['site'],
                             'date': r['date'],
@@ -2248,7 +2284,11 @@ elif mode == "OPD MD PA Conflict Detector":
                             'conflict_preceptor': r['preceptor'],
                             'md_student': r['md_student'],
                             'pa_student': r['pa_student'],
-                            'suggested_preceptor': a['preceptor']
+                            'suggested_preceptor': (
+                                f"{a['preceptor']} (currently assigned)"
+                                if allow_same_preceptor and a['preceptor'] == r['preceptor']
+                                else a['preceptor']
+                            )
                         })
                 else:
                     suggestions.append({
@@ -2298,7 +2338,7 @@ elif mode == "OPD MD PA Conflict Detector":
         # Availability behind a toggle
         show_avail = st.toggle("Show availability (proxy)", value=False)
         if show_avail:
-            st.markdown("**Availability (proxy)** – Preceptors present on the **same site/date/AM-PM** but not booked in MD or PA.")
+            st.markdown("**Availability (proxy)** – Preceptors present on the **same site/date/AM-PM** (per your options above).")
             if availability_df.empty:
                 st.info("No availability found (or no day-level roster detected for the selected weeks).")
             else:
