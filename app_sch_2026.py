@@ -2448,134 +2448,134 @@ elif mode == "OPD MD PA Conflict Detector":
                     file_name="opd_targeted_suggestions_cross_site.csv",
                     mime="text/csv"
                 )
-    # -----------------------------
-    # Annotated copies (MD/PA) with conflicts highlighted in RED
-    # -----------------------------
-    from io import BytesIO
-    from openpyxl import load_workbook
-    from openpyxl.styles import Font
-
-    def _annot_make_copy(uploaded_file, other_idx_by_site: dict, selected_sheets: list) -> bytes:
-        """
-        Make an .xlsx where cells are red if the *other* file already books the same
-        (site, DATE, AM/PM, preceptor). We don't change text; only font color.
-        """
-        raw = uploaded_file.getvalue()
-        wb = load_workbook(BytesIO(raw))
-
-        # helpers to mirror your parser
-        import re, unicodedata
-        def _norm(s: str) -> str:
-            s = unicodedata.normalize("NFKC", s).replace("\u00A0"," ")
-            s = s.replace("\u2013","-").replace("\u2014","-")
-            return re.sub(r"\s+"," ", s.strip())
-        def _parse_cell(val: str):
-            if not isinstance(val, str): return None, None
-            raw = _norm(val)
-            if "~" not in raw:
-                pre = _norm(raw); return (pre if pre else None), None
-            pre, rhs = re.split(r"\s*~\s*", raw, maxsplit=1)
-            pre = _norm(pre); rhs = _norm(rhs)
-            if rhs.lower() in {"", "nan", "n/a", "na", "-", "--", "—", "none", "null"}:
-                rhs = None
-            return (pre if pre else None), rhs
-        def _is_placeholder_preceptor(text: str) -> bool:
-            if not text: return True
-            t = text.strip().upper()
-            EXCLUDE_PREFIXES = [
-                'CLOSED','CLOSE','BLOCK','VACATION','ADMIN','MEETING','NO CLINIC',
-                'CLINIC CANCELLED','CANCELLED','HOLIDAY','OFF','PTO','SICK',
-                'NOTE','NOTES','REFERENCE','INFO','FYI','ORIENTATION'
-            ]
-            return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
-
-        for sheet in selected_sheets:
-            if sheet not in wb.sheetnames:
-                continue
-            ws = wb[sheet]
-
-            # rebuild date mapping for this uploaded file
-            df = load_sheet(uploaded_file, sheet)
-            headers = find_week_headers(df)
-            runs = detect_am_pm_runs(df, start_row=0)
-            week_dates = {}
-            for (_day_row, date_row, monday_date) in headers:
-                if monday_date is None or date_row is None:
-                    continue
-                week_dates.setdefault(monday_date, {})
-                for i, day in enumerate(DAYS):
-                    col_idx = 1 + i  # B..H
-                    if col_idx >= df.shape[1]:
+            # -----------------------------
+            # Annotated copies (MD/PA) with conflicts highlighted in RED
+            # -----------------------------
+            from io import BytesIO
+            from openpyxl import load_workbook
+            from openpyxl.styles import Font
+        
+            def _annot_make_copy(uploaded_file, other_idx_by_site: dict, selected_sheets: list) -> bytes:
+                """
+                Make an .xlsx where cells are red if the *other* file already books the same
+                (site, DATE, AM/PM, preceptor). We don't change text; only font color.
+                """
+                raw = uploaded_file.getvalue()
+                wb = load_workbook(BytesIO(raw))
+        
+                # helpers to mirror your parser
+                import re, unicodedata
+                def _norm(s: str) -> str:
+                    s = unicodedata.normalize("NFKC", s).replace("\u00A0"," ")
+                    s = s.replace("\u2013","-").replace("\u2014","-")
+                    return re.sub(r"\s+"," ", s.strip())
+                def _parse_cell(val: str):
+                    if not isinstance(val, str): return None, None
+                    raw = _norm(val)
+                    if "~" not in raw:
+                        pre = _norm(raw); return (pre if pre else None), None
+                    pre, rhs = re.split(r"\s*~\s*", raw, maxsplit=1)
+                    pre = _norm(pre); rhs = _norm(rhs)
+                    if rhs.lower() in {"", "nan", "n/a", "na", "-", "--", "—", "none", "null"}:
+                        rhs = None
+                    return (pre if pre else None), rhs
+                def _is_placeholder_preceptor(text: str) -> bool:
+                    if not text: return True
+                    t = text.strip().upper()
+                    EXCLUDE_PREFIXES = [
+                        'CLOSED','CLOSE','BLOCK','VACATION','ADMIN','MEETING','NO CLINIC',
+                        'CLINIC CANCELLED','CANCELLED','HOLIDAY','OFF','PTO','SICK',
+                        'NOTE','NOTES','REFERENCE','INFO','FYI','ORIENTATION'
+                    ]
+                    return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
+        
+                for sheet in selected_sheets:
+                    if sheet not in wb.sheetnames:
                         continue
-                    parsed = pd.to_datetime(df.iat[date_row, col_idx], errors='coerce')
-                    if pd.notna(parsed):
-                        week_dates[monday_date][day] = parsed.date()
-
-            other_idx = other_idx_by_site.get(sheet, {})
-
-            for period, rstart, rend in runs:
-                monday_date = row_to_week_monday(rstart, headers)
-                if monday_date is None:
-                    continue
-                for c_idx, day in enumerate(DAYS, start=1):  # B..H
-                    dt = week_dates.get(monday_date, {}).get(day)
-                    if dt is None:
-                        continue
-                    for row in range(rstart, rend+1):
-                        if c_idx >= df.shape[1]:
+                    ws = wb[sheet]
+        
+                    # rebuild date mapping for this uploaded file
+                    df = load_sheet(uploaded_file, sheet)
+                    headers = find_week_headers(df)
+                    runs = detect_am_pm_runs(df, start_row=0)
+                    week_dates = {}
+                    for (_day_row, date_row, monday_date) in headers:
+                        if monday_date is None or date_row is None:
                             continue
-                        val = df.iat[row, c_idx]
-                        if pd.isna(val) or not isinstance(val, str):
+                        week_dates.setdefault(monday_date, {})
+                        for i, day in enumerate(DAYS):
+                            col_idx = 1 + i  # B..H
+                            if col_idx >= df.shape[1]:
+                                continue
+                            parsed = pd.to_datetime(df.iat[date_row, col_idx], errors='coerce')
+                            if pd.notna(parsed):
+                                week_dates[monday_date][day] = parsed.date()
+        
+                    other_idx = other_idx_by_site.get(sheet, {})
+        
+                    for period, rstart, rend in runs:
+                        monday_date = row_to_week_monday(rstart, headers)
+                        if monday_date is None:
                             continue
-                        pre, _stu = _parse_cell(val)
-                        if not pre or _is_placeholder_preceptor(pre):
-                            continue
-                        # Mark red if the other file really books this (date, period, preceptor)
-                        if (dt, period, pre) in other_idx:
-                            cell_addr = f"{chr(ord('A')+c_idx)}{row+1}"
-                            cell = ws[cell_addr]
-                            f = cell.font or Font()
-                            cell.font = Font(
-                                name=f.name, size=f.size, bold=f.bold, italic=f.italic,
-                                underline=f.underline, color="FFFF0000"  # opaque red
-                            )
-
-        bio = BytesIO()
-        wb.save(bio)
-        bio.seek(0)
-        return bio.getvalue()
-
-    st.markdown("---")
-    st.subheader("Download annotated OPDs (conflicts highlighted in RED)")
-    st.caption("Cells are red when the *other* OPD already has that preceptor booked for the same site, date, and AM/PM.")
-
-    # Compare each file against the other
-    md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}
-    pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}
-
-    col_md, col_pa = st.columns(2)
-    with col_md:
-        try:
-            md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets)
-            st.download_button(
-                label="Download annotated MD OPD (RED = booked in PA)",
-                data=md_bytes,
-                file_name="md_opd_annotated.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        except Exception as e:
-            st.error(f"MD annotate failed: {e}")
-    with col_pa:
-        try:
-            pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets)
-            st.download_button(
-                label="Download annotated PA OPD (RED = booked in MD)",
-                data=pa_bytes,
-                file_name="pa_opd_annotated.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        except Exception as e:
-            st.error(f"PA annotate failed: {e}")
+                        for c_idx, day in enumerate(DAYS, start=1):  # B..H
+                            dt = week_dates.get(monday_date, {}).get(day)
+                            if dt is None:
+                                continue
+                            for row in range(rstart, rend+1):
+                                if c_idx >= df.shape[1]:
+                                    continue
+                                val = df.iat[row, c_idx]
+                                if pd.isna(val) or not isinstance(val, str):
+                                    continue
+                                pre, _stu = _parse_cell(val)
+                                if not pre or _is_placeholder_preceptor(pre):
+                                    continue
+                                # Mark red if the other file really books this (date, period, preceptor)
+                                if (dt, period, pre) in other_idx:
+                                    cell_addr = f"{chr(ord('A')+c_idx)}{row+1}"
+                                    cell = ws[cell_addr]
+                                    f = cell.font or Font()
+                                    cell.font = Font(
+                                        name=f.name, size=f.size, bold=f.bold, italic=f.italic,
+                                        underline=f.underline, color="FFFF0000"  # opaque red
+                                    )
+        
+                bio = BytesIO()
+                wb.save(bio)
+                bio.seek(0)
+                return bio.getvalue()
+        
+            st.markdown("---")
+            st.subheader("Download annotated OPDs (conflicts highlighted in RED)")
+            st.caption("Cells are red when the *other* OPD already has that preceptor booked for the same site, date, and AM/PM.")
+        
+            # Compare each file against the other
+            md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}
+            pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}
+        
+            col_md, col_pa = st.columns(2)
+            with col_md:
+                try:
+                    md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets)
+                    st.download_button(
+                        label="Download annotated MD OPD (RED = booked in PA)",
+                        data=md_bytes,
+                        file_name="md_opd_annotated.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                except Exception as e:
+                    st.error(f"MD annotate failed: {e}")
+            with col_pa:
+                try:
+                    pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets)
+                    st.download_button(
+                        label="Download annotated PA OPD (RED = booked in MD)",
+                        data=pa_bytes,
+                        file_name="pa_opd_annotated.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                except Exception as e:
+                    st.error(f"PA annotate failed: {e}")
 
 
     else:
