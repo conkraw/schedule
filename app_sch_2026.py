@@ -2456,29 +2456,29 @@ elif mode == "OPD MD PA Conflict Detector":
                     mime="text/csv"
                 )
 
-        how_annotated = st.toggle("Generate annotated OPD files (highlight conflicts in RED)", value=False)
-
+        # -----------------------------
+        # Optional Annotated Downloads Toggle
+        # -----------------------------
+        show_annotated = st.toggle("Generate annotated OPD files (highlight conflicts in RED)", value=False)
+        
         if show_annotated:
             st.markdown("---")
             st.subheader("Download annotated OPDs (conflicts highlighted in RED)")
             st.caption("Cells are red when the *other* OPD already has that preceptor booked for the same site, date, and AM/PM.")
-
-    
+        
             from io import BytesIO
             from openpyxl import load_workbook
-            from openpyxl.styles import Font, Color, Border, Side, PatternFill
-            from openpyxl.comments import Comment
-            
+            from openpyxl.styles import Font
+        
             def _annot_make_copy(uploaded_file, other_idx_by_site: dict, selected_sheets: list) -> bytes:
                 """
-                Create an annotated .xlsx: cells get RED font (if not CF-overridden),
-                PLUS a thick RED BORDER and a small comment so the conflict is always visible
-                even when Conditional Formatting forces a different font color.
+                Return an .xlsx bytes blob with cells highlighted RED when the *other* file
+                already has a booking for (same site, same DATE, same AM/PM, same PRECEPTOR).
+                We do NOT remove or change text; we simply color the font red.
                 """
                 raw = uploaded_file.getvalue()
                 wb = load_workbook(BytesIO(raw))
-            
-                # ---- helpers that mirror your main parser ----
+        
                 import re, unicodedata
                 def _norm(s: str) -> str:
                     s = unicodedata.normalize("NFKC", s)
@@ -2486,7 +2486,7 @@ elif mode == "OPD MD PA Conflict Detector":
                     s = s.replace("\u2013", "-").replace("\u2014", "-")
                     s = re.sub(r"\s+", " ", s.strip())
                     return s
-            
+        
                 def _parse_cell(val: str):
                     if not isinstance(val, str): return None, None
                     raw = _norm(val)
@@ -2494,11 +2494,12 @@ elif mode == "OPD MD PA Conflict Detector":
                         pre = _norm(raw)
                         return (pre if pre else None), None
                     pre, rhs = re.split(r"\s*~\s*", raw, maxsplit=1)
-                    pre = _norm(pre); rhs = _norm(rhs)
+                    pre = _norm(pre)
+                    rhs = _norm(rhs)
                     if rhs.lower() in {"", "nan", "n/a", "na", "-", "--", "—", "none", "null"}:
                         rhs = None
                     return (pre if pre else None), rhs
-            
+        
                 def _is_placeholder_preceptor(text: str) -> bool:
                     if not text: return True
                     t = text.strip().upper()
@@ -2508,42 +2509,36 @@ elif mode == "OPD MD PA Conflict Detector":
                         'NOTE','NOTES','REFERENCE','INFO','FYI','ORIENTATION'
                     ]
                     return any(t.startswith(pfx) for pfx in EXCLUDE_PREFIXES)
-            
-                OPAQUE_RED = Color(rgb="FFFF0000")  # ARGB
-                RED_SIDE   = Side(style="thick", color="FFFF0000")
-                RED_BORDER = Border(left=RED_SIDE, right=RED_SIDE, top=RED_SIDE, bottom=RED_SIDE)
-            
+        
                 for sheet in selected_sheets:
                     if sheet not in wb.sheetnames:
                         continue
                     ws = wb[sheet]
-            
-                    # rebuild date mapping from the uploaded file for this sheet
+        
                     df = load_sheet(uploaded_file, sheet)
                     headers = find_week_headers(df)
                     runs = detect_am_pm_runs(df, start_row=0)
-            
+        
                     week_dates = {}
                     for (_day_row, date_row, monday_date) in headers:
                         if monday_date is None or date_row is None:
                             continue
                         week_dates.setdefault(monday_date, {})
                         for i, day in enumerate(DAYS):
-                            col_idx = 1 + i  # B..H
+                            col_idx = 1 + i
                             if col_idx >= df.shape[1]:
                                 continue
                             parsed = pd.to_datetime(df.iat[date_row, col_idx], errors='coerce')
                             if pd.notna(parsed):
                                 week_dates[monday_date][day] = parsed.date()
-            
-                    other_idx = other_idx_by_site.get(sheet, {})  # {(date, period, pre): {...}}
-            
-                    # walk AM/PM runs and mark visually if the other file books the same slot
+        
+                    other_idx = other_idx_by_site.get(sheet, {})
+        
                     for period, rstart, rend in runs:
                         monday_date = row_to_week_monday(rstart, headers)
                         if monday_date is None:
                             continue
-                        for c_idx, day in enumerate(DAYS, start=1):  # B..H
+                        for c_idx, day in enumerate(DAYS, start=1):
                             dt = week_dates.get(monday_date, {}).get(day)
                             if dt is None:
                                 continue
@@ -2556,63 +2551,50 @@ elif mode == "OPD MD PA Conflict Detector":
                                 pre, _stu = _parse_cell(val)
                                 if not pre or _is_placeholder_preceptor(pre):
                                     continue
-            
                                 if (dt, period, pre) in other_idx:
-                                    addr = f"{chr(ord('A')+c_idx)}{row+1}"
-                                    cell = ws[addr]
-            
-                                    # Try to ensure the font is red (may be visually overridden by CF)
+                                    cell_addr = f"{chr(ord('A')+c_idx)}{row+1}"
+                                    cell = ws[cell_addr]
                                     f = cell.font or Font()
-                                    try:
-                                        cell.font = f.copy(color="FFFF0000", bold=f.bold)  # keep bold if present
-                                    except Exception:
-                                        cell.font = Font(
-                                            name=f.name, size=f.size or 11, bold=f.bold,
-                                            italic=f.italic, underline=f.underline, color=OPAQUE_RED
-                                        )
-            
-                                    # Add a thick red border (rarely overridden by CF)
-                                    cell.border = RED_BORDER
-            
-                                    # Add a small comment (red triangle) to make the conflict obvious
-                                    # (Excel shows an indicator even if the comment is not opened)
-                                    if cell.comment is None:
-                                        who = "MD↔PA conflict"
-                                        txt = f"Already booked in the other OPD\n{sheet} — {day} {dt} — {period}\nPreceptor: {pre}"
-                                        try:
-                                            cell.comment = Comment(txt, who)
-                                        except Exception:
-                                            # Some very old Excel versions can be finicky; safe to ignore
-                                            pass
-            
-                out = BytesIO()
-                wb.save(out)
-                out.seek(0)
-                return out.getvalue()
-    
-                
-            # Build per-site indices so each file can be colored against the other
-            # site_ctx[...] was built above in your loop
+                                    # Bold + RED font, visible on colored backgrounds
+                                    cell.font = Font(name=f.name or "Calibri",
+                                                     size=f.size or 11,
+                                                     bold=True,
+                                                     color="FF0000")
+        
+                bio = BytesIO()
+                wb.save(bio)
+                bio.seek(0)
+                return bio.getvalue()
+        
+            # Compare across files
             md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}
             pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}
-            
+        
             col_md, col_pa = st.columns(2)
             with col_md:
-                md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets)
-                st.download_button(
-                    label="Download annotated MD OPD (RED = booked in PA)",
-                    data=md_bytes,
-                    file_name="md_opd_annotated.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                try:
+                    md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets)
+                    st.download_button(
+                        label="⬇️ Download annotated MD OPD (RED = booked in PA)",
+                        data=md_bytes,
+                        file_name="md_opd_annotated.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                except Exception as e:
+                    st.error(f"MD annotate failed: {e}")
+        
             with col_pa:
-                pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets)
-                st.download_button(
-                    label="Download annotated PA OPD (RED = booked in MD)",
-                    data=pa_bytes,
-                    file_name="pa_opd_annotated.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                try:
+                    pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets)
+                    st.download_button(
+                        label="⬇️ Download annotated PA OPD (RED = booked in MD)",
+                        data=pa_bytes,
+                        file_name="pa_opd_annotated.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                except Exception as e:
+                    st.error(f"PA annotate failed: {e}")
+
 
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
