@@ -2587,19 +2587,17 @@ elif mode == "OPD MD PA Conflict Detector":
             md_compare_against_pa = {s: site_ctx[s]['pa_idx_date'] for s in site_ctx}
             pa_compare_against_md = {s: site_ctx[s]['md_idx_date'] for s in site_ctx}
             
-            show_annotated = st.toggle("Generate annotated OPD files (highlight conflicts in RED)", value=False)
-            if show_annotated:
-                col_md, col_pa = st.columns(2)
-                with col_md:
-                    md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets)
-                    st.download_button("⬇️ MD annotated (RED = booked in PA)", md_bytes,
-                                       "md_opd_annotated.xlsx",
-                                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                with col_pa:
-                    pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets)
-                    st.download_button("⬇️ PA annotated (RED = booked in MD)", pa_bytes,
-                                       "pa_opd_annotated.xlsx",
-                                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            col_md, col_pa = st.columns(2)
+            with col_md:
+                md_bytes = _annot_make_copy(md_file, md_compare_against_pa, selected_sheets)
+                st.download_button("⬇️ MD annotated (RED = booked in PA)", md_bytes,
+                                   "md_opd_annotated.xlsx",
+                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            with col_pa:
+                pa_bytes = _annot_make_copy(pa_file, pa_compare_against_md, selected_sheets)
+                st.download_button("⬇️ PA annotated (RED = booked in MD)", pa_bytes,
+                                   "pa_opd_annotated.xlsx",
+                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 
