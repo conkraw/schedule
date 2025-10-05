@@ -26,8 +26,8 @@ from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import column_index_from_string
 from openpyxl.styles import Font, PatternFill, Color
 
-st.set_page_config(page_title="Batch Preceptor → REDCap Import", layout="wide")
-st.title("Batch Preceptor → REDCap Import Generator")
+st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
+st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule","OPD Check","Create Individual Schedules","OPD MD PA Conflict Detector"))
