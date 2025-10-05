@@ -80,7 +80,7 @@ if mode == "OPD Check":
     
         return runs
     
-    st.title("OPD Preceptor GI‑al Check")
+    st.title("OPD PRECEPTOR CHECK")
     
     baseline_file = st.file_uploader(
         "1) Upload Latest Updated OPD", 
