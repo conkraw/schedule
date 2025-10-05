@@ -183,7 +183,7 @@ if mode == "OPD Check":
     doc = Document()
     doc.add_heading('Change Report', level=1)
     
-    for sheet, change in results.items():
+    for sheet, change in (locals().get('results') or {}).items():
         doc.add_heading(sheet, level=2)
     
         # build week→day map (collect both AM & PM under each day)
