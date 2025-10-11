@@ -2697,54 +2697,40 @@ elif mode == "Shift Availability Tracker":
             st.dataframe(df, use_container_width=True)
 
             # ---- Weekly (Mon–Sat) pivot ----
-            st.write("### Weekly Pivot (Monday–Saturday)")
+            st.write("### Weekly View (one table per week)")
             
-            # choose aggregation for the weekly roll-up
-            week_agg = st.radio(
-                "Weekly aggregation",
-                ["Sum across week", "Max across week (capacity view)"],
-                horizontal=True,
-                index=0
-            )
+            # pick site
+            site_list = sorted(summary["Site"].unique().tolist())
+            site_sel = st.selectbox("Site", site_list, index=site_list.index("HOPE_DRIVE") if "HOPE_DRIVE" in site_list else 0)
             
-            # prepare weekly dataframe
-            weekly = summary.copy()
-            weekly["Date"] = pd.to_datetime(weekly["Date"])
+            # use the deduped/segment-aware counts
+            site_df = summary[summary["Site"] == site_sel].copy()
+            site_df["Date"] = pd.to_datetime(site_df["Date"])
+            site_df["WeekStart"] = site_df["Date"] - pd.to_timedelta(site_df["Date"].dt.weekday, unit="D")
+            site_df["DayName"] = site_df["Date"].dt.day_name()
             
-            # keep only Mon–Sat (Mon=0 ... Sun=6)
-            weekly = weekly[weekly["Date"].dt.weekday <= 5]  # exclude Sundays
+            # day and shift orders
+            day_order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+            def shift_order_for(site):
+                return ["AM - ACUTES","AM - CONTINUITY","PM - ACUTES","PM - CONTINUITY"] if site == "HOPE_DRIVE" else ["AM","PM"]
             
-            # compute Monday-of-week
-            weekly["WeekStart"] = weekly["Date"] - pd.to_timedelta(weekly["Date"].dt.weekday, unit="D")
-            weekly["WeekLabel"] = weekly["WeekStart"].dt.strftime("Week of %Y-%m-%d (Mon–Sat)")
+            shift_order = shift_order_for(site_sel)
             
-            # aggregate within each week
-            aggfunc = "sum" if week_agg.startswith("Sum") else "max"
-            weekly_rollup = (weekly
-                .groupby(["Site", "Shift", "WeekLabel"], as_index=False)["Preceptor_Count"]
-                .agg(aggfunc)
-            )
+            # ensure categorical ordering
+            site_df["DayCat"] = pd.Categorical(site_df["DayName"], categories=day_order, ordered=True)
+            site_df["ShiftCat"] = pd.Categorical(site_df["Shift"], categories=shift_order, ordered=True)
             
-            # optional filters consistent with daily view
-            site_opt_w = ["All"] + sorted(weekly_rollup["Site"].unique().tolist())
-            sel_site_w = st.selectbox("Weekly view — Site", site_opt_w, key="weekly_site")
-            shift_pick_w = st.radio("Weekly view — Shift", ["All", "AM only", "PM only"],
-                                    horizontal=True, key="weekly_shift")
+            # loop weeks in chronological order
+            for wk_start, wk_df in site_df.sort_values("WeekStart").groupby("WeekStart"):
+                st.subheader(f"Week of {wk_start:%Y-%m-%d}")
             
-            dfw = weekly_rollup.copy()
-            if sel_site_w != "All":
-                dfw = dfw[dfw["Site"] == sel_site_w]
-            if shift_pick_w == "AM only":
-                dfw = dfw[dfw["Shift"].str.startswith("AM")]
-            elif shift_pick_w == "PM only":
-                dfw = dfw[dfw["Shift"].str.startswith("PM")]
-            
-            # pivot: rows = Site, Shift; columns = Week
-            pv_week = (dfw
-                .pivot_table(index=["Site","Shift"], columns="WeekLabel",
-                             values="Preceptor_Count", aggfunc="sum", fill_value=0)
-                .sort_index()
-            )
-            
-            st.dataframe(pv_week, use_container_width=True)
+                # pivot to grid: rows=Shift, cols=DayName; use max in case duplicates slipped in
+                grid = (wk_df.pivot_table(index="ShiftCat",
+                                          columns="DayCat",
+                                          values="Preceptor_Count",
+                                          aggfunc="max")
+                             .reindex(index=shift_order, columns=day_order)
+                             .fillna(0).astype(int))
+                grid.index.name = None
+                st.dataframe(grid, use_container_width=True)
 
