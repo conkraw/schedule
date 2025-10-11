@@ -2603,87 +2603,85 @@ elif mode == "OPD MD PA Conflict Detector":
         st.info("Upload both the MD and PA OPD files to begin.")
 
 
-import streamlit as st
-import pandas as pd
-import re
-
-def extract_names(cell: object) -> set[str]:
-    """Return unique preceptor names from a cell (remove ~, split on newlines/;/,/)."""
-    if not isinstance(cell, str):
-        return set()
-    txt = cell.replace("\n", " ").strip()
-    if "~" not in txt:
-        return set()
-    parts = re.split(r"[;/]", txt)  # support multiple names jammed into one cell
-    names = set()
-    for p in parts:
-        base = p.replace("~", "").strip()
-        if base:
-            names.add(base)
-    return names
-
-def find_date_row(df, search_rows=15):
-    best_row, best_count = None, -1
-    for r in range(min(search_rows, len(df))):
-        parsed = pd.to_datetime(df.iloc[r, 1:], errors="coerce")
-        c = parsed.notna().sum()
-        if c > best_count:
-            best_row, best_count = r, c
-    return best_row if best_row is not None else 3
-
-def build_summary_unique(excel):
-    # (Site, Date, Shift) -> set of names (dedup across repeated blocks/rows)
-    bucket = {}
-
-    for sheet in excel.sheet_names:
-        df = pd.read_excel(excel, sheet_name=sheet, header=None)
-        date_row = find_date_row(df)
-        dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
-
-        valid = (
-            {"AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"}
-            if sheet == "HOPE_DRIVE"
-            else {"AM", "PM"}
-        )
-
-        for i in range(date_row + 1, len(df)):
-            label = str(df.iat[i, 0]).strip().upper()
-            if label in valid:
-                for j, d in enumerate(dates, start=1):
-                    if pd.isna(d):
-                        continue
-                    names = extract_names(df.iat[i, j])
-                    if not names:
-                        continue
-                    key = (sheet, d.date(), label)
-                    bucket.setdefault(key, set()).update(names)
-
-    rows = [
-        {"Site": site, "Date": date, "Shift": shift, "Preceptor_Count": len(names)}
-        for (site, date, shift), names in bucket.items()
-    ]
-    out = pd.DataFrame(rows) if rows else pd.DataFrame(columns=["Site","Date","Shift","Preceptor_Count"])
-    return out.sort_values(["Site","Date","Shift"]).reset_index(drop=True), bucket
-
-# Optional: capacity caps (by Site + Shift)
-CAPS = {
-    ("HOPE_DRIVE", "AM - ACUTES"): 2,
-    ("HOPE_DRIVE", "PM - ACUTES"): 2,
-    # add more caps as needed...
-}
-
-def apply_caps(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
-        return df
-    capped = df.copy()
-    for (site, shift), cap in CAPS.items():
-        mask = (capped["Site"] == site) & (capped["Shift"] == shift)
-        capped.loc[mask, "Preceptor_Count"] = capped.loc[mask, "Preceptor_Count"].clip(upper=cap)
-    return capped
-
 # ---- Streamlit page ----
 elif mode == "Shift Availability Tracker":
     st.title("Shift Availability Tracker")
+
+    def extract_names(cell: object) -> set[str]:
+        """Return unique preceptor names from a cell (remove ~, split on newlines/;/,/)."""
+        if not isinstance(cell, str):
+            return set()
+        txt = cell.replace("\n", " ").strip()
+        if "~" not in txt:
+            return set()
+        parts = re.split(r"[;/]", txt)  # support multiple names jammed into one cell
+        names = set()
+        for p in parts:
+            base = p.replace("~", "").strip()
+            if base:
+                names.add(base)
+        return names
+
+    def find_date_row(df, search_rows=15):
+        best_row, best_count = None, -1
+        for r in range(min(search_rows, len(df))):
+            parsed = pd.to_datetime(df.iloc[r, 1:], errors="coerce")
+            c = parsed.notna().sum()
+            if c > best_count:
+                best_row, best_count = r, c
+        return best_row if best_row is not None else 3
+    
+    def build_summary_unique(excel):
+        # (Site, Date, Shift) -> set of names (dedup across repeated blocks/rows)
+        bucket = {}
+    
+        for sheet in excel.sheet_names:
+            df = pd.read_excel(excel, sheet_name=sheet, header=None)
+            date_row = find_date_row(df)
+            dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
+    
+            valid = (
+                {"AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"}
+                if sheet == "HOPE_DRIVE"
+                else {"AM", "PM"}
+            )
+    
+            for i in range(date_row + 1, len(df)):
+                label = str(df.iat[i, 0]).strip().upper()
+                if label in valid:
+                    for j, d in enumerate(dates, start=1):
+                        if pd.isna(d):
+                            continue
+                        names = extract_names(df.iat[i, j])
+                        if not names:
+                            continue
+                        key = (sheet, d.date(), label)
+                        bucket.setdefault(key, set()).update(names)
+    
+        rows = [
+            {"Site": site, "Date": date, "Shift": shift, "Preceptor_Count": len(names)}
+            for (site, date, shift), names in bucket.items()
+        ]
+        out = pd.DataFrame(rows) if rows else pd.DataFrame(columns=["Site","Date","Shift","Preceptor_Count"])
+        return out.sort_values(["Site","Date","Shift"]).reset_index(drop=True), bucket
+    
+    # Optional: capacity caps (by Site + Shift)
+    CAPS = {
+        ("HOPE_DRIVE", "AM - ACUTES"): 2,
+        ("HOPE_DRIVE", "PM - ACUTES"): 2,
+        # add more caps as needed...
+    }
+    
+    def apply_caps(df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return df
+        capped = df.copy()
+        for (site, shift), cap in CAPS.items():
+            mask = (capped["Site"] == site) & (capped["Shift"] == shift)
+            capped.loc[mask, "Preceptor_Count"] = capped.loc[mask, "Preceptor_Count"].clip(upper=cap)
+        return capped
+
+    
     opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
 
     if opd_file:
