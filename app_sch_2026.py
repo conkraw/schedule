@@ -2605,4 +2605,39 @@ elif mode == "OPD MD PA Conflict Detector":
 elif mode == "Shift Availability Tracker":
     st.title("Shift Availability Tracker")
     
-    opd_file1 = st.file_uploader("1) Upload Latest Updated OPD", type=["xlsx"], key="opd_file1")
+    opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
+       if opd_file:
+            excel = pd.ExcelFile(opd_file)
+            shift_summary = []
+    
+            for sheet in excel.sheet_names:
+                df = pd.read_excel(excel, sheet_name=sheet, header=None)
+                for i, row in df.iterrows():
+                    shift_label = str(row[0]).strip().upper()
+                    if sheet == "HOPE_DRIVE":
+                        valid_shifts = ["AM - ACUTE", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"]
+                    else:
+                        valid_shifts = ["AM", "PM"]
+                    if shift_label in valid_shifts:
+                        dates = df.iloc[2, 1:]  # date row
+                        for col, date in enumerate(dates, start=1):
+                            cell_values = df.iloc[i, col]
+                            if isinstance(cell_values, str) and "~" in cell_values:
+                                shift_summary.append({
+                                    "Site": sheet,
+                                    "Date": pd.to_datetime(date, errors="coerce"),
+                                    "Shift": shift_label,
+                                    "Preceptor": cell_values.strip()
+                                })
+    
+            summary_df = pd.DataFrame(shift_summary)
+            summary_count = summary_df.groupby(["Site", "Date", "Shift"]).size().reset_index(name="Preceptor_Count")
+    
+            st.write("### Summary Table")
+            st.dataframe(summary_count)
+    
+            am_pm_toggle = st.toggle("Show AM Only")
+            if am_pm_toggle:
+                st.dataframe(summary_count[summary_count["Shift"].str.startswith("AM")])
+            else:
+                st.dataframe(summary_count[summary_count["Shift"].str.startswith("PM")])
