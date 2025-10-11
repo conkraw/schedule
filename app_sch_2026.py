@@ -30,7 +30,7 @@ st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", lay
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule","OPD Check","Create Individual Schedules","OPD MD PA Conflict Detector"))
+mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule","OPD Check","Create Individual Schedules","OPD MD PA Conflict Detector","Shift Availability Tracker"))
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
 if mode == "OPD Check":
@@ -2599,8 +2599,9 @@ elif mode == "OPD MD PA Conflict Detector":
                                    "pa_opd_annotated.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-
-
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
+
+elif mode == "Shift Availability Tracker"
+    st.title("OPD MD/PA Double-Booking & Availability")
 
