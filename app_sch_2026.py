@@ -2604,9 +2604,10 @@ elif mode == "OPD MD PA Conflict Detector":
 
 elif mode == "Shift Availability Tracker":
     st.title("Shift Availability Tracker")
-    
+        
     opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
-       if opd_file:
+       
+    if opd_file:
             excel = pd.ExcelFile(opd_file)
             shift_summary = []
     
