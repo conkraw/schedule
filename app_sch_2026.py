@@ -2729,13 +2729,13 @@ elif mode == "Shift Availability Tracker":
                              .reindex(index=shift_order, columns=day_order)
                              .fillna(0).astype(int))
                 # add "Week of" column on the far right
-                grid["Week of"] = f"Week of {wk_start:%Y-%m-%d}"
+                grid.insert(0, "Week of", f"Week of {wk_start:%Y-%m-%d}")
                 # ensure column order Mon..Sun..Week of
                 grid = grid[day_order + ["Week of"]]
                 # nice index name
                 grid.index.name = None
                 blocks.append(grid)
-            
+                
             if blocks:
                 weekly_single_table = pd.concat(blocks, axis=0)
                 st.dataframe(weekly_single_table, use_container_width=True)
