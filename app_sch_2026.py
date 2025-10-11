@@ -2833,47 +2833,32 @@ elif mode == "Shift Availability Tracker":
     st.dataframe(weekly_capacity, use_container_width=True)
     
     # --------------------
-    # Student assignment (auto-pick weeks)
+    # Student assignment (auto-pick weeks) — PAIRED AM+PM DAILY
     # - Sites: HOPE_DRIVE → ETOWN → NYES
-    # - Students AM-only or PM-only, Mon–Fri
-    # - AM uses ALL 5 days; PM drops exactly ONE day
-    # - Primary = highest-capacity week; second-week placements fill from lowest-capacity weeks upward
+    # - Students get AM **and** PM on the same days
+    # - PM drops exactly ONE weekday; AM is restricted to those same 4 PM days to keep pairing
+    # - Primary = highest paired capacity week; second-week placements fill from lowest-capacity weeks upward
     # - Async notes include WHICH PM weekday was dropped
-    # - Guard against IndexError when fewer students are passed than week min_cap
+    # - Effective-capacity guards prevent indexing issues
     # --------------------
-    st.subheader("Assign Students (auto-pick weeks)")
+    st.subheader("Assign Students (auto-pick weeks; AM+PM paired daily)")
     
     cap3 = daily[daily["Site"].isin({"HOPE_DRIVE", "ETOWN", "NYES"}) & (daily["Weekday"] <= 4)].copy()
     
-    def pick_days(sub_df: pd.DataFrame, track: str):
-        """
-        Return (days_to_use, dropped_day_or_None) among Mon..Fri.
-        - AM: use ALL 5 days (no drop)
-        - PM: drop exactly one lowest-capacity day (tie → earliest weekday)
-        """
-        weekdays = [0,1,2,3,4]  # Mon..Fri
-        if sub_df.empty:
+    def pick_pm_days(sub_pm: pd.DataFrame):
+        """Pick PM days: drop exactly one lowest-capacity weekday (tie → earliest)."""
+        weekdays = [0,1,2,3,4]
+        if sub_pm.empty:
             return [], None
-        if track == "AM":
-            return weekdays, None
-        vec = sorted([(int(d.weekday()), cnt) for d, cnt in zip(sub_df["Date"], sub_df["Count"]) if int(d.weekday()) in weekdays])
+        vec = sorted([(int(d.weekday()), cnt) for d, cnt in zip(sub_pm["Date"], sub_pm["Count"]) if int(d.weekday()) in weekdays])
         if not vec:
             return [], None
-        drop = min(vec, key=lambda x: (x[1], x[0]))  # (weekday_idx, capacity)
-        return [d for d in weekdays if d != drop[0]], drop[0]
-    
-    def week_min_capacity(sub_df: pd.DataFrame, track: str):
-        """Compute week's limiting capacity; also return dropped PM day for notes."""
-        days_use, dropped = pick_days(sub_df, track)
-        required = 5 if track == "AM" else 4
-        if len(days_use) < required:
-            return 0, [], None, dropped
-        cap_by_day = {int(d.weekday()): cnt for d, cnt in zip(sub_df["Date"], sub_df["Count"]) if int(d.weekday()) in days_use}
-        if not cap_by_day:
-            return 0, [], None, dropped
-        return min(cap_by_day.values()), days_use, cap_by_day, dropped
+        drop = min(vec, key=lambda x: (x[1], x[0]))   # (weekday_idx, capacity)
+        keep = [d for d in weekdays if d != drop[0]]  # 4 days kept
+        return keep, drop[0]
     
     def preceptor_map_by_day(sub_df: pd.DataFrame):
+        """weekday -> [preceptor names]"""
         pmap = {}
         for dte, names in zip(sub_df["Date"], sub_df["Names"]):
             pmap[int(dte.weekday())] = list(names)
@@ -2886,120 +2871,168 @@ elif mode == "Shift Availability Tracker":
     SITE_ORDER   = ["HOPE_DRIVE", "ETOWN", "NYES"]
     
     for site in SITE_ORDER:
-        for track in ["AM", "PM"]:
-            # Build week catalog for this site/track
-            weeks_catalog = []
-            for wk, sub in cap3[(cap3["Site"]==site) & (cap3["Shift"]==track)].groupby("WeekStart"):
-                sub = sub.sort_values("Date")
-                min_cap, days_use, cap_by_day, dropped = week_min_capacity(sub, track)
-                if min_cap <= 0:
-                    async_issues.append({"Site": site, "WeekStart": wk, "Track": track, "Issue": "Insufficient capacity/days under policy"})
-                    continue
+        # Build week catalog using **paired capacity** per day (on PM-kept days)
+        weeks_catalog = []  # each: {wk, keep_days, dropped_pm_day, paired_min_cap, am_by_day, pm_by_day}
+        for wk, week_df in cap3[cap3["Site"] == site].groupby("WeekStart"):
+            sub_am = week_df[week_df["Shift"] == "AM"].sort_values("Date")
+            sub_pm = week_df[week_df["Shift"] == "PM"].sort_values("Date")
     
-                # info: which PM weekday was dropped
-                if track == "PM" and dropped is not None:
-                    async_issues.append({
-                        "Site": site,
-                        "WeekStart": wk,
-                        "Track": track,
-                        "Issue": f"Dropped PM weekday: {['Mon','Tue','Wed','Thu','Fri'][dropped]}"
-                    })
+            # Need both tracks present
+            if sub_pm.empty or sub_am.empty:
+                async_issues.append({"Site": site, "WeekStart": wk, "Track": "BOTH", "Issue": "Missing AM or PM rows for the week"})
+                continue
     
-                weeks_catalog.append({
-                    "wk": wk,
-                    "min_cap": int(min_cap),
-                    "days_use": sorted(days_use),
-                    "cap_by_day": cap_by_day,
-                    "pre_by_day": preceptor_map_by_day(sub)
+            pm_keep_days, pm_dropped = pick_pm_days(sub_pm)
+            if len(pm_keep_days) < 4:
+                async_issues.append({"Site": site, "WeekStart": wk, "Track": "PM", "Issue": "Not enough days after PM drop"})
+                continue
+    
+            # Info: which PM weekday was dropped
+            if pm_dropped is not None:
+                async_issues.append({
+                    "Site": site, "WeekStart": wk, "Track": "PM",
+                    "Issue": f"Dropped PM weekday: {['Mon','Tue','Wed','Thu','Fri'][pm_dropped]}"
                 })
     
-            if not weeks_catalog:
+            # Build capacities maps restricted to the kept PM days
+            am_cap_by_day = {int(d.weekday()): c for d, c in zip(sub_am["Date"], sub_am["Count"]) if int(d.weekday()) in pm_keep_days}
+            pm_cap_by_day = {int(d.weekday()): c for d, c in zip(sub_pm["Date"], sub_pm["Count"]) if int(d.weekday()) in pm_keep_days}
+    
+            # Ensure AM also has those PM-kept days (for pairing)
+            if any(d not in am_cap_by_day for d in pm_keep_days) or any(d not in pm_cap_by_day for d in pm_keep_days):
+                async_issues.append({"Site": site, "WeekStart": wk, "Track": "BOTH", "Issue": "AM/PM mismatch on kept days"})
                 continue
     
-            # PRIMARY = highest-capacity week
-            weeks_catalog.sort(key=lambda x: (-x["min_cap"], x["wk"]))
-            primary = weeks_catalog[0]
-            cohort_size = primary["min_cap"]
-            if cohort_size <= 0:
-                async_issues.append({"Site": site, "Track": track, "Issue": "Primary week had nonpositive capacity"})
+            # Paired per-day capacity = min(AM_cap, PM_cap) on each kept day
+            paired_by_day = {d: min(am_cap_by_day[d], pm_cap_by_day[d]) for d in pm_keep_days}
+            if not paired_by_day:
+                async_issues.append({"Site": site, "WeekStart": wk, "Track": "BOTH", "Issue": "No paired capacity on kept days"})
                 continue
     
-            # Create site-unique students for this track
-            students = [f"Student {i}" for i in range(next_id, next_id + cohort_size)]
-            for sid in students:
-                student_site[sid] = site
-            next_id += cohort_size
+            paired_min_cap = min(paired_by_day.values())
+            if paired_min_cap <= 0:
+                async_issues.append({"Site": site, "WeekStart": wk, "Track": "BOTH", "Issue": "Zero paired capacity on a kept day"})
+                continue
     
-            # Assign helper with effective capacity guard
-            def assign_week(week_info, students_list):
-                wk   = week_info["wk"]
-                days = week_info["days_use"]
-                pmap = week_info["pre_by_day"]
+            # Preceptor lists per day for each track
+            am_by_day = preceptor_map_by_day(sub_am)
+            pm_by_day = preceptor_map_by_day(sub_pm)
     
-                effective_mcap = min(week_info["min_cap"], len(students_list))
-                if effective_mcap <= 0:
-                    return
+            weeks_catalog.append({
+                "wk": wk,
+                "keep_days": sorted(pm_keep_days),   # 4 days
+                "dropped_pm_day": pm_dropped,        # int or None
+                "paired_min_cap": int(paired_min_cap),
+                "am_by_day": am_by_day,
+                "pm_by_day": pm_by_day
+            })
     
-                for wd in days:
-                    pre_list = pmap.get(wd, [])
-                    if len(pre_list) < effective_mcap:
-                        async_issues.append({
-                            "Site": site, "WeekStart": wk, "Track": track,
-                            "Issue": f"Weekday {wd} has fewer preceptors than needed (have {len(pre_list)}, need {effective_mcap})"
-                        })
-                        continue
+        if not weeks_catalog:
+            continue
     
-                    dq = deque(students_list)
-                    dq.rotate(-wd)
-                    for k in range(effective_mcap):
-                        assign_rows.append({
-                            "Site": site,
-                            "WeekStart": pd.to_datetime(wk),
-                            "Track": track,
-                            "Weekday": ["Mon","Tue","Wed","Thu","Fri"][wd],
-                            "Student": dq[k],
-                            "Preceptor": pre_list[k]
-                        })
+        # Pick PRIMARY = week with highest paired_min_cap
+        weeks_catalog.sort(key=lambda x: (-x["paired_min_cap"], x["wk"]))
+        primary = weeks_catalog[0]
+        cohort_size = primary["paired_min_cap"]
+        if cohort_size <= 0:
+            async_issues.append({"Site": site, "Track": "BOTH", "Issue": "Primary week had nonpositive paired capacity"})
+            continue
     
-            # Assign everyone to the PRIMARY week
-            assign_week(primary, students)
+        # Create site-unique students (each will do AM+PM on the same days)
+        students = [f"Student {i}" for i in range(next_id, next_id + cohort_size)]
+        for sid in students:
+            student_site[sid] = site
+        next_id += cohort_size
     
-            # Second-week placements: fill lowest-capacity weeks first
-            remaining = [w for w in weeks_catalog[1:]]
-            remaining.sort(key=lambda x: (x["min_cap"], x["wk"]))
+        # Helper to assign BOTH AM & PM for each used day
+        def assign_week_paired(week_info, students_list):
+            wk   = week_info["wk"]
+            days = week_info["keep_days"]            # 4 kept days
+            amap = week_info["am_by_day"]
+            pmap = week_info["pm_by_day"]
     
-            remaining_needed = set(students)
-            for wkinfo in remaining:
-                if not remaining_needed:
-                    break
-                take = min(len(remaining_needed), wkinfo["min_cap"])
-                if take <= 0:
-                    continue
-                chosen = list(sorted(remaining_needed))[:take]
-                assign_week(wkinfo, chosen)
-                remaining_needed -= set(chosen)
+            # Effective capacity per week = min(paired_min_cap, number of students we actually pass in)
+            effective_week_cap = min(week_info["paired_min_cap"], len(students_list))
+            if effective_week_cap <= 0:
+                return
     
-            # Report students who couldn't get a second week
-            if remaining_needed:
-                for sid in sorted(remaining_needed):
+            for wd in days:
+                am_pres = amap.get(wd, [])
+                pm_pres = pmap.get(wd, [])
+                # Effective per-day capacity = min(effective_week_cap, len(AM), len(PM))
+                effective_day_cap = min(effective_week_cap, len(am_pres), len(pm_pres))
+                if effective_day_cap <= 0:
                     async_issues.append({
+                        "Site": site, "WeekStart": wk, "Track": "BOTH",
+                        "Issue": f"Weekday {wd}: insufficient preceptors for paired assignment"
+                    })
+                    continue
+    
+                # Simple rotation by weekday to vary exposure
+                dq = deque(students_list)
+                dq.rotate(-wd)
+    
+                # Take the first effective_day_cap AM & PM preceptors
+                for k in range(effective_day_cap):
+                    stu = dq[k]
+                    # AM assignment
+                    assign_rows.append({
                         "Site": site,
-                        "Track": track,
-                        "Issue": f"{sid} could not be placed for a second week under current capacity policy"
+                        "WeekStart": pd.to_datetime(wk),
+                        "Track": "AM",
+                        "Weekday": ["Mon","Tue","Wed","Thu","Fri"][wd],
+                        "Student": stu,
+                        "Preceptor": am_pres[k]
+                    })
+                    # PM assignment (same student, same day)
+                    assign_rows.append({
+                        "Site": site,
+                        "WeekStart": pd.to_datetime(wk),
+                        "Track": "PM",
+                        "Weekday": ["Mon","Tue","Wed","Thu","Fri"][wd],
+                        "Student": stu,
+                        "Preceptor": pm_pres[k]
                     })
     
+        # Assign everyone to the PRIMARY week (paired AM+PM each day)
+        assign_week_paired(primary, students)
+    
+        # Second-week placements: fill weakest weeks first, paired as well
+        remaining = [w for w in weeks_catalog[1:]]
+        remaining.sort(key=lambda x: (x["paired_min_cap"], x["wk"]))
+    
+        remaining_needed = set(students)  # students still needing a second week
+        for wkinfo in remaining:
+            if not remaining_needed:
+                break
+            take = min(len(remaining_needed), wkinfo["paired_min_cap"])
+            if take <= 0:
+                continue
+            chosen = list(sorted(remaining_needed))[:take]
+            assign_week_paired(wkinfo, chosen)
+            remaining_needed -= set(chosen)
+    
+        # Report students who couldn't get a second week
+        if remaining_needed:
+            for sid in sorted(remaining_needed):
+                async_issues.append({
+                    "Site": site,
+                    "Track": "BOTH",
+                    "Issue": f"{sid} could not be placed for a second paired week under current capacity policy"
+                })
+    
     # Present outputs
-    st.subheader("Student Assignments (auto-picked weeks)")
+    st.subheader("Student Assignments (auto-picked weeks; AM+PM paired)")
     assign_df = pd.DataFrame(assign_rows)
     if assign_df.empty:
         st.info("No assignments were generated.")
     else:
-        st.dataframe(assign_df.sort_values(["Site", "WeekStart", "Track", "Weekday", "Student"]).reset_index(drop=True),
+        st.dataframe(assign_df.sort_values(["Site","WeekStart","Weekday","Student","Track"]).reset_index(drop=True),
                      use_container_width=True)
     
     if async_issues:
         st.subheader("Asynchronous / Not Auto-Filled")
-        issues_df = pd.DataFrame(async_issues).sort_values(["Site", "WeekStart", "Track", "Issue"]).reset_index(drop=True)
+        issues_df = pd.DataFrame(async_issues).sort_values(["Site","WeekStart","Track","Issue"]).reset_index(drop=True)
         st.dataframe(issues_df, use_container_width=True)
     else:
         issues_df = pd.DataFrame(columns=["Site","WeekStart","Track","Issue"])
@@ -3010,7 +3043,7 @@ elif mode == "Shift Availability Tracker":
         c1.download_button(
             "Download Assignments (CSV)",
             data=assign_df.to_csv(index=False).encode("utf-8"),
-            file_name="student_assignments_auto_weeks.csv",
+            file_name="student_assignments_auto_weeks_paired.csv",
             mime="text/csv"
         )
         buf = io.BytesIO()
@@ -3021,9 +3054,10 @@ elif mode == "Shift Availability Tracker":
         c2.download_button(
             "Download Assignments (Excel)",
             data=buf.getvalue(),
-            file_name="student_assignments_auto_weeks.xlsx",
+            file_name="student_assignments_auto_weeks_paired.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
     
     # --------------------
     # Write assignments back into the OPD workbook (append after ~)
