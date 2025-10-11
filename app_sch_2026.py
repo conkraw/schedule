@@ -2641,7 +2641,7 @@ elif mode == "Shift Availability Tracker":
             dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
     
             valid = (
-                {"AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"}
+                {"AM - ACUTES", "AM - Continuity", "PM - ACUTES", "PM - Continuity"}
                 if sheet == "HOPE_DRIVE"
                 else {"AM", "PM"}
             )
