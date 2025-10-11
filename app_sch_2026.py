@@ -2611,14 +2611,22 @@ elif mode == "Shift Availability Tracker":
         parsed = pd.to_datetime(series, errors="coerce")
         return parsed.notna().sum() >= min_dates
     
-    def extract_names(cell):
+    def extract_names(cell: object) -> set[str]:
+        """Parse one cell → set of unique preceptor names (ignore CLOSED)."""
         if not isinstance(cell, str):
             return set()
         s = cell.replace("\r", " ").replace("\n", " ").strip()
+    
+        # NEW: ignore any 'closed' marker like 'Closed', 'CLOSED?', 'Clinic Closed', etc.
+        if re.search(r"\bclosed\b", s, flags=re.IGNORECASE):
+            return set()
+    
         if "~" not in s:
             return set()
-        parts = re.split(r"[;/]| {2,}", s)  # split on ;, /, or 2+ spaces
-        return {p.replace("~","").strip() for p in parts if p.replace("~","").strip()}
+    
+        # split multiple entries (e.g., 'Name ~; Other ~' or 'Name ~  Other ~')
+        parts = re.split(r"[;/]| {2,}", s)
+        return {p.replace("~", "").strip() for p in parts if p.replace("~","").strip()}
     
     def build_segmented_summary(excel):
         rows = []
