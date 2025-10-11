@@ -2604,41 +2604,83 @@ elif mode == "OPD MD PA Conflict Detector":
 
 elif mode == "Shift Availability Tracker":
     st.title("Shift Availability Tracker")
-        
-    opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
-       
-    if opd_file:
-            excel = pd.ExcelFile(opd_file)
-            shift_summary = []
+    def count_tildes(x):
+        return x.count("~") if isinstance(x, str) else 0
+
+    def find_date_row(df, search_rows=15):
+        # Find the row where most cells in columns 1.. are datelike
+        best_row, best_count = None, -1
+        for r in range(min(search_rows, len(df))):
+            parsed = pd.to_datetime(df.iloc[r, 1:], errors="coerce")
+            c = parsed.notna().sum()
+            if c > best_count:
+                best_row, best_count = r, c
+        return best_row if best_row is not None else 3
     
-            for sheet in excel.sheet_names:
-                df = pd.read_excel(excel, sheet_name=sheet, header=None)
-                for i, row in df.iterrows():
-                    shift_label = str(row[0]).strip().upper()
-                    if sheet == "HOPE_DRIVE":
-                        valid_shifts = ["AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"]
-                    else:
-                        valid_shifts = ["AM", "PM"]
-                    if shift_label in valid_shifts:
-                        dates = df.iloc[2, 1:]  # date row
-                        for col, date in enumerate(dates, start=1):
-                            cell_values = df.iloc[i, col]
-                            if isinstance(cell_values, str) and "~" in cell_values:
-                                shift_summary.append({
-                                    "Site": sheet,
-                                    "Date": pd.to_datetime(date, errors="coerce"),
-                                    "Shift": shift_label,
-                                    "Preceptor": cell_values.strip()
-                                })
+    def build_summary(excel):
+        rows = []
+        for sheet in excel.sheet_names:
+            df = pd.read_excel(excel, sheet_name=sheet, header=None)
     
-            summary_df = pd.DataFrame(shift_summary)
-            summary_count = summary_df.groupby(["Site", "Date", "Shift"]).size().reset_index(name="Preceptor_Count")
+            # find the date row dynamically (fallback to 3)
+            date_row = find_date_row(df)
+            dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
     
-            st.write("### Summary Table")
-            st.dataframe(summary_count)
-    
-            am_pm_toggle = st.toggle("Show AM Only")
-            if am_pm_toggle:
-                st.dataframe(summary_count[summary_count["Shift"].str.startswith("AM")])
+            # valid shift labels
+            if sheet == "HOPE_DRIVE":
+                valid = {"AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"}
             else:
-                st.dataframe(summary_count[summary_count["Shift"].str.startswith("PM")])
+                valid = {"AM", "PM"}
+    
+            # scan rows under the date row
+            for i in range(date_row + 1, len(df)):
+                label = str(df.iat[i, 0]).strip().upper()
+                if label in valid:
+                    for j, d in enumerate(dates, start=1):
+                        if pd.isna(d):
+                            continue
+                        cnt = count_tildes(df.iat[i, j])
+                        if cnt > 0:
+                            rows.append(
+                                {"Site": sheet, "Date": d.date(), "Shift": label, "Preceptor_Count": cnt}
+                            )
+    
+        if not rows:
+            return pd.DataFrame(columns=["Site", "Date", "Shift", "Preceptor_Count"])
+    
+        out = pd.DataFrame(rows)
+        # aggregate in case a shift spans multiple rows
+        out = out.groupby(["Site", "Date", "Shift"], as_index=False)["Preceptor_Count"].sum()
+        return out
+    
+    opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
+
+    if opd_file:
+        excel = pd.ExcelFile(opd_file)
+        summary = build_summary(excel)
+
+        if summary.empty:
+            st.warning("No preceptors with '~' found. Double-check the file or labels.")
+        else:
+            # Filters
+            sites = ["All"] + sorted(summary["Site"].unique().tolist())
+            sel_site = st.selectbox("Site", sites)
+            shift_type = st.segmented_control("Shift", options=["All", "AM only", "PM only"])
+
+            df = summary.copy()
+            if sel_site != "All":
+                df = df[df["Site"] == sel_site]
+            if shift_type == "AM only":
+                df = df[df["Shift"].str.startswith("AM")]
+            elif shift_type == "PM only":
+                df = df[df["Shift"].str.startswith("PM")]
+
+            st.write("### Counts by Site / Date / Shift")
+            st.dataframe(df, use_container_width=True)
+
+            # Optional: quick pivot to view dates as columns
+            with st.expander("Show pivot view"):
+                pv = df.pivot_table(index=["Site", "Shift"], columns="Date",
+                                    values="Preceptor_Count", aggfunc="sum").fillna(0).astype(int)
+                st.dataframe(pv, use_container_width=True)
+
