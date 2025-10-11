@@ -2602,6 +2602,6 @@ elif mode == "OPD MD PA Conflict Detector":
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
 
-elif mode == "Shift Availability Tracker"
+elif mode == "Shift Availability Tracker":
     st.title("OPD MD/PA Double-Booking & Availability")
 
