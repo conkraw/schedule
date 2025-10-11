@@ -2602,100 +2602,90 @@ elif mode == "OPD MD PA Conflict Detector":
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
 
+
 # ---- Streamlit page ----
 elif mode == "Shift Availability Tracker":
     st.title("Shift Availability Tracker")
 
-    def extract_names(cell: object) -> set[str]:
-        """Parse one cell → set of unique preceptor names (handles ~, newlines, ;, /)."""
+    def is_date_header_row(series, min_dates=3):
+        parsed = pd.to_datetime(series, errors="coerce")
+        return parsed.notna().sum() >= min_dates
+    
+    def extract_names(cell):
         if not isinstance(cell, str):
             return set()
         s = cell.replace("\r", " ").replace("\n", " ").strip()
         if "~" not in s:
             return set()
-        parts = re.split(r"[;/]| {2,}", s)  # split on ;, /, or double+ spaces
-        names = set()
-        for p in parts:
-            base = p.replace("~", "").strip()
-            if base:
-                names.add(base)
-        return names
+        parts = re.split(r"[;/]| {2,}", s)  # split on ;, /, or 2+ spaces
+        return {p.replace("~","").strip() for p in parts if p.replace("~","").strip()}
     
-    def find_date_row(df, search_rows=15):
-        best_row, best_count = None, -1
-        for r in range(min(search_rows, len(df))):
-            parsed = pd.to_datetime(df.iloc[r, 1:], errors="coerce")
-            c = parsed.notna().sum()
-            if c > best_count:
-                best_row, best_count = r, c
-        return 3 if best_row is None else best_row
-    
-    def build_summary_unique(excel):
-        # (Site, Date, Shift) -> set(names)
-        bucket = {}
+    def build_segmented_summary(excel):
+        rows = []
         for sheet in excel.sheet_names:
             df = pd.read_excel(excel, sheet_name=sheet, header=None)
-            date_row = find_date_row(df)
-            dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
+    
+            # find ALL date header rows (row with many dates in cols 2+)
+            header_rows = [r for r in range(len(df)) if is_date_header_row(df.iloc[r, 1:])]
+            if not header_rows:
+                continue
+            header_rows.append(len(df))  # sentinel to cap the last segment
     
             valid = (
                 {"AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"}
-                if sheet == "HOPE_DRIVE"
-                else {"AM", "PM"}
+                if sheet == "HOPE_DRIVE" else {"AM", "PM"}
             )
     
-            for i in range(date_row + 1, len(df)):
-                label = str(df.iat[i, 0]).strip().upper()
-                if label in valid:
-                    for j, d in enumerate(dates, start=1):
-                        if pd.isna(d):
-                            continue
-                        names = extract_names(df.iat[i, j])
-                        if not names:
-                            continue
-                        key = (sheet, pd.Timestamp(d).date(), label)
-                        bucket.setdefault(key, set()).update(names)
+            # process each segment independently
+            for h in range(len(header_rows) - 1):
+                date_row, end_row = header_rows[h], header_rows[h+1]
+                dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
     
-        rows = [
-            {"Site": s, "Date": dt, "Shift": sh, "Preceptor_Count": len(nms)}
-            for (s, dt, sh), nms in bucket.items()
-        ]
-        df = pd.DataFrame(rows) if rows else pd.DataFrame(columns=["Site","Date","Shift","Preceptor_Count"])
-        return df.sort_values(["Site","Date","Shift"]).reset_index(drop=True), bucket
+                # local (site,date,shift) -> names for THIS segment only
+                seg_bucket = {}
+                for i in range(date_row + 1, end_row):
+                    label = str(df.iat[i, 0]).strip().upper()
+                    if label in valid:
+                        for j, d in enumerate(dates, start=1):
+                            if pd.isna(d):
+                                continue
+                            names = extract_names(df.iat[i, j])
+                            if not names:
+                                continue
+                            key = (sheet, pd.Timestamp(d).date(), label)
+                            seg_bucket.setdefault(key, set()).update(names)
     
-    # Optional capacity caps
-    CAPS = {
-        ("HOPE_DRIVE", "AM - ACUTES"): 2,
-        ("HOPE_DRIVE", "PM - ACUTES"): 2,
-        # add more if desired
-    }
+                # record results for this segment
+                for (site, dt, shift), nms in seg_bucket.items():
+                    rows.append({"Site": site, "Date": dt, "Shift": shift,
+                                 "Preceptor_Count": len(nms)})
     
-    def apply_caps(df: pd.DataFrame) -> pd.DataFrame:
-        out = df.copy()
-        for (site, shift), cap in CAPS.items():
-            mask = (out["Site"] == site) & (out["Shift"] == shift)
-            out.loc[mask, "Preceptor_Count"] = out.loc[mask, "Preceptor_Count"].clip(upper=cap)
+        if not rows:
+            return pd.DataFrame(columns=["Site","Date","Shift","Preceptor_Count"])
+    
+        # If the same site/date/shift appears in multiple segments (rare),
+        # choose the max (or sum if you prefer). Max is safer for “capacity”.
+        out = (pd.DataFrame(rows)
+                 .groupby(["Site","Date","Shift"], as_index=False)["Preceptor_Count"]
+                 .max()
+                 .sort_values(["Site","Date","Shift"])
+                 .reset_index(drop=True))
         return out
-
+    
     opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
 
     if opd_file:
         excel = pd.ExcelFile(opd_file)
-        summary, names_bucket = build_summary_unique(excel)
+        summary = build_segmented_summary(excel)
 
         if summary.empty:
             st.warning("No preceptors with '~' found. Check labels and file layout.")
         else:
-            enforce_caps = st.checkbox("Enforce capacity caps (e.g., HOPE_DRIVE ACUTES = 2)", value=True)
-            view_df = apply_caps(summary) if enforce_caps else summary
-
-            site_opt = ["All"] + sorted(view_df["Site"].unique().tolist())
+            site_opt = ["All"] + sorted(summary["Site"].unique().tolist())
             sel_site = st.selectbox("Site", site_opt)
-
-            # use radio for compatibility
             shift_pick = st.radio("Shift", ["All", "AM only", "PM only"], horizontal=True)
 
-            df = view_df.copy()
+            df = summary.copy()
             if sel_site != "All":
                 df = df[df["Site"] == sel_site]
             if shift_pick == "AM only":
@@ -2703,7 +2693,7 @@ elif mode == "Shift Availability Tracker":
             elif shift_pick == "PM only":
                 df = df[df["Shift"].str.startswith("PM")]
 
-            st.write("### Counts by Site / Date / Shift (unique preceptors)")
+            st.write("### Counts by Site / Date / Shift (segment-aware, unique names)")
             st.dataframe(df, use_container_width=True)
 
             with st.expander("Pivot view"):
@@ -2711,11 +2701,3 @@ elif mode == "Shift Availability Tracker":
                                     values="Preceptor_Count", aggfunc="max").fillna(0).astype(int)
                 st.dataframe(pv, use_container_width=True)
 
-            with st.expander("Drill-down: show names for a Site/Date/Shift"):
-                c1, c2, c3 = st.columns(3)
-                pick_site = c1.selectbox("Pick Site", sorted(summary["Site"].unique()))
-                pick_date = c2.selectbox("Pick Date", sorted(summary[summary["Site"]==pick_site]["Date"].unique()))
-                shifts_here = sorted(summary[(summary["Site"]==pick_site)&(summary["Date"]==pick_date)]["Shift"].unique())
-                pick_shift = c3.selectbox("Pick Shift", shifts_here)
-                names = sorted(names_bucket.get((pick_site, pick_date, pick_shift), set()))
-                st.write(f"**Preceptors ({len(names)})**: " + (", ".join(names) if names else "_None_"))
