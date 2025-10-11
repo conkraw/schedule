@@ -2698,18 +2698,15 @@ elif mode == "Shift Availability Tracker":
 
             # ---- Weekly (Mon–Sat) pivot ----
             st.write("### Weekly Grid (single table per site)")
-            
-            # choose site
+
             site_list = sorted(summary["Site"].unique().tolist())
             site_sel = st.selectbox("Site", site_list, index=site_list.index("HOPE_DRIVE") if "HOPE_DRIVE" in site_list else 0)
             
-            # site subset + week & day prep
             site_df = summary[summary["Site"] == site_sel].copy()
             site_df["Date"] = pd.to_datetime(site_df["Date"])
             site_df["WeekStart"] = site_df["Date"] - pd.to_timedelta(site_df["Date"].dt.weekday, unit="D")
             site_df["DayName"] = site_df["Date"].dt.day_name()
             
-            # desired ordering
             day_order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
             def shift_order_for(site):
                 return ["AM - ACUTES","AM - CONTINUITY","PM - ACUTES","PM - CONTINUITY"] if site == "HOPE_DRIVE" else ["AM","PM"]
@@ -2718,27 +2715,48 @@ elif mode == "Shift Availability Tracker":
             site_df["DayCat"] = pd.Categorical(site_df["DayName"], categories=day_order, ordered=True)
             site_df["ShiftCat"] = pd.Categorical(site_df["Shift"], categories=shift_order, ordered=True)
             
-            # build one big table: stack each week's grid vertically, add "Week of ..." column on the right
             blocks = []
             for wk_start, wk_df in site_df.sort_values(["WeekStart","ShiftCat","DayCat"]).groupby("WeekStart"):
-                # pivot for this week
                 grid = (wk_df.pivot_table(index="ShiftCat",
                                           columns="DayCat",
                                           values="Preceptor_Count",
                                           aggfunc="max")
                              .reindex(index=shift_order, columns=day_order)
                              .fillna(0).astype(int))
-                # add "Week of" column on the far right
+                grid.index.name = "Shift"
+            
+                # Put "Week of ..." FIRST
                 grid.insert(0, "Week of", f"Week of {wk_start:%Y-%m-%d}")
-                # ensure column order Mon..Sun..Week of
-                grid = grid[day_order + ["Week of"]]
-                # nice index name
-                grid.index.name = None
-                blocks.append(grid)
-                
+                blocks.append(grid.reset_index())  # keep Shift as a column for nicer downloads
+            
             if blocks:
-                weekly_single_table = pd.concat(blocks, axis=0)
+                weekly_single_table = pd.concat(blocks, axis=0, ignore_index=True)
+            
                 st.dataframe(weekly_single_table, use_container_width=True)
+            
+                # --- Downloads ---
+                c1, c2 = st.columns(2)
+                # CSV
+                csv_bytes = weekly_single_table.to_csv(index=False).encode("utf-8")
+                c1.download_button(
+                    "Download CSV",
+                    data=csv_bytes,
+                    file_name=f"{site_sel}_weekly_grid.csv",
+                    mime="text/csv",
+                    key="dl_csv_weekly_grid",
+                )
+            
+                # Excel
+                xbuf = io.BytesIO()
+                with pd.ExcelWriter(xbuf, engine="xlsxwriter") as writer:
+                    weekly_single_table.to_excel(writer, sheet_name="Weekly Grid", index=False)
+                c2.download_button(
+                    "Download Excel",
+                    data=xbuf.getvalue(),
+                    file_name=f"{site_sel}_weekly_grid.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="dl_xlsx_weekly_grid",
+                )
             else:
                 st.info("No data for this site.")
 
