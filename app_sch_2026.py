@@ -2603,5 +2603,6 @@ elif mode == "OPD MD PA Conflict Detector":
         st.info("Upload both the MD and PA OPD files to begin.")
 
 elif mode == "Shift Availability Tracker":
-    st.title("OPD MD/PA Double-Booking & Availability")
-
+    st.title("Shift Availability Tracker")
+    
+    opd_file1 = st.file_uploader("1) Upload Latest Updated OPD", type=["xlsx"], key="opd_file1")
