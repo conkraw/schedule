@@ -2696,8 +2696,55 @@ elif mode == "Shift Availability Tracker":
             st.write("### Counts by Site / Date / Shift (segment-aware, unique names)")
             st.dataframe(df, use_container_width=True)
 
-            with st.expander("Pivot view"):
-                pv = df.pivot_table(index=["Site","Shift"], columns="Date",
-                                    values="Preceptor_Count", aggfunc="max").fillna(0).astype(int)
-                st.dataframe(pv, use_container_width=True)
+            # ---- Weekly (Mon–Sat) pivot ----
+            st.write("### Weekly Pivot (Monday–Saturday)")
+            
+            # choose aggregation for the weekly roll-up
+            week_agg = st.radio(
+                "Weekly aggregation",
+                ["Sum across week", "Max across week (capacity view)"],
+                horizontal=True,
+                index=0
+            )
+            
+            # prepare weekly dataframe
+            weekly = summary.copy()
+            weekly["Date"] = pd.to_datetime(weekly["Date"])
+            
+            # keep only Mon–Sat (Mon=0 ... Sun=6)
+            weekly = weekly[weekly["Date"].dt.weekday <= 5]  # exclude Sundays
+            
+            # compute Monday-of-week
+            weekly["WeekStart"] = weekly["Date"] - pd.to_timedelta(weekly["Date"].dt.weekday, unit="D")
+            weekly["WeekLabel"] = weekly["WeekStart"].dt.strftime("Week of %Y-%m-%d (Mon–Sat)")
+            
+            # aggregate within each week
+            aggfunc = "sum" if week_agg.startswith("Sum") else "max"
+            weekly_rollup = (weekly
+                .groupby(["Site", "Shift", "WeekLabel"], as_index=False)["Preceptor_Count"]
+                .agg(aggfunc)
+            )
+            
+            # optional filters consistent with daily view
+            site_opt_w = ["All"] + sorted(weekly_rollup["Site"].unique().tolist())
+            sel_site_w = st.selectbox("Weekly view — Site", site_opt_w, key="weekly_site")
+            shift_pick_w = st.radio("Weekly view — Shift", ["All", "AM only", "PM only"],
+                                    horizontal=True, key="weekly_shift")
+            
+            dfw = weekly_rollup.copy()
+            if sel_site_w != "All":
+                dfw = dfw[dfw["Site"] == sel_site_w]
+            if shift_pick_w == "AM only":
+                dfw = dfw[dfw["Shift"].str.startswith("AM")]
+            elif shift_pick_w == "PM only":
+                dfw = dfw[dfw["Shift"].str.startswith("PM")]
+            
+            # pivot: rows = Site, Shift; columns = Week
+            pv_week = (dfw
+                .pivot_table(index=["Site","Shift"], columns="WeekLabel",
+                             values="Preceptor_Count", aggfunc="sum", fill_value=0)
+                .sort_index()
+            )
+            
+            st.dataframe(pv_week, use_container_width=True)
 
