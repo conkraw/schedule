@@ -25,6 +25,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import column_index_from_string
 from openpyxl.styles import Font, PatternFill, Color
+from collections import deque
 
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
@@ -2602,42 +2603,49 @@ elif mode == "OPD MD PA Conflict Detector":
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
 
-
-# ---- Streamlit page ----
+# --------------------
+# UI: title + upload
+# --------------------
 elif mode == "Shift Availability Tracker":
     st.title("Shift Availability Tracker")
-
+    # --------------------
+    # Helpers: parsing
+    # --------------------
     def is_date_header_row(series, min_dates=3):
+        """A row is a 'date header' if it has >= min_dates parsable dates in columns 2+."""
         parsed = pd.to_datetime(series, errors="coerce")
         return parsed.notna().sum() >= min_dates
     
     def extract_names(cell: object) -> set[str]:
-        """Parse one cell → set of unique preceptor names (ignore CLOSED)."""
+        """
+        From a single Excel cell, return unique preceptor names.
+        - Ignores any 'Closed' (case-insens., 'Closed?')
+        - Requires '~' marker
+        - Splits multiple entries on ';', '/', or 2+ spaces
+        """
         if not isinstance(cell, str):
             return set()
         s = cell.replace("\r", " ").replace("\n", " ").strip()
-    
-        # NEW: ignore any 'closed' marker like 'Closed', 'CLOSED?', 'Clinic Closed', etc.
         if re.search(r"\bclosed\b", s, flags=re.IGNORECASE):
             return set()
-    
         if "~" not in s:
             return set()
-    
-        # split multiple entries (e.g., 'Name ~; Other ~' or 'Name ~  Other ~')
         parts = re.split(r"[;/]| {2,}", s)
-        return {p.replace("~", "").strip() for p in parts if p.replace("~","").strip()}
+        return {p.replace("~", "").strip() for p in parts if p.replace("~", "").strip()}
     
-    def build_segmented_summary(excel):
-        rows = []
+    def build_segmented_name_map(excel: pd.ExcelFile) -> dict:
+        """
+        Return dict: (site, date, shift_label) -> set(names), computed SEGMENT-BY-SEGMENT.
+        A 'segment' begins at each date-header row and ends before the next date-header row.
+        """
+        bucket = {}
         for sheet in excel.sheet_names:
             df = pd.read_excel(excel, sheet_name=sheet, header=None)
-    
-            # find ALL date header rows (row with many dates in cols 2+)
+            # all date header rows
             header_rows = [r for r in range(len(df)) if is_date_header_row(df.iloc[r, 1:])]
             if not header_rows:
                 continue
-            header_rows.append(len(df))  # sentinel to cap the last segment
+            header_rows.append(len(df))  # sentinel end
     
             valid = (
                 {"AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"}
@@ -2649,7 +2657,6 @@ elif mode == "Shift Availability Tracker":
                 date_row, end_row = header_rows[h], header_rows[h+1]
                 dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
     
-                # local (site,date,shift) -> names for THIS segment only
                 seg_bucket = {}
                 for i in range(date_row + 1, end_row):
                     label = str(df.iat[i, 0]).strip().upper()
@@ -2663,108 +2670,348 @@ elif mode == "Shift Availability Tracker":
                             key = (sheet, pd.Timestamp(d).date(), label)
                             seg_bucket.setdefault(key, set()).update(names)
     
-                # record results for this segment
-                for (site, dt, shift), nms in seg_bucket.items():
-                    rows.append({"Site": site, "Date": dt, "Shift": shift,
-                                 "Preceptor_Count": len(nms)})
+                # merge this segment into the global map
+                for k, s in seg_bucket.items():
+                    bucket.setdefault(k, set()).update(s)
+        return bucket
     
-        if not rows:
-            return pd.DataFrame(columns=["Site","Date","Shift","Preceptor_Count"])
-    
-        # If the same site/date/shift appears in multiple segments (rare),
-        # choose the max (or sum if you prefer). Max is safer for “capacity”.
-        out = (pd.DataFrame(rows)
-                 .groupby(["Site","Date","Shift"], as_index=False)["Preceptor_Count"]
-                 .max()
-                 .sort_values(["Site","Date","Shift"])
-                 .reset_index(drop=True))
+    def fold_hope_drive_rows(sub_df: pd.DataFrame):
+        """
+        For HOPE_DRIVE on a given date, combine:
+          - AM = (AM - ACUTES) ∪ (AM - CONTINUITY)
+          - PM = (PM - ACUTES) ∪ (PM - CONTINUITY)
+        Return list of dict rows with Shift in {'AM','PM'}, Names list, Count.
+        """
+        am, pm = set(), set()
+        for _, r in sub_df.iterrows():
+            if r["Shift"].startswith("AM"):
+                am |= set(r["Names"])
+            elif r["Shift"].startswith("PM"):
+                pm |= set(r["Names"])
+        out = []
+        if am:
+            out.append({"Shift": "AM", "Names": sorted(am), "Count": len(am)})
+        if pm:
+            out.append({"Shift": "PM", "Names": sorted(pm), "Count": len(pm)})
         return out
     
     opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
-
-    if opd_file:
-        excel = pd.ExcelFile(opd_file)
-        summary = build_segmented_summary(excel)
-
-        if summary.empty:
-            st.warning("No preceptors with '~' found. Check labels and file layout.")
+    if not opd_file:
+        st.stop()
+    
+    excel = pd.ExcelFile(opd_file)
+    
+    # --------------------
+    # Build name-level map + daily counts (segment-aware)
+    # --------------------
+    name_map = build_segmented_name_map(excel)
+    
+    rows = []
+    for (site, dt, shift), names in name_map.items():
+        rows.append({"Site": site, "Date": pd.to_datetime(dt), "Shift": shift, "Names": sorted(names)})
+    
+    raw = pd.DataFrame(rows)
+    
+    # Merge HOPE_DRIVE detailed labels into AM/PM for counts and names
+    collapsed = []
+    for (site, dt), sub in raw.groupby(["Site", "Date"]):
+        if site == "HOPE_DRIVE":
+            for r in fold_hope_drive_rows(sub):
+                collapsed.append({"Site": site, "Date": dt, **r})
         else:
-            site_opt = ["All"] + sorted(summary["Site"].unique().tolist())
-            sel_site = st.selectbox("Site", site_opt)
-            shift_pick = st.radio("Shift", ["All", "AM only", "PM only"], horizontal=True)
-
-            df = summary.copy()
-            if sel_site != "All":
-                df = df[df["Site"] == sel_site]
-            if shift_pick == "AM only":
-                df = df[df["Shift"].str.startswith("AM")]
-            elif shift_pick == "PM only":
-                df = df[df["Shift"].str.startswith("PM")]
-
-            st.write("### Counts by Site / Date / Shift (segment-aware, unique names)")
-            st.dataframe(df, use_container_width=True)
-
-            # ---- Weekly (Mon–Sat) pivot ----
-            st.write("### Weekly Grid (single table per site)")
-
-            site_list = sorted(summary["Site"].unique().tolist())
-            site_sel = st.selectbox("Site", site_list, index=site_list.index("HOPE_DRIVE") if "HOPE_DRIVE" in site_list else 0)
-            
-            site_df = summary[summary["Site"] == site_sel].copy()
-            site_df["Date"] = pd.to_datetime(site_df["Date"])
-            site_df["WeekStart"] = site_df["Date"] - pd.to_timedelta(site_df["Date"].dt.weekday, unit="D")
-            site_df["DayName"] = site_df["Date"].dt.day_name()
-            
-            day_order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-            def shift_order_for(site):
-                return ["AM - ACUTES","AM - CONTINUITY","PM - ACUTES","PM - CONTINUITY"] if site == "HOPE_DRIVE" else ["AM","PM"]
-            shift_order = shift_order_for(site_sel)
-            
-            site_df["DayCat"] = pd.Categorical(site_df["DayName"], categories=day_order, ordered=True)
-            site_df["ShiftCat"] = pd.Categorical(site_df["Shift"], categories=shift_order, ordered=True)
-            
-            blocks = []
-            for wk_start, wk_df in site_df.sort_values(["WeekStart","ShiftCat","DayCat"]).groupby("WeekStart"):
-                grid = (wk_df.pivot_table(index="ShiftCat",
-                                          columns="DayCat",
-                                          values="Preceptor_Count",
-                                          aggfunc="max")
-                             .reindex(index=shift_order, columns=day_order)
-                             .fillna(0).astype(int))
-                grid.index.name = "Shift"
-            
-                # Put "Week of ..." FIRST
-                grid.insert(0, "Week of", f"Week of {wk_start:%Y-%m-%d}")
-                blocks.append(grid.reset_index())  # keep Shift as a column for nicer downloads
-            
-            if blocks:
-                weekly_single_table = pd.concat(blocks, axis=0, ignore_index=True)
-            
-                st.dataframe(weekly_single_table, use_container_width=True)
-            
-                # --- Downloads ---
-                c1, c2 = st.columns(2)
-                # CSV
-                csv_bytes = weekly_single_table.to_csv(index=False).encode("utf-8")
-                c1.download_button(
-                    "Download CSV",
-                    data=csv_bytes,
-                    file_name=f"{site_sel}_weekly_grid.csv",
-                    mime="text/csv",
-                    key="dl_csv_weekly_grid",
-                )
-            
-                # Excel
-                xbuf = io.BytesIO()
-                with pd.ExcelWriter(xbuf, engine="xlsxwriter") as writer:
-                    weekly_single_table.to_excel(writer, sheet_name="Weekly Grid", index=False)
-                c2.download_button(
-                    "Download Excel",
-                    data=xbuf.getvalue(),
-                    file_name=f"{site_sel}_weekly_grid.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="dl_xlsx_weekly_grid",
-                )
-            else:
-                st.info("No data for this site.")
+            for _, r in sub.iterrows():
+                collapsed.append({
+                    "Site": site,
+                    "Date": r["Date"],
+                    "Shift": r["Shift"],
+                    "Names": r["Names"],
+                    "Count": len(r["Names"]),
+                })
+    
+    daily = pd.DataFrame(collapsed)
+    if daily.empty:
+        st.warning("No preceptors with '~' found. Check file/layout.")
+        st.stop()
+    
+    daily["Weekday"] = daily["Date"].dt.weekday              # Mon=0..Sun=6
+    daily["DayName"] = daily["Date"].dt.day_name()
+    daily["WeekStart"] = daily["Date"] - pd.to_timedelta(daily["Date"].dt.weekday, unit="D")
+    
+    # --------------------
+    # Weekly Grid (single table per site)
+    # --------------------
+    st.subheader("Weekly Grid (single table per site)")
+    
+    site_list = sorted(daily["Site"].unique().tolist())
+    site_sel = st.selectbox("Site", site_list, index=(site_list.index("HOPE_DRIVE") if "HOPE_DRIVE" in site_list else 0))
+    
+    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    def shift_order_for(site):
+        return ["AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"] if site == "HOPE_DRIVE" else ["AM", "PM"]
+    
+    if site_sel == "HOPE_DRIVE":
+        raw_site = raw[raw["Site"] == "HOPE_DRIVE"].copy()
+        raw_site["WeekStart"] = raw_site["Date"] - pd.to_timedelta(raw_site["Date"].dt.weekday, unit="D")
+        raw_site["DayName"] = raw_site["Date"].dt.day_name()
+        raw_site["DayCat"] = pd.Categorical(raw_site["DayName"], categories=day_order, ordered=True)
+        raw_site["ShiftCat"] = pd.Categorical(raw_site["Shift"], categories=shift_order_for("HOPE_DRIVE"), ordered=True)
+    
+        blocks = []
+        for wk, wkdf in raw_site.sort_values(["WeekStart", "ShiftCat", "DayCat"]).groupby("WeekStart"):
+            grid = (
+                wkdf.assign(Count=wkdf["Names"].apply(len))
+                    .pivot_table(index="ShiftCat", columns="DayCat", values="Count", aggfunc="max")
+                    .reindex(index=shift_order_for("HOPE_DRIVE"), columns=day_order)
+                    .fillna(0).astype(int)
+            )
+            grid.index.name = "Shift"
+            grid.insert(0, "Week of", f"Week of {wk:%Y-%m-%d}")
+            blocks.append(grid.reset_index())
+        weekly_single_table = pd.concat(blocks, axis=0, ignore_index=True) if blocks else pd.DataFrame()
+    else:
+        site_df = daily[daily["Site"] == site_sel].copy()
+        site_df["DayCat"] = pd.Categorical(site_df["DayName"], categories=day_order, ordered=True)
+        site_df["ShiftCat"] = pd.Categorical(site_df["Shift"], categories=shift_order_for(site_sel), ordered=True)
+    
+        blocks = []
+        for wk, wkdf in site_df.sort_values(["WeekStart", "ShiftCat", "DayCat"]).groupby("WeekStart"):
+            grid = (
+                wkdf.pivot_table(index="ShiftCat", columns="DayCat", values="Count", aggfunc="max")
+                    .reindex(index=shift_order_for(site_sel), columns=day_order)
+                    .fillna(0).astype(int)
+            )
+            grid.index.name = "Shift"
+            grid.insert(0, "Week of", f"Week of {wk:%Y-%m-%d}")
+            blocks.append(grid.reset_index())
+        weekly_single_table = pd.concat(blocks, axis=0, ignore_index=True) if blocks else pd.DataFrame()
+    
+    if weekly_single_table.empty:
+        st.info("No data for this site.")
+    else:
+        st.dataframe(weekly_single_table, use_container_width=True)
+        c1, c2 = st.columns(2)
+        csv_bytes = weekly_single_table.to_csv(index=False).encode("utf-8")
+        c1.download_button("Download Weekly Grid (CSV)", data=csv_bytes,
+                           file_name=f"{site_sel}_weekly_grid.csv", mime="text/csv")
+        xbuf = io.BytesIO()
+        with pd.ExcelWriter(xbuf, engine="xlsxwriter") as writer:
+            weekly_single_table.to_excel(writer, sheet_name="Weekly Grid", index=False)
+        c2.download_button("Download Weekly Grid (Excel)", data=xbuf.getvalue(),
+                           file_name=f"{site_sel}_weekly_grid.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    
+    # --------------------
+    # Weekly capacity across ETOWN + HOPE_DRIVE + NYES
+    # AM = all 5 days (min across Mon–Fri)
+    # PM = drop EXACTLY one day (second-smallest across Mon–Fri)
+    # --------------------
+    st.subheader("Weekly Max Students (ETOWN + HOPE_DRIVE + NYES)")
+    
+    def daily_caps_three_sites(day_df: pd.DataFrame) -> pd.DataFrame:
+        df3 = day_df[day_df["Site"].isin({"ETOWN", "HOPE_DRIVE", "NYES"})].copy()
+        df3["Weekday"] = df3["Date"].dt.weekday
+        df3 = df3[df3["Weekday"] <= 4]  # Mon-Fri
+        def ampm_bucketize(group):
+            am_cap = group.loc[group["Shift"].str.startswith("AM"), "Count"].sum()
+            pm_cap = group.loc[group["Shift"].str.startswith("PM"), "Count"].sum()
+            return pd.Series({"AM_Capacity": am_cap, "PM_Capacity": pm_cap})
+        dc = df3.groupby("Date").apply(ampm_bucketize).reset_index()
+        dc["WeekStart"] = dc["Date"] - pd.to_timedelta(dc["Date"].dt.weekday, unit="D")
+        return dc
+    
+    daily_caps = daily_caps_three_sites(daily)
+    
+    def weekly_student_capacity(g):
+        am_vals = sorted(g["AM_Capacity"].tolist())      # Mon..Fri
+        pm_vals = sorted(g["PM_Capacity"].tolist())      # Mon..Fri
+        S_am = am_vals[0] if am_vals else 0              # AM: all 5 days → min
+        S_pm = pm_vals[1] if len(pm_vals) >= 2 else (pm_vals[0] if pm_vals else 0)  # PM: drop 1 → second-smallest
+        return pd.Series({"AM_students_max": S_am, "PM_students_max": S_pm, "Total_students_max": S_am + S_pm})
+    
+    weekly_capacity = daily_caps.groupby("WeekStart").apply(weekly_student_capacity).reset_index()
+    st.dataframe(weekly_capacity, use_container_width=True)
+    
+    # --------------------
+    # Student assignment (auto-pick weeks)
+    # - Sites: HOPE_DRIVE → ETOWN → NYES
+    # - Students AM-only or PM-only, Mon–Fri
+    # - AM uses ALL 5 days; PM drops exactly ONE day
+    # - Primary = highest-capacity week; second-week placements fill from lowest-capacity weeks upward
+    # - No student at more than one site; async not auto-filled
+    # - Async notes include WHICH PM weekday was dropped
+    # --------------------
+    st.subheader("Assign Students (auto-pick weeks)")
+    
+    cap3 = daily[daily["Site"].isin({"HOPE_DRIVE", "ETOWN", "NYES"}) & (daily["Weekday"] <= 4)].copy()
+    
+    def pick_days(sub_df: pd.DataFrame, track: str):
+        """
+        Return (days_to_use, dropped_day_or_None) among Mon..Fri.
+        - AM: use ALL 5 days (no drop)
+        - PM: drop exactly one lowest-capacity day (tie → earliest weekday)
+        """
+        weekdays = [0,1,2,3,4]  # Mon..Fri
+        if sub_df.empty:
+            return [], None
+        if track == "AM":
+            return weekdays, None
+        vec = sorted([(int(d.weekday()), cnt) for d, cnt in zip(sub_df["Date"], sub_df["Count"]) if int(d.weekday()) in weekdays])
+        if not vec:
+            return [], None
+        drop = min(vec, key=lambda x: (x[1], x[0]))  # (weekday_idx, capacity)
+        return [d for d in weekdays if d != drop[0]], drop[0]
+    
+    def week_min_capacity(sub_df: pd.DataFrame, track: str):
+        """Compute week's limiting capacity; also return dropped PM day for notes."""
+        days_use, dropped = pick_days(sub_df, track)
+        required = 5 if track == "AM" else 4
+        if len(days_use) < required:
+            return 0, [], None, dropped
+        cap_by_day = {int(d.weekday()): cnt for d, cnt in zip(sub_df["Date"], sub_df["Count"]) if int(d.weekday()) in days_use}
+        if not cap_by_day:
+            return 0, [], None, dropped
+        return min(cap_by_day.values()), days_use, cap_by_day, dropped
+    
+    def preceptor_map_by_day(sub_df: pd.DataFrame):
+        pmap = {}
+        for dte, names in zip(sub_df["Date"], sub_df["Names"]):
+            pmap[int(dte.weekday())] = list(names)
+        return pmap
+    
+    async_issues = []
+    assign_rows  = []
+    student_site = {}
+    next_id      = 1
+    SITE_ORDER   = ["HOPE_DRIVE", "ETOWN", "NYES"]
+    
+    for site in SITE_ORDER:
+        for track in ["AM", "PM"]:
+            # Build week catalog for this site/track
+            weeks_catalog = []
+            for wk, sub in cap3[(cap3["Site"]==site) & (cap3["Shift"]==track)].groupby("WeekStart"):
+                sub = sub.sort_values("Date")
+                min_cap, days_use, cap_by_day, dropped = week_min_capacity(sub, track)
+                if min_cap <= 0:
+                    async_issues.append({"Site": site, "WeekStart": wk, "Track": track, "Issue": "Insufficient capacity/days under policy"})
+                    continue
+    
+                # NOTE: record which PM weekday was dropped (info only)
+                if track == "PM" and dropped is not None:
+                    async_issues.append({
+                        "Site": site,
+                        "WeekStart": wk,
+                        "Track": track,
+                        "Issue": f"Dropped PM weekday: {['Mon','Tue','Wed','Thu','Fri'][dropped]}"
+                    })
+    
+                weeks_catalog.append({
+                    "wk": wk,
+                    "min_cap": int(min_cap),
+                    "days_use": sorted(days_use),
+                    "cap_by_day": cap_by_day,
+                    "pre_by_day": preceptor_map_by_day(sub)
+                })
+    
+            if not weeks_catalog:
+                continue
+    
+            # PRIMARY = highest-capacity week
+            weeks_catalog.sort(key=lambda x: (-x["min_cap"], x["wk"]))
+            primary = weeks_catalog[0]
+            cohort_size = primary["min_cap"]
+            if cohort_size <= 0:
+                async_issues.append({"Site": site, "Track": track, "Issue": "Primary week had nonpositive capacity"})
+                continue
+    
+            # Create site-unique students for this track
+            students = [f"Student {i}" for i in range(next_id, next_id + cohort_size)]
+            for sid in students:
+                student_site[sid] = site
+            next_id += cohort_size
+    
+            # Assign helper for a given week record
+            def assign_week(week_info, students_list):
+                wk   = week_info["wk"]
+                mcap = week_info["min_cap"]
+                days = week_info["days_use"]
+                pmap = week_info["pre_by_day"]
+                for wd in days:
+                    pre_list = pmap.get(wd, [])
+                    if len(pre_list) < mcap:
+                        async_issues.append({"Site": site, "WeekStart": wk, "Track": track,
+                                             "Issue": f"Weekday {wd} has fewer preceptors than min_cap"})
+                        continue
+                    dq = deque(students_list)
+                    dq.rotate(-wd)
+                    for k in range(mcap):
+                        assign_rows.append({
+                            "Site": site,
+                            "WeekStart": pd.to_datetime(wk),
+                            "Track": track,
+                            "Weekday": ["Mon","Tue","Wed","Thu","Fri"][wd],
+                            "Student": dq[k],
+                            "Preceptor": pre_list[k]
+                        })
+    
+            # Assign everyone to the PRIMARY week
+            assign_week(primary, students)
+    
+            # Second-week placements: fill lowest-capacity weeks first
+            remaining = [w for w in weeks_catalog[1:]]
+            remaining.sort(key=lambda x: (x["min_cap"], x["wk"]))
+    
+            remaining_needed = set(students)
+            for wkinfo in remaining:
+                if not remaining_needed:
+                    break
+                take = min(len(remaining_needed), wkinfo["min_cap"])
+                chosen = list(sorted(remaining_needed))[:take]
+                assign_week(wkinfo, chosen)
+                remaining_needed -= set(chosen)
+    
+            # Report students who couldn't get a second week
+            if remaining_needed:
+                for sid in sorted(remaining_needed):
+                    async_issues.append({
+                        "Site": site,
+                        "Track": track,
+                        "Issue": f"{sid} could not be placed for a second week under current capacity policy"
+                    })
+    
+    # Present outputs
+    st.subheader("Student Assignments (auto-picked weeks)")
+    assign_df = pd.DataFrame(assign_rows)
+    if assign_df.empty:
+        st.info("No assignments were generated.")
+    else:
+        st.dataframe(assign_df.sort_values(["Site", "WeekStart", "Track", "Weekday", "Student"]).reset_index(drop=True),
+                     use_container_width=True)
+    
+    if async_issues:
+        st.subheader("Asynchronous / Not Auto-Filled")
+        issues_df = pd.DataFrame(async_issues).sort_values(["Site", "WeekStart", "Track", "Issue"]).reset_index(drop=True)
+        st.dataframe(issues_df, use_container_width=True)
+    else:
+        issues_df = pd.DataFrame(columns=["Site","WeekStart","Track","Issue"])
+    
+    # Downloads for assignments
+    if not assign_df.empty:
+        c1, c2 = st.columns(2)
+        c1.download_button(
+            "Download Assignments (CSV)",
+            data=assign_df.to_csv(index=False).encode("utf-8"),
+            file_name="student_assignments_auto_weeks.csv",
+            mime="text/csv"
+        )
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine="xlsxwriter") as xw:
+            assign_df.to_excel(xw, index=False, sheet_name="Assignments")
+            if not issues_df.empty:
+                issues_df.to_excel(xw, index=False, sheet_name="Async_Issues")
+        c2.download_button(
+            "Download Assignments (Excel)",
+            data=buf.getvalue(),
+            file_name="student_assignments_auto_weeks.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
