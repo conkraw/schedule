@@ -2932,18 +2932,27 @@ elif mode == "Shift Availability Tracker":
             # Assign helper for a given week record
             def assign_week(week_info, students_list):
                 wk   = week_info["wk"]
-                mcap = week_info["min_cap"]
                 days = week_info["days_use"]
                 pmap = week_info["pre_by_day"]
+            
+                # Use effective capacity based on how many students we’re actually passing in
+                effective_mcap = min(week_info["min_cap"], len(students_list))
+                if effective_mcap <= 0:
+                    return
+            
                 for wd in days:
                     pre_list = pmap.get(wd, [])
-                    if len(pre_list) < mcap:
-                        async_issues.append({"Site": site, "WeekStart": wk, "Track": track,
-                                             "Issue": f"Weekday {wd} has fewer preceptors than min_cap"})
+                    if len(pre_list) < effective_mcap:
+                        async_issues.append({
+                            "Site": site, "WeekStart": wk, "Track": track,
+                            "Issue": f"Weekday {wd} has fewer preceptors than needed "
+                                     f"(have {len(pre_list)}, need {effective_mcap})"
+                        })
                         continue
+            
                     dq = deque(students_list)
                     dq.rotate(-wd)
-                    for k in range(mcap):
+                    for k in range(effective_mcap):
                         assign_rows.append({
                             "Site": site,
                             "WeekStart": pd.to_datetime(wk),
@@ -2952,19 +2961,21 @@ elif mode == "Shift Availability Tracker":
                             "Student": dq[k],
                             "Preceptor": pre_list[k]
                         })
-    
+
             # Assign everyone to the PRIMARY week
             assign_week(primary, students)
     
             # Second-week placements: fill lowest-capacity weeks first
             remaining = [w for w in weeks_catalog[1:]]
             remaining.sort(key=lambda x: (x["min_cap"], x["wk"]))
-    
+
             remaining_needed = set(students)
             for wkinfo in remaining:
                 if not remaining_needed:
                     break
                 take = min(len(remaining_needed), wkinfo["min_cap"])
+                if take <= 0:
+                    continue
                 chosen = list(sorted(remaining_needed))[:take]
                 assign_week(wkinfo, chosen)
                 remaining_needed -= set(chosen)
