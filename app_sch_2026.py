@@ -2697,40 +2697,48 @@ elif mode == "Shift Availability Tracker":
             st.dataframe(df, use_container_width=True)
 
             # ---- Weekly (Mon–Sat) pivot ----
-            st.write("### Weekly View (one table per week)")
+            st.write("### Weekly Grid (single table per site)")
             
-            # pick site
+            # choose site
             site_list = sorted(summary["Site"].unique().tolist())
             site_sel = st.selectbox("Site", site_list, index=site_list.index("HOPE_DRIVE") if "HOPE_DRIVE" in site_list else 0)
             
-            # use the deduped/segment-aware counts
+            # site subset + week & day prep
             site_df = summary[summary["Site"] == site_sel].copy()
             site_df["Date"] = pd.to_datetime(site_df["Date"])
             site_df["WeekStart"] = site_df["Date"] - pd.to_timedelta(site_df["Date"].dt.weekday, unit="D")
             site_df["DayName"] = site_df["Date"].dt.day_name()
             
-            # day and shift orders
+            # desired ordering
             day_order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
             def shift_order_for(site):
                 return ["AM - ACUTES","AM - CONTINUITY","PM - ACUTES","PM - CONTINUITY"] if site == "HOPE_DRIVE" else ["AM","PM"]
-            
             shift_order = shift_order_for(site_sel)
             
-            # ensure categorical ordering
             site_df["DayCat"] = pd.Categorical(site_df["DayName"], categories=day_order, ordered=True)
             site_df["ShiftCat"] = pd.Categorical(site_df["Shift"], categories=shift_order, ordered=True)
             
-            # loop weeks in chronological order
-            for wk_start, wk_df in site_df.sort_values("WeekStart").groupby("WeekStart"):
-                st.subheader(f"Week of {wk_start:%Y-%m-%d}")
-            
-                # pivot to grid: rows=Shift, cols=DayName; use max in case duplicates slipped in
+            # build one big table: stack each week's grid vertically, add "Week of ..." column on the right
+            blocks = []
+            for wk_start, wk_df in site_df.sort_values(["WeekStart","ShiftCat","DayCat"]).groupby("WeekStart"):
+                # pivot for this week
                 grid = (wk_df.pivot_table(index="ShiftCat",
                                           columns="DayCat",
                                           values="Preceptor_Count",
                                           aggfunc="max")
                              .reindex(index=shift_order, columns=day_order)
                              .fillna(0).astype(int))
+                # add "Week of" column on the far right
+                grid["Week of"] = f"Week of {wk_start:%Y-%m-%d}"
+                # ensure column order Mon..Sun..Week of
+                grid = grid[day_order + ["Week of"]]
+                # nice index name
                 grid.index.name = None
-                st.dataframe(grid, use_container_width=True)
+                blocks.append(grid)
+            
+            if blocks:
+                weekly_single_table = pd.concat(blocks, axis=0)
+                st.dataframe(weekly_single_table, use_container_width=True)
+            else:
+                st.info("No data for this site.")
 
