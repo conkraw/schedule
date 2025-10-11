@@ -2607,7 +2607,6 @@ elif mode == "OPD MD PA Conflict Detector":
 # UI: title + upload
 # --------------------
 elif mode == "Shift Availability Tracker":
-    st.title("Shift Availability Tracker")
     # --------------------
     # Helpers: parsing
     # --------------------
@@ -2641,7 +2640,6 @@ elif mode == "Shift Availability Tracker":
         bucket = {}
         for sheet in excel.sheet_names:
             df = pd.read_excel(excel, sheet_name=sheet, header=None)
-            # all date header rows
             header_rows = [r for r in range(len(df)) if is_date_header_row(df.iloc[r, 1:])]
             if not header_rows:
                 continue
@@ -2652,7 +2650,6 @@ elif mode == "Shift Availability Tracker":
                 if sheet == "HOPE_DRIVE" else {"AM", "PM"}
             )
     
-            # process each segment independently
             for h in range(len(header_rows) - 1):
                 date_row, end_row = header_rows[h], header_rows[h+1]
                 dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
@@ -2670,7 +2667,6 @@ elif mode == "Shift Availability Tracker":
                             key = (sheet, pd.Timestamp(d).date(), label)
                             seg_bucket.setdefault(key, set()).update(names)
     
-                # merge this segment into the global map
                 for k, s in seg_bucket.items():
                     bucket.setdefault(k, set()).update(s)
         return bucket
@@ -2694,6 +2690,11 @@ elif mode == "Shift Availability Tracker":
         if pm:
             out.append({"Shift": "PM", "Names": sorted(pm), "Count": len(pm)})
         return out
+    
+    # --------------------
+    # UI: title + upload
+    # --------------------
+    st.title("Shift Availability Tracker")
     
     opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
     if not opd_file:
@@ -2837,8 +2838,8 @@ elif mode == "Shift Availability Tracker":
     # - Students AM-only or PM-only, Mon–Fri
     # - AM uses ALL 5 days; PM drops exactly ONE day
     # - Primary = highest-capacity week; second-week placements fill from lowest-capacity weeks upward
-    # - No student at more than one site; async not auto-filled
     # - Async notes include WHICH PM weekday was dropped
+    # - Guard against IndexError when fewer students are passed than week min_cap
     # --------------------
     st.subheader("Assign Students (auto-pick weeks)")
     
@@ -2895,7 +2896,7 @@ elif mode == "Shift Availability Tracker":
                     async_issues.append({"Site": site, "WeekStart": wk, "Track": track, "Issue": "Insufficient capacity/days under policy"})
                     continue
     
-                # NOTE: record which PM weekday was dropped (info only)
+                # info: which PM weekday was dropped
                 if track == "PM" and dropped is not None:
                     async_issues.append({
                         "Site": site,
@@ -2929,27 +2930,25 @@ elif mode == "Shift Availability Tracker":
                 student_site[sid] = site
             next_id += cohort_size
     
-            # Assign helper for a given week record
+            # Assign helper with effective capacity guard
             def assign_week(week_info, students_list):
                 wk   = week_info["wk"]
                 days = week_info["days_use"]
                 pmap = week_info["pre_by_day"]
-            
-                # Use effective capacity based on how many students we’re actually passing in
+    
                 effective_mcap = min(week_info["min_cap"], len(students_list))
                 if effective_mcap <= 0:
                     return
-            
+    
                 for wd in days:
                     pre_list = pmap.get(wd, [])
                     if len(pre_list) < effective_mcap:
                         async_issues.append({
                             "Site": site, "WeekStart": wk, "Track": track,
-                            "Issue": f"Weekday {wd} has fewer preceptors than needed "
-                                     f"(have {len(pre_list)}, need {effective_mcap})"
+                            "Issue": f"Weekday {wd} has fewer preceptors than needed (have {len(pre_list)}, need {effective_mcap})"
                         })
                         continue
-            
+    
                     dq = deque(students_list)
                     dq.rotate(-wd)
                     for k in range(effective_mcap):
@@ -2961,14 +2960,14 @@ elif mode == "Shift Availability Tracker":
                             "Student": dq[k],
                             "Preceptor": pre_list[k]
                         })
-
+    
             # Assign everyone to the PRIMARY week
             assign_week(primary, students)
     
             # Second-week placements: fill lowest-capacity weeks first
             remaining = [w for w in weeks_catalog[1:]]
             remaining.sort(key=lambda x: (x["min_cap"], x["wk"]))
-
+    
             remaining_needed = set(students)
             for wkinfo in remaining:
                 if not remaining_needed:
@@ -3025,4 +3024,180 @@ elif mode == "Shift Availability Tracker":
             file_name="student_assignments_auto_weeks.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
+    
+    # --------------------
+    # Write assignments back into the OPD workbook (append after ~)
+    # --------------------
+    st.subheader("Write assignments into OPD (append after '~')")
+    
+    def find_date_segments(ws):
+        """
+        Return list of segments:
+        [(date_row_idx, end_row_idx, {col_idx: date}), ...]
+        Date row: >=3 parsable dates in columns 2+.
+        """
+        segments = []
+        date_rows = []
+        max_row = ws.max_row
+        max_col = ws.max_column
+    
+        for r in range(1, max_row + 1):
+            vals = [ws.cell(r, c).value for c in range(2, max_col + 1)]
+            pars = pd.to_datetime(pd.Series(vals), errors="coerce")
+            if pars.notna().sum() >= 3:
+                date_rows.append(r)
+    
+        if not date_rows:
+            return segments
+    
+        date_rows.append(max_row + 1)  # sentinel
+        for i in range(len(date_rows) - 1):
+            r0, r1 = date_rows[i], date_rows[i + 1]
+            dmap = {}
+            for c in range(2, max_col + 1):
+                v = ws.cell(r0, c).value
+                dt = pd.to_datetime(v, errors="coerce")
+                if pd.notna(dt):
+                    dmap[c] = dt.date()
+            segments.append((r0, r1 - 1, dmap))
+        return segments
+    
+    def valid_shift_labels(sheet_name: str, track: str):
+        if sheet_name == "HOPE_DRIVE":
+            return ["AM - ACUTES", "AM - CONTINUITY"] if track == "AM" else ["PM - ACUTES", "PM - CONTINUITY"]
+        else:
+            return [track]
+    
+    def append_student_after_tilde(cell_text: str, preceptor_name: str, student_id: str) -> str | None:
+        """
+        Find 'preceptor_name ~' (case-insensitive) and append ' student_id'.
+        Return updated string, or None if pattern not found.
+        """
+        if not isinstance(cell_text, str):
+            return None
+        name_pat = re.escape(preceptor_name)
+        pat = re.compile(rf"(?i)\b{name_pat}\b\s*~")
+        if not pat.search(cell_text):
+            return None
+        return pat.sub(lambda m: m.group(0) + f" {student_id}", cell_text, count=1)
+    
+    def write_back_students(opd_file_like, assignments_df: pd.DataFrame):
+        """
+        Return (workbook_bytes, issues_df).
+        """
+        from openpyxl import load_workbook
+        from io import BytesIO
+    
+        wb = load_workbook(opd_file_like)
+        issues = []
+    
+        # Pre-index segments
+        segment_index = {}
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            segment_index[sheet_name] = find_date_segments(ws)
+    
+        for _, row in assignments_df.iterrows():
+            site = row["Site"]
+            wkstart = pd.to_datetime(row["WeekStart"]).date()
+            track = row["Track"]       # "AM" or "PM"
+            weekday = row["Weekday"]   # "Mon"..."Fri"
+            student = row["Student"]
+            preceptor = row["Preceptor"]
+    
+            # actual date
+            wd_idx = ["Mon","Tue","Wed","Thu","Fri"].index(weekday)
+            the_date = (pd.Timestamp(wkstart) + pd.to_timedelta(wd_idx, unit="D")).date()
+    
+            if site not in wb.sheetnames:
+                issues.append({"Site": site, "Date": the_date, "Track": track, "Preceptor": preceptor,
+                               "Student": student, "Issue": "Sheet not found"})
+                continue
+    
+            ws = wb[site]
+            segments = segment_index.get(site, [])
+            seg = None
+            date_col = None
+            for (r0, r1, dmap) in segments:
+                for c, dt in dmap.items():
+                    if dt == the_date:
+                        seg = (r0, r1, dmap)
+                        date_col = c
+                        break
+                if seg:
+                    break
+            if seg is None or date_col is None:
+                issues.append({"Site": site, "Date": the_date, "Track": track, "Preceptor": preceptor,
+                               "Student": student, "Issue": "Date not found in any date header row"})
+                continue
+    
+            r0, r1, _ = seg
+            # find shift rows in this segment
+            candidate_shifts = valid_shift_labels(site, track)
+            shift_rows = []
+            for r in range(r0 + 1, r1 + 1):
+                label = ws.cell(r, 1).value
+                if isinstance(label, str) and label.strip().upper() in [s.upper() for s in candidate_shifts]:
+                    shift_rows.append(r)
+    
+            if not shift_rows:
+                issues.append({"Site": site, "Date": the_date, "Track": track, "Preceptor": preceptor,
+                               "Student": student, "Issue": "Shift row not found in segment"})
+                continue
+    
+            # try first in the targeted shift rows
+            updated = False
+            for rr in shift_rows:
+                cell = ws.cell(rr, date_col)
+                new_text = append_student_after_tilde(cell.value, preceptor, student)
+                if new_text is not None:
+                    cell.value = new_text
+                    updated = True
+                    break
+    
+            if not updated:
+                # fallback: any row in the segment
+                for rr in range(r0 + 1, r1 + 1):
+                    cell = ws.cell(rr, date_col)
+                    new_text = append_student_after_tilde(cell.value, preceptor, student)
+                    if new_text is not None:
+                        cell.value = new_text
+                        updated = True
+                        break
+    
+            if not updated:
+                issues.append({"Site": site, "Date": the_date, "Track": track, "Preceptor": preceptor,
+                               "Student": student, "Issue": "Preceptor name not found in target cell"})
+    
+        out_buf = io.BytesIO()
+        if issues:
+            ws_issues = wb.create_sheet("Write-Back Issues")
+            headers = ["Site","Date","Track","Preceptor","Student","Issue"]
+            ws_issues.append(headers)
+            for it in issues:
+                ws_issues.append([it.get(h, "") for h in headers])
+    
+        wb.save(out_buf)
+        return out_buf.getvalue(), pd.DataFrame(issues)
+    
+    if not assign_df.empty:
+        st.markdown("#### Write assignments back into OPD (append after `~`)")
+        if st.button("Generate OPD copy with students added"):
+            try:
+                # Rewind/upload buffer and load raw bytes
+                opd_file.seek(0)
+                xls_bytes = opd_file.read()
+                wb_bytes, wb_issues = write_back_students(io.BytesIO(xls_bytes), assign_df)
+    
+                st.success("Done. Download your updated workbook below.")
+                st.download_button(
+                    "Download md_opd_with_students.xlsx",
+                    data=wb_bytes,
+                    file_name="md_opd_with_students.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                if not wb_issues.empty:
+                    st.warning("Some entries couldn't be written exactly; see issues below.")
+                    st.dataframe(wb_issues, use_container_width=True)
+            except Exception as e:
+                st.error(f"Failed to write back into workbook: {e}")
