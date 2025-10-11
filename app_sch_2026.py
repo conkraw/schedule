@@ -2602,13 +2602,32 @@ elif mode == "OPD MD PA Conflict Detector":
     else:
         st.info("Upload both the MD and PA OPD files to begin.")
 
+
+# ---- In your Streamlit page ----
 elif mode == "Shift Availability Tracker":
     st.title("Shift Availability Tracker")
-    def count_tildes(x):
-        return x.count("~") if isinstance(x, str) else 0
 
+    def extract_names(cell):
+        """
+        Return a set of preceptor names from a cell.
+        Handles '~' markers, multiple names split by newlines/;/, and extra spaces.
+        """
+        if not isinstance(cell, str):
+            return set()
+        txt = cell.replace("\n", " ").strip()
+        if "~" not in txt:
+            return set()
+    
+        # Split on semicolons or slashes if someone packed multiple in one cell
+        parts = re.split(r"[;/]", txt)
+        names = set()
+        for p in parts:
+            base = p.replace("~", "").strip()
+            if base:
+                names.add(base)
+        return names
+    
     def find_date_row(df, search_rows=15):
-        # Find the row where most cells in columns 1.. are datelike
         best_row, best_count = None, -1
         for r in range(min(search_rows, len(df))):
             parsed = pd.to_datetime(df.iloc[r, 1:], errors="coerce")
@@ -2617,52 +2636,58 @@ elif mode == "Shift Availability Tracker":
                 best_row, best_count = r, c
         return best_row if best_row is not None else 3
     
-    def build_summary(excel):
-        rows = []
+    def build_summary_unique_names(excel):
+        # Dictionary: (Site, Date, Shift) -> set of unique names
+        bucket = {}
+    
         for sheet in excel.sheet_names:
             df = pd.read_excel(excel, sheet_name=sheet, header=None)
     
-            # find the date row dynamically (fallback to 3)
             date_row = find_date_row(df)
             dates = pd.to_datetime(df.iloc[date_row, 1:], errors="coerce")
     
-            # valid shift labels
             if sheet == "HOPE_DRIVE":
                 valid = {"AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"}
             else:
                 valid = {"AM", "PM"}
     
-            # scan rows under the date row
             for i in range(date_row + 1, len(df)):
                 label = str(df.iat[i, 0]).strip().upper()
                 if label in valid:
                     for j, d in enumerate(dates, start=1):
                         if pd.isna(d):
                             continue
-                        cnt = count_tildes(df.iat[i, j])
-                        if cnt > 0:
-                            rows.append(
-                                {"Site": sheet, "Date": d.date(), "Shift": label, "Preceptor_Count": cnt}
-                            )
+                        names = extract_names(df.iat[i, j])
+                        if not names:
+                            continue
+                        key = (sheet, d.date(), label)
+                        if key not in bucket:
+                            bucket[key] = set()
+                        # union to deduplicate across repeated blocks
+                        bucket[key] |= names
     
+        # Convert to dataframe of counts
+        rows = [
+            {"Site": k[0], "Date": k[1], "Shift": k[2], "Preceptor_Count": len(v)}
+            for k, v in bucket.items()
+        ]
         if not rows:
             return pd.DataFrame(columns=["Site", "Date", "Shift", "Preceptor_Count"])
-    
         out = pd.DataFrame(rows)
-        # aggregate in case a shift spans multiple rows
-        out = out.groupby(["Site", "Date", "Shift"], as_index=False)["Preceptor_Count"].sum()
+        # sort nicely
+        out = out.sort_values(["Site", "Date", "Shift"]).reset_index(drop=True)
         return out
+
     
     opd_file = st.file_uploader("Upload md_opd.xlsx", type=["xlsx"])
 
     if opd_file:
         excel = pd.ExcelFile(opd_file)
-        summary = build_summary(excel)
+        summary = build_summary_unique_names(excel)
 
         if summary.empty:
             st.warning("No preceptors with '~' found. Double-check the file or labels.")
         else:
-            # Filters
             sites = ["All"] + sorted(summary["Site"].unique().tolist())
             sel_site = st.selectbox("Site", sites)
             shift_type = st.segmented_control("Shift", options=["All", "AM only", "PM only"])
@@ -2675,12 +2700,11 @@ elif mode == "Shift Availability Tracker":
             elif shift_type == "PM only":
                 df = df[df["Shift"].str.startswith("PM")]
 
-            st.write("### Counts by Site / Date / Shift")
+            st.write("### Counts by Site / Date / Shift (unique preceptors)")
             st.dataframe(df, use_container_width=True)
 
-            # Optional: quick pivot to view dates as columns
-            with st.expander("Show pivot view"):
+            with st.expander("Pivot view"):
                 pv = df.pivot_table(index=["Site", "Shift"], columns="Date",
-                                    values="Preceptor_Count", aggfunc="sum").fillna(0).astype(int)
+                                    values="Preceptor_Count", aggfunc="max").fillna(0).astype(int)
                 st.dataframe(pv, use_container_width=True)
 
