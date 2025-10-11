@@ -2616,7 +2616,7 @@ elif mode == "Shift Availability Tracker":
                 for i, row in df.iterrows():
                     shift_label = str(row[0]).strip().upper()
                     if sheet == "HOPE_DRIVE":
-                        valid_shifts = ["AM - ACUTE", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"]
+                        valid_shifts = ["AM - ACUTES", "AM - CONTINUITY", "PM - ACUTES", "PM - CONTINUITY"]
                     else:
                         valid_shifts = ["AM", "PM"]
                     if shift_label in valid_shifts:
