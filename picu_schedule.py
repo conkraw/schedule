@@ -471,20 +471,22 @@ elif mode == "Roster_HMC":
         "docass_due_date_1","docass_due_date_2",
         "grade_due_date"
     ]
-    
+
     for col in due_cols:
         df_roster[col] = (df_roster[col].dt.normalize() + pd.Timedelta(hours=23, minutes=59)).dt.strftime("%m-%d-%Y 23:59")
 
     df_roster["start_date"] = df_roster["start_date"].dt.strftime('%Y-%m-%d')  
     df_roster["end_date"] = df_roster["end_date"].dt.strftime('%Y-%m-%d')
 
-    
+    df_roster.drop(columns=due_cols, errors="ignore", inplace=True)
+  
     df_roster["student_demographics_complete"] = 2 
 
     df_roster = pd.concat([df_roster, df_roster.iloc[[5]].assign(record_id="testing")], ignore_index=True)
   
     df_roster["multiple_student"] = df_roster.groupby("start_date")["start_date"].transform("count").gt(1).astype(int) + 1
 
+  df_roster.drop(columns=[c for c in due_cols if c != "grade_due_date"],errors="ignore",inplace=True)
     # preview + download
     st.dataframe(df_roster, height=400)
     
