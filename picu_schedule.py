@@ -486,7 +486,7 @@ elif mode == "Roster_HMC":
   
     df_roster["multiple_student"] = df_roster.groupby("start_date")["start_date"].transform("count").gt(1).astype(int) + 1
 
-  df_roster.drop(columns=[c for c in due_cols if c != "grade_due_date"],errors="ignore",inplace=True)
+    df_roster.drop(columns=[c for c in due_cols if c != "grade_due_date"],errors="ignore",inplace=True)
     # preview + download
     st.dataframe(df_roster, height=400)
     
