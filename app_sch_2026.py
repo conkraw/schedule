@@ -1421,11 +1421,10 @@ elif mode == "Create Student Schedule":
         start_rows = [2, 10, 18, 26]
         weeks = ['Week 1','Week 2','Week 3','Week 4']
         due_texts = [
-            'Quiz 1 Due',
-            'Quiz 2, Pediatric Documentation #1, 1 Clinical Encounter Log Due',
-            'Quiz 3 Due',
-            'Quiz 4, Pediatric Documentation #2, Social Drivers of Health Assessment Form, Developmental Assessment of Pediatric Patient Form, All Clinical Encounter Logs are Due!'
-        ]
+            '',
+            '',
+            '',
+            'All Clinical Encounter Logs are Due, Solicitation of Clinical Assessments, Observed H&Ps and Observed Handoff Due']
     
         for name in students:
             title = name[:31].replace('/','-').replace('\\','-')
