@@ -364,16 +364,35 @@ elif mode == "Format OPD + Summary":
     
     schedule_files = st.file_uploader("1) Upload one or more QGenda calendar Excel(s)",type=["xlsx", "xls"],accept_multiple_files=True)
     
+    #if schedule_files:
+    #    for file in schedule_files:
+    #        try:
+    #            # Read the first sheet
+    #            df = pd.read_excel(file, sheet_name=0, header=None)
+    
+    #            # Flatten all string values to a list of lowercase strings
+    #            cell_values = df.astype(str).apply(lambda x: x.str.lower()).values.flatten().tolist()
+    
+    #            # Check if any keyword is found in cell values
+    #            for keyword in required_keywords:
+    #                if any(keyword in val for val in cell_values):
+    #                    found_keywords.add(keyword)
+    
+    #       except Exception as e:
+    #           st.error(f"Error reading {file.name}: {e}")
+
     if schedule_files:
         for file in schedule_files:
             try:
-                # Read the first sheet
                 df = pd.read_excel(file, sheet_name=0, header=None)
     
-                # Flatten all string values to a list of lowercase strings
-                cell_values = df.astype(str).apply(lambda x: x.str.lower()).values.flatten().tolist()
+                cell_values = [
+                    str(val).strip().lower()
+                    for row in df.values
+                    for val in row
+                    if pd.notna(val)
+                ]
     
-                # Check if any keyword is found in cell values
                 for keyword in required_keywords:
                     if any(keyword in val for val in cell_values):
                         found_keywords.add(keyword)
