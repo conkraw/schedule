@@ -442,10 +442,33 @@ elif mode == "Roster_HMC":
     df_roster.drop(columns=renamed_cols, errors="ignore", inplace=True)
 
     #DUE DATES
-    
     # ─── 1) Ensure start_date and end_date are datetime ─────────────────────────
-    df_roster["start_date"] = pd.to_datetime(df_roster["start_date"], infer_datetime_format=True)
-    df_roster["end_date"]   = pd.to_datetime(df_roster["end_date"], infer_datetime_format=True)
+    def parse_roster_dates(series, col_name):
+        raw = series.astype(str).str.strip()
+    
+        # Treat blanks / obvious missing values as missing
+        raw = raw.replace({"": pd.NA, "nan": pd.NA, "NaT": pd.NA, "None": pd.NA})
+    
+        # Newer pandas supports format="mixed"; older pandas may not
+        try:
+            parsed = pd.to_datetime(raw, errors="coerce", format="mixed")
+        except TypeError:
+            parsed = pd.to_datetime(raw, errors="coerce")
+    
+        bad_mask = raw.notna() & parsed.isna()
+        if bad_mask.any():
+            st.error(f"Some values in '{col_name}' could not be parsed as dates.")
+            st.dataframe(
+                df_roster.loc[bad_mask, ["record_id", "student", col_name]],
+                use_container_width=True
+            )
+            st.stop()
+    
+        return parsed
+    
+    
+    df_roster["start_date"] = parse_roster_dates(df_roster["start_date"], "start_date")
+    df_roster["end_date"]   = parse_roster_dates(df_roster["end_date"], "end_date")
     
     # ─── 2) Compute first Sunday on/after start_date ────────────────────────────
     days_to_sunday = (6 - df_roster["start_date"].dt.weekday) % 7
@@ -482,7 +505,11 @@ elif mode == "Roster_HMC":
   
     df_roster["student_demographics_complete"] = 2 
 
-    df_roster = pd.concat([df_roster, df_roster.iloc[[5]].assign(record_id="testing")], ignore_index=True)
+    if len(df_roster) > 5:
+    df_roster = pd.concat(
+        [df_roster, df_roster.iloc[[5]].assign(record_id="testing")],
+        ignore_index=True
+    )
   
     df_roster["multiple_student"] = df_roster.groupby("start_date")["start_date"].transform("count").gt(1).astype(int) + 1
 
