@@ -506,11 +506,11 @@ elif mode == "Roster_HMC":
     df_roster["student_demographics_complete"] = 2 
 
     if len(df_roster) > 5:
-    df_roster = pd.concat(
-        [df_roster, df_roster.iloc[[5]].assign(record_id="testing")],
-        ignore_index=True
-    )
-  
+      df_roster = pd.concat(
+          [df_roster, df_roster.iloc[[5]].assign(record_id="testing")],
+          ignore_index=True
+      )
+    
     df_roster["multiple_student"] = df_roster.groupby("start_date")["start_date"].transform("count").gt(1).astype(int) + 1
 
     df_roster.drop(columns=[c for c in due_cols if c != "grade_due_date"],errors="ignore",inplace=True)
