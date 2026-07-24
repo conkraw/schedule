@@ -1790,9 +1790,13 @@ elif mode == "Create Individual Schedules":
     ]
 
     uploaded = st.file_uploader(
-        "Upload the master Excel (.xlsx) with one tab per person",
+        "Upload the OPD workbook or master schedule Excel (.xlsx)",
         type=["xlsx"],
         key="individual_schedule_master",
+        help=(
+            "OPD workbooks contain site tabs such as HOPE_DRIVE, NYES, and ETOWN. "
+            "Master schedule workbooks contain one tab per student."
+        ),
     )
 
     def _normalize_name(value):
@@ -1854,7 +1858,12 @@ elif mode == "Create Individual Schedules":
         if not isinstance(value, str) or not value.strip():
             return None, None
 
-        match = re.match(r"^\s*(.*?)\s*-\s*\[\s*([^\]]+)\s*\]\s*$", value)
+        normalized = (
+            value.replace("\u00a0", " ")
+            .replace("\u2013", "-")
+            .replace("\u2014", "-")
+        )
+        match = re.match(r"^\s*(.*?)\s*-\s*\[\s*([^\]]+)\s*\]\s*$", normalized)
         if not match:
             return None, None
 
@@ -1862,19 +1871,114 @@ elif mode == "Create Individual Schedules":
         site = _normalize_site(match.group(2))
         return preceptor, site
 
-    def build_preceptor_assignment_report(master_wb):
-        """
-        Build one row per student/preceptor/week for HOPE_DRIVE, NYES, and ETOWN.
+    def _parse_opd_assignment(value):
+        """Parse an OPD cell formatted as 'Preceptor ~ Student'."""
+        if not isinstance(value, str) or not value.strip() or "~" not in value:
+            return None, None
 
-        Primary logic:
-          - At most one primary preceptor per student/week.
-          - The preceptor with the largest session count is primary only when the
-            count is >3. Ties are resolved alphabetically for stable output.
+        normalized = (
+            value.replace("\u00a0", " ")
+            .replace("\u2013", "-")
+            .replace("\u2014", "-")
+        )
+        preceptor, student = re.split(r"\s*~\s*", normalized, maxsplit=1)
+        preceptor = re.sub(r"\s+", " ", preceptor.strip())
+        student = re.sub(r"\s+", " ", student.strip())
 
-        Fragmentation logic:
-          - YES when that preceptor has <3 sessions with the student that week.
-          - A count of exactly 3 is neither primary nor fragmented.
-        """
+        blank_tokens = {"", "nan", "n/a", "na", "none", "null", "-", "--", "—"}
+        if (
+            not preceptor
+            or student.casefold() in blank_tokens
+            or not re.search(r"[A-Za-z0-9]", student)
+        ):
+            return None, None
+
+        return preceptor, student
+
+    def _is_opd_site_workbook(master_wb):
+        """Return True when the workbook contains one or more focus-site tabs."""
+        return any(
+            _normalize_site(sheet_name) in FOCUS_SITES
+            for sheet_name in master_wb.sheetnames
+        )
+
+    def _opd_week_blocks(ws):
+        """Yield (Monday date, AM/PM assignment rows) from an OPD site sheet."""
+        monday_header_rows = []
+        for row in range(1, ws.max_row + 1):
+            value = ws.cell(row=row, column=2).value
+            if isinstance(value, str) and value.strip().casefold() == "monday":
+                monday_header_rows.append(row)
+
+        for index, header_row in enumerate(monday_header_rows):
+            next_header = (
+                monday_header_rows[index + 1]
+                if index + 1 < len(monday_header_rows)
+                else ws.max_row + 1
+            )
+
+            date_row = None
+            monday_date = None
+            for candidate_row in range(header_row + 1, min(header_row + 7, next_header)):
+                parsed_dates = []
+                for col in range(2, 9):
+                    parsed = _parse_excel_date(ws.cell(row=candidate_row, column=col).value)
+                    if parsed is not None:
+                        parsed_dates.append((col, parsed))
+
+                if len(parsed_dates) >= 2:
+                    date_row = candidate_row
+                    monday_date = _week_monday_from_date_row(ws, candidate_row)
+                    break
+
+            if date_row is None or monday_date is None:
+                continue
+
+            session_rows = []
+            for row in range(date_row + 1, next_header):
+                label = ws.cell(row=row, column=1).value
+                if isinstance(label, str) and re.match(
+                    r"^\s*(AM|PM)\b", label, re.IGNORECASE
+                ):
+                    session_rows.append(row)
+
+            if session_rows:
+                yield monday_date, session_rows
+
+    def _append_week_rows(weekly_rows, student_name, monday_date, preceptor_counts):
+        """Append report rows and enforce one primary preceptor per student/week."""
+        if not preceptor_counts:
+            return
+
+        eligible_primary = [
+            (preceptor, count)
+            for preceptor, count in preceptor_counts.items()
+            if count >= 3
+        ]
+        primary_name = None
+        if eligible_primary:
+            eligible_primary.sort(
+                key=lambda item: (-item[1], _normalize_name(item[0]))
+            )
+            primary_name = eligible_primary[0][0]
+
+        for preceptor, count in preceptor_counts.items():
+            weekly_rows.append(
+                {
+                    "preceptor_name": preceptor,
+                    "student_name": student_name,
+                    "no_of_sessions": int(count),
+                    "monday_date": monday_date,
+                    "primary_preceptor": "YES" if preceptor == primary_name else "NO",
+                    "fragmented_preceptor": "YES" if count < 3 else "NO",
+                    "email": NORMALIZED_EMAIL_MAP.get(
+                        _normalize_name(preceptor), ""
+                    ),
+                }
+            )
+
+    def _build_report_from_student_sheets(master_wb):
+        """Read the one-tab-per-student master schedule format."""
         weekly_rows = []
 
         # Rows created by create_ms_schedule_template:
@@ -1895,7 +1999,6 @@ elif mode == "Create Individual Schedules":
                     continue
 
                 preceptor_counts = Counter()
-
                 for session_row in layout["session_rows"]:
                     for col in range(2, 9):  # Monday-Sunday, B:H
                         preceptor, site = _parse_schedule_assignment(
@@ -1905,40 +2008,85 @@ elif mode == "Create Individual Schedules":
                             continue
                         preceptor_counts[preceptor] += 1
 
-                if not preceptor_counts:
-                    continue
+                _append_week_rows(
+                    weekly_rows,
+                    student_name,
+                    monday_date,
+                    preceptor_counts,
+                )
 
-                # Select no more than one primary preceptor for this student/week.
-                eligible_primary = [
-                    (preceptor, count)
-                    for preceptor, count in preceptor_counts.items()
-                    if count > 3
-                ]
-                primary_name = None
-                if eligible_primary:
-                    eligible_primary.sort(
-                        key=lambda item: (-item[1], _normalize_name(item[0]))
-                    )
-                    primary_name = eligible_primary[0][0]
+        return weekly_rows
 
-                for preceptor, count in preceptor_counts.items():
-                    weekly_rows.append(
-                        {
-                            "preceptor_name": preceptor,
-                            "student_name": student_name,
-                            "no_of_sessions": int(count),
-                            "monday_date": monday_date,
-                            "primary_preceptor": (
-                                "YES" if preceptor == primary_name else "NO"
-                            ),
-                            "fragmented_preceptor": "YES" if count < 3 else "NO",
-                            "email": NORMALIZED_EMAIL_MAP.get(
-                                _normalize_name(preceptor), ""
-                            ),
-                        }
-                    )
+    def _build_report_from_opd_sheets(master_wb):
+        """Read OPD site tabs containing cells formatted as 'Preceptor ~ Student'."""
+        counts_by_student_week = defaultdict(Counter)
+        student_display_names = {}
+        preceptor_display_names = {}
+
+        for ws in master_wb.worksheets:
+            site = _normalize_site(ws.title)
+            if site not in FOCUS_SITES:
+                continue
+
+            for monday_date, session_rows in _opd_week_blocks(ws):
+                for session_row in session_rows:
+                    for col in range(2, 9):  # Monday-Sunday, B:H
+                        preceptor, student = _parse_opd_assignment(
+                            ws.cell(row=session_row, column=col).value
+                        )
+                        if not preceptor or not student:
+                            continue
+
+                        student_key = _normalize_name(student)
+                        preceptor_key = _normalize_name(preceptor)
+                        student_display_names.setdefault(student_key, student)
+                        preceptor_display_names.setdefault(preceptor_key, preceptor)
+                        counts_by_student_week[(student_key, monday_date)][preceptor_key] += 1
+
+        weekly_rows = []
+        for (student_key, monday_date), normalized_counts in counts_by_student_week.items():
+            display_counts = Counter(
+                {
+                    preceptor_display_names[preceptor_key]: count
+                    for preceptor_key, count in normalized_counts.items()
+                }
+            )
+            _append_week_rows(
+                weekly_rows,
+                student_display_names[student_key],
+                monday_date,
+                display_counts,
+            )
+
+        return weekly_rows
+
+    def build_preceptor_assignment_report(master_wb):
+        """
+        Build one row per student/preceptor/week for HOPE_DRIVE, NYES, and ETOWN.
+
+        Supported inputs:
+          1) OPD site workbook: site tabs with 'Preceptor ~ Student' cells.
+          2) Student master schedule: one tab per student with
+             'Preceptor - [SITE]' cells.
+
+        Primary logic:
+          - At most one primary preceptor per student/week.
+          - The highest-session preceptor is primary when the count is >=3.
+          - Ties are resolved alphabetically for stable output.
+
+        Fragmentation logic:
+          - YES when that preceptor has <3 sessions with the student that week.
+          - A count of exactly 3 may be primary and is not fragmented.
+        """
+        if _is_opd_site_workbook(master_wb):
+            weekly_rows = _build_report_from_opd_sheets(master_wb)
+            source_format = "OPD site workbook"
+        else:
+            weekly_rows = _build_report_from_student_sheets(master_wb)
+            source_format = "student master schedule"
 
         report_df = pd.DataFrame(weekly_rows, columns=REPORT_COLUMNS)
+        report_df.attrs["source_format"] = source_format
 
         if not report_df.empty:
             report_df["_primary_sort"] = report_df["primary_preceptor"].map(
@@ -1959,6 +2107,7 @@ elif mode == "Create Individual Schedules":
                 .drop(columns=["_primary_sort"])
                 .reset_index(drop=True)
             )
+            report_df.attrs["source_format"] = source_format
 
         return report_df
 
@@ -2040,12 +2189,12 @@ elif mode == "Create Individual Schedules":
         notes["A2"] = "Primary preceptor"
         notes["B2"] = (
             "At most one per student/week; YES for the highest-session preceptor "
-            "only when no_of_sessions > 3."
+            "when no_of_sessions >= 3."
         )
         notes["A3"] = "Fragmented preceptor"
         notes["B3"] = "YES when no_of_sessions < 3."
         notes["A4"] = "Exactly 3 sessions"
-        notes["B4"] = "Neither primary nor fragmented."
+        notes["B4"] = "Eligible to be the one primary preceptor; not fragmented."
         notes["A5"] = "Email mapping"
         notes["B5"] = (
             "Emails come from PRECEPTOR_EMAIL_MAP in the Streamlit source code."
@@ -2229,56 +2378,84 @@ elif mode == "Create Individual Schedules":
 
         # Keep formulas/formatting -> data_only=False
         wb = load_workbook(uploaded, data_only=False)
+        is_opd_source = _is_opd_site_workbook(wb)
+        source_label = "OPD site workbook" if is_opd_source else "one-tab-per-student master schedule"
+
         st.write(f"Found **{len(wb.sheetnames)}** tabs.")
+        st.info(f"Detected: **{source_label}**")
+        if is_opd_source:
+            st.caption(
+                "The preceptor report will be created directly from cells formatted "
+                "as 'Preceptor ~ Student'. To split individual student schedules, "
+                "upload the MS_Schedule.xlsx workbook with one tab per student."
+            )
+        else:
+            st.caption(
+                "The app will split each student tab into an individual workbook and "
+                "create the preceptor report from cells formatted as 'Preceptor - [SITE]'."
+            )
+
         st.caption(
-            "The preceptor report includes only HOPE_DRIVE, NYES, and ETOWN. "
-            "Primary = one highest-session preceptor with >3 sessions; "
-            "fragmented = <3 sessions."
+            "Report scope: HOPE_DRIVE, NYES, and ETOWN only. "
+            "Primary = the one highest-session preceptor when no_of_sessions >=3; "
+            "fragmented = no_of_sessions <3."
         )
 
-        if st.button("Build individual schedules + preceptor report"):
+        build_label = (
+            "Build preceptor report"
+            if is_opd_source
+            else "Build individual schedules + preceptor report"
+        )
+
+        if st.button(build_label):
             report_df = build_preceptor_assignment_report(wb)
             report_buf, missing_emails = build_preceptor_report_workbook(report_df)
 
-            zip_buf = BytesIO()
-            with ZipFile(zip_buf, mode="w", compression=ZIP_DEFLATED) as zf:
-                used_names = defaultdict(int)
+            # Individual files are only meaningful for the one-tab-per-student format.
+            if not is_opd_source:
+                zip_buf = BytesIO()
+                with ZipFile(zip_buf, mode="w", compression=ZIP_DEFLATED) as zf:
+                    used_names = defaultdict(int)
 
-                for sheet_name in wb.sheetnames:
-                    ws = wb[sheet_name]
+                    for sheet_name in wb.sheetnames:
+                        ws = wb[sheet_name]
 
-                    # Skip truly empty sheets (no cells with value)
-                    has_any_value = any(
-                        cell.value is not None
-                        for row in ws.iter_rows()
-                        for cell in row
+                        # Skip truly empty sheets (no cells with value)
+                        has_any_value = any(
+                            cell.value is not None
+                            for row in ws.iter_rows()
+                            for cell in row
+                        )
+                        if not has_any_value:
+                            continue
+
+                        # Safe file name
+                        base = re.sub(r"[^A-Za-z0-9._-]+", "_", sheet_name).strip("_") or "sheet"
+                        used_names[base] += 1
+                        safe_name = (
+                            base
+                            if used_names[base] == 1
+                            else f"{base}_{used_names[base]}"
+                        )
+
+                        # Copy this sheet into its own new workbook (preserving formatting)
+                        out_buf = copy_sheet_to_new_wb(ws)
+                        zf.writestr(f"{safe_name}.xlsx", out_buf.getvalue())
+
+                    # Include the new report in the same ZIP.
+                    zf.writestr(
+                        "Preceptor_Assignment_Report.xlsx", report_buf.getvalue()
                     )
-                    if not has_any_value:
-                        continue
 
-                    # Safe file name
-                    base = re.sub(r"[^A-Za-z0-9._-]+", "_", sheet_name).strip("_") or "sheet"
-                    used_names[base] += 1
-                    safe_name = (
-                        base
-                        if used_names[base] == 1
-                        else f"{base}_{used_names[base]}"
-                    )
+                zip_buf.seek(0)
+                st.session_state["individual_schedule_zip"] = zip_buf.getvalue()
+            else:
+                st.session_state.pop("individual_schedule_zip", None)
 
-                    # Copy this sheet into its own new workbook (preserving formatting)
-                    out_buf = copy_sheet_to_new_wb(ws)
-                    zf.writestr(f"{safe_name}.xlsx", out_buf.getvalue())
-
-                # Include the new report in the same ZIP.
-                zf.writestr(
-                    "Preceptor_Assignment_Report.xlsx", report_buf.getvalue()
-                )
-
-            zip_buf.seek(0)
-            st.session_state["individual_schedule_zip"] = zip_buf.getvalue()
             st.session_state["individual_preceptor_report"] = report_buf.getvalue()
             st.session_state["individual_preceptor_preview"] = report_df
             st.session_state["individual_missing_emails"] = missing_emails
+            st.session_state["individual_report_source"] = source_label
 
         report_preview = st.session_state.get("individual_preceptor_preview")
         if report_preview is not None:
