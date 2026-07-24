@@ -1763,501 +1763,32 @@ elif mode == "Create Student Schedule":
 elif mode == "Create Individual Schedules":
     st.subheader("Individual Schedule Creator")
 
-    # -------------------------------------------------------------------------
-    # HARD-CODED PRECEPTOR EMAIL MAP
-    # -------------------------------------------------------------------------
-    # Add each preceptor exactly as the name appears in the OPD/student schedule.
-    # Matching ignores capitalization and extra spaces.
-    #
-    # Example:
-    # PRECEPTOR_EMAIL_MAP = {
-    #     "Smith, Jane": "jsmith@pennstatehealth.psu.edu",
-    #     "Jones, Robert": "rjones@pennstatehealth.psu.edu",
-    # }
-    PRECEPTOR_EMAIL_MAP = {
-        # "Preceptor Name": "preceptor_email@pennstatehealth.psu.edu",
-    }
-
-    FOCUS_SITES = {"HOPE_DRIVE", "NYES", "ETOWN"}
-    REPORT_COLUMNS = [
-        "preceptor_name",
-        "student_name",
-        "no_of_sessions",
-        "monday_date",
-        "primary_preceptor",
-        "fragmented_preceptor",
-        "email",
-    ]
-
     uploaded = st.file_uploader(
-        "Upload the OPD workbook or master schedule Excel (.xlsx)",
-        type=["xlsx"],
-        key="individual_schedule_master",
-        help=(
-            "OPD workbooks contain site tabs such as HOPE_DRIVE, NYES, and ETOWN. "
-            "Master schedule workbooks contain one tab per student."
-        ),
+        "Upload the master Excel (.xlsx) with one tab per person",
+        type=["xlsx"]
     )
-
-    def _normalize_name(value):
-        """Normalize names for reliable hard-coded email matching."""
-        return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
-
-    def _normalize_site(value):
-        """Convert site labels such as 'Hope Drive' to 'HOPE_DRIVE'."""
-        cleaned = re.sub(r"[^A-Za-z0-9]+", "_", str(value or "").strip().upper())
-        return cleaned.strip("_")
-
-    NORMALIZED_EMAIL_MAP = {
-        _normalize_name(preceptor): str(email).strip()
-        for preceptor, email in PRECEPTOR_EMAIL_MAP.items()
-        if str(preceptor).strip()
-    }
-
-    def _parse_excel_date(value):
-        """Return a Python date from a typical openpyxl/pandas date value."""
-        if value is None or value == "":
-            return None
-
-        if isinstance(value, datetime):
-            return value.date()
-
-        if hasattr(value, "date") and not isinstance(value, str):
-            try:
-                return value.date()
-            except Exception:
-                pass
-
-        try:
-            parsed = pd.to_datetime(value, errors="coerce")
-            if pd.notna(parsed):
-                return parsed.date()
-        except Exception:
-            pass
-
-        return None
-
-    def _week_monday_from_date_row(ws, date_row):
-        """Find/infer Monday from the B:H date cells for a weekly block."""
-        for day_offset, col in enumerate(range(2, 9)):
-            parsed = _parse_excel_date(ws.cell(row=date_row, column=col).value)
-            if parsed is not None:
-                return parsed - timedelta(days=day_offset)
-        return None
-
-    def _student_name_from_sheet(ws):
-        """Prefer the displayed student name; fall back to the worksheet title."""
-        for coordinate in ("B1", "B2"):
-            value = ws[coordinate].value
-            if value is not None and str(value).strip():
-                return str(value).strip()
-        return str(ws.title).strip()
-
-    def _parse_schedule_assignment(value):
-        """Parse a student-schedule cell formatted as 'Preceptor - [SITE]'."""
-        if not isinstance(value, str) or not value.strip():
-            return None, None
-
-        normalized = (
-            value.replace("\u00a0", " ")
-            .replace("\u2013", "-")
-            .replace("\u2014", "-")
-        )
-        match = re.match(r"^\s*(.*?)\s*-\s*\[\s*([^\]]+)\s*\]\s*$", normalized)
-        if not match:
-            return None, None
-
-        preceptor = re.sub(r"\s+", " ", match.group(1).strip())
-        site = _normalize_site(match.group(2))
-        return preceptor, site
-
-    def _parse_opd_assignment(value):
-        """Parse an OPD cell formatted as 'Preceptor ~ Student'."""
-        if not isinstance(value, str) or not value.strip() or "~" not in value:
-            return None, None
-
-        normalized = (
-            value.replace("\u00a0", " ")
-            .replace("\u2013", "-")
-            .replace("\u2014", "-")
-        )
-        preceptor, student = re.split(r"\s*~\s*", normalized, maxsplit=1)
-        preceptor = re.sub(r"\s+", " ", preceptor.strip())
-        student = re.sub(r"\s+", " ", student.strip())
-
-        blank_tokens = {"", "nan", "n/a", "na", "none", "null", "-", "--", "—"}
-        if (
-            not preceptor
-            or student.casefold() in blank_tokens
-            or not re.search(r"[A-Za-z0-9]", student)
-        ):
-            return None, None
-
-        return preceptor, student
-
-    def _is_opd_site_workbook(master_wb):
-        """Return True when the workbook contains one or more focus-site tabs."""
-        return any(
-            _normalize_site(sheet_name) in FOCUS_SITES
-            for sheet_name in master_wb.sheetnames
-        )
-
-    def _opd_week_blocks(ws):
-        """Yield (Monday date, AM/PM assignment rows) from an OPD site sheet."""
-        monday_header_rows = []
-        for row in range(1, ws.max_row + 1):
-            value = ws.cell(row=row, column=2).value
-            if isinstance(value, str) and value.strip().casefold() == "monday":
-                monday_header_rows.append(row)
-
-        for index, header_row in enumerate(monday_header_rows):
-            next_header = (
-                monday_header_rows[index + 1]
-                if index + 1 < len(monday_header_rows)
-                else ws.max_row + 1
-            )
-
-            date_row = None
-            monday_date = None
-            for candidate_row in range(header_row + 1, min(header_row + 7, next_header)):
-                parsed_dates = []
-                for col in range(2, 9):
-                    parsed = _parse_excel_date(ws.cell(row=candidate_row, column=col).value)
-                    if parsed is not None:
-                        parsed_dates.append((col, parsed))
-
-                if len(parsed_dates) >= 2:
-                    date_row = candidate_row
-                    monday_date = _week_monday_from_date_row(ws, candidate_row)
-                    break
-
-            if date_row is None or monday_date is None:
-                continue
-
-            session_rows = []
-            for row in range(date_row + 1, next_header):
-                label = ws.cell(row=row, column=1).value
-                if isinstance(label, str) and re.match(
-                    r"^\s*(AM|PM)\b", label, re.IGNORECASE
-                ):
-                    session_rows.append(row)
-
-            if session_rows:
-                yield monday_date, session_rows
-
-    def _append_week_rows(weekly_rows, student_name, monday_date, preceptor_counts):
-        """Append report rows and enforce one primary preceptor per student/week."""
-        if not preceptor_counts:
-            return
-
-        eligible_primary = [
-            (preceptor, count)
-            for preceptor, count in preceptor_counts.items()
-            if count >= 3
-        ]
-        primary_name = None
-        if eligible_primary:
-            eligible_primary.sort(
-                key=lambda item: (-item[1], _normalize_name(item[0]))
-            )
-            primary_name = eligible_primary[0][0]
-
-        for preceptor, count in preceptor_counts.items():
-            weekly_rows.append(
-                {
-                    "preceptor_name": preceptor,
-                    "student_name": student_name,
-                    "no_of_sessions": int(count),
-                    "monday_date": monday_date,
-                    "primary_preceptor": "YES" if preceptor == primary_name else "NO",
-                    "fragmented_preceptor": "YES" if count < 3 else "NO",
-                    "email": NORMALIZED_EMAIL_MAP.get(
-                        _normalize_name(preceptor), ""
-                    ),
-                }
-            )
-
-    def _build_report_from_student_sheets(master_wb):
-        """Read the one-tab-per-student master schedule format."""
-        weekly_rows = []
-
-        # Rows created by create_ms_schedule_template:
-        # week 1 dates/AM/PM = 4/6/7; then every 8 rows for weeks 2-4.
-        week_layout = [
-            {"date_row": 4, "session_rows": (6, 7)},
-            {"date_row": 12, "session_rows": (14, 15)},
-            {"date_row": 20, "session_rows": (22, 23)},
-            {"date_row": 28, "session_rows": (30, 31)},
-        ]
-
-        for ws in master_wb.worksheets:
-            student_name = _student_name_from_sheet(ws)
-
-            for layout in week_layout:
-                monday_date = _week_monday_from_date_row(ws, layout["date_row"])
-                if monday_date is None:
-                    continue
-
-                preceptor_counts = Counter()
-                for session_row in layout["session_rows"]:
-                    for col in range(2, 9):  # Monday-Sunday, B:H
-                        preceptor, site = _parse_schedule_assignment(
-                            ws.cell(row=session_row, column=col).value
-                        )
-                        if not preceptor or site not in FOCUS_SITES:
-                            continue
-                        preceptor_counts[preceptor] += 1
-
-                _append_week_rows(
-                    weekly_rows,
-                    student_name,
-                    monday_date,
-                    preceptor_counts,
-                )
-
-        return weekly_rows
-
-    def _build_report_from_opd_sheets(master_wb):
-        """Read OPD site tabs containing cells formatted as 'Preceptor ~ Student'."""
-        counts_by_student_week = defaultdict(Counter)
-        student_display_names = {}
-        preceptor_display_names = {}
-
-        for ws in master_wb.worksheets:
-            site = _normalize_site(ws.title)
-            if site not in FOCUS_SITES:
-                continue
-
-            for monday_date, session_rows in _opd_week_blocks(ws):
-                for session_row in session_rows:
-                    for col in range(2, 9):  # Monday-Sunday, B:H
-                        preceptor, student = _parse_opd_assignment(
-                            ws.cell(row=session_row, column=col).value
-                        )
-                        if not preceptor or not student:
-                            continue
-
-                        student_key = _normalize_name(student)
-                        preceptor_key = _normalize_name(preceptor)
-                        student_display_names.setdefault(student_key, student)
-                        preceptor_display_names.setdefault(preceptor_key, preceptor)
-                        counts_by_student_week[(student_key, monday_date)][preceptor_key] += 1
-
-        weekly_rows = []
-        for (student_key, monday_date), normalized_counts in counts_by_student_week.items():
-            display_counts = Counter(
-                {
-                    preceptor_display_names[preceptor_key]: count
-                    for preceptor_key, count in normalized_counts.items()
-                }
-            )
-            _append_week_rows(
-                weekly_rows,
-                student_display_names[student_key],
-                monday_date,
-                display_counts,
-            )
-
-        return weekly_rows
-
-    def build_preceptor_assignment_report(master_wb):
-        """
-        Build one row per student/preceptor/week for HOPE_DRIVE, NYES, and ETOWN.
-
-        Supported inputs:
-          1) OPD site workbook: site tabs with 'Preceptor ~ Student' cells.
-          2) Student master schedule: one tab per student with
-             'Preceptor - [SITE]' cells.
-
-        Primary logic:
-          - At most one primary preceptor per student/week.
-          - The highest-session preceptor is primary when the count is >=3.
-          - Ties are resolved alphabetically for stable output.
-
-        Fragmentation logic:
-          - YES when that preceptor has <3 sessions with the student that week.
-          - A count of exactly 3 may be primary and is not fragmented.
-        """
-        if _is_opd_site_workbook(master_wb):
-            weekly_rows = _build_report_from_opd_sheets(master_wb)
-            source_format = "OPD site workbook"
-        else:
-            weekly_rows = _build_report_from_student_sheets(master_wb)
-            source_format = "student master schedule"
-
-        report_df = pd.DataFrame(weekly_rows, columns=REPORT_COLUMNS)
-        report_df.attrs["source_format"] = source_format
-
-        if not report_df.empty:
-            report_df["_primary_sort"] = report_df["primary_preceptor"].map(
-                {"YES": 0, "NO": 1}
-            )
-            report_df = (
-                report_df.sort_values(
-                    by=[
-                        "monday_date",
-                        "student_name",
-                        "_primary_sort",
-                        "no_of_sessions",
-                        "preceptor_name",
-                    ],
-                    ascending=[True, True, True, False, True],
-                    kind="stable",
-                )
-                .drop(columns=["_primary_sort"])
-                .reset_index(drop=True)
-            )
-            report_df.attrs["source_format"] = source_format
-
-        return report_df
-
-    def build_preceptor_report_workbook(report_df):
-        """Create a formatted Excel workbook containing the assignment report."""
-        from openpyxl import Workbook
-        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-        from openpyxl.worksheet.table import Table, TableStyleInfo
-
-        wb_report = Workbook()
-        ws = wb_report.active
-        ws.title = "Preceptor Assignments"
-
-        header_fill = PatternFill("solid", fgColor="1F4E78")
-        header_font = Font(color="FFFFFF", bold=True)
-        thin_gray = Side(style="thin", color="D9E2F3")
-        primary_fill = PatternFill("solid", fgColor="E2F0D9")
-        fragmented_fill = PatternFill("solid", fgColor="FFF2CC")
-        missing_email_fill = PatternFill("solid", fgColor="FCE4D6")
-
-        for col_idx, header in enumerate(REPORT_COLUMNS, start=1):
-            cell = ws.cell(row=1, column=col_idx, value=header)
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-            cell.border = Border(bottom=thin_gray)
-
-        for row_idx, row in enumerate(
-            report_df.itertuples(index=False, name=None), start=2
-        ):
-            for col_idx, value in enumerate(row, start=1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                cell.alignment = Alignment(vertical="top")
-                cell.border = Border(bottom=thin_gray)
-
-            ws.cell(row=row_idx, column=4).number_format = "mm/dd/yyyy"
-
-            if ws.cell(row=row_idx, column=5).value == "YES":
-                for col_idx in range(1, len(REPORT_COLUMNS) + 1):
-                    ws.cell(row=row_idx, column=col_idx).fill = primary_fill
-            elif ws.cell(row=row_idx, column=6).value == "YES":
-                for col_idx in range(1, len(REPORT_COLUMNS) + 1):
-                    ws.cell(row=row_idx, column=col_idx).fill = fragmented_fill
-
-            if not str(ws.cell(row=row_idx, column=7).value or "").strip():
-                ws.cell(row=row_idx, column=7).fill = missing_email_fill
-
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = f"A1:G{max(1, ws.max_row)}"
-        ws.sheet_view.zoomScale = 90
-
-        widths = {
-            "A": 28,
-            "B": 28,
-            "C": 16,
-            "D": 15,
-            "E": 20,
-            "F": 23,
-            "G": 38,
-        }
-        for col_letter, width in widths.items():
-            ws.column_dimensions[col_letter].width = width
-
-        if len(report_df) > 0:
-            table = Table(displayName="PreceptorAssignmentTable", ref=f"A1:G{ws.max_row}")
-            table.tableStyleInfo = TableStyleInfo(
-                name="TableStyleMedium2",
-                showFirstColumn=False,
-                showLastColumn=False,
-                showRowStripes=True,
-                showColumnStripes=False,
-            )
-            ws.add_table(table)
-
-        # Add a concise definitions sheet so the workbook remains self-explanatory.
-        notes = wb_report.create_sheet("Definitions")
-        notes["A1"] = "Report scope"
-        notes["B1"] = "HOPE_DRIVE, NYES, and ETOWN only"
-        notes["A2"] = "Primary preceptor"
-        notes["B2"] = (
-            "At most one per student/week; YES for the highest-session preceptor "
-            "when no_of_sessions >= 3."
-        )
-        notes["A3"] = "Fragmented preceptor"
-        notes["B3"] = "YES when no_of_sessions < 3."
-        notes["A4"] = "Exactly 3 sessions"
-        notes["B4"] = "Eligible to be the one primary preceptor; not fragmented."
-        notes["A5"] = "Email mapping"
-        notes["B5"] = (
-            "Emails come from PRECEPTOR_EMAIL_MAP in the Streamlit source code."
-        )
-        notes.column_dimensions["A"].width = 24
-        notes.column_dimensions["B"].width = 90
-        for cell in notes["A"]:
-            cell.font = Font(bold=True)
-        for row in notes.iter_rows(min_row=1, max_row=5, min_col=1, max_col=2):
-            for cell in row:
-                cell.alignment = Alignment(vertical="top", wrap_text=True)
-
-        missing_names = sorted(
-            report_df.loc[
-                report_df["email"].fillna("").astype(str).str.strip().eq(""),
-                "preceptor_name",
-            ].dropna().unique().tolist(),
-            key=_normalize_name,
-        ) if not report_df.empty else []
-
-        if missing_names:
-            missing_ws = wb_report.create_sheet("Missing Emails")
-            missing_ws.append(["preceptor_name", "action_needed"])
-            for name in missing_names:
-                missing_ws.append(
-                    [
-                        name,
-                        "Add this name and email to PRECEPTOR_EMAIL_MAP in app_sch_2026.py",
-                    ]
-                )
-            for cell in missing_ws[1]:
-                cell.fill = header_fill
-                cell.font = header_font
-            missing_ws.column_dimensions["A"].width = 32
-            missing_ws.column_dimensions["B"].width = 70
-            missing_ws.freeze_panes = "A2"
-
-        output = BytesIO()
-        wb_report.save(output)
-        output.seek(0)
-        return output, missing_names
 
     def copy_sheet_to_new_wb(src_ws):
         """Return a BytesIO of a new .xlsx containing src_ws with formatting."""
         from openpyxl import Workbook
         from io import BytesIO
-
+    
         wb_new = Workbook()
         ws_new = wb_new.active
         ws_new.title = src_ws.title[:31]
-
+    
         # Column widths & visibility
         for col_letter, dim in src_ws.column_dimensions.items():
             if dim.width is not None:
                 ws_new.column_dimensions[col_letter].width = dim.width
             ws_new.column_dimensions[col_letter].hidden = dim.hidden
-
+    
         # Row heights & visibility
         for idx, dim in src_ws.row_dimensions.items():
             if dim.height is not None:
                 ws_new.row_dimensions[idx].height = dim.height
             ws_new.row_dimensions[idx].hidden = dim.hidden
-
+    
         # Sheet settings (best-effort)
         try:
             ws_new.sheet_format.defaultColWidth = src_ws.sheet_format.defaultColWidth
@@ -2269,7 +1800,7 @@ elif mode == "Create Individual Schedules":
             ws_new.page_setup.orientation = src_ws.page_setup.orientation
             ws_new.page_setup.fitToWidth = src_ws.page_setup.fitToWidth
             ws_new.page_setup.fitToHeight = src_ws.page_setup.fitToHeight
-            ws_new.page_margins = copy(src_ws.page_margins)
+            ws_new.page_margins = src_ws.page_margins
             ws_new.print_options.horizontalCentered = src_ws.print_options.horizontalCentered
             ws_new.print_options.verticalCentered = src_ws.print_options.verticalCentered
             ws_new.print_area = src_ws.print_area
@@ -2279,7 +1810,7 @@ elif mode == "Create Individual Schedules":
         try:
             # Set zoom to 70%
             ws_new.sheet_view.zoomScale = 70
-
+    
             # Set column widths
             ws_new.column_dimensions["A"].width = 20
             ws_new.column_dimensions["B"].width = 30
@@ -2288,52 +1819,47 @@ elif mode == "Create Individual Schedules":
             ws_new.column_dimensions["H"].width = 155
         except Exception:
             pass
-
+    
         # Copy cells: values + (copied) styles
         for row in src_ws.iter_rows():
             for cell in row:
                 # Skip non-master cells from merged ranges
                 if isinstance(cell, MergedCell):
                     continue
-
+        
                 # Get a reliable numeric column index
                 col_idx = getattr(cell, "col_idx", None)
                 if col_idx is None:
                     col = cell.column  # may be int or letter depending on version
                     col_idx = col if isinstance(col, int) else column_index_from_string(col)
-
+        
                 # Create target cell with value (formula preserved if present)
                 tgt = ws_new.cell(row=cell.row, column=col_idx, value=cell.value)
-
+        
                 # Copy style safely
                 if getattr(cell, "has_style", False):
                     try:
-                        if cell.font:
-                            tgt.font = copy(cell.font)
-                        if cell.fill:
-                            tgt.fill = copy(cell.fill)
-                        if cell.border:
-                            tgt.border = copy(cell.border)
-                        if cell.alignment:
-                            tgt.alignment = copy(cell.alignment)
-                        if cell.protection:
-                            tgt.protection = copy(cell.protection)
+                        from copy import copy
+                        if cell.font:        tgt.font        = copy(cell.font)
+                        if cell.fill:        tgt.fill        = copy(cell.fill)
+                        if cell.border:      tgt.border      = copy(cell.border)
+                        if cell.alignment:   tgt.alignment   = copy(cell.alignment)
+                        if cell.protection:  tgt.protection  = copy(cell.protection)
                         tgt.number_format = cell.number_format
                     except Exception:
                         pass
-
+    
         # Copy merged cell ranges (after values)
         for merged in list(src_ws.merged_cells.ranges):
             try:
                 ws_new.merge_cells(str(merged))
             except Exception:
                 pass
-
+    
         # Copy data validations (best-effort)
         try:
             if src_ws.data_validations and src_ws.data_validations.dataValidation:
                 from openpyxl.worksheet.datavalidation import DataValidation
-
                 for dv in src_ws.data_validations.dataValidation:
                     dv_new = DataValidation(
                         type=dv.type,
@@ -2346,153 +1872,63 @@ elif mode == "Create Individual Schedules":
                         errorTitle=dv.errorTitle,
                         error=dv.error,
                         promptTitle=dv.promptTitle,
-                        prompt=dv.prompt,
+                        prompt=dv.prompt
                     )
+                    # Copy cell refs
                     for sqref in getattr(dv, "sqref", []):
                         dv_new.add(sqref)
                     ws_new.add_data_validation(dv_new)
         except Exception:
             pass
-
+    
         # Filters
         try:
             ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
         except Exception:
             pass
-
+    
         # Save to buffer
         buf = BytesIO()
         wb_new.save(buf)
         buf.seek(0)
         return buf
-
+        
     if uploaded is not None:
-        # Clear previously generated output when a different source file is uploaded.
-        source_signature = (uploaded.name, getattr(uploaded, "size", None))
-        if st.session_state.get("individual_schedule_source") != source_signature:
-            st.session_state["individual_schedule_source"] = source_signature
-            st.session_state.pop("individual_schedule_zip", None)
-            st.session_state.pop("individual_preceptor_report", None)
-            st.session_state.pop("individual_preceptor_preview", None)
-            st.session_state.pop("individual_missing_emails", None)
-
         # Keep formulas/formatting -> data_only=False
         wb = load_workbook(uploaded, data_only=False)
-        is_opd_source = _is_opd_site_workbook(wb)
-        source_label = "OPD site workbook" if is_opd_source else "one-tab-per-student master schedule"
-
         st.write(f"Found **{len(wb.sheetnames)}** tabs.")
-        st.info(f"Detected: **{source_label}**")
-        if is_opd_source:
-            st.caption(
-                "The preceptor report will be created directly from cells formatted "
-                "as 'Preceptor ~ Student'. To split individual student schedules, "
-                "upload the MS_Schedule.xlsx workbook with one tab per student."
-            )
-        else:
-            st.caption(
-                "The app will split each student tab into an individual workbook and "
-                "create the preceptor report from cells formatted as 'Preceptor - [SITE]'."
-            )
 
-        st.caption(
-            "Report scope: HOPE_DRIVE, NYES, and ETOWN only. "
-            "Primary = the one highest-session preceptor when no_of_sessions >=3; "
-            "fragmented = no_of_sessions <3."
-        )
+        if st.button("Split tabs and build ZIP"):
+            zip_buf = BytesIO()
+            with ZipFile(zip_buf, mode="w", compression=ZIP_DEFLATED) as zf:
+                used_names = defaultdict(int)
 
-        build_label = (
-            "Build preceptor report"
-            if is_opd_source
-            else "Build individual schedules + preceptor report"
-        )
+                for sheet_name in wb.sheetnames:
+                    ws = wb[sheet_name]
 
-        if st.button(build_label):
-            report_df = build_preceptor_assignment_report(wb)
-            report_buf, missing_emails = build_preceptor_report_workbook(report_df)
+                    # Skip truly empty sheets (no cells with value)
+                    has_any_value = any(cell.value is not None for row in ws.iter_rows() for cell in row)
+                    if not has_any_value:
+                        continue
 
-            # Individual files are only meaningful for the one-tab-per-student format.
-            if not is_opd_source:
-                zip_buf = BytesIO()
-                with ZipFile(zip_buf, mode="w", compression=ZIP_DEFLATED) as zf:
-                    used_names = defaultdict(int)
+                    # Safe file name
+                    base = re.sub(r"[^A-Za-z0-9._-]+", "_", sheet_name).strip("_") or "sheet"
+                    used_names[base] += 1
+                    safe_name = base if used_names[base] == 1 else f"{base}_{used_names[base]}"
 
-                    for sheet_name in wb.sheetnames:
-                        ws = wb[sheet_name]
+                    # Copy this sheet into its own new workbook (preserving formatting)
+                    out_buf = copy_sheet_to_new_wb(ws)
 
-                        # Skip truly empty sheets (no cells with value)
-                        has_any_value = any(
-                            cell.value is not None
-                            for row in ws.iter_rows()
-                            for cell in row
-                        )
-                        if not has_any_value:
-                            continue
+                    # Add to ZIP
+                    zf.writestr(f"{safe_name}.xlsx", out_buf.getvalue())
 
-                        # Safe file name
-                        base = re.sub(r"[^A-Za-z0-9._-]+", "_", sheet_name).strip("_") or "sheet"
-                        used_names[base] += 1
-                        safe_name = (
-                            base
-                            if used_names[base] == 1
-                            else f"{base}_{used_names[base]}"
-                        )
-
-                        # Copy this sheet into its own new workbook (preserving formatting)
-                        out_buf = copy_sheet_to_new_wb(ws)
-                        zf.writestr(f"{safe_name}.xlsx", out_buf.getvalue())
-
-                    # Include the new report in the same ZIP.
-                    zf.writestr(
-                        "Preceptor_Assignment_Report.xlsx", report_buf.getvalue()
-                    )
-
-                zip_buf.seek(0)
-                st.session_state["individual_schedule_zip"] = zip_buf.getvalue()
-            else:
-                st.session_state.pop("individual_schedule_zip", None)
-
-            st.session_state["individual_preceptor_report"] = report_buf.getvalue()
-            st.session_state["individual_preceptor_preview"] = report_df
-            st.session_state["individual_missing_emails"] = missing_emails
-            st.session_state["individual_report_source"] = source_label
-
-        report_preview = st.session_state.get("individual_preceptor_preview")
-        if report_preview is not None:
-            st.markdown("**Preceptor assignment report preview**")
-            if report_preview.empty:
-                st.warning(
-                    "No HOPE_DRIVE, NYES, or ETOWN assignments were found in the uploaded workbook."
-                )
-            else:
-                st.dataframe(report_preview, use_container_width=True, hide_index=True)
-
-            missing_emails = st.session_state.get("individual_missing_emails", [])
-            if missing_emails:
-                st.warning(
-                    f"{len(missing_emails)} preceptor(s) are missing from "
-                    "PRECEPTOR_EMAIL_MAP. Their email cells are blank, and their names "
-                    "are listed on the 'Missing Emails' tab."
-                )
-            else:
-                st.success("All preceptors in this report have a mapped email address.")
-
-        if st.session_state.get("individual_preceptor_report") is not None:
+            zip_buf.seek(0)
             st.download_button(
-                label="Download preceptor assignment report (Excel)",
-                data=st.session_state["individual_preceptor_report"],
-                file_name="Preceptor_Assignment_Report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-
-        if st.session_state.get("individual_schedule_zip") is not None:
-            st.download_button(
-                label="Download individual schedules + report (ZIP)",
-                data=st.session_state["individual_schedule_zip"],
-                file_name="individual_schedules_with_preceptor_report.zip",
+                label="Download individual schedules (ZIP)",
+                data=zip_buf,
+                file_name="individual_schedules_formatted.zip",
                 mime="application/zip",
             )
-
 
 elif mode == "OPD MD PA Conflict Detector":
     import streamlit as st
