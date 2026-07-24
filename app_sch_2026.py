@@ -1869,11 +1869,11 @@ elif mode == "Create Individual Schedules":
         Primary logic:
           - At most one primary preceptor per student/week.
           - The preceptor with the largest session count is primary only when the
-            count is >3. Ties are resolved alphabetically for stable output.
+            count is >=3. Ties are resolved alphabetically for stable output.
 
         Fragmentation logic:
           - YES when that preceptor has <3 sessions with the student that week.
-          - A count of exactly 3 is neither primary nor fragmented.
+          - A count of exactly 3 is eligible to be primary and is not fragmented.
         """
         weekly_rows = []
 
@@ -1912,7 +1912,7 @@ elif mode == "Create Individual Schedules":
                 eligible_primary = [
                     (preceptor, count)
                     for preceptor, count in preceptor_counts.items()
-                    if count > 3
+                    if count >= 3
                 ]
                 primary_name = None
                 if eligible_primary:
@@ -1963,128 +1963,221 @@ elif mode == "Create Individual Schedules":
         return report_df
 
     def build_preceptor_report_workbook(report_df):
-        """Create a formatted Excel workbook containing the assignment report."""
-        from openpyxl import Workbook
-        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-        from openpyxl.worksheet.table import Table, TableStyleInfo
+        """
+        Create a Power Automate-ready .xlsx workbook using XlsxWriter.
 
-        wb_report = Workbook()
-        ws = wb_report.active
-        ws.title = "Preceptor Assignments"
+        The report is written as a genuine Excel table without adding a second,
+        overlapping worksheet AutoFilter. Avoiding that overlap prevents Excel's
+        "We found a problem with some content" repair warning.
+        """
+        output = BytesIO()
+        workbook = xlsxwriter.Workbook(
+            output,
+            {
+                "in_memory": True,
+                "strings_to_formulas": False,
+                "strings_to_urls": False,
+            },
+        )
 
-        header_fill = PatternFill("solid", fgColor="1F4E78")
-        header_font = Font(color="FFFFFF", bold=True)
-        thin_gray = Side(style="thin", color="D9E2F3")
-        primary_fill = PatternFill("solid", fgColor="E2F0D9")
-        fragmented_fill = PatternFill("solid", fgColor="FFF2CC")
-        missing_email_fill = PatternFill("solid", fgColor="FCE4D6")
+        worksheet = workbook.add_worksheet("Preceptor Assignments")
+        worksheet.freeze_panes(1, 0)
+        worksheet.set_zoom(90)
+        worksheet.set_column("A:A", 28)
+        worksheet.set_column("B:B", 28)
+        worksheet.set_column("C:C", 16)
+        worksheet.set_column("D:D", 15)
+        worksheet.set_column("E:E", 20)
+        worksheet.set_column("F:F", 23)
+        worksheet.set_column("G:G", 38)
 
-        for col_idx, header in enumerate(REPORT_COLUMNS, start=1):
-            cell = ws.cell(row=1, column=col_idx, value=header)
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-            cell.border = Border(bottom=thin_gray)
-
-        for row_idx, row in enumerate(
-            report_df.itertuples(index=False, name=None), start=2
-        ):
-            for col_idx, value in enumerate(row, start=1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                cell.alignment = Alignment(vertical="top")
-                cell.border = Border(bottom=thin_gray)
-
-            ws.cell(row=row_idx, column=4).number_format = "mm/dd/yyyy"
-
-            if ws.cell(row=row_idx, column=5).value == "YES":
-                for col_idx in range(1, len(REPORT_COLUMNS) + 1):
-                    ws.cell(row=row_idx, column=col_idx).fill = primary_fill
-            elif ws.cell(row=row_idx, column=6).value == "YES":
-                for col_idx in range(1, len(REPORT_COLUMNS) + 1):
-                    ws.cell(row=row_idx, column=col_idx).fill = fragmented_fill
-
-            if not str(ws.cell(row=row_idx, column=7).value or "").strip():
-                ws.cell(row=row_idx, column=7).fill = missing_email_fill
-
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = f"A1:G{max(1, ws.max_row)}"
-        ws.sheet_view.zoomScale = 90
-
-        widths = {
-            "A": 28,
-            "B": 28,
-            "C": 16,
-            "D": 15,
-            "E": 20,
-            "F": 23,
-            "G": 38,
-        }
-        for col_letter, width in widths.items():
-            ws.column_dimensions[col_letter].width = width
-
-        if len(report_df) > 0:
-            table = Table(displayName="PreceptorAssignmentTable", ref=f"A1:G{ws.max_row}")
-            table.tableStyleInfo = TableStyleInfo(
-                name="TableStyleMedium2",
-                showFirstColumn=False,
-                showLastColumn=False,
-                showRowStripes=True,
-                showColumnStripes=False,
+        header_format = workbook.add_format(
+            {
+                "bold": True,
+                "font_color": "#FFFFFF",
+                "bg_color": "#1F4E78",
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": "#D9E2F3",
+            }
+        )
+        body_format = workbook.add_format(
+            {
+                "valign": "top",
+                "bottom": 1,
+                "bottom_color": "#D9E2F3",
+            }
+        )
+        integer_format = workbook.add_format(
+            {
+                "valign": "top",
+                "align": "center",
+                "num_format": "0",
+                "bottom": 1,
+                "bottom_color": "#D9E2F3",
+            }
+        )
+        date_format = workbook.add_format(
+            {
+                "valign": "top",
+                "align": "center",
+                "num_format": "mm/dd/yyyy",
+                "bottom": 1,
+                "bottom_color": "#D9E2F3",
+            }
+        )
+        primary_formats = [
+            workbook.add_format(
+                {
+                    "valign": "top",
+                    "bg_color": "#E2F0D9",
+                    "bottom": 1,
+                    "bottom_color": "#D9E2F3",
+                    **({"align": "center", "num_format": "0"} if col == 2 else {}),
+                    **({"align": "center", "num_format": "mm/dd/yyyy"} if col == 3 else {}),
+                }
             )
-            ws.add_table(table)
-
-        # Add a concise definitions sheet so the workbook remains self-explanatory.
-        notes = wb_report.create_sheet("Definitions")
-        notes["A1"] = "Report scope"
-        notes["B1"] = "HOPE_DRIVE, NYES, and ETOWN only"
-        notes["A2"] = "Primary preceptor"
-        notes["B2"] = (
-            "At most one per student/week; YES for the highest-session preceptor "
-            "only when no_of_sessions > 3."
+            for col in range(len(REPORT_COLUMNS))
+        ]
+        fragmented_formats = [
+            workbook.add_format(
+                {
+                    "valign": "top",
+                    "bg_color": "#FFF2CC",
+                    "bottom": 1,
+                    "bottom_color": "#D9E2F3",
+                    **({"align": "center", "num_format": "0"} if col == 2 else {}),
+                    **({"align": "center", "num_format": "mm/dd/yyyy"} if col == 3 else {}),
+                }
+            )
+            for col in range(len(REPORT_COLUMNS))
+        ]
+        missing_email_format = workbook.add_format(
+            {
+                "valign": "top",
+                "bg_color": "#FCE4D6",
+                "bottom": 1,
+                "bottom_color": "#D9E2F3",
+            }
         )
-        notes["A3"] = "Fragmented preceptor"
-        notes["B3"] = "YES when no_of_sessions < 3."
-        notes["A4"] = "Exactly 3 sessions"
-        notes["B4"] = "Neither primary nor fragmented."
-        notes["A5"] = "Email mapping"
-        notes["B5"] = (
-            "Emails come from PRECEPTOR_EMAIL_MAP in the Streamlit source code."
-        )
-        notes.column_dimensions["A"].width = 24
-        notes.column_dimensions["B"].width = 90
-        for cell in notes["A"]:
-            cell.font = Font(bold=True)
-        for row in notes.iter_rows(min_row=1, max_row=5, min_col=1, max_col=2):
-            for cell in row:
-                cell.alignment = Alignment(vertical="top", wrap_text=True)
 
-        missing_names = sorted(
-            report_df.loc[
-                report_df["email"].fillna("").astype(str).str.strip().eq(""),
-                "preceptor_name",
-            ].dropna().unique().tolist(),
-            key=_normalize_name,
-        ) if not report_df.empty else []
+        # Write headers explicitly. The table is added after the data is written.
+        for col_idx, header in enumerate(REPORT_COLUMNS):
+            worksheet.write(0, col_idx, header, header_format)
+
+        for row_offset, row in enumerate(
+            report_df.itertuples(index=False, name=None), start=1
+        ):
+            is_primary = str(row[4]).strip().upper() == "YES"
+            is_fragmented = str(row[5]).strip().upper() == "YES"
+
+            for col_idx, value in enumerate(row):
+                if is_primary:
+                    cell_format = primary_formats[col_idx]
+                elif is_fragmented:
+                    cell_format = fragmented_formats[col_idx]
+                elif col_idx == 2:
+                    cell_format = integer_format
+                elif col_idx == 3:
+                    cell_format = date_format
+                else:
+                    cell_format = body_format
+
+                if col_idx == 6 and not str(value or "").strip():
+                    cell_format = missing_email_format
+
+                if col_idx == 3:
+                    parsed_date = _parse_excel_date(value)
+                    if parsed_date is not None:
+                        worksheet.write_datetime(
+                            row_offset,
+                            col_idx,
+                            datetime.combine(parsed_date, datetime.min.time()),
+                            cell_format,
+                        )
+                    else:
+                        worksheet.write_blank(row_offset, col_idx, None, cell_format)
+                elif value is None or (isinstance(value, float) and pd.isna(value)):
+                    worksheet.write_blank(row_offset, col_idx, None, cell_format)
+                else:
+                    worksheet.write(row_offset, col_idx, value, cell_format)
+
+        # Power Automate needs a named Excel table. Only the table owns the filter;
+        # do not also call worksheet.autofilter() on the same range.
+        if not report_df.empty:
+            worksheet.add_table(
+                0,
+                0,
+                len(report_df),
+                len(REPORT_COLUMNS) - 1,
+                {
+                    "name": "PreceptorAssignmentTable",
+                    "style": "Table Style Medium 2",
+                    "columns": [{"header": header} for header in REPORT_COLUMNS],
+                },
+            )
+
+        notes = workbook.add_worksheet("Definitions")
+        notes.set_column("A:A", 24)
+        notes.set_column("B:B", 90)
+        notes_format = workbook.add_format({"valign": "top", "text_wrap": True})
+        notes_label_format = workbook.add_format(
+            {"bold": True, "valign": "top", "text_wrap": True}
+        )
+        definitions = [
+            ("Report scope", "HOPE_DRIVE, NYES, and ETOWN only"),
+            (
+                "Primary preceptor",
+                "At most one per student/week; YES for the highest-session "
+                "preceptor when no_of_sessions >= 3.",
+            ),
+            ("Fragmented preceptor", "YES when no_of_sessions < 3."),
+            (
+                "Exactly 3 sessions",
+                "Eligible to be the single primary preceptor; not fragmented.",
+            ),
+            (
+                "Email mapping",
+                "Emails come from PRECEPTOR_EMAIL_MAP in the Streamlit source code.",
+            ),
+        ]
+        for row_idx, (label, definition) in enumerate(definitions):
+            notes.write(row_idx, 0, label, notes_label_format)
+            notes.write(row_idx, 1, definition, notes_format)
+
+        missing_names = (
+            sorted(
+                report_df.loc[
+                    report_df["email"].fillna("").astype(str).str.strip().eq(""),
+                    "preceptor_name",
+                ]
+                .dropna()
+                .unique()
+                .tolist(),
+                key=_normalize_name,
+            )
+            if not report_df.empty
+            else []
+        )
 
         if missing_names:
-            missing_ws = wb_report.create_sheet("Missing Emails")
-            missing_ws.append(["preceptor_name", "action_needed"])
-            for name in missing_names:
-                missing_ws.append(
-                    [
-                        name,
-                        "Add this name and email to PRECEPTOR_EMAIL_MAP in app_sch_2026.py",
-                    ]
+            missing_ws = workbook.add_worksheet("Missing Emails")
+            missing_ws.freeze_panes(1, 0)
+            missing_ws.set_column("A:A", 32)
+            missing_ws.set_column("B:B", 70)
+            missing_ws.write(0, 0, "preceptor_name", header_format)
+            missing_ws.write(0, 1, "action_needed", header_format)
+            for row_idx, name in enumerate(missing_names, start=1):
+                missing_ws.write(row_idx, 0, name, body_format)
+                missing_ws.write(
+                    row_idx,
+                    1,
+                    "Add this name and email to PRECEPTOR_EMAIL_MAP in app_sch_2026.py",
+                    body_format,
                 )
-            for cell in missing_ws[1]:
-                cell.fill = header_fill
-                cell.font = header_font
-            missing_ws.column_dimensions["A"].width = 32
-            missing_ws.column_dimensions["B"].width = 70
-            missing_ws.freeze_panes = "A2"
 
-        output = BytesIO()
-        wb_report.save(output)
+        workbook.close()
         output.seek(0)
         return output, missing_names
 
@@ -2232,7 +2325,7 @@ elif mode == "Create Individual Schedules":
         st.write(f"Found **{len(wb.sheetnames)}** tabs.")
         st.caption(
             "The preceptor report includes only HOPE_DRIVE, NYES, and ETOWN. "
-            "Primary = one highest-session preceptor with >3 sessions; "
+            "Primary = one highest-session preceptor with >=3 sessions; "
             "fragmented = <3 sessions."
         )
 
