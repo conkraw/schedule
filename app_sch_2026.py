@@ -1786,6 +1786,8 @@ elif mode == "Create Individual Schedules":
         "monday_date",
         "primary_preceptor",
         "fragmented_preceptor",
+        "primary_preceptor_flag",
+        "primary_preceptor_flag_reason",
         "email",
     ]
 
@@ -1867,13 +1869,19 @@ elif mode == "Create Individual Schedules":
         Build one row per student/preceptor/week for HOPE_DRIVE, NYES, and ETOWN.
 
         Primary logic:
-          - At most one primary preceptor per student/week.
-          - The preceptor with the largest session count is primary only when the
-            count is >=3. Ties are resolved alphabetically for stable output.
+          - Every student/week represented in this report receives exactly one
+            primary preceptor.
+          - Prefer the preceptor with the largest session count among those with
+            at least 3 sessions.
+          - If nobody reaches 3 sessions, select the highest-session preceptor
+            anyway and flag that primary assignment for review.
+          - The same preceptor may be primary for more than one student. Repeated
+            primary assignments within the same week are also flagged.
+          - Ties are resolved alphabetically for stable output.
 
         Fragmentation logic:
           - YES when that preceptor has <3 sessions with the student that week.
-          - A count of exactly 3 is eligible to be primary and is not fragmented.
+          - A count of exactly 3 is not fragmented.
         """
         weekly_rows = []
 
@@ -1908,30 +1916,36 @@ elif mode == "Create Individual Schedules":
                 if not preceptor_counts:
                     continue
 
-                # Select no more than one primary preceptor for this student/week.
+                # Every student/week must have one primary. Prefer >=3 sessions;
+                # otherwise choose the best available preceptor and flag it.
                 eligible_primary = [
                     (preceptor, count)
                     for preceptor, count in preceptor_counts.items()
                     if count >= 3
                 ]
-                primary_name = None
-                if eligible_primary:
-                    eligible_primary.sort(
-                        key=lambda item: (-item[1], _normalize_name(item[0]))
-                    )
-                    primary_name = eligible_primary[0][0]
+                primary_pool = eligible_primary or list(preceptor_counts.items())
+                primary_pool.sort(
+                    key=lambda item: (-item[1], _normalize_name(item[0]))
+                )
+                primary_name, primary_count = primary_pool[0]
+                below_threshold = primary_count < 3
 
                 for preceptor, count in preceptor_counts.items():
+                    is_primary = preceptor == primary_name
+                    flag_reasons = []
+                    if is_primary and below_threshold:
+                        flag_reasons.append("SELECTED PRIMARY HAS FEWER THAN 3 SESSIONS")
+
                     weekly_rows.append(
                         {
                             "preceptor_name": preceptor,
                             "student_name": student_name,
                             "no_of_sessions": int(count),
                             "monday_date": monday_date,
-                            "primary_preceptor": (
-                                "YES" if preceptor == primary_name else "NO"
-                            ),
+                            "primary_preceptor": "YES" if is_primary else "NO",
                             "fragmented_preceptor": "YES" if count < 3 else "NO",
+                            "primary_preceptor_flag": "YES" if flag_reasons else "NO",
+                            "primary_preceptor_flag_reason": "; ".join(flag_reasons),
                             "email": NORMALIZED_EMAIL_MAP.get(
                                 _normalize_name(preceptor), ""
                             ),
@@ -1941,6 +1955,43 @@ elif mode == "Create Individual Schedules":
         report_df = pd.DataFrame(weekly_rows, columns=REPORT_COLUMNS)
 
         if not report_df.empty:
+            # Flag a provider who is serving as primary for multiple students in
+            # the same week. Reuse is allowed; the flag simply makes it visible.
+            primary_mask = report_df["primary_preceptor"].eq("YES")
+            primary_rows = report_df.loc[
+                primary_mask,
+                ["monday_date", "preceptor_name", "student_name"],
+            ].copy()
+            primary_rows["_normalized_preceptor"] = primary_rows[
+                "preceptor_name"
+            ].map(_normalize_name)
+
+            repeated_keys = set(
+                primary_rows.groupby(
+                    ["monday_date", "_normalized_preceptor"], dropna=False
+                )["student_name"]
+                .nunique()
+                .loc[lambda counts: counts > 1]
+                .index.tolist()
+            )
+
+            for row_idx in report_df.index[primary_mask]:
+                key = (
+                    report_df.at[row_idx, "monday_date"],
+                    _normalize_name(report_df.at[row_idx, "preceptor_name"]),
+                )
+                if key not in repeated_keys:
+                    continue
+
+                reason = str(
+                    report_df.at[row_idx, "primary_preceptor_flag_reason"] or ""
+                ).strip()
+                repeat_reason = "PRECEPTOR IS PRIMARY FOR MULTIPLE STUDENTS THIS WEEK"
+                report_df.at[row_idx, "primary_preceptor_flag"] = "YES"
+                report_df.at[row_idx, "primary_preceptor_flag_reason"] = (
+                    f"{reason}; {repeat_reason}" if reason else repeat_reason
+                )
+
             report_df["_primary_sort"] = report_df["primary_preceptor"].map(
                 {"YES": 0, "NO": 1}
             )
@@ -1989,7 +2040,9 @@ elif mode == "Create Individual Schedules":
         worksheet.set_column("D:D", 15)
         worksheet.set_column("E:E", 20)
         worksheet.set_column("F:F", 23)
-        worksheet.set_column("G:G", 38)
+        worksheet.set_column("G:G", 23)
+        worksheet.set_column("H:H", 58)
+        worksheet.set_column("I:I", 38)
 
         header_format = workbook.add_format(
             {
@@ -2053,6 +2106,20 @@ elif mode == "Create Individual Schedules":
             )
             for col in range(len(REPORT_COLUMNS))
         ]
+        flagged_primary_formats = [
+            workbook.add_format(
+                {
+                    "valign": "top",
+                    "bg_color": "#FCE4D6",
+                    "font_color": "#9C0006",
+                    "bottom": 1,
+                    "bottom_color": "#D9E2F3",
+                    **({"align": "center", "num_format": "0"} if col == 2 else {}),
+                    **({"align": "center", "num_format": "mm/dd/yyyy"} if col == 3 else {}),
+                }
+            )
+            for col in range(len(REPORT_COLUMNS))
+        ]
         missing_email_format = workbook.add_format(
             {
                 "valign": "top",
@@ -2071,9 +2138,12 @@ elif mode == "Create Individual Schedules":
         ):
             is_primary = str(row[4]).strip().upper() == "YES"
             is_fragmented = str(row[5]).strip().upper() == "YES"
+            is_flagged_primary = str(row[6]).strip().upper() == "YES"
 
             for col_idx, value in enumerate(row):
-                if is_primary:
+                if is_flagged_primary:
+                    cell_format = flagged_primary_formats[col_idx]
+                elif is_primary:
                     cell_format = primary_formats[col_idx]
                 elif is_fragmented:
                     cell_format = fragmented_formats[col_idx]
@@ -2084,7 +2154,7 @@ elif mode == "Create Individual Schedules":
                 else:
                     cell_format = body_format
 
-                if col_idx == 6 and not str(value or "").strip():
+                if col_idx == len(REPORT_COLUMNS) - 1 and not str(value or "").strip():
                     cell_format = missing_email_format
 
                 if col_idx == 3:
@@ -2129,13 +2199,20 @@ elif mode == "Create Individual Schedules":
             ("Report scope", "HOPE_DRIVE, NYES, and ETOWN only"),
             (
                 "Primary preceptor",
-                "At most one per student/week; YES for the highest-session "
-                "preceptor when no_of_sessions >= 3.",
+                "Exactly one per student/week. The app prefers the highest-session "
+                "preceptor with at least 3 sessions. If nobody reaches 3, the "
+                "highest-session preceptor is still selected and flagged.",
+            ),
+            (
+                "Repeated primary",
+                "The same preceptor may be primary for multiple students. Those "
+                "primary rows are flagged for visibility.",
             ),
             ("Fragmented preceptor", "YES when no_of_sessions < 3."),
             (
-                "Exactly 3 sessions",
-                "Eligible to be the single primary preceptor; not fragmented.",
+                "Primary preceptor flag",
+                "YES when the selected primary has fewer than 3 sessions or the "
+                "same preceptor is primary for multiple students that week.",
             ),
             (
                 "Email mapping",
@@ -2325,8 +2402,9 @@ elif mode == "Create Individual Schedules":
         st.write(f"Found **{len(wb.sheetnames)}** tabs.")
         st.caption(
             "The preceptor report includes only HOPE_DRIVE, NYES, and ETOWN. "
-            "Primary = one highest-session preceptor with >=3 sessions; "
-            "fragmented = <3 sessions."
+            "Every student/week receives one primary preceptor. The app prefers "
+            ">=3 sessions; fallback and repeated primary assignments are flagged. "
+            "Fragmented = <3 sessions."
         )
 
         if st.button("Build individual schedules + preceptor report"):
@@ -2382,6 +2460,18 @@ elif mode == "Create Individual Schedules":
                 )
             else:
                 st.dataframe(report_preview, use_container_width=True, hide_index=True)
+
+            flagged_primary_rows = report_preview.loc[
+                report_preview["primary_preceptor"].eq("YES")
+                & report_preview["primary_preceptor_flag"].eq("YES")
+            ]
+            if not flagged_primary_rows.empty:
+                st.warning(
+                    f"{len(flagged_primary_rows)} primary assignment(s) require review. "
+                    "See primary_preceptor_flag_reason in the preview or Excel report."
+                )
+            else:
+                st.success("Every primary assignment met the preferred criteria without reuse flags.")
 
             missing_emails = st.session_state.get("individual_missing_emails", [])
             if missing_emails:
