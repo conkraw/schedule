@@ -1453,11 +1453,16 @@ elif mode == "Create Student Schedule":
             # Header
             ws.merge_range('A1:A2','Student Name:', f1)
             ws.merge_range('B1:B2',      title,      f1)
-            note = ("*Note* Asynchronous time is for coursework only. During this time period, "
-                    "we expect students to do coursework, be available for any additional educational "
-                    "activities, and any extra clinical time that may be available. If the student is not "
-                    "available during this time period and has not made an absence request, the student "
-                    "will be cited for unprofessionalism and will risk failing the course.")
+            #note = ("*Note* Protected Self-Study Time is for coursework only. During this time period, "
+            #        "we expect students to do coursework, be available for any additional educational "
+            #        "activities, and any extra clinical time that may be available. If the student is not "
+            #        "available during this time period and has not made an absence request, the student "
+            #        "will be cited for unprofessionalism and will risk failing the course.")
+            
+            note = ("*Note* Protected Self-Study Time is reserved for independent learning and completion of required "
+                    "coursework. Students are encouraged to use this time to complete assignments, review course materials, "
+                    "prepare for patient care, and reinforce concepts encountered during the clerkship.")
+            
             ws.merge_range('C1:H2', note, f2)
     
             # Column widths & row height
@@ -1496,8 +1501,8 @@ elif mode == "Create Student Schedule":
                 am_row = 5 + block*8
                 pm_row = 6 + block*8
                 for col in range(1, 8):
-                    ws.write(am_row, col, "Asynchronous Time", f5)
-                    ws.write(pm_row, col, "Asynchronous Time", f5)
+                    ws.write(am_row, col, "Protected Self-Study Time", f5)
+                    ws.write(pm_row, col, "Protected Self-Study Time", f5)
     
             # Separators
             for sep in [10, 18, 26, 34]:
