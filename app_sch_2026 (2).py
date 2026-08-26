@@ -1784,6 +1784,36 @@ elif mode == "Create Individual Schedules":
     }
 
     FOCUS_SITES = {"HOPE_DRIVE", "NYES", "ETOWN"}
+
+    # -------------------------------------------------------------------------
+    # SECURE STORAGE IMAGES FROM GITHUB
+    # -------------------------------------------------------------------------
+    # Put each site's image in your GitHub repository and enter its repository
+    # path below. Leave a value blank (or remove the key) when no image exists.
+    # The individual workbook will only receive a "Secure Storage" tab when at
+    # least one image is available for one of that student's assigned sites.
+    #
+    # Example repository paths:
+    #   secure_storage/hope_drive.png
+    #   secure_storage/nyes.jpg
+    #
+    # IMPORTANT: if these images contain genuinely sensitive storage/location
+    # information, keep the GitHub repository PRIVATE.
+    SECURE_STORAGE_GITHUB_FILES = {
+        "HOPE_DRIVE": "secure_storage/hope_drive.png",
+        "NYES": "",
+        "ETOWN": "",
+    }
+
+    # By default this reuses the same [github] repo/token Streamlit secrets that
+    # your other GitHub-enabled apps can use:
+    #
+    #   [github]
+    #   repo = "your-account/your-repository"
+    #   token = "github_pat_..."
+    #
+    # If this schedule app uses a different repository, enter owner/repo here.
+    SECURE_STORAGE_GITHUB_REPO = ""
     REPORT_COLUMNS = [
         "preceptor_name",
         "student_name",
@@ -1868,6 +1898,139 @@ elif mode == "Create Individual Schedules":
         preceptor = re.sub(r"\s+", " ", match.group(1).strip())
         site = _normalize_site(match.group(2))
         return preceptor, site
+
+    def _github_secret(name):
+        """Read an optional value from the [github] section of st.secrets."""
+        try:
+            github_cfg = st.secrets["github"]
+            return str(github_cfg.get(name, "") or "").strip()
+        except Exception:
+            return ""
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def _fetch_github_image_bytes(repo, repo_path, token):
+        """Fetch one GitHub file as bytes; return None if unavailable."""
+        if not str(repo or "").strip() or not str(repo_path or "").strip():
+            return None
+
+        from urllib.error import HTTPError, URLError
+        from urllib.parse import quote
+        from urllib.request import Request, urlopen
+
+        repo = str(repo).strip()
+        repo_path = str(repo_path).strip().lstrip("/")
+        api_url = (
+            f"https://api.github.com/repos/{quote(repo, safe='/')}/contents/"
+            f"{quote(repo_path, safe='/')}"
+        )
+
+        headers = {
+            "Accept": "application/vnd.github.raw+json",
+            "User-Agent": "student-schedule-streamlit-app",
+        }
+        if str(token or "").strip():
+            headers["Authorization"] = f"Bearer {str(token).strip()}"
+
+        try:
+            request = Request(api_url, headers=headers)
+            with urlopen(request, timeout=10) as response:
+                return response.read()
+        except (HTTPError, URLError, TimeoutError, OSError):
+            # Missing/unavailable image is intentionally silent.
+            return None
+
+    def _sites_from_schedule_sheet(ws):
+        """Return the normalized sites actually present on this student's schedule."""
+        sites = set()
+        for row in ws.iter_rows():
+            for cell in row:
+                _preceptor, site = _parse_schedule_assignment(cell.value)
+                if site:
+                    sites.add(site)
+        return sorted(sites)
+
+    def _secure_storage_images_for_sheet(ws):
+        """Return [(site, image_bytes), ...] only for available configured images."""
+        repo = (
+            str(SECURE_STORAGE_GITHUB_REPO or "").strip()
+            or _github_secret("repo")
+        )
+        token = _github_secret("token")
+
+        if not repo:
+            return []
+
+        images = []
+        for site in _sites_from_schedule_sheet(ws):
+            repo_path = str(SECURE_STORAGE_GITHUB_FILES.get(site, "") or "").strip()
+            if not repo_path:
+                continue
+
+            image_bytes = _fetch_github_image_bytes(repo, repo_path, token)
+            if image_bytes:
+                images.append((site, image_bytes))
+
+        return images
+
+    def _add_secure_storage_sheet(workbook, site_images):
+        """Add a Secure Storage tab containing all available site images."""
+        if not site_images:
+            return False
+
+        from io import BytesIO
+        from openpyxl.drawing.image import Image as XLImage
+        from openpyxl.styles import Alignment, Font
+
+        ws_secure = workbook.create_sheet("Secure Storage")
+        ws_secure.sheet_view.zoomScale = 80
+        ws_secure.column_dimensions["A"].width = 18
+        ws_secure.column_dimensions["B"].width = 100
+
+        ws_secure["A1"] = "Secure Storage"
+        ws_secure["A1"].font = Font(size=18, bold=True)
+        ws_secure["A1"].alignment = Alignment(vertical="center")
+        ws_secure.row_dimensions[1].height = 28
+
+        current_row = 3
+        added_count = 0
+
+        for site, image_bytes in site_images:
+            try:
+                image_stream = BytesIO(image_bytes)
+                xl_image = XLImage(image_stream)
+
+                # Keep large phone photos manageable while preserving aspect ratio.
+                max_width = 900
+                max_height = 650
+                scale = min(
+                    max_width / xl_image.width if xl_image.width else 1,
+                    max_height / xl_image.height if xl_image.height else 1,
+                    1,
+                )
+                xl_image.width = int(xl_image.width * scale)
+                xl_image.height = int(xl_image.height * scale)
+
+                display_site = site.replace("_", " ").title()
+                label_cell = ws_secure.cell(row=current_row, column=1)
+                label_cell.value = display_site
+                label_cell.font = Font(size=12, bold=True)
+
+                image_row = current_row + 1
+                ws_secure.add_image(xl_image, f"A{image_row}")
+
+                # Approximate enough rows for the image plus spacing before the
+                # next site. This keeps multiple site images from overlapping.
+                current_row = image_row + max(8, int(xl_image.height / 20) + 4)
+                added_count += 1
+            except Exception:
+                # A corrupt/unsupported image should not break schedule creation.
+                continue
+
+        if added_count == 0:
+            workbook.remove(ws_secure)
+            return False
+
+        return True
 
     def build_preceptor_assignment_report(master_wb):
         """
@@ -2264,7 +2427,7 @@ elif mode == "Create Individual Schedules":
         return output, missing_names
 
     def copy_sheet_to_new_wb(src_ws):
-        """Return a BytesIO of a new .xlsx containing src_ws with formatting."""
+        """Return one student's workbook, plus Secure Storage when available."""
         from openpyxl import Workbook
         from io import BytesIO
 
@@ -2385,6 +2548,12 @@ elif mode == "Create Individual Schedules":
             ws_new.auto_filter.ref = getattr(src_ws.auto_filter, "ref", None)
         except Exception:
             pass
+
+        # Add site-specific Secure Storage images only when they exist.
+        # If no configured/retrievable image exists for this student's site(s),
+        # no Secure Storage tab is created.
+        site_images = _secure_storage_images_for_sheet(src_ws)
+        _add_secure_storage_sheet(wb_new, site_images)
 
         # Save to buffer
         buf = BytesIO()
