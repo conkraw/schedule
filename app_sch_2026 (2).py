@@ -1803,7 +1803,7 @@ elif mode == "Create Individual Schedules":
         "HOPE_DRIVE": "secure/hope_drive.png",
         "NYES": "",
         "ETOWN": "",
-        "WARD A": "secure/ward_a_test.png", 
+        "WARD A": "https://raw.githubusercontent.com/conkraw/ward_a_test.png", 
     }
 
     # By default this reuses the same [github] repo/token Streamlit secrets that
