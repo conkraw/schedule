@@ -1803,7 +1803,9 @@ elif mode == "Create Individual Schedules":
         "HOPE_DRIVE": "secure/hope_drive.png",
         "NYES": "",
         "ETOWN": "",
-        "WARD A/HMC": "https://raw.githubusercontent.com/conkraw/ward_a_test.png", 
+        # Either a repo-relative path such as "ward_a_test.png"
+        # or a full GitHub /blob/ or raw image URL may be used here.
+        "WARD A/HMC": "https://raw.githubusercontent.com/conkraw/ward_a_test.png"
     }
 
     # By default this reuses the same [github] repo/token Streamlit secrets that
@@ -1838,14 +1840,43 @@ elif mode == "Create Individual Schedules":
         return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
 
     def _normalize_site(value):
-        """Convert site labels such as 'Hope Drive' to 'HOPE_DRIVE'."""
+        """Normalize arbitrary site text to a stable uppercase key."""
         cleaned = re.sub(r"[^A-Za-z0-9]+", "_", str(value or "").strip().upper())
         return cleaned.strip("_")
+
+    def _canonical_site(value):
+        """Map real schedule labels/variants to the site keys used by the app."""
+        normalized = _normalize_site(value)
+        if not normalized:
+            return ""
+
+        # Common outpatient variants in the actual student schedules.
+        if "HOPE_DRIVE" in normalized:
+            return "HOPE_DRIVE"
+        if normalized.startswith("NYES"):
+            return "NYES"
+        if normalized in {"ETOWN", "ELIZABETHTOWN"} or "ETOWN" in normalized:
+            return "ETOWN"
+
+        # Inpatient site used in the uploaded schedules.
+        if "WARD_A_HMC" in normalized:
+            return "WARD_A_HMC"
+
+        # Keep any other site usable for future Secure Storage mappings.
+        return normalized
 
     NORMALIZED_EMAIL_MAP = {
         _normalize_name(preceptor): str(email).strip()
         for preceptor, email in PRECEPTOR_EMAIL_MAP.items()
         if str(preceptor).strip()
+    }
+
+    # Normalize Secure Storage dictionary keys too, so either
+    # "WARD A/HMC" or "WARD_A_HMC" works in the configuration.
+    NORMALIZED_SECURE_STORAGE_FILES = {
+        _canonical_site(site): str(source or "").strip()
+        for site, source in SECURE_STORAGE_GITHUB_FILES.items()
+        if str(site or "").strip() and str(source or "").strip()
     }
 
     def _parse_excel_date(value):
@@ -1888,16 +1919,23 @@ elif mode == "Create Individual Schedules":
         return str(ws.title).strip()
 
     def _parse_schedule_assignment(value):
-        """Parse a student-schedule cell formatted as 'Preceptor - [SITE]'."""
+        """Parse both 'Preceptor - [SITE]' and the real 'Preceptor - SITE' format."""
         if not isinstance(value, str) or not value.strip():
             return None, None
 
-        match = re.match(r"^\s*(.*?)\s*-\s*\[\s*([^\]]+)\s*\]\s*$", value)
+        text = str(value).strip()
+
+        # Older/bracketed format: Smith, Jane - [HOPE DRIVE]
+        match = re.match(r"^\s*(.*?)\s*-\s*\[\s*([^\]]+)\s*\]\s*$", text, flags=re.S)
+        if not match:
+            # Current schedule format: Smith, Jane - Hope Drive
+            match = re.match(r"^\s*(.*?)\s+-\s+(.*?)\s*$", text, flags=re.S)
         if not match:
             return None, None
 
         preceptor = re.sub(r"\s+", " ", match.group(1).strip())
-        site = _normalize_site(match.group(2))
+        raw_site = re.sub(r"\s+", " ", match.group(2).strip())
+        site = _canonical_site(raw_site)
         return preceptor, site
 
     def _github_secret(name):
@@ -1909,39 +1947,75 @@ elif mode == "Create Individual Schedules":
             return ""
 
     @st.cache_data(ttl=300, show_spinner=False)
-    def _fetch_github_image_bytes(repo, repo_path, token):
-        """Fetch one GitHub file as bytes; return None if unavailable."""
-        if not str(repo or "").strip() or not str(repo_path or "").strip():
+    def _fetch_secure_storage_image_bytes(repo, source, token):
+        """
+        Fetch a configured image. `source` may be either:
+          1) a path inside the configured GitHub repo, e.g. secure/hope_drive.png
+          2) a full https:// URL to an image
+          3) a normal GitHub /blob/ URL (automatically converted to raw)
+        Return None when the image is missing/unavailable.
+        """
+        if not str(source or "").strip():
             return None
 
         from urllib.error import HTTPError, URLError
-        from urllib.parse import quote
+        from urllib.parse import quote, urlparse
         from urllib.request import Request, urlopen
 
+        source = str(source).strip()
+        token = str(token or "").strip()
+
+        headers = {"User-Agent": "student-schedule-streamlit-app"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        # Full URL supplied directly.
+        if source.lower().startswith(("http://", "https://")):
+            url = source
+
+            # Let the user paste an ordinary GitHub browser URL.
+            # https://github.com/OWNER/REPO/blob/BRANCH/path/file.png
+            # becomes the corresponding raw.githubusercontent.com URL.
+            parsed = urlparse(url)
+            if parsed.netloc.lower() == "github.com":
+                parts = [part for part in parsed.path.split("/") if part]
+                if len(parts) >= 5 and parts[2] == "blob":
+                    owner, repository, _blob, branch = parts[:4]
+                    file_path = "/".join(parts[4:])
+                    url = (
+                        f"https://raw.githubusercontent.com/{owner}/{repository}/"
+                        f"{branch}/{file_path}"
+                    )
+
+            try:
+                request = Request(url, headers=headers)
+                with urlopen(request, timeout=10) as response:
+                    return response.read()
+            except (HTTPError, URLError, TimeoutError, OSError, ValueError):
+                return None
+
+        # Otherwise treat `source` as a file path inside the configured repo.
+        if not str(repo or "").strip():
+            return None
+
         repo = str(repo).strip()
-        repo_path = str(repo_path).strip().lstrip("/")
+        repo_path = source.lstrip("/")
         api_url = (
             f"https://api.github.com/repos/{quote(repo, safe='/')}/contents/"
             f"{quote(repo_path, safe='/')}"
         )
-
-        headers = {
-            "Accept": "application/vnd.github.raw+json",
-            "User-Agent": "student-schedule-streamlit-app",
-        }
-        if str(token or "").strip():
-            headers["Authorization"] = f"Bearer {str(token).strip()}"
+        api_headers = dict(headers)
+        api_headers["Accept"] = "application/vnd.github.raw+json"
 
         try:
-            request = Request(api_url, headers=headers)
+            request = Request(api_url, headers=api_headers)
             with urlopen(request, timeout=10) as response:
                 return response.read()
-        except (HTTPError, URLError, TimeoutError, OSError):
-            # Missing/unavailable image is intentionally silent.
+        except (HTTPError, URLError, TimeoutError, OSError, ValueError):
             return None
 
     def _sites_from_schedule_sheet(ws):
-        """Return the normalized sites actually present on this student's schedule."""
+        """Return canonical site keys found anywhere on this student's schedule."""
         sites = set()
         for row in ws.iter_rows():
             for cell in row:
@@ -1951,23 +2025,17 @@ elif mode == "Create Individual Schedules":
         return sorted(sites)
 
     def _secure_storage_images_for_sheet(ws):
-        """Return [(site, image_bytes), ...] only for available configured images."""
-        repo = (
-            str(SECURE_STORAGE_GITHUB_REPO or "").strip()
-            or _github_secret("repo")
-        )
+        """Return [(site, image_bytes), ...] for configured images that exist."""
+        repo = str(SECURE_STORAGE_GITHUB_REPO or "").strip() or _github_secret("repo")
         token = _github_secret("token")
-
-        if not repo:
-            return []
 
         images = []
         for site in _sites_from_schedule_sheet(ws):
-            repo_path = str(SECURE_STORAGE_GITHUB_FILES.get(site, "") or "").strip()
-            if not repo_path:
+            source = NORMALIZED_SECURE_STORAGE_FILES.get(site, "")
+            if not source:
                 continue
 
-            image_bytes = _fetch_github_image_bytes(repo, repo_path, token)
+            image_bytes = _fetch_secure_storage_image_bytes(repo, source, token)
             if image_bytes:
                 images.append((site, image_bytes))
 
@@ -2673,6 +2741,9 @@ elif mode == "Create Individual Schedules":
                 file_name="individual_schedules_with_preceptor_report.zip",
                 mime="application/zip",
             )
+
+
+        
 
 
 elif mode == "OPD MD PA Conflict Detector":
