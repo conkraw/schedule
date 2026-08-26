@@ -1847,22 +1847,25 @@ elif mode == "Create Individual Schedules":
     def _canonical_site(value):
         """Map real schedule labels/variants to the site keys used by the app."""
         normalized = _normalize_site(value)
+    
         if not normalized:
             return ""
-
-        # Common outpatient variants in the actual student schedules.
+    
         if "HOPE_DRIVE" in normalized:
             return "HOPE_DRIVE"
+    
         if normalized.startswith("NYES"):
             return "NYES"
+    
         if normalized in {"ETOWN", "ELIZABETHTOWN"} or "ETOWN" in normalized:
             return "ETOWN"
-
-        # Inpatient site used in the uploaded schedules.
+    
         if "WARD_A_HMC" in normalized:
             return "WARD_A_HMC"
-
-        # Keep any other site usable for future Secure Storage mappings.
+    
+        if "INPATIENT_SJR" in normalized:
+            return "INPATIENT_SJR"
+    
         return normalized
 
     NORMALIZED_EMAIL_MAP = {
@@ -2015,13 +2018,28 @@ elif mode == "Create Individual Schedules":
             return None
 
     def _sites_from_schedule_sheet(ws):
-        """Return canonical site keys found anywhere on this student's schedule."""
+        """Find sites in both preceptor assignments and standalone rotation cells."""
         sites = set()
+    
         for row in ws.iter_rows():
             for cell in row:
-                _preceptor, site = _parse_schedule_assignment(cell.value)
+                value = cell.value
+    
+                # First try normal "Preceptor - Site" assignments.
+                _preceptor, site = _parse_schedule_assignment(value)
+    
                 if site:
                     sites.add(site)
+                    continue
+    
+                # Also recognize standalone site/rotation cells such as:
+                # "Inpatient SJR\\n(St. Joseph's Reading)"
+                if isinstance(value, str):
+                    standalone_site = _canonical_site(value)
+    
+                    if standalone_site in NORMALIZED_SECURE_STORAGE_FILES:
+                        sites.add(standalone_site)
+    
         return sorted(sites)
 
     def _secure_storage_images_for_sheet(ws):
