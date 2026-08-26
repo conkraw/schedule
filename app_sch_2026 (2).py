@@ -1805,7 +1805,7 @@ elif mode == "Create Individual Schedules":
         "ETOWN": "",
         # Either a repo-relative path such as "ward_a_test.png"
         # or a full GitHub /blob/ or raw image URL may be used here.
-        "WARD A/HMC": "https://raw.githubusercontent.com/conkraw/ward_a_test.png"
+        "WARD A/HMC": "https://github.com/conkraw/schedule/blob/main/secure/ward_a_test.png"
     }
 
     # By default this reuses the same [github] repo/token Streamlit secrets that
