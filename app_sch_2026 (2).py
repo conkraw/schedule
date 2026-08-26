@@ -1800,9 +1800,10 @@ elif mode == "Create Individual Schedules":
     # IMPORTANT: if these images contain genuinely sensitive storage/location
     # information, keep the GitHub repository PRIVATE.
     SECURE_STORAGE_GITHUB_FILES = {
-        "HOPE_DRIVE": "secure_storage/hope_drive.png",
+        "HOPE_DRIVE": "secure/hope_drive.png",
         "NYES": "",
         "ETOWN": "",
+        "WARD A": "secure/ward_a_test.png", 
     }
 
     # By default this reuses the same [github] repo/token Streamlit secrets that
