@@ -1803,9 +1803,8 @@ elif mode == "Create Individual Schedules":
         "HOPE_DRIVE": "secure/hope_drive.png",
         "NYES": "",
         "ETOWN": "",
-        # Either a repo-relative path such as "ward_a_test.png"
-        # or a full GitHub /blob/ or raw image URL may be used here.
-        "- WARD A/HMC": "https://github.com/conkraw/schedule/blob/main/secure/ward_a_test.png"
+        "Inpatient SJR (St. Joseph's Reading)": "https://github.com/conkraw/schedule/blob/main/secure/sjr_inpatient.png",
+        "WARD A/HMC": "https://github.com/conkraw/schedule/blob/main/secure/ward_a_test.png"
     }
 
     # By default this reuses the same [github] repo/token Streamlit secrets that
