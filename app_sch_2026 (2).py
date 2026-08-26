@@ -1804,7 +1804,8 @@ elif mode == "Create Individual Schedules":
         "NYES": "",
         "ETOWN": "",
         "Inpatient SJR": "https://github.com/conkraw/schedule/blob/main/secure/sjr_inpatient.png",
-        "WARD A/HMC": "https://github.com/conkraw/schedule/blob/main/secure/ward_a_test.png"
+        "WARD A/HMC": "https://github.com/conkraw/schedule/blob/main/secure/ward_a_test.png",
+        "All About Children's": "https://github.com/conkraw/schedule/blob/main/secure/all_about_childrens.png"
     }
 
     # By default this reuses the same [github] repo/token Streamlit secrets that
