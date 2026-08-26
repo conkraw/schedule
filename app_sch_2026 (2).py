@@ -1803,7 +1803,7 @@ elif mode == "Create Individual Schedules":
         "HOPE_DRIVE": "secure/hope_drive.png",
         "NYES": "",
         "ETOWN": "",
-        "Inpatient SJR (St. Joseph's Reading)": "https://github.com/conkraw/schedule/blob/main/secure/sjr_inpatient.png",
+        "Inpatient SJR": "https://github.com/conkraw/schedule/blob/main/secure/sjr_inpatient.png",
         "WARD A/HMC": "https://github.com/conkraw/schedule/blob/main/secure/ward_a_test.png"
     }
 
