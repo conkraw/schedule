@@ -27,11 +27,604 @@ from openpyxl.utils import column_index_from_string
 from openpyxl.styles import Font, PatternFill, Color
 from collections import deque
 
+# =============================================================================
+# ENCRYPTED OPD ARCHIVE - whole-file encryption, one current file per rotation
+# Only ciphertext is sent to GitHub. No credentials or plaintext index is saved.
+# Configure [opd_archive] in Streamlit Secrets; see SETUP_OPD_ARCHIVE.md.
+# =============================================================================
+import base64
+import hashlib
+import hmac
+import time
+from dataclasses import dataclass, field
+from datetime import date as CalendarDate
+from urllib.parse import quote
+import requests
+from cryptography.fernet import Fernet, MultiFernet, InvalidToken
+from openpyxl.utils.datetime import from_excel
+
+OPD_ARCHIVE_VERSION = 1
+OPD_MAX_BYTES = 10 * 1024 * 1024
+OPD_MAX_ENCRYPTED_BYTES = 15 * 1024 * 1024
+OPD_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+OPD_NAME_ORDERS = (
+    "Auto-detect using rotation list",
+    "Student ~ Preceptor",
+    "Preceptor ~ Student",
+)
+
+
+class OPDArchiveError(RuntimeError):
+    """A safe, user-facing archive error; never include a token or workbook data."""
+
+
+def _opd_secret_settings():
+    try:
+        return dict(st.secrets.get("opd_archive", {}))
+    except Exception:
+        return {}
+
+
+def _opd_authenticate_callback():
+    settings = _opd_secret_settings()
+    expected = str(settings.get("app_password", ""))
+    supplied = str(st.session_state.pop("_opd_login_password", ""))
+    if time.time() < st.session_state.get("_opd_login_retry_at", 0):
+        return
+    if len(expected) >= 20 and hmac.compare_digest(supplied.encode(), expected.encode()):
+        st.session_state["_opd_auth"] = hashlib.sha256(expected.encode()).hexdigest()
+        st.session_state["_opd_auth_at"] = time.time()
+        st.session_state.pop("_opd_login_failed", None)
+        st.session_state.pop("_opd_login_retry_at", None)
+    else:
+        st.session_state["_opd_login_failed"] = True
+        st.session_state["_opd_login_retry_at"] = time.time() + 5
+
+
+def _opd_logout_callback():
+    # Includes decrypted workbooks and all generated student/report downloads.
+    st.session_state.clear()
+
+
+def require_opd_staff_login():
+    """Gate the entire app, including all archive reads, writes and downloads.
+
+    A shared staff password is a basic access gate, not institutional SSO/MFA.
+    Use the random password produced by generate_opd_secrets.py, not the key.
+    """
+    expected = str(_opd_secret_settings().get("app_password", ""))
+    if len(expected) < 20 or expected.startswith(("REPLACE_", "YOUR_", "GENERATE_")):
+        st.error("Setup required: add a random app_password (at least 20 characters) "
+                 "under [opd_archive] in Streamlit Secrets. See SETUP_OPD_ARCHIVE.md.")
+        st.stop()
+    if expected == str(_opd_secret_settings().get("encryption_key", "")):
+        st.error("The staff password must be different from the encryption key. Use the two separate generated values.")
+        st.stop()
+    fingerprint = hashlib.sha256(expected.encode()).hexdigest()
+    authenticated = st.session_state.get("_opd_auth") == fingerprint
+    idle_seconds = time.time() - st.session_state.get("_opd_auth_at", 0)
+    if authenticated and idle_seconds < 1800:
+        st.session_state["_opd_auth_at"] = time.time()
+        st.sidebar.button("Sign out / clear session", on_click=_opd_logout_callback,
+                          key="opd_sign_out")
+        return
+    if st.session_state.get("_opd_auth"):
+        st.session_state.clear()
+    st.subheader("Staff sign-in")
+    st.caption("The staff password is separate from the encryption key. "
+               "Access expires after 30 minutes without an app interaction.")
+    with st.form("opd_staff_login_form"):
+        st.text_input("Staff password", type="password", key="_opd_login_password")
+        st.form_submit_button("Sign in", on_click=_opd_authenticate_callback)
+    if st.session_state.get("_opd_login_failed"):
+        st.error("Sign-in was not accepted. Wait five seconds before trying again.")
+    st.stop()
+
+
+@dataclass(frozen=True)
+class OPDArchiveConfig:
+    owner: str
+    repo: str
+    branch: str
+    folder: str
+    github_token: str = field(repr=False)
+    encryption_key: str = field(repr=False)
+    previous_encryption_keys: tuple = field(default=(), repr=False)
+
+    def cipher(self):
+        try:
+            keys = (self.encryption_key,) + self.previous_encryption_keys
+            return MultiFernet([Fernet(k.encode("ascii")) for k in keys])
+        except (ValueError, TypeError, UnicodeError):
+            raise OPDArchiveError("An archive encryption key is invalid. Use a Fernet "
+                                  "key from generate_opd_secrets.py.") from None
+
+    def signature(self):
+        # Session-only identity. Includes credential changes to invalidate receipts.
+        material = "\0".join((self.owner, self.repo, self.branch, self.folder,
+                              self.github_token, self.encryption_key,
+                              *self.previous_encryption_keys))
+        return hashlib.sha256(material.encode()).hexdigest()
+
+
+def get_opd_archive_config():
+    values = _opd_secret_settings()
+    required = ("owner", "repo", "github_token", "encryption_key")
+    if any(not str(values.get(k, "")).strip() for k in required):
+        raise OPDArchiveError("Archive setup is incomplete. Add owner, repo, "
+                              "github_token and encryption_key under [opd_archive] "
+                              "in Streamlit Secrets.")
+    owner, repo = str(values["owner"]).strip(), str(values["repo"]).strip()
+    if not re.fullmatch(r"[A-Za-z0-9-]+", owner) or not re.fullmatch(r"[A-Za-z0-9_.-]+", repo):
+        raise OPDArchiveError("Use the GitHub account name and repository name only, not a URL.")
+    branch = str(values.get("branch", "main")).strip()
+    folder = str(values.get("folder", "opd_archive")).strip("/")
+    if not branch or not folder or any(
+        not re.fullmatch(r"[A-Za-z0-9_-]+", part) for part in folder.split("/")
+    ):
+        raise OPDArchiveError("Check the archive branch and folder in Streamlit Secrets.")
+    previous = values.get("previous_encryption_keys", [])
+    if not isinstance(previous, (tuple, list)):
+        raise OPDArchiveError("previous_encryption_keys must be a TOML list, or omitted.")
+    config = OPDArchiveConfig(owner, repo, branch, folder,
+                              str(values["github_token"]).strip(),
+                              str(values["encryption_key"]).strip(),
+                              tuple(str(k).strip() for k in previous))
+    config.cipher()
+    return config
+
+
+def validate_opd_xlsx_bytes(raw):
+    """Bound memory use and reject non-XLSX inputs without modifying the bytes."""
+    if not isinstance(raw, bytes) or not raw:
+        raise OPDArchiveError("The OPD upload is empty.")
+    if len(raw) > OPD_MAX_BYTES:
+        raise OPDArchiveError("OPD uploads must be 10 MB or smaller.")
+    try:
+        with ZipFile(BytesIO(raw)) as zf:
+            members = zf.infolist()
+            if len(members) > 20000 or sum(i.file_size for i in members) > 100 * 1024 * 1024:
+                raise OPDArchiveError("This workbook is too large to process safely.")
+            names = set(zf.namelist())
+            if "xl/workbook.xml" not in names or "[Content_Types].xml" not in names:
+                raise OPDArchiveError("Upload an actual Excel .xlsx workbook, not an .xls file.")
+            if any(i.flag_bits & 1 for i in members) or "xl/vbaProject.bin" in names:
+                raise OPDArchiveError("Use a normal .xlsx file without password protection or macros.")
+            if zf.testzip() is not None:
+                raise OPDArchiveError("The uploaded workbook failed its ZIP integrity check.")
+    except zipfile.BadZipFile:
+        raise OPDArchiveError("The file could not be read as an Excel .xlsx workbook.") from None
+
+
+def _opd_date(value, epoch):
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, CalendarDate):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            dt = from_excel(value, epoch)
+            return dt.date() if isinstance(dt, datetime) and 1970 <= dt.year <= 2100 else None
+        except (ValueError, OverflowError):
+            return None
+    if isinstance(value, str):
+        for fmt in ("%m/%d/%Y", "%m-%d-%Y", "%Y-%m-%d", "%B %d, %Y", "%b %d, %Y"):
+            try:
+                return datetime.strptime(value.strip(), fmt).date()
+            except ValueError:
+                pass
+    return None
+
+
+def inspect_opd_rotation(raw):
+    """Find the first scheduled Monday in site-tab OPDs, using calendar headers.
+
+    The filename and names around '~' play no role in the archive identifier.
+    Different date ranges across site worksheets are rejected, not guessed.
+    """
+    validate_opd_xlsx_bytes(raw)
+    try:
+        wb = load_workbook(BytesIO(raw), read_only=True, data_only=True)
+    except Exception:
+        raise OPDArchiveError("The OPD workbook could not be opened. Save it as .xlsx and retry.") from None
+    try:
+        expected_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        schedules = {}
+        for ws in wb.worksheets:
+            rows = list(ws.iter_rows(min_row=1, max_row=min(ws.max_row or 0, 1200),
+                                     max_col=8, values_only=True))
+            if not rows or str(rows[0][0] or "").strip().rstrip(":").casefold() != "site":
+                continue
+            has_sessions = any(re.match(r"^\s*(AM|PM)\b", str(row[0] or ""), re.I) for row in rows)
+            if not has_sessions:
+                continue
+            mondays = []
+            for r, row in enumerate(rows[:-1]):
+                labels = [str(v or "").strip().casefold() for v in row[1:8]]
+                if labels != expected_days:
+                    continue
+                values = [_opd_date(v, wb.epoch) for v in rows[r + 1][1:8]]
+                if not all(values) or values[0].weekday() != 0 or any(
+                    day != values[0] + timedelta(days=i) for i, day in enumerate(values)
+                ):
+                    raise OPDArchiveError(f"The date row on worksheet '{ws.title}' near row {r+2} "
+                                          "must contain seven consecutive Monday-Sunday dates.")
+                mondays.append(values[0])
+            if not mondays:
+                raise OPDArchiveError(f"No readable Monday-Sunday date headers were found on '{ws.title}'.")
+            if any(d != mondays[0] + timedelta(days=7*i) for i, d in enumerate(mondays)):
+                raise OPDArchiveError(f"The calendar weeks on '{ws.title}' are not consecutive.")
+            schedules[ws.title] = tuple(mondays)
+        if not schedules:
+            raise OPDArchiveError("This is not a recognized OPD site-tab workbook. Upload the original "
+                                  "OPD.xlsx, not the one-tab-per-student MS_Schedule.xlsx.")
+        first = next(iter(schedules.values()))
+        if any(weeks != first for weeks in schedules.values()):
+            raise OPDArchiveError("The OPD site worksheets have different rotation dates. "
+                                  "Correct the dates before archiving; no file was replaced.")
+        return {"rotation_start": first[0], "week_mondays": first,
+                "site_names": tuple(schedules), "sha256": hashlib.sha256(raw).hexdigest()}
+    finally:
+        wb.close()
+
+
+class GitHubOPDArchive:
+    """GitHub Contents API transport; only authenticated ciphertext is written.
+
+    Reads are pinned to a commit. Updates use the existing blob SHA. A competing
+    write causes an explicit retry prompt rather than a silent overwrite/rebase.
+    """
+    def __init__(self, config, transport=None):
+        self.config = config
+        self.transport = transport or requests
+        self.base = f"https://api.github.com/repos/{config.owner}/{config.repo}"
+        self.cipher = config.cipher()
+
+    def _request(self, method, route, *, params=None, body=None, raw=False, missing_ok=False):
+        headers = {"Authorization": f"Bearer {self.config.github_token}",
+                   "Accept": ("application/vnd.github.raw+json" if raw else
+                              "application/vnd.github.object+json" if method == "GET" else "application/vnd.github+json"),
+                   "X-GitHub-Api-Version": "2026-03-10",
+                   "User-Agent": "OPD-Encrypted-Archive/1.0"}
+        try:
+            response = self.transport.request(method, self.base + route, headers=headers,
+                                              params=params, json=body, timeout=(10, 45),
+                                              allow_redirects=False, stream=raw)
+        except requests.RequestException:
+            raise OPDArchiveError("GitHub could not be reached. The save is not confirmed. "
+                                  "Retry when the connection is available.") from None
+        status = response.status_code
+        if status == 404 and missing_ok:
+            response.close()
+            return None
+        if status not in (200, 201):
+            response.close()
+            messages = {
+                401: "GitHub authentication failed. Check or renew the access token in Streamlit Secrets.",
+                403: "GitHub denied access or rate-limited this request. Check token permissions, organization approval and repository rules, then retry later.",
+                404: "GitHub repository, branch or archive file was not found. Check owner, repo and branch.",
+                409: "Another save changed the repository during this operation. Retry explicitly; the app will re-read the current version first.",
+                422: "GitHub rejected the write. Check branch rules and token permissions, then retry.",
+                429: "GitHub rate-limited this request. Wait before retrying.",
+            }
+            raise OPDArchiveError(messages.get(status, f"GitHub request failed (HTTP {status}); the save is not confirmed."))
+        if raw:
+            try:
+                chunks, size = [], 0
+                for chunk in response.iter_content(chunk_size=65536):
+                    size += len(chunk)
+                    if size > OPD_MAX_ENCRYPTED_BYTES:
+                        raise OPDArchiveError("The encrypted archive file exceeds this app's size limit.")
+                    chunks.append(chunk)
+                return b"".join(chunks)
+            except requests.RequestException:
+                raise OPDArchiveError("The encrypted file download was interrupted. Retry loading it.") from None
+            finally:
+                response.close()
+        try:
+            return response.json()
+        except (ValueError, requests.RequestException):
+            raise OPDArchiveError("GitHub returned an unexpected response. No save is confirmed.") from None
+        finally:
+            response.close()
+
+    def _head(self):
+        data = self._request("GET", "/branches/" + quote(self.config.branch, safe=""))
+        try:
+            return data["commit"]["sha"]
+        except (KeyError, TypeError):
+            raise OPDArchiveError("GitHub did not return a valid branch. Initialize the archive repository with a README.") from None
+
+    def path_for(self, rotation_start):
+        if not isinstance(rotation_start, CalendarDate) or rotation_start.weekday() != 0:
+            raise OPDArchiveError("The archive identifier must be the rotation's first Monday.")
+        return f"{self.config.folder}/OPD_{rotation_start.isoformat()}.xlsx.enc"
+
+    def _read_at(self, path, commit):
+        route = "/contents/" + quote(path, safe="/")
+        metadata = self._request("GET", route, params={"ref": commit}, missing_ok=True)
+        if metadata is None:
+            return None
+        if not isinstance(metadata, dict) or metadata.get("type") != "file" or metadata.get("submodule_git_url"):
+            raise OPDArchiveError("The archive path is not a regular file. No replacement was made.")
+        if int(metadata.get("size", 0)) > OPD_MAX_ENCRYPTED_BYTES:
+            raise OPDArchiveError("The encrypted archive file is too large for this app.")
+        if metadata.get("encoding") == "base64" and metadata.get("content"):
+            try:
+                token = base64.b64decode("".join(metadata["content"].split()), validate=True)
+            except (ValueError, TypeError):
+                raise OPDArchiveError("GitHub returned invalid encoded file contents.") from None
+        else:
+            token = self._request("GET", route, params={"ref": commit}, raw=True)
+        if len(token) > OPD_MAX_ENCRYPTED_BYTES:
+            raise OPDArchiveError("The encrypted archive file is too large for this app.")
+        blob_sha = hashlib.sha1(b"blob " + str(len(token)).encode() + b"\0" + token).hexdigest()
+        if blob_sha != metadata.get("sha"):
+            raise OPDArchiveError("The archive download did not match its GitHub file identifier. Retry loading it.")
+        try:
+            plaintext = self.cipher.decrypt(token)  # no TTL: historical files remain reloadable
+        except (InvalidToken, ValueError):
+            raise OPDArchiveError("This OPD cannot be decrypted with the configured key(s), or its encrypted "
+                                  "contents were altered. The existing file will NOT be overwritten. "
+                                  "Restore the correct encryption key in Streamlit Secrets.") from None
+        details = inspect_opd_rotation(plaintext)
+        if path != self.path_for(details["rotation_start"]):
+            raise OPDArchiveError("The decrypted OPD's rotation does not match its archive filename.")
+        return {"raw": plaintext, "encrypted": token, "details": details,
+                "sha": metadata["sha"], "path": path, "commit": commit}
+
+    def load(self, rotation_start):
+        found = self._read_at(self.path_for(rotation_start), self._head())
+        if found is None:
+            raise OPDArchiveError("No archived OPD was found for that rotation. Refresh the archive list.")
+        return found
+
+    def save(self, raw):
+        details = inspect_opd_rotation(raw)
+        path = self.path_for(details["rotation_start"])
+        current = self._read_at(path, self._head())
+        if current is not None and hmac.compare_digest(current["raw"], raw):
+            return {"action": "unchanged", "path": path, "sha": current["sha"],
+                    "sha256": details["sha256"], "rotation_start": details["rotation_start"]}
+        token = self.cipher.encrypt(raw)
+        body = {"message": "Update encrypted OPD archive", "branch": self.config.branch,
+                "content": base64.b64encode(token).decode("ascii")}
+        if current is not None:
+            body["sha"] = current["sha"]
+        result = self._request("PUT", "/contents/" + quote(path, safe="/"), body=body)
+        try:
+            commit = result["commit"]["sha"]
+        except (KeyError, TypeError):
+            raise OPDArchiveError("GitHub did not return a save confirmation. Retry to verify the current archive.") from None
+        verified = self._read_at(path, commit)
+        if verified is None or not hmac.compare_digest(verified["raw"], raw):
+            raise OPDArchiveError("The uploaded OPD could not be verified after saving. Retry before creating schedules.")
+        return {"action": "replaced" if current else "created", "path": path,
+                "sha": verified["sha"], "sha256": details["sha256"],
+                "rotation_start": details["rotation_start"]}
+
+    def list_rotations(self):
+        commit = self._head()
+        route = "/contents/" + quote(self.config.folder, safe="/")
+        data = self._request("GET", route, params={"ref": commit}, missing_ok=True)
+        if data is None:
+            return []
+        entries = data.get("entries") if isinstance(data, dict) else data
+        if not isinstance(entries, list):
+            raise OPDArchiveError("The configured archive folder is not a directory.")
+        if len(entries) >= 1000:
+            raise OPDArchiveError("The GitHub directory listing limit was reached. The app cannot safely "
+                                  "show a complete archive; organize the archive before continuing.")
+        rotations = []
+        for item in entries:
+            match = re.fullmatch(r"OPD_(\d{4}-\d{2}-\d{2})\.xlsx\.enc", str(item.get("name", "")))
+            if item.get("type") != "file" or not match:
+                continue
+            try:
+                day = CalendarDate.fromisoformat(match.group(1))
+            except ValueError:
+                continue
+            if day.weekday() == 0:
+                rotations.append(day)
+        return sorted(set(rotations), reverse=True)
+
+
+def _opd_scope_archive_session(config):
+    signature = config.signature()
+    if st.session_state.get("opd_archive_scope") != signature:
+        for key in ("opd_archive_list", "opd_archive_loaded", "opd_archive_upload_state",
+                    "opd_generated_master", "opd_master_signature"):
+            st.session_state.pop(key, None)
+        st.session_state["opd_archive_scope"] = signature
+
+
+def _opd_upload_changed():
+    for key in ("opd_archive_upload_state", "opd_generated_master", "opd_master_signature"):
+        st.session_state.pop(key, None)
+
+
+def _opd_archive_upload_ui(uploaded, client):
+    """Save each upload event once; retries are explicit. A widget rerun is not a new save."""
+    raw = uploaded.getvalue()
+    details = inspect_opd_rotation(raw)
+    signature = (client.config.signature(), getattr(uploaded, "file_id", None),
+                 hashlib.sha256(raw).hexdigest())
+    status = st.session_state.get("opd_archive_upload_state")
+    if not status or status.get("signature") != signature:
+        status = None
+    if status is None:
+        with st.spinner("Encrypting and verifying the original OPD in GitHub..."):
+            try:
+                receipt = client.save(raw)
+                status = {"signature": signature, "receipt": receipt}
+                st.session_state.pop("opd_archive_list", None)
+                st.session_state.pop("opd_archive_loaded", None)
+            except OPDArchiveError as exc:
+                status = {"signature": signature, "error": str(exc)}
+        st.session_state["opd_archive_upload_state"] = status
+    if status.get("error"):
+        st.error("OPD was NOT confirmed archived. " + status["error"])
+        st.button("Retry encrypted OPD save", key="opd_retry_archive",
+                  on_click=_opd_upload_changed)
+        return raw, details, False
+    receipt = status["receipt"]
+    message = {"created": "New rotation saved", "replaced": "Current copy for this rotation replaced",
+               "unchanged": "Identical original already archived; no extra commit created"}[receipt["action"]]
+    st.success(f"OPD archived and verified - {details['rotation_start']:%B %d, %Y}. {message}.")
+    return raw, details, True
+
+
+def _opd_archive_picker(client, prefix):
+    refresh = st.button("Refresh archive list", key=f"{prefix}_refresh")
+    if refresh:
+        st.session_state.pop("opd_archive_list", None)
+        st.session_state.pop("opd_archive_loaded", None)
+    if "opd_archive_list" not in st.session_state:
+        try:
+            st.session_state["opd_archive_list"] = client.list_rotations()
+        except OPDArchiveError as exc:
+            st.error(str(exc))
+            return None
+    rotations = st.session_state["opd_archive_list"]
+    if not rotations:
+        st.info("No archived rotations yet. Upload an OPD in Create Student Schedule to save the first one.")
+        return None
+    loaded = st.session_state.get("opd_archive_loaded")
+    previous = loaded["details"]["rotation_start"] if loaded else None
+    default_index = rotations.index(previous) if previous in rotations else 0
+    selection_key = f"{prefix}_rotation"
+    if st.session_state.get(selection_key) not in rotations:
+        st.session_state.pop(selection_key, None)
+    selected = st.selectbox("Rotation beginning", rotations, index=default_index,
+                            format_func=lambda d: d.strftime("%B %d, %Y"), key=selection_key)
+    if st.button("Load / decrypt selected OPD", key=f"{prefix}_load"):
+        st.session_state.pop("opd_archive_loaded", None)
+        try:
+            with st.spinner("Loading and decrypting the latest archived OPD..."):
+                st.session_state["opd_archive_loaded"] = client.load(selected)
+        except OPDArchiveError as exc:
+            st.error(str(exc))
+    loaded = st.session_state.get("opd_archive_loaded")
+    if loaded and loaded["details"]["rotation_start"] == selected:
+        st.success("Archived original loaded. Reloading does not overwrite the archive.")
+        st.download_button("Download original OPD.xlsx", loaded["raw"],
+                           file_name=f"OPD_{selected.isoformat()}.xlsx", mime=OPD_XLSX_MIME,
+                           key=f"{prefix}_download")
+        return loaded
+    return None
+
+
+def _opd_use_loaded_callback():
+    loaded = st.session_state.get("opd_archive_loaded")
+    if loaded:
+        st.session_state["schedule_archive_rotation"] = loaded["details"]["rotation_start"]
+    st.session_state["opd_source_choice"] = "Reload archived OPD"
+    st.session_state["schedule_app_mode"] = "Create Student Schedule"
+    st.session_state.pop("opd_generated_master", None)
+
+
+def render_opd_archive_page():
+    st.subheader("Encrypted OPD Archive")
+    st.caption("One current original OPD per rotation. Only encrypted workbook bytes are stored in GitHub.")
+    try:
+        client = GitHubOPDArchive(get_opd_archive_config())
+        _opd_scope_archive_session(client.config)
+    except OPDArchiveError as exc:
+        st.error(str(exc))
+        return
+    loaded = _opd_archive_picker(client, "archive_page")
+    if loaded:
+        st.button("Use this OPD to create student schedules", on_click=_opd_use_loaded_callback,
+                  key="opd_use_loaded_in_schedule")
+    st.info("A newer upload with the same first Monday replaces the current copy. Older encrypted "
+            "versions remain in Git history. Rotation dates, file sizes and commit metadata are public.")
+
+
+def _opd_name_key(value):
+    return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+
+
+def split_opd_assignment(value, roster, order=OPD_NAME_ORDERS[0]):
+    """Return (preceptor, canonical_student), ignoring spaces around '~'.
+
+    Auto mode identifies the student using the rotation list, not an assumption
+    about which side contains the preceptor. Unknown students are reported by the
+    caller; a provider-only cell with an empty opposite side is not assigned.
+    """
+    if not isinstance(value, str) or "~" not in value:
+        return None, None
+    left, right = (part.strip() for part in value.split("~", 1))
+    left_student, right_student = roster.get(_opd_name_key(left)), roster.get(_opd_name_key(right))
+    if order == "Student ~ Preceptor":
+        return (right, left_student) if left_student else (None, None)
+    if order == "Preceptor ~ Student":
+        return (left, right_student) if right_student else (None, None)
+    if left_student and right_student:
+        raise OPDArchiveError("Both sides of an assignment match the student list. Choose an explicit '~' name order.")
+    if left_student:
+        return right, left_student
+    if right_student:
+        return left, right_student
+    return None, None
+
+
+def collect_opd_assignments(raw, students, order=OPD_NAME_ORDERS[0]):
+    """Read the existing four-week AM/PM layout without changing the original OPD."""
+    roster = {_opd_name_key(name): name for name in students}
+    wb = load_workbook(BytesIO(raw), data_only=True)
+    assignments, unmatched = [], []
+    try:
+        for ws in wb.worksheets:
+            for shift in ("AM", "PM"):
+                rows = [cell.row for cell in ws["A"] if re.match(rf"^\s*{shift}\b", str(cell.value or ""), re.I)]
+                blocks, block = [], []
+                for r in rows:
+                    if block and r != block[-1] + 1:
+                        blocks.append(block)
+                        block = []
+                    block.append(r)
+                if block:
+                    blocks.append(block)
+                for week, block in enumerate(blocks[:4]):
+                    for col in range(2, 9):
+                        for row in block:
+                            cell = ws.cell(row=row, column=col)
+                            preceptor, student = split_opd_assignment(cell.value, roster, order)
+                            if student is not None:
+                                assignments.append({"student": student, "preceptor": preceptor,
+                                                    "site": ws.title, "week": week, "shift": shift,
+                                                    "column": col, "coordinate": cell.coordinate})
+                            elif isinstance(cell.value, str) and "~" in cell.value:
+                                if all(part.strip() for part in cell.value.split("~", 1)):
+                                    unmatched.append(f"{ws.title}!{cell.coordinate}")
+        return assignments, unmatched
+    finally:
+        wb.close()
+
+
+def populate_ms_schedule(blank_bytes, assignments):
+    wb = load_workbook(BytesIO(blank_bytes))
+    try:
+        sheets = {_opd_name_key(ws["B1"].value): ws for ws in wb.worksheets}
+        for item in assignments:
+            ws = sheets.get(_opd_name_key(item["student"]))
+            if ws is None:
+                raise OPDArchiveError("A student could not be matched to the generated schedule tabs.")
+            row = (6 if item["shift"] == "AM" else 7) + 8 * item["week"]
+            ws.cell(row=row, column=item["column"], value=f"{item['preceptor']} - [{item['site']}]")
+        output = BytesIO()
+        wb.save(output)
+        return output.getvalue()
+    finally:
+        wb.close()
+
+
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
+require_opd_staff_login()
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule","OPD Check","Create Individual Schedules","OPD MD PA Conflict Detector","Shift Availability Tracker"))
+mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule", "OPD Check", "Create Individual Schedules", "OPD Archive", "OPD MD PA Conflict Detector", "Shift Availability Tracker"), key="schedule_app_mode")
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
 if mode == "OPD Check":
@@ -1395,29 +1988,10 @@ elif mode == "Format OPD + Summary":
 
 elif mode == "Create Student Schedule":
     st.subheader("Create Student Schedule")
-    def save_to_session(filename, fileobj, namespace="uploaded_files"):
-        st.session_state.setdefault(namespace, {})[filename] = fileobj
-        
-    # ───────── Helper to load & stash uploads ─────────
-    def load_workbook_df(label, types, key):
-        upload = st.file_uploader(label, type=types, key=key)
-        if not upload:
-            st.info(f"Please upload {label}.")
-            return None
-        # stash the raw upload under a known session key
-        st.session_state[f"{key}_file"] = upload
-        try:
-            if upload.name.lower().endswith(".csv"):
-                return pd.read_csv(upload)
-            else:
-                return pd.read_excel(upload)
-        except Exception as e:
-            st.error(f"Error loading {upload.name}: {e}")
-            return None
 
     def create_ms_schedule_template(students, dates):
         buf = io.BytesIO()
-        wb = xlsxwriter.Workbook(buf, {'in_memory': True})
+        wb = xlsxwriter.Workbook(buf, {'in_memory': True, 'strings_to_formulas': False, 'strings_to_urls': False})
     
         # — Formats —
         f1 = wb.add_format({'font_size':14,'bold':1,'align':'center','valign':'vcenter',
@@ -1445,14 +2019,21 @@ elif mode == "Create Student Schedule":
             '',
             'All Clinical Encounter Logs are Due, Solicitation of Clinical Assessments, Observed H&Ps and Observed Handoff Due']
     
+        used_titles = set()
         for name in students:
-            title = name[:31].replace('/','-').replace('\\','-')
+            safe = re.sub(r"[\[\]:*?/\\]", "-", str(name)).strip().strip("'") or "Student"
+            title, suffix_number = safe[:31], 1
+            while title.casefold() in used_titles:
+                suffix_number += 1
+                suffix = f"_{suffix_number}"
+                title = safe[:31-len(suffix)] + suffix
+            used_titles.add(title.casefold())
             ws = wb.add_worksheet(title)
             ws.set_zoom(70)
     
             # Header
             ws.merge_range('A1:A2','Student Name:', f1)
-            ws.merge_range('B1:B2',      title,      f1)
+            ws.merge_range('B1:B2',      str(name),      f1)
             #note = ("*Note* Protected Self-Study Time is for coursework only. During this time period, "
             #        "we expect students to do coursework, be available for any additional educational "
             #        "activities, and any extra clinical time that may be available. If the student is not "
@@ -1528,242 +2109,129 @@ elif mode == "Create Student Schedule":
         buf.seek(0)
         return buf
     
-    def assign_preceptors_all_weeks_am(opd_file, ms_file):
-        """
-        For each OPD sheet:
-          1) Collect all rows where col A starts with "AM".
-          2) Cluster those rows into contiguous week‐blocks.
-          3) Map each week_block i to MS_Schedule row [6,14,22,30][i].
-          4) Copy any "Preceptor ~ Student" in OPD cols B–H within that block
-             into the student's sheet at that row.
-        Returns an in‑memory BytesIO of the populated MS_Schedule.
-        """
-        # Open workbooks
-        opd_wb = load_workbook(opd_file, data_only=True)
-        ms_wb  = load_workbook(ms_file)
-    
-        # Fixed target rows in MS template for Week1–4 AM
-        target_ms_rows = [6, 14, 22, 30]
-    
-        for site in opd_wb.sheetnames:
-            ws_opd = opd_wb[site]
-    
-            # 1) Find all AM marker rows in col A
-            am_rows = [
-                cell.row
-                for cell in ws_opd['A']
-                if isinstance(cell.value, str) and re.match(r"^\s*AM\b", cell.value, re.IGNORECASE)
-            ]
-    
-            if not am_rows:
-                continue
-    
-            # 2) Cluster contiguous AM rows into blocks
-            am_rows.sort()
-            blocks = []
-            current = [am_rows[0]]
-            for r in am_rows[1:]:
-                if r == current[-1] + 1:
-                    current.append(r)
-                else:
-                    blocks.append(current)
-                    current = [r]
-            blocks.append(current)  # last block
-    
-            # 3) Process up to 4 week‐blocks
-            for week_idx, block in enumerate(blocks[:4]):
-                ms_row = target_ms_rows[week_idx]
-    
-                # 4) Copy assignments in B–H for every row in this block
-                for col in range(2, 9):  # B=2 … H=8
-                    for r in block:
-                        val = ws_opd.cell(row=r, column=col).value
-                        if not val or "~" not in str(val):
-                            continue
-                        pre, student = [s.strip() for s in str(val).split("~", 1)]
-                        if student not in ms_wb.sheetnames:
-                            continue
-                        ws_ms = ms_wb[student]
-                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
-    
-        # Save back to a BytesIO buffer
-        out = io.BytesIO()
-        ms_wb.save(out)
-        out.seek(0)
-        return out
 
-    def assign_preceptors_all_weeks_pm(opd_file, ms_file):
-        """
-        For each OPD sheet:
-          1) Collect all rows where col A starts with "PM".
-          2) Cluster those rows into contiguous week‑blocks.
-          3) Map each week_block i to MS_Schedule row [7,15,23,31][i].
-          4) Copy any "Preceptor ~ Student" in OPD cols B–H within that block
-             into the student's sheet at that row.
-        Returns an in‑memory BytesIO of the populated MS_Schedule.
-        """
-        # Open workbooks
-        opd_wb = load_workbook(opd_file, data_only=True)
-        ms_wb  = load_workbook(ms_file)
-    
-        # Fixed target rows in MS template for Week1–4 PM
-        target_ms_rows = [7, 15, 23, 31]
-    
-        for site in opd_wb.sheetnames:
-            ws_opd = opd_wb[site]
-    
-            # 1) Find all PM marker rows in col A
-            pm_rows = [
-                cell.row
-                for cell in ws_opd['A']
-                if isinstance(cell.value, str) and re.match(r"^\s*PM\b", cell.value, re.IGNORECASE)
-            ]
-    
-            if not pm_rows:
-                continue
-    
-            # 2) Cluster contiguous PM rows into blocks
-            pm_rows.sort()
-            blocks = []
-            current = [pm_rows[0]]
-            for r in pm_rows[1:]:
-                if r == current[-1] + 1:
-                    current.append(r)
-                else:
-                    blocks.append(current)
-                    current = [r]
-            blocks.append(current)
-    
-            # 3) Process up to 4 week‐blocks
-            for week_idx, block in enumerate(blocks[:4]):
-                ms_row = target_ms_rows[week_idx]
-    
-                # 4) Copy assignments in B–H for every row in this block
-                for col in range(2, 9):  # B=2 … H=8
-                    for r in block:
-                        val = ws_opd.cell(row=r, column=col).value
-                        if not val or "~" not in str(val):
-                            continue
-                        pre, student = [s.strip() for s in str(val).split("~", 1)]
-                        if student not in ms_wb.sheetnames:
-                            continue
-                        ws_ms = ms_wb[student]
-                        ws_ms.cell(row=ms_row, column=col).value = f"{pre} - [{site}]"
+    # Archive the original OPD at this upload step, before producing schedules.
+    try:
+        archive_client = GitHubOPDArchive(get_opd_archive_config())
+        _opd_scope_archive_session(archive_client.config)
+    except OPDArchiveError as exc:
+        st.error(str(exc))
+        st.info("Complete the GitHub/Streamlit Secrets setup first. OPDs will not be processed without a verified archive.")
+        st.stop()
 
-        # Save back to a BytesIO buffer
-        out = io.BytesIO()
-        ms_wb.save(out)
-        out.seek(0)
-        return out
-    
-    def detect_shift_conflicts(opd_file):
-        """
-        Scans both AM and PM shifts, week 1–4, day Mon–Sun, and flags any student
-        who appears more than once in the same shift/day/week.
-        Only ignores entries where there is no text after the '~'.
-        """
-        wb = load_workbook(opd_file, data_only=True)
-        days      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-        am_marker = re.compile(r"^\s*AM\b", re.IGNORECASE)
-        pm_marker = re.compile(r"^\s*PM\b", re.IGNORECASE)
-        conflicts = []
-    
-        def find_blocks(ws, marker_re):
-            rows = [c.row for c in ws['A']
-                    if isinstance(c.value, str) and marker_re.match(c.value)]
-            rows.sort()
-            blocks, curr = [], []
-            for r in rows:
-                if not curr or r == curr[-1] + 1:
-                    curr.append(r)
-                else:
-                    blocks.append(curr)
-                    curr = [r]
-            if curr:
-                blocks.append(curr)
-            return blocks[:4]
-    
-        # derive AM/PM blocks from first sheet
-        tpl      = wb[wb.sheetnames[0]]
-        am_blocks = find_blocks(tpl, am_marker)
-        pm_blocks = find_blocks(tpl, pm_marker)
-    
-        for shift, blocks in (("AM", am_blocks), ("PM", pm_blocks)):
-            for week_idx, block_rows in enumerate(blocks, start=1):
-                for day_idx, day_name in enumerate(days):
-                    col = 2 + day_idx
-                    locs = defaultdict(list)
-    
-                    # collect all assignments in this shift
-                    for sheet in wb.sheetnames:
-                        ws = wb[sheet]
-                        for r in block_rows:
-                            raw = ws.cell(row=r, column=col).value
-                            text = str(raw or "")
-                            if "~" not in text:
-                                continue
-                            pre, student = [s.strip() for s in text.split("~",1)]
-                            if not student:
-                                continue
-                            coord = ws.cell(row=r, column=col).coordinate
-                            locs[student].append((sheet, coord))
-    
-                    # flag duplicates
-                    for student, occ in locs.items():
-                        if len(occ) > 1:
-                            conflicts.append({
-                                "student":     student,
-                                "week":        week_idx,
-                                "day":         day_name,
-                                "shift":       shift,
-                                "occurrences": occ
-                            })
-    
-        return conflicts
-
-
-    # ───────── Load OPD & Rotation Schedule ─────────
-    df_opd = load_workbook_df("Upload OPD.xlsx file", ["xlsx"], key="opd_main")
-    df_rot = load_workbook_df("Upload Rotation Schedule (.xlsx or .csv)", ["xlsx", "csv"], key="rot_main")
-
-        # ───────── Check for duplicates ─────────
-    if df_opd is not None:
-        conflicts = detect_shift_conflicts(st.session_state["opd_main_file"])
-        if conflicts:
-            for c in conflicts:
-                occ_str = "; ".join(f"{sheet}@{coord}" for sheet, coord in c["occurrences"])
-                st.warning(
-                    f"⚠️ Week {c['week']} {c['day']} {c['shift']}: "
-                    f"{c['student']} double‑booked ({occ_str})"
-                )
-        else:
-            st.success("No AM/PM shift conflicts detected.")
-
-
-    # ───────── Build, Assign & Download ─────────
-    if df_opd is not None and df_rot is not None:
-        # compute dates
-        df_rot["start_date"] = pd.to_datetime(df_rot["start_date"])
-        monday = df_rot["start_date"].min() - pd.Timedelta(days=df_rot["start_date"].min().weekday())
-        dates  = pd.date_range(start=monday, periods=28, freq="D").tolist()
-
-        # students from OPD
-        students = df_rot["legal_name"].dropna().unique().tolist()
-
-        if st.button("Create & Download Fully‑Populated MS_Schedule"):
-            # 1) Build the blank 4‑week calendar
-            blank_buf = create_ms_schedule_template(students, dates)
-        
-            # 2) Populate AM slots from OPD
-            am_buf = assign_preceptors_all_weeks_am(opd_file = st.session_state["opd_main_file"],ms_file  = blank_buf)
-        
-            # 3) Populate PM slots on top of the AM‑populated file
-            full_buf = assign_preceptors_all_weeks_pm(opd_file = st.session_state["opd_main_file"],ms_file  = am_buf)
-        
-            # 4) Offer the final workbook for download
-            st.download_button("Download MS_Schedule.xlsx",data = full_buf.getvalue(),file_name = "MS_Schedule.xlsx",mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    source_choice = st.radio("OPD source", ("Upload new/revised OPD", "Reload archived OPD"),
+                             key="opd_source_choice", horizontal=True)
+    raw_opd, opd_details, archive_ok = None, None, False
+    if source_choice == "Upload new/revised OPD":
+        opd_upload = st.file_uploader("Upload original OPD.xlsx", type=["xlsx"], key="opd_main",
+                                      on_change=_opd_upload_changed)
+        if opd_upload is not None:
+            try:
+                raw_opd, opd_details, archive_ok = _opd_archive_upload_ui(opd_upload, archive_client)
+            except OPDArchiveError as exc:
+                st.error(str(exc))
     else:
-        st.info("Please upload both OPD.xlsx and the rotation schedule above to proceed.")
+        loaded_opd = _opd_archive_picker(archive_client, "schedule_archive")
+        if loaded_opd:
+            raw_opd, opd_details, archive_ok = loaded_opd["raw"], loaded_opd["details"], True
+
+    rot_upload = st.file_uploader("Upload Rotation Schedule (.xlsx or .csv)", type=["xlsx", "csv"],
+                                  key="rot_main")
+    df_rot = None
+    if rot_upload is not None:
+        try:
+            rotation_bytes = rot_upload.getvalue()
+            df_rot = (pd.read_csv(BytesIO(rotation_bytes)) if rot_upload.name.lower().endswith(".csv")
+                      else pd.read_excel(BytesIO(rotation_bytes)))
+        except Exception:
+            st.error("The rotation list could not be read. Check the uploaded CSV or Excel file.")
+
+    if raw_opd is None or df_rot is None:
+        st.info("Upload or reload an OPD and upload its rotation list to create student schedules.")
+        st.session_state.pop("opd_generated_master", None)
+    else:
+        if not {"legal_name", "start_date"}.issubset(df_rot.columns):
+            st.error("The rotation list must contain legal_name and start_date columns.")
+            st.stop()
+        roster_df = df_rot.loc[df_rot["legal_name"].notna()].copy()
+        roster_df["legal_name"] = roster_df["legal_name"].astype(str).str.strip()
+        roster_df = roster_df.loc[roster_df["legal_name"].ne("")]
+        roster_df["start_date"] = pd.to_datetime(roster_df["start_date"], errors="coerce")
+        if roster_df.empty or roster_df["start_date"].isna().any():
+            st.error("Each student in the rotation list must have a valid start_date.")
+            st.stop()
+        roster_mondays = {
+            value.date() - timedelta(days=value.weekday()) for value in roster_df["start_date"]
+        }
+        if roster_mondays != {opd_details["rotation_start"]}:
+            st.error(f"The rotation list does not match this OPD's first Monday "
+                     f"({opd_details['rotation_start']:%m/%d/%Y}). Upload the matching rotation list. "
+                     "The original OPD is archived under its own dates, not the roster's dates.")
+            st.stop()
+        if len(opd_details["week_mondays"]) != 4:
+            st.error("The original has been archived, but the existing MS_Schedule template requires exactly four weeks.")
+            st.stop()
+
+        students = list({_opd_name_key(name): name for name in roster_df["legal_name"]}.values())
+        name_order = st.selectbox("Names around '~' in the OPD", OPD_NAME_ORDERS,
+                                  key="opd_name_order",
+                                  help="Auto-detect matches the student to legal_name in the rotation list. "
+                                       "It accepts either name order and ignores spaces around '~'.")
+        signature = (hashlib.sha256(raw_opd).hexdigest(), hashlib.sha256(rotation_bytes).hexdigest(), name_order)
+        if st.session_state.get("opd_master_signature") != signature:
+            st.session_state.pop("opd_generated_master", None)
+            st.session_state["opd_master_signature"] = signature
+        try:
+            assignments, unmatched = collect_opd_assignments(raw_opd, students, name_order)
+        except OPDArchiveError as exc:
+            st.error(str(exc))
+            st.stop()
+        if unmatched:
+            st.warning(f"{len(unmatched)} filled assignment cell(s) do not match this rotation list/name order "
+                       "and will not populate a student schedule. This can include students from another course.")
+            with st.expander("Unmatched assignment cells"):
+                st.write(", ".join(unmatched))
+        assigned_students = {item["student"] for item in assignments}
+        if any(name not in assigned_students for name in students):
+            st.warning("Some students have no matching OPD assignments. Review the roster and name-order setting before building.")
+        conflicts = defaultdict(list)
+        for item in assignments:
+            conflicts[(item["student"], item["week"], item["shift"], item["column"])].append(item)
+        has_conflicts = False
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        for (student, week, shift, col), items in conflicts.items():
+            if len(items) > 1:
+                has_conflicts = True
+                locations = "; ".join(f"{item['site']}@{item['coordinate']}" for item in items)
+                st.warning(f"Week {week+1} {days[col-2]} {shift}: {student} double-booked ({locations}). "
+                           "As in the previous version, the last assignment read fills that schedule cell.")
+        if not has_conflicts:
+            st.success("No AM/PM shift conflicts detected among matched students.")
+        st.caption(f"OPD rotation: {opd_details['rotation_start']:%B %d, %Y}; "
+                   f"{len(students)} student(s); {len(assignments)} matched assignment cell(s).")
+        if not archive_ok:
+            st.error("Schedule generation is disabled until the original OPD is successfully archived.")
+            st.session_state.pop("opd_generated_master", None)
+        if st.button("Create & Download Fully-Populated MS_Schedule", disabled=not archive_ok,
+                     key="opd_build_master"):
+            try:
+                # Do not silently reuse or overwrite an older session's source.
+                current_archive = archive_client.load(opd_details["rotation_start"])
+                if not hmac.compare_digest(current_archive["raw"], raw_opd):
+                    raise OPDArchiveError("A different OPD is now current in the archive for this rotation. "
+                                          "Reload the latest archived OPD, or deliberately upload your revised file again.")
+                dates = pd.date_range(start=opd_details["rotation_start"], periods=28, freq="D").tolist()
+                blank_buf = create_ms_schedule_template(students, dates)
+                st.session_state["opd_generated_master"] = populate_ms_schedule(blank_buf.getvalue(), assignments)
+            except OPDArchiveError as exc:
+                st.session_state.pop("opd_generated_master", None)
+                st.error(str(exc))
+        if archive_ok and st.session_state.get("opd_generated_master"):
+            st.download_button("Download MS_Schedule.xlsx", data=st.session_state["opd_generated_master"],
+                               file_name="MS_Schedule.xlsx", mime=OPD_XLSX_MIME, key="opd_master_download")
+            st.caption("Next: open Create Individual Schedules and upload this MS_Schedule.xlsx. "
+                       "The individual student ZIP and Power Automate preceptor workbook remain available there.")
+
 
 elif mode == "Create Individual Schedules":
     st.subheader("Individual Schedule Creator")
@@ -1795,6 +2263,27 @@ elif mode == "Create Individual Schedules":
         "primary_preceptor_flag_reason",
         "email",
     ]
+
+    # Increment this whenever the generated report columns or output logic change.
+    # Streamlit keeps session_state across app reruns/deployments, so an older
+    # preview DataFrame may otherwise remain cached without newly added columns.
+    INDIVIDUAL_REPORT_SCHEMA_VERSION = 3
+    INDIVIDUAL_OUTPUT_STATE_KEYS = (
+        "individual_schedule_zip",
+        "individual_preceptor_report",
+        "individual_preceptor_preview",
+        "individual_missing_emails",
+    )
+
+    if (
+        st.session_state.get("individual_report_schema_version")
+        != INDIVIDUAL_REPORT_SCHEMA_VERSION
+    ):
+        for state_key in INDIVIDUAL_OUTPUT_STATE_KEYS:
+            st.session_state.pop(state_key, None)
+        st.session_state["individual_report_schema_version"] = (
+            INDIVIDUAL_REPORT_SCHEMA_VERSION
+        )
 
     uploaded = st.file_uploader(
         "Upload the master Excel (.xlsx) with one tab per person",
@@ -2394,7 +2883,7 @@ elif mode == "Create Individual Schedules":
 
     if uploaded is not None:
         # Clear previously generated output when a different source file is uploaded.
-        source_signature = (uploaded.name, getattr(uploaded, "size", None))
+        source_signature = (uploaded.name, hashlib.sha256(uploaded.getvalue()).hexdigest())
         if st.session_state.get("individual_schedule_source") != source_signature:
             st.session_state["individual_schedule_source"] = source_signature
             st.session_state.pop("individual_schedule_zip", None)
@@ -2407,7 +2896,7 @@ elif mode == "Create Individual Schedules":
         st.write(f"Found **{len(wb.sheetnames)}** tabs.")
         st.caption(
             "The preceptor report includes only HOPE_DRIVE, NYES, and ETOWN. "
-            "Every student/week receives one primary preceptor. The app prefers "
+            "Each student/week with focus-site assignments receives one primary preceptor. The app prefers "
             ">=3 sessions; fallback and repeated primary assignments are flagged. "
             "Fragmented = <3 sessions."
         )
@@ -2457,6 +2946,27 @@ elif mode == "Create Individual Schedules":
             st.session_state["individual_missing_emails"] = missing_emails
 
         report_preview = st.session_state.get("individual_preceptor_preview")
+
+        # Defensive protection for stale output created by an older app version.
+        # A prior preview may be a valid DataFrame but lack newly added columns.
+        required_preview_columns = {
+            "primary_preceptor",
+            "primary_preceptor_flag",
+            "primary_preceptor_flag_reason",
+        }
+        preview_is_current = (
+            isinstance(report_preview, pd.DataFrame)
+            and required_preview_columns.issubset(report_preview.columns)
+        )
+        if report_preview is not None and not preview_is_current:
+            for state_key in INDIVIDUAL_OUTPUT_STATE_KEYS:
+                st.session_state.pop(state_key, None)
+            report_preview = None
+            st.info(
+                "The preceptor report format was updated. Please click "
+                "'Build individual schedules + preceptor report' to regenerate both outputs."
+            )
+
         if report_preview is not None:
             st.markdown("**Preceptor assignment report preview**")
             if report_preview.empty:
@@ -2475,7 +2985,7 @@ elif mode == "Create Individual Schedules":
                     f"{len(flagged_primary_rows)} primary assignment(s) require review. "
                     "See primary_preceptor_flag_reason in the preview or Excel report."
                 )
-            else:
+            elif not report_preview.empty:
                 st.success("Every primary assignment met the preferred criteria without reuse flags.")
 
             missing_emails = st.session_state.get("individual_missing_emails", [])
@@ -2485,7 +2995,7 @@ elif mode == "Create Individual Schedules":
                     "PRECEPTOR_EMAIL_MAP. Their email cells are blank, and their names "
                     "are listed on the 'Missing Emails' tab."
                 )
-            else:
+            elif not report_preview.empty:
                 st.success("All preceptors in this report have a mapped email address.")
 
         if st.session_state.get("individual_preceptor_report") is not None:
@@ -3425,3 +3935,7 @@ elif mode == "Shift Availability Tracker":
     weekly_capacity = daily_caps.groupby("WeekStart").apply(weekly_student_capacity).reset_index()
     st.dataframe(weekly_capacity, use_container_width=True)
     
+
+
+elif mode == "OPD Archive":
+    render_opd_archive_page()
