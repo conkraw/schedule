@@ -572,7 +572,7 @@ import secrets as _teaching_secrets
 from datetime import timezone as _teaching_timezone
 from zoneinfo import ZoneInfo as _TeachingZoneInfo
 
-TEACHING_REPORT_VERSION = 1
+TEACHING_REPORT_VERSION = 2
 TEACHING_HOURS_PER_STUDENT_SHIFT = 4
 TEACHING_CSV_COLUMNS = (
     "preceptor_name", "academic_year", "no_of_shifts",
@@ -959,6 +959,268 @@ def teaching_make_docx(name, monthly, scan):
     return output.getvalue()
 
 
+# The chair summary is an additional output; the CSV and individual reports use
+# the same existing aggregates and counting rules as before.
+TEACHING_CHAIR_SUMMARY_FILENAME = "Pediatric_Clerkship_Educational_Effort_Summary.docx"
+
+
+def teaching_brief_months(month_values):
+    """Compact month labels without implying teaching occurred in missing months."""
+    months = sorted({CalendarDate.fromisoformat(value).replace(day=1) for value in month_values})
+    if not months:
+        return "Not recorded"
+    groups, first, last = [], months[0], months[0]
+    for month in months[1:]:
+        if month.year == last.year and month.month == last.month + 1:
+            last = month
+        else:
+            groups.append((first, last))
+            first = last = month
+    groups.append((first, last))
+    labels = []
+    for first, last in groups:
+        label = TEACHING_MONTH_NAMES[first.month - 1][:3]
+        if first != last:
+            label += "-" + TEACHING_MONTH_NAMES[last.month - 1][:3]
+        labels.append(f"{label} {first.year}")
+    return "; ".join(labels)
+
+
+def teaching_chair_summary_data(scan, selected_years):
+    """Year-by-year summaries using the exact rows used for the existing CSV.
+
+    Generic site/slot/combined labels remain in overall assignment totals, but
+    are separated from named preceptors so they are not presented as people.
+    """
+    years = sorted({int(year) for year in selected_years})
+    annual = teaching_annual_rows(scan, years)
+    review_keys = {teaching_name_key(name) for name in scan.get("unresolved_preceptor_labels", [])}
+    summaries = []
+    for year in years:
+        label = teaching_academic_label(year)
+        monthly = [row for row in scan["monthly"] if row["academic_start_year"] == year]
+        by_name = defaultdict(list)
+        for row in monthly:
+            by_name[row["preceptor_name"]].append(row["month"])
+        named, unresolved = [], []
+        for row in annual:
+            if row["academic_year"] != label:
+                continue
+            entry = dict(row)
+            entry["months_brief"] = teaching_brief_months(by_name[row["preceptor_name"]])
+            target = unresolved if teaching_name_key(row["preceptor_name"]) in review_keys else named
+            target.append(entry)
+        start, end = CalendarDate(year, 7, 1), CalendarDate(year + 1, 6, 30)
+        relevant_sources = [source for source in scan.get("sources", [])
+                            if CalendarDate.fromisoformat(source["rotation_start"]) <= end
+                            and CalendarDate.fromisoformat(source["last_scheduled_date"]) >= start]
+        rows = named + unresolved
+        summaries.append({
+            "academic_start_year": year,
+            "academic_year": label,
+            "named_preceptors": sorted(named, key=lambda row: teaching_name_key(row["preceptor_name"])),
+            "unresolved_labels": sorted(unresolved, key=lambda row: teaching_name_key(row["preceptor_name"])),
+            "named_preceptor_count": len(named),
+            "no_of_shifts": sum(row["no_of_shifts"] for row in rows),
+            "educational_hours": sum(row["educational_hours"] for row in rows),
+            "months_brief": teaching_brief_months(row["month"] for row in monthly),
+            "source_count": len(relevant_sources),
+            # Cells may contain more than one learner; this is not a shift count.
+            "has_missing_provider": any(int(source.get("missing_provider_cells", 0)) > 0
+                                        for source in relevant_sources),
+        })
+    return summaries
+
+
+def teaching_make_chair_summary(scan, selected_years):
+    """One editable, chair-friendly Word report covering all selected years.
+
+    Uses scheduled student-shifts, not unique students, elapsed hours, patient
+    encounters, or a claim that all planned teaching has actually occurred.
+    """
+    from docx.shared import Inches, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    summaries = teaching_chair_summary_data(scan, selected_years)
+    if not summaries or not any(item["no_of_shifts"] for item in summaries):
+        raise OPDArchiveError("No student assignments were found for the selected academic year(s); no empty chair summary was generated.")
+
+    doc = Document()
+    section = doc.sections[0]
+    section.page_width, section.page_height = Inches(8.5), Inches(11)
+    section.top_margin = section.bottom_margin = Inches(0.7)
+    section.left_margin = section.right_margin = Inches(0.8)
+    section.header_distance = section.footer_distance = Inches(0.3)
+    normal = doc.styles["Normal"]
+    normal.font.name, normal.font.size = "Calibri", Pt(11)
+    normal.paragraph_format.space_after = Pt(5)
+    normal.paragraph_format.line_spacing = 1.05
+    for name, size in (("Title", 23), ("Heading 1", 16), ("Heading 2", 12)):
+        style = doc.styles[name]
+        style.font.name, style.font.size = "Calibri", Pt(size)
+        style.font.color.rgb = RGBColor.from_string("24466B")
+        style.paragraph_format.keep_with_next = True
+        style.paragraph_format.space_before = Pt(8 if name == "Heading 2" else 0)
+        style.paragraph_format.space_after = Pt(4)
+        properties = style.element.find(qn("w:pPr"))
+        if properties is not None:
+            borders = properties.find(qn("w:pBdr"))
+            if borders is not None:
+                properties.remove(borders)
+    subtitle = doc.styles["Subtitle"]
+    subtitle.font.name, subtitle.font.size = "Calibri", Pt(12)
+    subtitle.font.italic = False
+    subtitle.font.color.rgb = RGBColor.from_string("526475")
+    subtitle.paragraph_format.space_before = Pt(0)
+    subtitle.paragraph_format.space_after = Pt(12)
+    subtitle.paragraph_format.keep_with_next = True
+    header = section.header.paragraphs[0]
+    header.text = "PENN STATE  |  PEDIATRIC CLERKSHIP"
+    header.runs[0].font.size = Pt(9)
+    header.runs[0].font.color.rgb = RGBColor.from_string("526475")
+    footer = section.footer.paragraphs[0]
+    footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    footer.add_run("Educational effort summary  |  Page ").font.size = Pt(9)
+    field = OxmlElement("w:fldSimple")
+    field.set(qn("w:instr"), "PAGE")
+    footer._p.append(field)
+    doc.core_properties.title = "Pediatric clerkship educational effort summary"
+    doc.core_properties.author = "Pediatric Clerkship"
+    doc.core_properties.subject = "Scheduled third-year student teaching by academic year"
+
+    def note(text, *, warning=False):
+        p = doc.add_paragraph(text)
+        for run in p.runs:
+            run.font.size = Pt(9)
+            run.font.color.rgb = RGBColor.from_string("8C3B25" if warning else "526475")
+        return p
+
+    def add_effort_table(entries, *, pending=False):
+        table = doc.add_table(rows=1, cols=4)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        table.autofit = False
+        # 6.9 inches = the printable width; also set the table grid, not only cells.
+        widths = tuple(Inches(value) for value in (2.45, 2.15, 1.05, 1.25))
+        for col, width in zip(table.columns, widths):
+            col.width = width
+        titles = ("Provider label" if pending else "Preceptor", "Months with assignments",
+                  "Student-shifts", "Educational hours*")
+        repeat_header = OxmlElement("w:tblHeader")
+        table.rows[0]._tr.get_or_add_trPr().append(repeat_header)
+
+        def fill_row(row, values, *, heading=False, total=False, band=False):
+            row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+            for index, (cell, value, width) in enumerate(zip(row.cells, values, widths)):
+                cell.width = width
+                cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+                cell.text = str(value)
+                properties = cell._tc.get_or_add_tcPr()
+                margin = OxmlElement("w:tcMar")
+                for edge, amount in (("top", 40), ("bottom", 40), ("left", 90), ("right", 90)):
+                    item = OxmlElement("w:" + edge)
+                    item.set(qn("w:w"), str(amount))
+                    item.set(qn("w:type"), "dxa")
+                    margin.append(item)
+                properties.append(margin)
+                if heading or total or band:
+                    shade = OxmlElement("w:shd")
+                    shade.set(qn("w:fill"), "24466B" if heading else "E8EEF5" if total else "F5F7FA")
+                    properties.append(shade)
+                p = cell.paragraphs[0]
+                p.paragraph_format.space_before = p.paragraph_format.space_after = Pt(1)
+                p.paragraph_format.line_spacing = 1.0
+                p.paragraph_format.keep_with_next = heading
+                if index >= 2:
+                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                for run in p.runs:
+                    run.font.name, run.font.size = "Calibri", Pt(10)
+                    run.bold = heading or total
+                    if heading:
+                        run.font.color.rgb = RGBColor(255, 255, 255)
+
+        fill_row(table.rows[0], titles, heading=True)
+        for index, row in enumerate(entries):
+            fill_row(table.add_row(), (row["preceptor_name"], row["months_brief"],
+                                      f"{row['no_of_shifts']:,}", f"{row['educational_hours']:,}"),
+                     band=index % 2 == 1)
+        subtotal = "Awaiting attribution" if pending else "Named preceptors total"
+        fill_row(table.add_row(), (subtotal, "", f"{sum(row['no_of_shifts'] for row in entries):,}",
+                                   f"{sum(row['educational_hours'] for row in entries):,}"), total=True)
+        # Avoid leaving the subtotal by itself at the top of a new page.
+        if len(table.rows) > 2:
+            for cell in table.rows[-2].cells:
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.keep_with_next = True
+        return table
+
+    for index, item in enumerate(summaries):
+        year = item["academic_start_year"]
+        if index:
+            doc.add_page_break()
+        doc.add_paragraph("Preceptor educational effort", style="Title")
+        doc.add_paragraph("Third-year medical student teaching", style="Subtitle")
+        doc.add_heading(f"Academic year {item['academic_year']}", level=1)
+        p = doc.add_paragraph(f"July 1, {year} - June 30, {year + 1}")
+        p.paragraph_format.space_after = Pt(9)
+        if not item["no_of_shifts"]:
+            doc.add_paragraph("No assigned student-shifts were found in the archived schedules for this academic year. "
+                              "This does not establish that no teaching occurred.")
+            continue
+
+        p = doc.add_paragraph()
+        p.add_run("Archived OPD schedules record ")
+        p.add_run(f"{item['no_of_shifts']:,} student-shifts").bold = True
+        p.add_run(", representing ")
+        p.add_run(f"{item['educational_hours']:,} educational hours").bold = True
+        p.add_run(" of scheduled teaching.")
+        p = doc.add_paragraph()
+        p.add_run("Named preceptors: ").bold = True
+        p.add_run(str(item["named_preceptor_count"]))
+        p.add_run("   |   Months with assignments: ").bold = True
+        p.add_run(item["months_brief"])
+        if item["unresolved_labels"]:
+            pending_shifts = sum(row["no_of_shifts"] for row in item["unresolved_labels"])
+            pending_hours = sum(row["educational_hours"] for row in item["unresolved_labels"])
+            note(f"The totals include {pending_shifts:,} student-shifts ({pending_hours:,} hours) recorded under "
+                 "site, slot, or combined provider labels. These are listed separately below and are not credited to an individual.",
+                 warning=True)
+
+        note(f"*One student assigned to one AM or PM shift = one student-shift and "
+             f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. "
+             "These are student-weighted hours, not distinct clock hours or verified attendance.")
+        note(f"Coverage: {item['source_count']} saved rotation schedule(s) overlap this academic year. "
+             "Only archived assignments are represented; missing rotations are not assumed to have no teaching. "
+             "Future scheduled assignments are included.")
+        if item["has_missing_provider"]:
+            note("Data review: at least one source rotation overlapping this year contains assignments without "
+                 "an identifiable preceptor. Those assignments are excluded from provider totals; review Report_Notes.txt.",
+                 warning=True)
+
+        if item["named_preceptors"]:
+            doc.add_heading("Educational effort by preceptor", level=2)
+            add_effort_table(item["named_preceptors"])
+        else:
+            doc.add_paragraph("No assignments in this selection were recorded under an individual preceptor name.")
+        if item["unresolved_labels"]:
+            doc.add_heading("Assignments awaiting an individual preceptor name", level=2)
+            add_effort_table(item["unresolved_labels"], pending=True)
+            p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(8)
+            p.add_run("Combined recorded total: ").bold = True
+            p.add_run(f"{item['no_of_shifts']:,} student-shifts | {item['educational_hours']:,} educational hours")
+        source = note("Source: current saved OPD schedules. "
+                      f"Archive retrieved: {scan['generated_at']}. "
+                      "Alphabetical listing; student names omitted. File-level source details accompany this report in the ZIP.")
+        source.paragraph_format.space_before = Pt(6)
+
+    output = BytesIO()
+    doc.save(output)
+    return output.getvalue()
+
+
 def teaching_build_zip(scan, selected_years):
     """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
     years = sorted({int(year) for year in selected_years})
@@ -980,6 +1242,8 @@ def teaching_build_zip(scan, selected_years):
         "All recognized OPD site worksheets are included, not just HOPE_DRIVE, NYES and ETOWN.",
         "This report counts scheduled student assignments, not patient encounters or confirmed attendance.",
         "One row in preceptor_teaching_summary.csv = one preceptor in one academic year.",
+        f"{TEACHING_CHAIR_SUMMARY_FILENAME} = one combined Word summary for the chair.",
+        "The chair summary lists named preceptors alphabetically and keeps unresolved provider labels separate.",
         "Academic year is July 1 through June 30 of the following calendar year.",
         "The actual session date, not the rotation's start date, determines the month and academic year.",
         "no_of_shifts counts student-shifts, not distinct half-days or distinct students.",
@@ -1007,6 +1271,7 @@ def teaching_build_zip(scan, selected_years):
         "duplicate_student_shifts_removed", "missing_provider_cells",
     )
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
+        zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years))
         zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual))
         used = set()
         for name in sorted(monthly_by_name, key=teaching_name_key):
@@ -1026,7 +1291,8 @@ def teaching_build_zip(scan, selected_years):
 
 def render_preceptor_teaching_summary():
     st.subheader("Preceptor Teaching Summary")
-    st.write("Read current encrypted OPDs from GitHub, then generate a CSV and one Word teaching report per preceptor.")
+    st.write("Read current encrypted OPDs from GitHub, then generate a chair-friendly Word summary, "
+             "the summary CSV, and one Word teaching report per preceptor.")
     st.caption("All OPD sites. One student assigned to one AM/PM session = one student-shift = four educational hours. "
                "Two students at once count twice. Hours are student-weighted scheduled hours, not unique clock hours.")
     current = teaching_academic_start(teaching_local_today())
@@ -1082,7 +1348,7 @@ def render_preceptor_teaching_summary():
     selected = st.multiselect("Academic year(s) to include", years, default=[current],
                               format_func=teaching_academic_label, key="teaching_selected_years",
                               help="The current year is selected by default. Select other available years to add "
-                                   "a separate section for each year in every preceptor's Word report.")
+                                   "a separate section for each year in the chair summary and every preceptor's Word report.")
     signature = (options_signature, scan["commit"], tuple(sorted(selected)))
     if st.session_state.get("teaching_zip_signature") != signature:
         st.session_state.pop("teaching_zip", None)
@@ -1119,7 +1385,7 @@ def render_preceptor_teaching_summary():
     if st.button("Create teaching reports ZIP", key="teaching_build_zip"):
         st.session_state.pop("teaching_zip", None)
         try:
-            with st.spinner("Creating CSV and individual Word reports..."):
+            with st.spinner("Creating chair summary, CSV and individual Word reports..."):
                 zip_bytes, _ = teaching_build_zip(scan, selected)
                 st.session_state["teaching_zip"] = zip_bytes
                 st.session_state["teaching_zip_signature"] = signature
@@ -1133,8 +1399,16 @@ def render_preceptor_teaching_summary():
         st.download_button("Download CSV + Word reports (ZIP)",
                            data=st.session_state["teaching_zip"], file_name=f"Preceptor_Teaching_{year_part}.zip",
                            mime="application/zip", key="teaching_download_zip")
-        st.caption("The ZIP contains the summary CSV, a Preceptor_Reports folder, Report_Notes.txt and Archive_Sources.csv. "
-                   "Treat the downloaded ZIP as an unencrypted staff report; do not commit it to the public repository.")
+        # Reuse the Word bytes already packaged in the ZIP; no second scan or decryption.
+        with ZipFile(BytesIO(st.session_state["teaching_zip"])) as generated_zip:
+            chair_bytes = generated_zip.read(TEACHING_CHAIR_SUMMARY_FILENAME)
+        st.download_button("Download chair summary only (Word)", data=chair_bytes,
+                           file_name=TEACHING_CHAIR_SUMMARY_FILENAME,
+                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                           key="teaching_download_chair_summary")
+        st.caption("The ZIP includes one combined chair summary, the unchanged summary CSV, individual Word reports "
+                   "in Preceptor_Reports, Report_Notes.txt and Archive_Sources.csv. "
+                   "Treat these downloads as unencrypted staff reports; do not commit them to the public repository.")
 
 
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
