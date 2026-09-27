@@ -316,8 +316,8 @@ class GitHubOPDArchive:
         return {"raw": plaintext, "encrypted": token, "details": details,
                 "sha": metadata["sha"], "path": path, "commit": commit}
 
-    def load(self, rotation_start):
-        found = self._read_at(self.path_for(rotation_start), self._head())
+    def load(self, rotation_start, commit=None):
+        found = self._read_at(self.path_for(rotation_start), commit or self._head())
         if found is None:
             raise OPDArchiveError("No archived OPD was found for that rotation. Refresh the archive list.")
         return found
@@ -346,8 +346,8 @@ class GitHubOPDArchive:
                 "sha": verified["sha"], "sha256": details["sha256"],
                 "rotation_start": details["rotation_start"]}
 
-    def list_rotations(self):
-        commit = self._head()
+    def list_rotations(self, commit=None):
+        commit = commit or self._head()
         route = "/contents/" + quote(self.config.folder, safe="/")
         data = self._request("GET", route, params={"ref": commit}, missing_ok=True)
         if data is None:
@@ -562,11 +562,586 @@ def populate_ms_schedule(blank_bytes, assignments):
         wb.close()
 
 
+# =============================================================================
+# PRECEPTOR TEACHING SUMMARY - READ-ONLY analysis of current encrypted OPDs
+# No workbook/student data is written back to GitHub by this section.
+# =============================================================================
+import csv
+import json
+import secrets as _teaching_secrets
+from datetime import timezone as _teaching_timezone
+from zoneinfo import ZoneInfo as _TeachingZoneInfo
+
+TEACHING_REPORT_VERSION = 1
+TEACHING_HOURS_PER_STUDENT_SHIFT = 4
+TEACHING_CSV_COLUMNS = (
+    "preceptor_name", "academic_year", "no_of_shifts",
+    "months_worked", "educational_hours",
+)
+TEACHING_MONTH_NAMES = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+TEACHING_NAME_ORDERS = ("Preceptor ~ Student", "Student ~ Preceptor")
+
+# Optional, explicit spelling aliases. Never guess that two different names are
+# the same person. Matching ignores case, repeated spaces and spaces by commas.
+# Do NOT map a rotating generic slot (e.g. SJR_1) to one person for every date.
+TEACHING_PRECEPTOR_NAME_MAP = {
+    # "Smith, J.": "Smith, Jane",
+}
+
+# Optional exceptions for a rotation whose name order differs from the selection
+# on the summary page. Keys are the first Monday shown INSIDE each OPD.
+TEACHING_OPD_NAME_ORDER_OVERRIDES = {
+    # "2026-08-03": "Preceptor ~ Student",
+}
+
+# Labels that do not identify an assigned student. Case-insensitive exact match.
+TEACHING_EMPTY_STUDENT_LABELS = {
+    "", "nan", "none", "n/a", "na", "tbd", "unassigned", "no student",
+    "no students", "open", "available", "off", "vacation", "holiday",
+}
+
+
+def teaching_name_key(value):
+    cleaned = re.sub(r"\s+", " ", str(value or "").strip())
+    return re.sub(r"\s*,\s*", ", ", cleaned).casefold()
+
+
+def teaching_display_name(value):
+    return re.sub(r"\s*,\s*", ", ", re.sub(r"\s+", " ", str(value or "").strip()))
+
+
+def teaching_local_today():
+    # Streamlit Cloud may run on UTC. Keep the academic-year boundary local.
+    try:
+        return datetime.now(_TeachingZoneInfo("America/New_York")).date()
+    except Exception:
+        return datetime.now(_teaching_timezone.utc).date()
+
+
+def teaching_academic_start(day):
+    return day.year if day.month >= 7 else day.year - 1
+
+
+def teaching_academic_label(start_year):
+    return f"{start_year % 100:02d}-{(start_year + 1) % 100:02d}"
+
+
+def teaching_month_label(month):
+    return f"{TEACHING_MONTH_NAMES[month.month - 1]} {month.year}"
+
+
+def teaching_label_needs_review(name, site_names=()):
+    key = re.sub(r"[^A-Z0-9]+", "_", str(name).upper()).strip("_")
+    site_keys = {re.sub(r"[^A-Z0-9]+", "_", str(s).upper()).strip("_") for s in site_names}
+    return (
+        key in site_keys or key in {"HAMPDEN_NURSERY", "PSHCH_NURSERY", "SJR_HOSPITALIST", "WARD_A"}
+        or bool(re.fullmatch(r"(?:SJR|AAC|HOPE_DRIVE|NYES|ETOWN|LANCASTER|HAMPDEN_NURSERY|PSHCH_NURSERY)_?\d+", key))
+        or key in {"TBD", "UNKNOWN", "PRECEPTOR", "PROVIDER", "TO_BE_ASSIGNED"}
+        or bool(re.search(r"[;&|]|\s/\s|\s+and\s+", str(name), re.I))
+    )
+
+
+def teaching_split_assignment(value, order):
+    """Return (provider, [students]) groups without splitting 'Last, First'.
+
+    Names are used only temporarily to count separate students and recognize
+    exact duplicates. They never enter the exported CSV, Word files or notes.
+    Multiple students: separate OPD rows, or ; / newline / | / ' & ' / ' and '
+    on the student side. Repeated full Provider ~ Student pairs may be separated
+    with a newline, semicolon or |. A bare repeated ~ is ambiguous and rejected.
+    """
+    if order not in TEACHING_NAME_ORDERS:
+        raise OPDArchiveError("Choose Preceptor ~ Student or Student ~ Preceptor for the teaching summary.")
+    if not isinstance(value, str) or "~" not in value:
+        return []
+    text = value.strip()
+    if text.count("~") == 1:
+        segments = [text]
+    else:
+        segments = [part.strip() for part in re.split(r"[\r\n;|]+", text) if part.strip()]
+        if any(part.count("~") != 1 for part in segments):
+            raise OPDArchiveError("An assignment contains an ambiguous repeated '~'. Use separate OPD rows "
+                                  "or a semicolon-separated list of students on the student side.")
+    parsed = []
+    for segment in segments:
+        left, right = (part.strip() for part in segment.split("~", 1))
+        provider, student_text = (left, right) if order == "Preceptor ~ Student" else (right, left)
+        students = [teaching_display_name(part) for part in
+                    re.split(r"[\r\n;|]+|\s+&\s+|\s+and\s+", student_text, flags=re.I)]
+        students = [name for name in students if teaching_name_key(name) not in TEACHING_EMPTY_STUDENT_LABELS]
+        parsed.append((teaching_display_name(provider), students))
+    return parsed
+
+
+def teaching_extract_assignments(raw, details, order):
+    """Read AM/PM cells under each *actual* date, including hidden OPD rows.
+
+    Returns temporary records containing student names. The caller aggregates
+    and discards these records before storing anything in Streamlit session_state.
+    """
+    wb = load_workbook(BytesIO(raw), read_only=True, data_only=False)
+    records, missing_provider_cells = [], []
+    expected_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    try:
+        for sheet_name in details["site_names"]:
+            ws = wb[sheet_name]
+            if (ws.max_row or 0) > 1200:
+                raise OPDArchiveError(f"Worksheet '{sheet_name}' exceeds the supported 1,200-row OPD layout; "
+                                      "no partial teaching report was generated.")
+            rows = list(ws.iter_rows(max_col=8))
+            current_dates = None
+            for row_index, row in enumerate(rows):
+                values = [cell.value for cell in row]
+                if [str(v or "").strip().casefold() for v in values[1:8]] == expected_days:
+                    if row_index + 1 >= len(rows):
+                        raise OPDArchiveError(f"Missing dates on worksheet '{sheet_name}'.")
+                    current_dates = [_opd_date(cell.value, wb.epoch) for cell in rows[row_index + 1][1:8]]
+                    if not all(current_dates) or any(
+                        day != current_dates[0] + timedelta(days=i) for i, day in enumerate(current_dates)
+                    ):
+                        raise OPDArchiveError(f"Invalid date row on worksheet '{sheet_name}'.")
+                    continue
+                match = re.match(r"^\s*(AM|PM)\b", str(values[0] or ""), re.I)
+                if not match:
+                    continue
+                for col_index, cell in enumerate(row[1:8]):
+                    if cell.data_type == "f":
+                        raise OPDArchiveError(f"{sheet_name}!{cell.coordinate} contains a formula in a session cell. "
+                                              "Use assignment values rather than formulas for this summary.")
+                    try:
+                        groups = teaching_split_assignment(cell.value, order)
+                    except OPDArchiveError as exc:
+                        raise OPDArchiveError(f"{sheet_name}!{cell.coordinate}: {exc}") from None
+                    for provider, students in groups:
+                        if not students:
+                            continue  # provider availability alone earns no teaching hours
+                        if teaching_name_key(provider) in TEACHING_EMPTY_STUDENT_LABELS:
+                            missing_provider_cells.append(f"{sheet_name}!{cell.coordinate}")
+                            continue
+                        if current_dates is None:
+                            raise OPDArchiveError(f"{sheet_name}!{cell.coordinate} has an assignment before a date header.")
+                        for student in students:
+                            records.append({
+                                "preceptor_name": provider, "student": student,
+                                "day": current_dates[col_index], "shift": match.group(1).upper(),
+                                "site": sheet_name, "cell": cell.coordinate,
+                            })
+        return records, missing_provider_cells
+    finally:
+        wb.close()
+
+
+def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progress=None):
+    """Use one repository snapshot; read/decrypt every current OPD once.
+
+    An unreadable file aborts the run. Never return partial totals as complete.
+    Files are streamed one rotation at a time; no raw workbooks or students are
+    retained in the returned object. Student IDs for deduplication are keyed with
+    a fresh, run-local random key and then discarded, not saved or exported.
+    """
+    if default_order not in TEACHING_NAME_ORDERS:
+        raise OPDArchiveError("Select a supported OPD name order.")
+    commit = client._head()
+    rotations = client.list_rotations(commit=commit)
+    counts = Counter()
+    names, name_variants, review_labels, manifests, warnings = {}, defaultdict(set), set(), [], []
+    seen_assignments = set()
+    salt = _teaching_secrets.token_bytes(32)
+    aliases = {teaching_name_key(k): teaching_display_name(v)
+               for k, v in TEACHING_PRECEPTOR_NAME_MAP.items() if str(k).strip() and str(v).strip()}
+    duplicates = 0
+    future_assignments = 0
+    today = teaching_local_today()
+    for number, rotation in enumerate(rotations, start=1):
+        order = TEACHING_OPD_NAME_ORDER_OVERRIDES.get(rotation.isoformat(), default_order)
+        if order not in TEACHING_NAME_ORDERS:
+            raise OPDArchiveError(f"Invalid teaching-summary name-order override for rotation {rotation.isoformat()}.")
+        try:
+            loaded = client.load(rotation, commit=commit)
+            records, missing_cells = teaching_extract_assignments(loaded["raw"], loaded["details"], order)
+        except OPDArchiveError as exc:
+            raise OPDArchiveError(f"Rotation {rotation.isoformat()}: {exc} No ZIP was generated from partial data.") from None
+        counted = removed = 0
+        for item in records:
+            original_name = item["preceptor_name"]
+            name = aliases.get(teaching_name_key(original_name), original_name)
+            key = teaching_name_key(name)
+            # Source/site are deliberately absent: the same provider + student +
+            # date + half-day duplicated in another site/rotation is one assignment.
+            # Different students in the SAME half-day have DIFFERENT identifiers.
+            identity = json.dumps([key, teaching_name_key(item["student"]),
+                                   item["day"].isoformat(), item["shift"]], ensure_ascii=False)
+            digest = hmac.new(salt, identity.encode("utf-8"), hashlib.sha256).digest()
+            if digest in seen_assignments:
+                duplicates += 1
+                removed += 1
+                continue
+            seen_assignments.add(digest)
+            names.setdefault(key, name)
+            name_variants[key].add(original_name)
+            month = item["day"].replace(day=1)
+            counts[(key, month)] += 1
+            counted += 1
+            future_assignments += int(item["day"] > today)
+            if teaching_label_needs_review(name, loaded["details"]["site_names"]):
+                review_labels.add(key)
+        if missing_cells:
+            warnings.append({"rotation_start": rotation.isoformat(), "issue": "Missing provider; not attributed",
+                             "details": ", ".join(sorted(set(missing_cells)))})
+        manifests.append({
+            "rotation_start": rotation.isoformat(),
+            "last_scheduled_date": (loaded["details"]["week_mondays"][-1] + timedelta(days=6)).isoformat(),
+            "archive_file": loaded["path"].rsplit("/", 1)[-1],
+            "github_blob_sha": loaded["sha"], "name_order": order,
+            "assigned_student_shifts_read": len(records),
+            "assigned_student_shifts_counted": counted,
+            "duplicate_student_shifts_removed": removed,
+            "missing_provider_cells": len(set(missing_cells)),
+        })
+        # Only provider-level aggregates remain after each rotation is processed.
+        del records, loaded
+        if progress:
+            progress(number, len(rotations))
+    monthly = [{"preceptor_name": names[key], "academic_year": teaching_academic_label(teaching_academic_start(month)),
+                "academic_start_year": teaching_academic_start(month), "month": month.isoformat(),
+                "no_of_shifts": int(count), "educational_hours": int(count * TEACHING_HOURS_PER_STUDENT_SHIFT)}
+               for (key, month), count in sorted(counts.items(), key=lambda item: (item[0][0], item[0][1]))]
+    return {
+        "version": TEACHING_REPORT_VERSION, "commit": commit,
+        "generated_at": datetime.now(_teaching_timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "default_name_order": default_order, "monthly": monthly, "sources": manifests,
+        "warnings": warnings, "duplicate_assignments_removed": duplicates,
+        "future_assignments_in_archive": future_assignments,
+        "unresolved_preceptor_labels": sorted((names[k] for k in review_labels), key=teaching_name_key),
+        "name_variants": {names[k]: sorted(v) for k, v in name_variants.items() if len(v) > 1},
+    }
+
+
+def teaching_annual_rows(scan, selected_years):
+    selected = {int(year) for year in selected_years}
+    grouped = defaultdict(list)
+    for item in scan["monthly"]:
+        if item["academic_start_year"] in selected:
+            grouped[(item["preceptor_name"], item["academic_start_year"])].append(item)
+    rows = []
+    for (name, start_year), items in sorted(grouped.items(), key=lambda item: (teaching_name_key(item[0][0]), item[0][1])):
+        ordered = sorted(items, key=lambda item: item["month"])
+        total = sum(item["no_of_shifts"] for item in ordered)
+        rows.append({"preceptor_name": name, "academic_year": teaching_academic_label(start_year),
+                     "no_of_shifts": total,
+                     "months_worked": "; ".join(teaching_month_label(CalendarDate.fromisoformat(item["month"])) for item in ordered),
+                     "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT})
+    return rows
+
+
+def teaching_csv_bytes(rows, columns=TEACHING_CSV_COLUMNS):
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(stream, fieldnames=list(columns), extrasaction="ignore", lineterminator="\r\n")
+    writer.writeheader()
+    for row in rows:
+        cleaned = {}
+        for column in columns:
+            value = row.get(column, "")
+            # Keep name text from becoming an Excel formula when CSV is opened.
+            if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+                value = "'" + value
+            cleaned[column] = value
+        writer.writerow(cleaned)
+    return stream.getvalue().encode("utf-8-sig")
+
+
+def teaching_make_docx(name, monthly, scan):
+    """One editable Word document per preceptor; one page per academic year."""
+    from docx.shared import Inches, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    doc = Document()
+    section = doc.sections[0]
+    section.page_width, section.page_height = Inches(8.5), Inches(11)
+    section.top_margin = section.bottom_margin = Inches(0.7)
+    section.left_margin = section.right_margin = Inches(0.8)
+    normal = doc.styles["Normal"]
+    normal.font.name, normal.font.size = "Calibri", Pt(11)
+    normal.paragraph_format.space_after = Pt(7)
+    for style_name in ("Title", "Heading 1", "Heading 2"):
+        doc.styles[style_name].font.name = "Calibri"
+        doc.styles[style_name].font.color.rgb = RGBColor.from_string("24466B")
+    doc.styles["Title"].font.size = Pt(24)
+    doc.styles["Heading 1"].font.size = Pt(16)
+    header = section.header.paragraphs[0]
+    header.text = "PENN STATE  |  PEDIATRIC CLERKSHIP"
+    header.runs[0].font.size = Pt(9)
+    header.runs[0].font.color.rgb = RGBColor.from_string("526475")
+    footer = section.footer.paragraphs[0]
+    footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    footer.add_run("Third-year student teaching  |  Page ").font.size = Pt(9)
+    field = OxmlElement("w:fldSimple")
+    field.set(qn("w:instr"), "PAGE")
+    footer._p.append(field)
+    doc.core_properties.title = f"Preceptor teaching report - {name}"
+    doc.core_properties.author = "Pediatric Clerkship"
+    doc.core_properties.subject = "Scheduled student-shifts and student-weighted educational hours"
+
+    grouped = defaultdict(list)
+    for row in monthly:
+        grouped[row["academic_start_year"]].append(row)
+    for index, (year, rows) in enumerate(sorted(grouped.items())):
+        if index:
+            doc.add_page_break()
+        doc.add_paragraph("Preceptor teaching report", style="Subtitle")
+        doc.add_paragraph(name, style="Title")
+        doc.add_heading(f"Academic year {teaching_academic_label(year)}", level=1)
+        doc.add_paragraph(f"July 1, {year} - June 30, {year + 1}")
+        if name in scan["unresolved_preceptor_labels"]:
+            warning = doc.add_paragraph()
+            run = warning.add_run("Review required: this is a site, slot, or combined provider label, not a verified individual preceptor.")
+            run.bold = True
+            run.font.color.rgb = RGBColor.from_string("8C3B25")
+        count = sum(row["no_of_shifts"] for row in rows)
+        p = doc.add_paragraph()
+        p.add_run("Assigned student-shifts: ").bold = True
+        p.add_run(f"{count:,}")
+        p = doc.add_paragraph()
+        p.add_run("Student-weighted educational hours: ").bold = True
+        p.add_run(f"{count * TEACHING_HOURS_PER_STUDENT_SHIFT:,}")
+        doc.add_heading("Monthly assignments", level=2)
+        table = doc.add_table(rows=1, cols=3)
+        table.style = "Light Shading Accent 1"
+        table.autofit = False
+        widths = (Inches(2.5), Inches(2.2), Inches(2.2))
+        for cell, title, width in zip(table.rows[0].cells, ("Month", "Student-shifts", "Educational hours"), widths):
+            cell.text, cell.width = title, width
+            for run in cell.paragraphs[0].runs:
+                run.bold = True
+        repeat_header = OxmlElement("w:tblHeader")
+        table.rows[0]._tr.get_or_add_trPr().append(repeat_header)
+        for row in sorted(rows, key=lambda item: item["month"]):
+            values = (teaching_month_label(CalendarDate.fromisoformat(row["month"])),
+                      f"{row['no_of_shifts']:,}", f"{row['educational_hours']:,}")
+            for cell, value, width in zip(table.add_row().cells, values, widths):
+                cell.text, cell.width = value, width
+        for cell, value, width in zip(table.add_row().cells,
+                                      ("Total", f"{count:,}", f"{count * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"), widths):
+            cell.text, cell.width = value, width
+            for run in cell.paragraphs[0].runs:
+                run.bold = True
+        for row in table.rows:
+            row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+            for i, cell in enumerate(row.cells):
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.space_before = Pt(3)
+                    paragraph.paragraph_format.space_after = Pt(3)
+                    if i:
+                        paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        doc.add_paragraph()
+        note = doc.add_paragraph(
+            f"Counting method: one student assigned to one AM or PM shift counts as one student-shift and "
+            f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two different students in the same shift count "
+            "as two student-shifts and eight hours. These are student-weighted scheduled educational hours, "
+            "not distinct clock hours or confirmed attendance. Identical duplicate assignments count once."
+        )
+        for run in note.runs:
+            run.font.size = Pt(9)
+        source = doc.add_paragraph(
+            "Source: current encrypted OPD archive files, decrypted for this report. "
+            f"Archive snapshot: {scan['commit'][:12]}. Retrieved: {scan['generated_at']}. "
+            "Only months with assignments are shown. Student names are omitted."
+        )
+        for run in source.runs:
+            run.font.size = Pt(9)
+    output = BytesIO()
+    doc.save(output)
+    return output.getvalue()
+
+
+def teaching_build_zip(scan, selected_years):
+    """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
+    years = sorted({int(year) for year in selected_years})
+    annual = teaching_annual_rows(scan, years)
+    if not annual:
+        raise OPDArchiveError("No student assignments were found for the selected academic year(s); no empty report was generated.")
+    monthly_by_name = defaultdict(list)
+    for item in scan["monthly"]:
+        if item["academic_start_year"] in years:
+            monthly_by_name[item["preceptor_name"]].append(item)
+    labels = ", ".join(teaching_academic_label(year) for year in years)
+    output = BytesIO()
+    notes = [
+        "PRECEPTOR TEACHING SUMMARY", f"Selected academic year(s): {labels}",
+        f"Archive retrieved: {scan['generated_at']}", f"Repository snapshot: {scan['commit']}",
+        f"Current OPD files read: {len(scan['sources'])}", "",
+        "Source: every current OPD_YYYY-MM-DD.xlsx.enc in the configured archive folder.",
+        "Superseded Git history is not counted. The archived files are not changed.",
+        "All recognized OPD site worksheets are included, not just HOPE_DRIVE, NYES and ETOWN.",
+        "This report counts scheduled student assignments, not patient encounters or confirmed attendance.",
+        "One row in preceptor_teaching_summary.csv = one preceptor in one academic year.",
+        "Academic year is July 1 through June 30 of the following calendar year.",
+        "The actual session date, not the rotation's start date, determines the month and academic year.",
+        "no_of_shifts counts student-shifts, not distinct half-days or distinct students.",
+        f"educational_hours = no_of_shifts x {TEACHING_HOURS_PER_STUDENT_SHIFT}.",
+        "Two different students in the same AM/PM session count as two assignments and eight hours.",
+        "An identical preceptor/student/date/AM-or-PM duplicate counts once, even across overlapping OPDs.",
+        "Provider availability with no student does not count. All filled student assignments are treated equally.",
+        "Names are matched case-insensitively with normalized whitespace and comma spacing; no fuzzy identity matching.",
+        "Student names and decrypted workbooks are not included in this ZIP.",
+        "Future scheduled assignments in the selected academic year(s) are included.",
+        "Providers with no assignments in the selected year(s) do not receive a report.",
+        "The summary remains a snapshot until Load / refresh archived OPDs is clicked again.", "",
+        "DATA QUALITY (the following diagnostics cover ALL scanned academic years)",
+        f"Exact duplicate student-shifts removed: {scan['duplicate_assignments_removed']}",
+        f"Future student-shifts in the entire archive when scanned: {scan['future_assignments_in_archive']}",
+    ]
+    if scan["unresolved_preceptor_labels"]:
+        notes += ["Provider/site/slot labels needing review (retained literally, not assigned to a guessed individual):"]
+        notes += ["  " + name for name in scan["unresolved_preceptor_labels"]]
+    for item in scan["warnings"]:
+        notes.append(f"Rotation {item['rotation_start']}: {item['issue']}: {item['details']}")
+    source_columns = (
+        "rotation_start", "last_scheduled_date", "archive_file", "github_blob_sha", "name_order",
+        "assigned_student_shifts_read", "assigned_student_shifts_counted",
+        "duplicate_student_shifts_removed", "missing_provider_cells",
+    )
+    with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
+        zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual))
+        used = set()
+        for name in sorted(monthly_by_name, key=teaching_name_key):
+            base = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")[:110] or "preceptor"
+            safe = base
+            number = 1
+            while safe.casefold() in used:
+                number += 1
+                safe = f"{base}_{number}"
+            used.add(safe.casefold())
+            zf.writestr(f"Preceptor_Reports/{safe}_Teaching_Report.docx",
+                        teaching_make_docx(name, monthly_by_name[name], scan))
+        zf.writestr("Report_Notes.txt", "\n".join(notes).encode("utf-8"))
+        zf.writestr("Archive_Sources.csv", teaching_csv_bytes(scan["sources"], source_columns))
+    return output.getvalue(), annual
+
+
+def render_preceptor_teaching_summary():
+    st.subheader("Preceptor Teaching Summary")
+    st.write("Read current encrypted OPDs from GitHub, then generate a CSV and one Word teaching report per preceptor.")
+    st.caption("All OPD sites. One student assigned to one AM/PM session = one student-shift = four educational hours. "
+               "Two students at once count twice. Hours are student-weighted scheduled hours, not unique clock hours.")
+    current = teaching_academic_start(teaching_local_today())
+    st.info(f"Current academic year: {teaching_academic_label(current)} (July 1, {current} through June 30, {current + 1}).")
+    try:
+        client = GitHubOPDArchive(get_opd_archive_config())
+    except OPDArchiveError as exc:
+        st.error(str(exc))
+        return
+    order = st.selectbox("Names around '~' in archived OPDs", TEACHING_NAME_ORDERS,
+                          key="teaching_name_order",
+                          help="The sample OPD uses Preceptor ~ Student. No rotation list is required. "
+                               "Choose the actual name order in your archive. Multiple students may be on separate rows "
+                               "or separated by semicolons/newlines on the student side; commas inside names are preserved.")
+    options_signature = hashlib.sha256(json.dumps(
+        [TEACHING_REPORT_VERSION, client.config.signature(), order, TEACHING_PRECEPTOR_NAME_MAP,
+         TEACHING_OPD_NAME_ORDER_OVERRIDES], sort_keys=True).encode()).hexdigest()
+    if st.session_state.get("teaching_options_signature") != options_signature:
+        for key in ("teaching_scan", "teaching_zip", "teaching_zip_signature", "teaching_selected_years"):
+            st.session_state.pop(key, None)
+        st.session_state["teaching_options_signature"] = options_signature
+    if st.button("Load / refresh archived OPDs", key="teaching_load_archives", type="primary"):
+        for key in ("teaching_scan", "teaching_zip", "teaching_zip_signature", "teaching_selected_years"):
+            st.session_state.pop(key, None)
+        bar = st.progress(0, text="Reading the current encrypted archive...")
+        try:
+            with st.spinner("Decrypting OPDs and counting student assignments..."):
+                scan = teaching_scan_archives(
+                    client, order,
+                    progress=lambda n, total: bar.progress(n / total, text=f"Read {n} of {total} current OPD files"),
+                )
+            st.session_state["teaching_scan"] = scan
+        except OPDArchiveError as exc:
+            st.error(str(exc))
+        except Exception:
+            # Do not echo workbook contents, credentials or learner data in the UI.
+            st.error("The teaching summary could not be completed. No partial ZIP was created. "
+                     "Check the workbook layout and installed requirements, then retry.")
+        finally:
+            bar.empty()
+    scan = st.session_state.get("teaching_scan")
+    if scan is None:
+        st.caption("Nothing is downloaded or decrypted until you click Load / refresh archived OPDs. "
+                   "This page never saves a report or decrypted OPD to GitHub.")
+        return
+    if not scan["sources"]:
+        st.warning("No current encrypted OPDs were found in the configured GitHub archive folder.")
+        return
+    st.success(f"Read and decrypted {len(scan['sources'])} current OPD files. Archive snapshot: {scan['generated_at']}.")
+    st.caption("Upload revisions in Create Student Schedule as usual. Click Load / refresh again to include newer saves. "
+               "Only current files are counted, not their older Git versions.")
+    years = sorted({row["academic_start_year"] for row in scan["monthly"]} | {current}, reverse=True)
+    selected = st.multiselect("Academic year(s) to include", years, default=[current],
+                              format_func=teaching_academic_label, key="teaching_selected_years",
+                              help="The current year is selected by default. Select other available years to add "
+                                   "a separate section for each year in every preceptor's Word report.")
+    signature = (options_signature, scan["commit"], tuple(sorted(selected)))
+    if st.session_state.get("teaching_zip_signature") != signature:
+        st.session_state.pop("teaching_zip", None)
+        st.session_state["teaching_zip_signature"] = signature
+    annual = teaching_annual_rows(scan, selected)
+    if scan["duplicate_assignments_removed"]:
+        st.warning(f"{scan['duplicate_assignments_removed']} identical student-shift duplicates were counted once. "
+                   "Different students assigned in the same shift still count separately.")
+    if scan["unresolved_preceptor_labels"]:
+        st.warning("Some assigned providers are recorded as site/slot/combined labels rather than individual names. "
+                   "They are retained literally and marked for review, not attributed to a guessed person.")
+        with st.expander("Provider labels to review"):
+            st.write(", ".join(scan["unresolved_preceptor_labels"]))
+    if scan["warnings"]:
+        st.warning("Some filled assignment cells have no identifiable provider and cannot be attributed. "
+                   "See the data-quality details and Report_Notes.txt.")
+    with st.expander("Archive coverage and data-quality details"):
+        st.dataframe(pd.DataFrame(scan["sources"]), hide_index=True, use_container_width=True)
+        if scan["warnings"]:
+            st.dataframe(pd.DataFrame(scan["warnings"]), hide_index=True, use_container_width=True)
+    if not annual:
+        st.info("No assigned student-shifts were found for the selected academic year(s). "
+                "Choose another available year, check the '~' name order, or archive OPDs with completed student assignments. "
+                "Provider availability without a student does not count.")
+        return
+    preview = pd.DataFrame(annual, columns=TEACHING_CSV_COLUMNS)
+    a, b, c = st.columns(3)
+    a.metric("Preceptors / provider labels", preview["preceptor_name"].nunique())
+    b.metric("Assigned student-shifts", f"{preview['no_of_shifts'].sum():,}")
+    c.metric("Student-weighted educational hours", f"{preview['educational_hours'].sum():,}")
+    st.dataframe(preview, hide_index=True, use_container_width=True)
+    st.caption("The CSV contains one row per preceptor per academic year. Months follow the actual assignment dates. "
+               "Student names are not included in the CSV, Word reports, or source notes.")
+    if st.button("Create teaching reports ZIP", key="teaching_build_zip"):
+        st.session_state.pop("teaching_zip", None)
+        try:
+            with st.spinner("Creating CSV and individual Word reports..."):
+                zip_bytes, _ = teaching_build_zip(scan, selected)
+                st.session_state["teaching_zip"] = zip_bytes
+                st.session_state["teaching_zip_signature"] = signature
+        except OPDArchiveError as exc:
+            st.error(str(exc))
+        except Exception:
+            st.error("The Word/CSV export could not be completed. No partial ZIP was retained. "
+                     "Check that python-docx is installed and retry.")
+    if st.session_state.get("teaching_zip"):
+        year_part = teaching_academic_label(selected[0]) if len(selected) == 1 else "Multiple_Academic_Years"
+        st.download_button("Download CSV + Word reports (ZIP)",
+                           data=st.session_state["teaching_zip"], file_name=f"Preceptor_Teaching_{year_part}.zip",
+                           mime="application/zip", key="teaching_download_zip")
+        st.caption("The ZIP contains the summary CSV, a Preceptor_Reports folder, Report_Notes.txt and Archive_Sources.csv. "
+                   "Treat the downloaded ZIP as an unencrypted staff report; do not commit it to the public repository.")
+
+
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
-mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule", "OPD Check", "Create Individual Schedules", "OPD Archive", "OPD MD PA Conflict Detector", "Shift Availability Tracker"), key="schedule_app_mode")
+mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule", "OPD Check", "Create Individual Schedules", "OPD Archive", "Preceptor Teaching Summary", "OPD MD PA Conflict Detector", "Shift Availability Tracker"), key="schedule_app_mode")
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 
 if mode == "OPD Check":
@@ -3881,3 +4456,7 @@ elif mode == "Shift Availability Tracker":
 
 elif mode == "OPD Archive":
     render_opd_archive_page()
+
+
+elif mode == "Preceptor Teaching Summary":
+    render_preceptor_teaching_summary()
