@@ -572,7 +572,7 @@ import secrets as _teaching_secrets
 from datetime import timezone as _teaching_timezone
 from zoneinfo import ZoneInfo as _TeachingZoneInfo
 
-TEACHING_REPORT_VERSION = 2
+TEACHING_REPORT_VERSION = 3
 TEACHING_HOURS_PER_STUDENT_SHIFT = 4
 TEACHING_CSV_COLUMNS = (
     "preceptor_name", "academic_year", "no_of_shifts",
@@ -602,6 +602,97 @@ TEACHING_EMPTY_STUDENT_LABELS = {
     "", "nan", "none", "n/a", "na", "tbd", "unassigned", "no student",
     "no students", "open", "available", "off", "vacation", "holiday",
 }
+
+
+# -----------------------------------------------------------------------------
+# WORK-TYPE GROUPS FOR TEACHING REPORTS
+# Keys are OPD worksheet names normalized to UPPER_CASE_WITH_UNDERSCORES.
+# Only the explicitly grouped clinics are combined. All other worksheets remain
+# separate unless you deliberately add them to this map. No setting gets an
+# extra educational-hours multiplier.
+# -----------------------------------------------------------------------------
+TEACHING_WORK_TYPE_MAP = {
+    "HOPE_DRIVE": "Academic Pediatrics",
+    "ETOWN": "Academic Pediatrics",
+    "NYES": "Academic Pediatrics",
+    "WARD_A": "Ward A",
+    "PSHCH_NURSERY": "PSHCH Nursery",
+    "COMPLEX": "Complex Care",
+}
+TEACHING_WORK_TYPE_ORDER = (
+    "Academic Pediatrics", "Ward A", "PSHCH Nursery", "Complex Care",
+)
+TEACHING_WORK_TYPE_REVIEW = "Work type needs review"
+TEACHING_WORK_TYPE_CSV_COLUMNS = (
+    "preceptor_name", "academic_year", "work_type", "no_of_shifts",
+    "months_worked", "educational_hours", "source_sites",
+)
+
+
+def teaching_site_key(site):
+    return re.sub(r"[^A-Z0-9]+", "_", str(site or "").upper()).strip("_")
+
+
+def teaching_work_type(site):
+    """Classify the assignment by its OPD site, not the preceptor's name."""
+    key = teaching_site_key(site)
+    if not key:
+        raise OPDArchiveError("An assigned shift has no OPD site; its work type cannot be determined.")
+    if key in TEACHING_WORK_TYPE_MAP:
+        label = str(TEACHING_WORK_TYPE_MAP[key]).strip()
+        if not label or label == TEACHING_WORK_TYPE_REVIEW:
+            raise OPDArchiveError("Check TEACHING_WORK_TYPE_MAP: use a nonempty work-type label, not the reserved review label.")
+        return label
+    # Preserve unmapped services, rather than silently assuming inpatient or outpatient.
+    return key.replace("_", " ")
+
+
+def teaching_work_type_sort(label):
+    if label in TEACHING_WORK_TYPE_ORDER:
+        return (0, TEACHING_WORK_TYPE_ORDER.index(label), "")
+    if label == TEACHING_WORK_TYPE_REVIEW:
+        return (2, 0, "")
+    return (1, 0, str(label).casefold())
+
+
+def teaching_require_work_type_data(scan):
+    """Reject cached scans without site detail; totals alone cannot reconstruct it."""
+    if scan.get("version") != TEACHING_REPORT_VERSION or "monthly_by_work_type" not in scan:
+        raise OPDArchiveError("This teaching scan predates work-type reporting. Click Load / refresh archived OPDs, then generate the reports again.")
+    expected, actual = Counter(), Counter()
+    for row in scan["monthly"]:
+        expected[(row["preceptor_name"], row["academic_start_year"], row["month"])] += row["no_of_shifts"]
+    for row in scan["monthly_by_work_type"]:
+        if not row.get("work_type") or int(row["no_of_shifts"]) <= 0:
+            raise OPDArchiveError("The work-type breakdown is incomplete. Refresh the archived OPDs; no partial report was generated.")
+        actual[(row["preceptor_name"], row["academic_start_year"], row["month"])] += row["no_of_shifts"]
+    if dict(expected) != dict(actual):
+        raise OPDArchiveError("Work-type subtotals do not match the overall teaching totals. Refresh the archived OPDs before generating a report.")
+
+
+def teaching_work_type_rows(scan, selected_years):
+    """One row per preceptor, academic year and work type; no student identifiers."""
+    teaching_require_work_type_data(scan)
+    years = {int(year) for year in selected_years}
+    grouped = defaultdict(list)
+    for item in scan["monthly_by_work_type"]:
+        if item["academic_start_year"] in years:
+            grouped[(item["preceptor_name"], item["academic_start_year"], item["work_type"])].append(item)
+    rows = []
+    for (name, year, work_type), items in sorted(
+        grouped.items(), key=lambda pair: (teaching_name_key(pair[0][0]), pair[0][1], teaching_work_type_sort(pair[0][2]))
+    ):
+        months = sorted({item["month"] for item in items})
+        total = sum(item["no_of_shifts"] for item in items)
+        sites = sorted({site for item in items for site in item["source_sites"]})
+        rows.append({
+            "preceptor_name": name, "academic_year": teaching_academic_label(year),
+            "work_type": work_type, "no_of_shifts": total,
+            "months_worked": "; ".join(teaching_month_label(CalendarDate.fromisoformat(month)) for month in months),
+            "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT,
+            "source_sites": "; ".join(sites),
+        })
+    return rows
 
 
 def teaching_name_key(value):
@@ -735,12 +826,11 @@ def teaching_extract_assignments(raw, details, order):
 
 
 def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progress=None):
-    """Use one repository snapshot; read/decrypt every current OPD once.
+    """Read/decrypt each current OPD at one repository snapshot, retaining work type.
 
-    An unreadable file aborts the run. Never return partial totals as complete.
-    Files are streamed one rotation at a time; no raw workbooks or students are
-    retained in the returned object. Student IDs for deduplication are keyed with
-    a fresh, run-local random key and then discarded, not saved or exported.
+    Student names are temporary. Run-local keyed digests deduplicate assignments;
+    neither the digests nor learner names appear in returned aggregates or reports.
+    Work-type subtotals always reconcile to the existing overall counting rules.
     """
     if default_order not in TEACHING_NAME_ORDERS:
         raise OPDArchiveError("Select a supported OPD name order.")
@@ -748,13 +838,14 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
     rotations = client.list_rotations(commit=commit)
     counts = Counter()
     names, name_variants, review_labels, manifests, warnings = {}, defaultdict(set), set(), [], []
-    seen_assignments = set()
+    # One anonymous item per provider/student/date/AM-or-PM assignment.
+    seen_assignments = {}
     salt = _teaching_secrets.token_bytes(32)
     aliases = {teaching_name_key(k): teaching_display_name(v)
                for k, v in TEACHING_PRECEPTOR_NAME_MAP.items() if str(k).strip() and str(v).strip()}
-    duplicates = 0
-    future_assignments = 0
+    duplicates = future_assignments = 0
     today = teaching_local_today()
+    observed_site_groups = {}
     for number, rotation in enumerate(rotations, start=1):
         order = TEACHING_OPD_NAME_ORDER_OVERRIDES.get(rotation.isoformat(), default_order)
         if order not in TEACHING_NAME_ORDERS:
@@ -769,20 +860,28 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             original_name = item["preceptor_name"]
             name = aliases.get(teaching_name_key(original_name), original_name)
             key = teaching_name_key(name)
-            # Source/site are deliberately absent: the same provider + student +
-            # date + half-day duplicated in another site/rotation is one assignment.
-            # Different students in the SAME half-day have DIFFERENT identifiers.
+            work_type = teaching_work_type(item["site"])
+            site = teaching_site_key(item["site"])
+            observed_site_groups[site] = work_type
             identity = json.dumps([key, teaching_name_key(item["student"]),
                                    item["day"].isoformat(), item["shift"]], ensure_ascii=False)
             digest = hmac.new(salt, identity.encode("utf-8"), hashlib.sha256).digest()
+            # A duplicate within Academic Pediatrics is still counted once even
+            # if it is copied onto both HOPE_DRIVE and NYES worksheets. Distinct
+            # students in the same shift have different identities and count twice.
             if digest in seen_assignments:
                 duplicates += 1
                 removed += 1
+                seen_assignments[digest]["work_types"].add(work_type)
+                seen_assignments[digest]["sites"].add(site)
                 continue
-            seen_assignments.add(digest)
+            month = item["day"].replace(day=1)
+            seen_assignments[digest] = {
+                "provider_key": key, "month": month, "day": item["day"], "shift": item["shift"],
+                "work_types": {work_type}, "sites": {site},
+            }
             names.setdefault(key, name)
             name_variants[key].add(original_name)
-            month = item["day"].replace(day=1)
             counts[(key, month)] += 1
             counted += 1
             future_assignments += int(item["day"] > today)
@@ -801,7 +900,6 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             "duplicate_student_shifts_removed": removed,
             "missing_provider_cells": len(set(missing_cells)),
         })
-        # Only provider-level aggregates remain after each rotation is processed.
         del records, loaded
         if progress:
             progress(number, len(rotations))
@@ -809,15 +907,47 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
                 "academic_start_year": teaching_academic_start(month), "month": month.isoformat(),
                 "no_of_shifts": int(count), "educational_hours": int(count * TEACHING_HOURS_PER_STUDENT_SHIFT)}
                for (key, month), count in sorted(counts.items(), key=lambda item: (item[0][0], item[0][1]))]
-    return {
+
+    type_counts, conflict_counts = Counter(), Counter()
+    type_sites = defaultdict(set)
+    for item in seen_assignments.values():
+        key, month = item["provider_key"], item["month"]
+        work_type = next(iter(item["work_types"])) if len(item["work_types"]) == 1 else TEACHING_WORK_TYPE_REVIEW
+        type_counts[(key, month, work_type)] += 1
+        type_sites[(key, month, work_type)].update(item["sites"])
+        if len(item["work_types"]) > 1:
+            # Do not silently credit the same assignment to the first site read.
+            # It stays in the overall total once, in an explicit review category.
+            conflict_counts[(key, item["day"], item["shift"],
+                             "; ".join(sorted(item["work_types"], key=teaching_work_type_sort)),
+                             "; ".join(sorted(item["sites"])))] += 1
+    monthly_by_type = [{
+        "preceptor_name": names[key], "academic_year": teaching_academic_label(teaching_academic_start(month)),
+        "academic_start_year": teaching_academic_start(month), "month": month.isoformat(),
+        "work_type": work_type, "no_of_shifts": int(count),
+        "educational_hours": int(count * TEACHING_HOURS_PER_STUDENT_SHIFT),
+        "source_sites": sorted(type_sites[(key, month, work_type)]),
+    } for (key, month, work_type), count in sorted(
+        type_counts.items(), key=lambda pair: (pair[0][0], pair[0][1], teaching_work_type_sort(pair[0][2]))) ]
+    conflicts = [{
+        "preceptor_name": names[key], "date": day.isoformat(), "shift": shift,
+        "academic_year": teaching_academic_label(teaching_academic_start(day)),
+        "conflicting_work_types": types, "source_sites": sites,
+        "no_of_student_shifts": count,
+    } for (key, day, shift, types, sites), count in sorted(conflict_counts.items())]
+    result = {
         "version": TEACHING_REPORT_VERSION, "commit": commit,
         "generated_at": datetime.now(_teaching_timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "default_name_order": default_order, "monthly": monthly, "sources": manifests,
-        "warnings": warnings, "duplicate_assignments_removed": duplicates,
+        "default_name_order": default_order, "monthly": monthly,
+        "monthly_by_work_type": monthly_by_type, "work_type_conflicts": conflicts,
+        "site_work_type_mapping": dict(sorted(observed_site_groups.items())),
+        "sources": manifests, "warnings": warnings, "duplicate_assignments_removed": duplicates,
         "future_assignments_in_archive": future_assignments,
         "unresolved_preceptor_labels": sorted((names[k] for k in review_labels), key=teaching_name_key),
         "name_variants": {names[k]: sorted(v) for k, v in name_variants.items() if len(v) > 1},
     }
+    teaching_require_work_type_data(result)
+    return result
 
 
 def teaching_annual_rows(scan, selected_years):
@@ -853,26 +983,97 @@ def teaching_csv_bytes(rows, columns=TEACHING_CSV_COLUMNS):
     return stream.getvalue().encode("utf-8-sig")
 
 
+def teaching_add_work_table(doc, headers, entries, *, widths, number_columns=(), total=None):
+    """A compact, editable table with repeating headers and readable page breaks."""
+    from docx.shared import Inches, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    table = doc.add_table(rows=1, cols=len(headers))
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    measured = tuple(Inches(value) for value in widths)
+    for col, width in zip(table.columns, measured):
+        col.width = width
+    table.rows[0]._tr.get_or_add_trPr().append(OxmlElement("w:tblHeader"))
+
+    def write_row(row, values, *, heading=False, subtotal=False, band=False):
+        row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+        for i, (cell, value, width) in enumerate(zip(row.cells, values, measured)):
+            cell.width = width
+            cell.text = str(value)
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            properties = cell._tc.get_or_add_tcPr()
+            margin = OxmlElement("w:tcMar")
+            for edge, amount in (("top", 45), ("bottom", 45), ("left", 90), ("right", 90)):
+                element = OxmlElement("w:" + edge)
+                element.set(qn("w:w"), str(amount))
+                element.set(qn("w:type"), "dxa")
+                margin.append(element)
+            properties.append(margin)
+            if heading or subtotal or band:
+                shade = OxmlElement("w:shd")
+                shade.set(qn("w:fill"), "24466B" if heading else "E8EEF5" if subtotal else "F5F7FA")
+                properties.append(shade)
+            paragraph = cell.paragraphs[0]
+            paragraph.paragraph_format.space_before = paragraph.paragraph_format.space_after = Pt(1)
+            paragraph.paragraph_format.line_spacing = 1
+            paragraph.paragraph_format.keep_with_next = heading
+            if i in number_columns:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            for run in paragraph.runs:
+                run.font.name, run.font.size = "Calibri", Pt(10)
+                run.bold = heading or subtotal
+                if heading:
+                    run.font.color.rgb = RGBColor(255, 255, 255)
+    write_row(table.rows[0], headers, heading=True)
+    for index, values in enumerate(entries):
+        write_row(table.add_row(), values, band=index % 2 == 1)
+    if total is not None:
+        write_row(table.add_row(), total, subtotal=True)
+        if len(table.rows) > 2:
+            for cell in table.rows[-2].cells:
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.keep_with_next = True
+    return table
+
+
 def teaching_make_docx(name, monthly, scan):
-    """One editable Word document per preceptor; one page per academic year."""
+    """One document per preceptor; academic years and work types stay separate."""
     from docx.shared import Inches, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
-
+    teaching_require_work_type_data(scan)
     doc = Document()
     section = doc.sections[0]
     section.page_width, section.page_height = Inches(8.5), Inches(11)
     section.top_margin = section.bottom_margin = Inches(0.7)
     section.left_margin = section.right_margin = Inches(0.8)
+    section.header_distance = section.footer_distance = Inches(0.3)
     normal = doc.styles["Normal"]
     normal.font.name, normal.font.size = "Calibri", Pt(11)
-    normal.paragraph_format.space_after = Pt(7)
-    for style_name in ("Title", "Heading 1", "Heading 2"):
-        doc.styles[style_name].font.name = "Calibri"
-        doc.styles[style_name].font.color.rgb = RGBColor.from_string("24466B")
-    doc.styles["Title"].font.size = Pt(24)
-    doc.styles["Heading 1"].font.size = Pt(16)
+    normal.paragraph_format.space_after = Pt(5)
+    normal.paragraph_format.line_spacing = 1.05
+    for style_name, size in (("Title", 23), ("Heading 1", 16), ("Heading 2", 12)):
+        style = doc.styles[style_name]
+        style.font.name, style.font.size = "Calibri", Pt(size)
+        style.font.color.rgb = RGBColor.from_string("24466B")
+        style.paragraph_format.keep_with_next = True
+        style.paragraph_format.space_before = Pt(8 if style_name == "Heading 2" else 0)
+        style.paragraph_format.space_after = Pt(4)
+        properties = style.element.find(qn("w:pPr"))
+        if properties is not None:
+            border = properties.find(qn("w:pBdr"))
+            if border is not None:
+                properties.remove(border)
+    subtitle = doc.styles["Subtitle"]
+    subtitle.font.name, subtitle.font.size = "Calibri", Pt(12)
+    subtitle.font.italic = False
+    subtitle.font.color.rgb = RGBColor.from_string("526475")
+    subtitle.paragraph_format.space_after = Pt(7)
+    subtitle.paragraph_format.keep_with_next = True
     header = section.header.paragraphs[0]
     header.text = "PENN STATE  |  PEDIATRIC CLERKSHIP"
     header.runs[0].font.size = Pt(9)
@@ -885,11 +1086,19 @@ def teaching_make_docx(name, monthly, scan):
     footer._p.append(field)
     doc.core_properties.title = f"Preceptor teaching report - {name}"
     doc.core_properties.author = "Pediatric Clerkship"
-    doc.core_properties.subject = "Scheduled student-shifts and student-weighted educational hours"
+    doc.core_properties.subject = "Scheduled student-shifts by academic year and type of work"
+
+    def note(text, warning=False):
+        paragraph = doc.add_paragraph(text)
+        for run in paragraph.runs:
+            run.font.size = Pt(9)
+            run.font.color.rgb = RGBColor.from_string("8C3B25" if warning else "526475")
+        return paragraph
 
     grouped = defaultdict(list)
     for row in monthly:
         grouped[row["academic_start_year"]].append(row)
+    type_rows = [row for row in scan["monthly_by_work_type"] if row["preceptor_name"] == name]
     for index, (year, rows) in enumerate(sorted(grouped.items())):
         if index:
             doc.add_page_break()
@@ -898,69 +1107,50 @@ def teaching_make_docx(name, monthly, scan):
         doc.add_heading(f"Academic year {teaching_academic_label(year)}", level=1)
         doc.add_paragraph(f"July 1, {year} - June 30, {year + 1}")
         if name in scan["unresolved_preceptor_labels"]:
-            warning = doc.add_paragraph()
-            run = warning.add_run("Review required: this is a site, slot, or combined provider label, not a verified individual preceptor.")
-            run.bold = True
-            run.font.color.rgb = RGBColor.from_string("8C3B25")
-        count = sum(row["no_of_shifts"] for row in rows)
+            note("Review required: this is a site, slot, or combined provider label, not a verified individual preceptor.", warning=True)
+        total = sum(row["no_of_shifts"] for row in rows)
         p = doc.add_paragraph()
-        p.add_run("Assigned student-shifts: ").bold = True
-        p.add_run(f"{count:,}")
-        p = doc.add_paragraph()
-        p.add_run("Student-weighted educational hours: ").bold = True
-        p.add_run(f"{count * TEACHING_HOURS_PER_STUDENT_SHIFT:,}")
-        doc.add_heading("Monthly assignments", level=2)
-        table = doc.add_table(rows=1, cols=3)
-        table.style = "Light Shading Accent 1"
-        table.autofit = False
-        widths = (Inches(2.5), Inches(2.2), Inches(2.2))
-        for cell, title, width in zip(table.rows[0].cells, ("Month", "Student-shifts", "Educational hours"), widths):
-            cell.text, cell.width = title, width
-            for run in cell.paragraphs[0].runs:
-                run.bold = True
-        repeat_header = OxmlElement("w:tblHeader")
-        table.rows[0]._tr.get_or_add_trPr().append(repeat_header)
-        for row in sorted(rows, key=lambda item: item["month"]):
-            values = (teaching_month_label(CalendarDate.fromisoformat(row["month"])),
-                      f"{row['no_of_shifts']:,}", f"{row['educational_hours']:,}")
-            for cell, value, width in zip(table.add_row().cells, values, widths):
-                cell.text, cell.width = value, width
-        for cell, value, width in zip(table.add_row().cells,
-                                      ("Total", f"{count:,}", f"{count * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"), widths):
-            cell.text, cell.width = value, width
-            for run in cell.paragraphs[0].runs:
-                run.bold = True
-        for row in table.rows:
-            row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
-            for i, cell in enumerate(row.cells):
-                for paragraph in cell.paragraphs:
-                    paragraph.paragraph_format.space_before = Pt(3)
-                    paragraph.paragraph_format.space_after = Pt(3)
-                    if i:
-                        paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        doc.add_paragraph()
-        note = doc.add_paragraph(
-            f"Counting method: one student assigned to one AM or PM shift counts as one student-shift and "
-            f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two different students in the same shift count "
-            "as two student-shifts and eight hours. These are student-weighted scheduled educational hours, "
-            "not distinct clock hours or confirmed attendance. Identical duplicate assignments count once."
-        )
-        for run in note.runs:
-            run.font.size = Pt(9)
-        source = doc.add_paragraph(
-            "Source: current encrypted OPD archive files, decrypted for this report. "
-            f"Archive snapshot: {scan['commit'][:12]}. Retrieved: {scan['generated_at']}. "
-            "Only months with assignments are shown. Student names are omitted."
-        )
-        for run in source.runs:
-            run.font.size = Pt(9)
+        p.add_run("All work types: ").bold = True
+        p.add_run(f"{total:,} assigned student-shifts  |  {total * TEACHING_HOURS_PER_STUDENT_SHIFT:,} educational hours")
+        by_type = defaultdict(list)
+        for row in type_rows:
+            if row["academic_start_year"] == year:
+                by_type[row["work_type"]].append(row)
+        doc.add_heading("Educational effort by type of work", level=2)
+        overview = []
+        for work_type, items in sorted(by_type.items(), key=lambda pair: teaching_work_type_sort(pair[0])):
+            count = sum(item["no_of_shifts"] for item in items)
+            overview.append((work_type, teaching_brief_months(item["month"] for item in items),
+                             f"{count:,}", f"{count * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
+        teaching_add_work_table(doc,
+            ("Type of work", "Months with assignments", "Student-shifts", "Educational hours*"), overview,
+            widths=(2.45, 2.15, 1.05, 1.25), number_columns=(2, 3),
+            total=("All work types", "", f"{total:,}", f"{total * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
+        note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
+        note(f"*One student assigned to one AM or PM shift = one student-shift and {TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. These are student-weighted scheduled hours, not distinct clock hours or verified attendance.")
+        if TEACHING_WORK_TYPE_REVIEW in by_type:
+            note("Work type needs review: the same assignment appears under different work types. It is counted once in this review category, not credited twice or assigned to a guessed setting.", warning=True)
+        doc.add_heading("Monthly detail by type of work", level=2)
+        month_values = []
+        for work_type, items in sorted(by_type.items(), key=lambda pair: teaching_work_type_sort(pair[0])):
+            for item in sorted(items, key=lambda item: item["month"]):
+                month_values.append((work_type, teaching_month_label(CalendarDate.fromisoformat(item["month"])),
+                                     f"{item['no_of_shifts']:,}",
+                                     f"{item['no_of_shifts'] * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
+        teaching_add_work_table(doc,
+            ("Type of work", "Month", "Student-shifts", "Educational hours*"), month_values,
+            widths=(2.45, 2.15, 1.05, 1.25), number_columns=(2, 3),
+            total=("All work types", "", f"{total:,}", f"{total * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
+        note("Source: current encrypted OPD archive files, decrypted for this report. "
+             f"Archive snapshot: {scan['commit'][:12]}. Retrieved: {scan['generated_at']}. "
+             "Only months with assignments are shown. Future scheduled assignments are included. Student names are omitted.")
     output = BytesIO()
     doc.save(output)
     return output.getvalue()
 
 
 # The chair summary is an additional output; the CSV and individual reports use
-# the same existing aggregates and counting rules as before.
+# the same overall counting rules, with an additional work-type breakdown.
 TEACHING_CHAIR_SUMMARY_FILENAME = "Pediatric_Clerkship_Educational_Effort_Summary.docx"
 
 
@@ -995,6 +1185,7 @@ def teaching_chair_summary_data(scan, selected_years):
     years = sorted({int(year) for year in selected_years})
     annual = teaching_annual_rows(scan, years)
     review_keys = {teaching_name_key(name) for name in scan.get("unresolved_preceptor_labels", [])}
+    typed = teaching_work_type_rows(scan, years)
     summaries = []
     for year in years:
         label = teaching_academic_label(year)
@@ -1010,6 +1201,25 @@ def teaching_chair_summary_data(scan, selected_years):
             entry["months_brief"] = teaching_brief_months(by_name[row["preceptor_name"]])
             target = unresolved if teaching_name_key(row["preceptor_name"]) in review_keys else named
             target.append(entry)
+        work_types = []
+        year_typed = [row for row in typed if row["academic_year"] == label]
+        year_type_months = [row for row in scan["monthly_by_work_type"] if row["academic_start_year"] == year]
+        for work_type in sorted({row["work_type"] for row in year_typed}, key=teaching_work_type_sort):
+            entries = [dict(row) for row in year_typed if row["work_type"] == work_type]
+            type_months = [row for row in year_type_months if row["work_type"] == work_type]
+            for entry in entries:
+                entry["months_brief"] = teaching_brief_months(row["month"] for row in type_months
+                                                             if row["preceptor_name"] == entry["preceptor_name"])
+            sites = sorted({site for row in type_months for site in row["source_sites"]})
+            work_types.append({
+                "work_type": work_type,
+                "named_preceptors": [row for row in entries if teaching_name_key(row["preceptor_name"]) not in review_keys],
+                "unresolved_labels": [row for row in entries if teaching_name_key(row["preceptor_name"]) in review_keys],
+                "no_of_shifts": sum(row["no_of_shifts"] for row in entries),
+                "educational_hours": sum(row["educational_hours"] for row in entries),
+                "months_brief": teaching_brief_months(row["month"] for row in type_months),
+                "source_sites": sites,
+            })
         start, end = CalendarDate(year, 7, 1), CalendarDate(year + 1, 6, 30)
         relevant_sources = [source for source in scan.get("sources", [])
                             if CalendarDate.fromisoformat(source["rotation_start"]) <= end
@@ -1018,6 +1228,7 @@ def teaching_chair_summary_data(scan, selected_years):
         summaries.append({
             "academic_start_year": year,
             "academic_year": label,
+            "work_types": work_types,
             "named_preceptors": sorted(named, key=lambda row: teaching_name_key(row["preceptor_name"])),
             "unresolved_labels": sorted(unresolved, key=lambda row: teaching_name_key(row["preceptor_name"])),
             "named_preceptor_count": len(named),
@@ -1089,16 +1300,17 @@ def teaching_make_chair_summary(scan, selected_years):
     footer._p.append(field)
     doc.core_properties.title = "Pediatric clerkship educational effort summary"
     doc.core_properties.author = "Pediatric Clerkship"
-    doc.core_properties.subject = "Scheduled third-year student teaching by academic year"
+    doc.core_properties.subject = "Scheduled third-year student teaching by academic year and type of work"
 
     def note(text, *, warning=False):
         p = doc.add_paragraph(text)
+        p.paragraph_format.space_after = Pt(2)
         for run in p.runs:
             run.font.size = Pt(9)
             run.font.color.rgb = RGBColor.from_string("8C3B25" if warning else "526475")
         return p
 
-    def add_effort_table(entries, *, pending=False):
+    def add_effort_table(entries, *, pending=False, first_title=None, total_title=None):
         table = doc.add_table(rows=1, cols=4)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         table.autofit = False
@@ -1106,7 +1318,7 @@ def teaching_make_chair_summary(scan, selected_years):
         widths = tuple(Inches(value) for value in (2.45, 2.15, 1.05, 1.25))
         for col, width in zip(table.columns, widths):
             col.width = width
-        titles = ("Provider label" if pending else "Preceptor", "Months with assignments",
+        titles = (first_title or ("Provider label" if pending else "Preceptor"), "Months with assignments",
                   "Student-shifts", "Educational hours*")
         repeat_header = OxmlElement("w:tblHeader")
         table.rows[0]._tr.get_or_add_trPr().append(repeat_header)
@@ -1146,7 +1358,7 @@ def teaching_make_chair_summary(scan, selected_years):
             fill_row(table.add_row(), (row["preceptor_name"], row["months_brief"],
                                       f"{row['no_of_shifts']:,}", f"{row['educational_hours']:,}"),
                      band=index % 2 == 1)
-        subtotal = "Awaiting attribution" if pending else "Named preceptors total"
+        subtotal = total_title or ("Awaiting attribution" if pending else "Named preceptors total")
         fill_row(table.add_row(), (subtotal, "", f"{sum(row['no_of_shifts'] for row in entries):,}",
                                    f"{sum(row['educational_hours'] for row in entries):,}"), total=True)
         # Avoid leaving the subtotal by itself at the top of a new page.
@@ -1188,6 +1400,15 @@ def teaching_make_chair_summary(scan, selected_years):
                  "site, slot, or combined provider labels. These are listed separately below and are not credited to an individual.",
                  warning=True)
 
+        doc.add_heading("Overview by type of work", level=2)
+        add_effort_table([
+            {"preceptor_name": group["work_type"], "months_brief": group["months_brief"],
+             "no_of_shifts": group["no_of_shifts"], "educational_hours": group["educational_hours"]}
+            for group in item["work_types"]
+        ], first_title="Type of work", total_title="All work types")
+        note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
+        if any(group["work_type"] == TEACHING_WORK_TYPE_REVIEW for group in item["work_types"]):
+            note("Work type needs review: identical assignments appear under different work types. Each is retained once in this review category; no setting is guessed.", warning=True)
         note(f"*One student assigned to one AM or PM shift = one student-shift and "
              f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. "
              "These are student-weighted hours, not distinct clock hours or verified attendance.")
@@ -1199,18 +1420,23 @@ def teaching_make_chair_summary(scan, selected_years):
                  "an identifiable preceptor. Those assignments are excluded from provider totals; review Report_Notes.txt.",
                  warning=True)
 
-        if item["named_preceptors"]:
-            doc.add_heading("Educational effort by preceptor", level=2)
-            add_effort_table(item["named_preceptors"])
-        else:
-            doc.add_paragraph("No assignments in this selection were recorded under an individual preceptor name.")
-        if item["unresolved_labels"]:
-            doc.add_heading("Assignments awaiting an individual preceptor name", level=2)
-            add_effort_table(item["unresolved_labels"], pending=True)
-            p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(8)
-            p.add_run("Combined recorded total: ").bold = True
-            p.add_run(f"{item['no_of_shifts']:,} student-shifts | {item['educational_hours']:,} educational hours")
+        doc.add_heading("Preceptor detail by type of work", level=2)
+        for group in item["work_types"]:
+            heading = doc.add_heading(group["work_type"], level=2)
+            heading.paragraph_format.space_before = Pt(12)
+            source_note = note("OPD site(s): " + ", ".join(group["source_sites"]))
+            source_note.paragraph_format.keep_with_next = True
+            if group["named_preceptors"]:
+                add_effort_table(group["named_preceptors"], total_title="Named preceptors subtotal")
+            if group["unresolved_labels"]:
+                pending_note = note("Assignments awaiting an individual preceptor name", warning=True)
+                pending_note.paragraph_format.keep_with_next = True
+                add_effort_table(group["unresolved_labels"], pending=True)
+                p = doc.add_paragraph()
+                p.paragraph_format.space_before = Pt(5)
+                p.add_run("Work-type total: ").bold = True
+                p.add_run(f"{group['no_of_shifts']:,} student-shifts | {group['educational_hours']:,} educational hours")
+        note("A preceptor working in more than one setting appears in each applicable section. The overall named-preceptor count counts each person once; work-type shifts and hours add to the overall totals.")
         source = note("Source: current saved OPD schedules. "
                       f"Archive retrieved: {scan['generated_at']}. "
                       "Alphabetical listing; student names omitted. File-level source details accompany this report in the ZIP.")
@@ -1225,6 +1451,7 @@ def teaching_build_zip(scan, selected_years):
     """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
     years = sorted({int(year) for year in selected_years})
     annual = teaching_annual_rows(scan, years)
+    typed = teaching_work_type_rows(scan, years)
     if not annual:
         raise OPDArchiveError("No student assignments were found for the selected academic year(s); no empty report was generated.")
     monthly_by_name = defaultdict(list)
@@ -1241,7 +1468,15 @@ def teaching_build_zip(scan, selected_years):
         "Superseded Git history is not counted. The archived files are not changed.",
         "All recognized OPD site worksheets are included, not just HOPE_DRIVE, NYES and ETOWN.",
         "This report counts scheduled student assignments, not patient encounters or confirmed attendance.",
-        "One row in preceptor_teaching_summary.csv = one preceptor in one academic year.",
+        "One row in preceptor_teaching_summary.csv = one preceptor in one academic year (unchanged).",
+        "One row in preceptor_teaching_by_work_type.csv = one preceptor / academic year / work type.",
+        "The chair and individual Word reports contain work-type subtotals plus overall totals.",
+        "Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery and Complex Care are separate.",
+        "Other worksheets are kept as separate work types unless explicitly mapped in TEACHING_WORK_TYPE_MAP.",
+        "Classification uses the site of each assignment, not the preceptor's usual specialty or home division.",
+        "Every setting uses the same 4 hours per student-shift; no outpatient/inpatient weighting is added.",
+        "Work-type subtotals are checked against the overall totals before export.",
+        "An identical assignment recorded in different work types counts once under Work type needs review.",
         f"{TEACHING_CHAIR_SUMMARY_FILENAME} = one combined Word summary for the chair.",
         "The chair summary lists named preceptors alphabetically and keeps unresolved provider labels separate.",
         "Academic year is July 1 through June 30 of the following calendar year.",
@@ -1265,6 +1500,13 @@ def teaching_build_zip(scan, selected_years):
         notes += ["  " + name for name in scan["unresolved_preceptor_labels"]]
     for item in scan["warnings"]:
         notes.append(f"Rotation {item['rotation_start']}: {item['issue']}: {item['details']}")
+    notes += ["", "WORK-TYPE GROUPING FOR ASSIGNED OPD SITES"]
+    for site, work_type in scan["site_work_type_mapping"].items():
+        notes.append(f"  {site} -> {work_type}")
+    selected_labels = {teaching_academic_label(year) for year in years}
+    conflicts = [row for row in scan.get("work_type_conflicts", []) if row["academic_year"] in selected_labels]
+    if conflicts:
+        notes += ["", "WORK-TYPE REVIEW", "See Work_Type_Review.csv. These assignments are included once in the review category."]
     source_columns = (
         "rotation_start", "last_scheduled_date", "archive_file", "github_blob_sha", "name_order",
         "assigned_student_shifts_read", "assigned_student_shifts_counted",
@@ -1273,6 +1515,10 @@ def teaching_build_zip(scan, selected_years):
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
         zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years))
         zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual))
+        zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(typed, TEACHING_WORK_TYPE_CSV_COLUMNS))
+        if conflicts:
+            zf.writestr("Work_Type_Review.csv", teaching_csv_bytes(conflicts,
+                ("preceptor_name", "academic_year", "date", "shift", "conflicting_work_types", "source_sites", "no_of_student_shifts")))
         used = set()
         for name in sorted(monthly_by_name, key=teaching_name_key):
             base = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")[:110] or "preceptor"
@@ -1292,7 +1538,9 @@ def teaching_build_zip(scan, selected_years):
 def render_preceptor_teaching_summary():
     st.subheader("Preceptor Teaching Summary")
     st.write("Read current encrypted OPDs from GitHub, then generate a chair-friendly Word summary, "
-             "the summary CSV, and one Word teaching report per preceptor.")
+             "overall and work-type CSVs, and one Word teaching report per preceptor.")
+    st.caption("Work types: HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Ward A, PSHCH Nursery and Complex Care "
+               "stay separate. Other OPD sites retain their own work-type labels; no extra weighting is applied.")
     st.caption("All OPD sites. One student assigned to one AM/PM session = one student-shift = four educational hours. "
                "Two students at once count twice. Hours are student-weighted scheduled hours, not unique clock hours.")
     current = teaching_academic_start(teaching_local_today())
@@ -1309,7 +1557,7 @@ def render_preceptor_teaching_summary():
                                "or separated by semicolons/newlines on the student side; commas inside names are preserved.")
     options_signature = hashlib.sha256(json.dumps(
         [TEACHING_REPORT_VERSION, client.config.signature(), order, TEACHING_PRECEPTOR_NAME_MAP,
-         TEACHING_OPD_NAME_ORDER_OVERRIDES], sort_keys=True).encode()).hexdigest()
+         TEACHING_OPD_NAME_ORDER_OVERRIDES, TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER], sort_keys=True).encode()).hexdigest()
     if st.session_state.get("teaching_options_signature") != options_signature:
         for key in ("teaching_scan", "teaching_zip", "teaching_zip_signature", "teaching_selected_years"):
             st.session_state.pop(key, None)
@@ -1338,6 +1586,13 @@ def render_preceptor_teaching_summary():
         st.caption("Nothing is downloaded or decrypted until you click Load / refresh archived OPDs. "
                    "This page never saves a report or decrypted OPD to GitHub.")
         return
+    try:
+        teaching_require_work_type_data(scan)
+    except OPDArchiveError as exc:
+        for state_key in ("teaching_scan", "teaching_zip", "teaching_zip_signature"):
+            st.session_state.pop(state_key, None)
+        st.warning(str(exc))
+        return
     if not scan["sources"]:
         st.warning("No current encrypted OPDs were found in the configured GitHub archive folder.")
         return
@@ -1365,10 +1620,19 @@ def render_preceptor_teaching_summary():
     if scan["warnings"]:
         st.warning("Some filled assignment cells have no identifiable provider and cannot be attributed. "
                    "See the data-quality details and Report_Notes.txt.")
+    if scan.get("work_type_conflicts"):
+        st.warning("Some identical assignments appear in different work types. They count once under Work type needs review, "
+                   "not in both settings. Details are included in the report ZIP for selected years.")
     with st.expander("Archive coverage and data-quality details"):
         st.dataframe(pd.DataFrame(scan["sources"]), hide_index=True, use_container_width=True)
         if scan["warnings"]:
             st.dataframe(pd.DataFrame(scan["warnings"]), hide_index=True, use_container_width=True)
+        if scan.get("work_type_conflicts"):
+            st.dataframe(pd.DataFrame(scan["work_type_conflicts"]), hide_index=True, use_container_width=True)
+        st.write("Assigned-site work-type mapping")
+        st.dataframe(pd.DataFrame([{"opd_site": site, "work_type": work_type}
+                                  for site, work_type in scan["site_work_type_mapping"].items()]),
+                     hide_index=True, use_container_width=True)
     if not annual:
         st.info("No assigned student-shifts were found for the selected academic year(s). "
                 "Choose another available year, check the '~' name order, or archive OPDs with completed student assignments. "
@@ -1379,13 +1643,18 @@ def render_preceptor_teaching_summary():
     a.metric("Preceptors / provider labels", preview["preceptor_name"].nunique())
     b.metric("Assigned student-shifts", f"{preview['no_of_shifts'].sum():,}")
     c.metric("Student-weighted educational hours", f"{preview['educational_hours'].sum():,}")
-    st.dataframe(preview, hide_index=True, use_container_width=True)
-    st.caption("The CSV contains one row per preceptor per academic year. Months follow the actual assignment dates. "
+    st.markdown("**Teaching by type of work**")
+    type_preview = pd.DataFrame(teaching_work_type_rows(scan, selected), columns=TEACHING_WORK_TYPE_CSV_COLUMNS)
+    st.dataframe(type_preview, hide_index=True, use_container_width=True)
+    with st.expander("Overall annual totals (original CSV)"):
+        st.dataframe(preview, hide_index=True, use_container_width=True)
+    st.caption("The original CSV remains one row per preceptor per academic year. An additional CSV breaks this down by work type. "
+               "Months follow the actual assignment dates. "
                "Student names are not included in the CSV, Word reports, or source notes.")
     if st.button("Create teaching reports ZIP", key="teaching_build_zip"):
         st.session_state.pop("teaching_zip", None)
         try:
-            with st.spinner("Creating chair summary, CSV and individual Word reports..."):
+            with st.spinner("Creating work-type chair summary, CSVs and individual Word reports..."):
                 zip_bytes, _ = teaching_build_zip(scan, selected)
                 st.session_state["teaching_zip"] = zip_bytes
                 st.session_state["teaching_zip_signature"] = signature
@@ -1406,7 +1675,7 @@ def render_preceptor_teaching_summary():
                            file_name=TEACHING_CHAIR_SUMMARY_FILENAME,
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                            key="teaching_download_chair_summary")
-        st.caption("The ZIP includes one combined chair summary, the unchanged summary CSV, individual Word reports "
+        st.caption("The ZIP includes one chair summary by work type, the unchanged summary CSV, a new work-type CSV, individual Word reports "
                    "in Preceptor_Reports, Report_Notes.txt and Archive_Sources.csv. "
                    "Treat these downloads as unencrypted staff reports; do not commit them to the public repository.")
 
