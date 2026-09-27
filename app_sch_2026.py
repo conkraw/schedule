@@ -35,7 +35,6 @@ from collections import deque
 import base64
 import hashlib
 import hmac
-import time
 from dataclasses import dataclass, field
 from datetime import date as CalendarDate
 from urllib.parse import quote
@@ -63,62 +62,6 @@ def _opd_secret_settings():
         return dict(st.secrets.get("opd_archive", {}))
     except Exception:
         return {}
-
-
-def _opd_authenticate_callback():
-    settings = _opd_secret_settings()
-    expected = str(settings.get("app_password", ""))
-    supplied = str(st.session_state.pop("_opd_login_password", ""))
-    if time.time() < st.session_state.get("_opd_login_retry_at", 0):
-        return
-    if len(expected) >= 20 and hmac.compare_digest(supplied.encode(), expected.encode()):
-        st.session_state["_opd_auth"] = hashlib.sha256(expected.encode()).hexdigest()
-        st.session_state["_opd_auth_at"] = time.time()
-        st.session_state.pop("_opd_login_failed", None)
-        st.session_state.pop("_opd_login_retry_at", None)
-    else:
-        st.session_state["_opd_login_failed"] = True
-        st.session_state["_opd_login_retry_at"] = time.time() + 5
-
-
-def _opd_logout_callback():
-    # Includes decrypted workbooks and all generated student/report downloads.
-    st.session_state.clear()
-
-
-def require_opd_staff_login():
-    """Gate the entire app, including all archive reads, writes and downloads.
-
-    A shared staff password is a basic access gate, not institutional SSO/MFA.
-    Use the random password produced by generate_opd_secrets.py, not the key.
-    """
-    expected = str(_opd_secret_settings().get("app_password", ""))
-    if len(expected) < 20 or expected.startswith(("REPLACE_", "YOUR_", "GENERATE_")):
-        st.error("Setup required: add a random app_password (at least 20 characters) "
-                 "under [opd_archive] in Streamlit Secrets. See SETUP_OPD_ARCHIVE.md.")
-        st.stop()
-    if expected == str(_opd_secret_settings().get("encryption_key", "")):
-        st.error("The staff password must be different from the encryption key. Use the two separate generated values.")
-        st.stop()
-    fingerprint = hashlib.sha256(expected.encode()).hexdigest()
-    authenticated = st.session_state.get("_opd_auth") == fingerprint
-    idle_seconds = time.time() - st.session_state.get("_opd_auth_at", 0)
-    if authenticated and idle_seconds < 1800:
-        st.session_state["_opd_auth_at"] = time.time()
-        st.sidebar.button("Sign out / clear session", on_click=_opd_logout_callback,
-                          key="opd_sign_out")
-        return
-    if st.session_state.get("_opd_auth"):
-        st.session_state.clear()
-    st.subheader("Staff sign-in")
-    st.caption("The staff password is separate from the encryption key. "
-               "Access expires after 30 minutes without an app interaction.")
-    with st.form("opd_staff_login_form"):
-        st.text_input("Staff password", type="password", key="_opd_login_password")
-        st.form_submit_button("Sign in", on_click=_opd_authenticate_callback)
-    if st.session_state.get("_opd_login_failed"):
-        st.error("Sign-in was not accepted. Wait five seconds before trying again.")
-    st.stop()
 
 
 @dataclass(frozen=True)
@@ -621,7 +564,6 @@ def populate_ms_schedule(blank_bytes, assignments):
 
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
-require_opd_staff_login()
 
 # ─── Sidebar mode selector ─────────────────────────────────────────────────────
 mode = st.sidebar.radio("What do you want to do?",("Instructions", "Format OPD + Summary", "Create Student Schedule", "OPD Check", "Create Individual Schedules", "OPD Archive", "OPD MD PA Conflict Detector", "Shift Availability Tracker"), key="schedule_app_mode")
