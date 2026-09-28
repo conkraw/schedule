@@ -550,5 +550,16 @@
     "Preceptor Teaching Summary": {
       "module": "schedule_app.sections.preceptor_teaching_summary"
     }
+  },
+  "custom_dates_update": {
+    "note": "The original extraction map is retained as provenance. The following modules were subsequently updated for exact reporting dates.",
+    "modules": [
+      "sections/preceptor_teaching_summary.py",
+      "services/teaching_analysis.py",
+      "services/reporting_periods.py",
+      "reports/chair_summary.py",
+      "reports/individual_teaching.py",
+      "reports/teaching_export.py"
+    ]
   }
 }

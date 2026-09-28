@@ -1,35 +1,34 @@
-# Validation of this modular delivery
+# Validation: custom reporting dates
 
 ## Scope
 
-The comparison baseline was the exact `app_sch_2026 (1)(1).py` uploaded for this refactor, not an older version. Source-to-module locations and the source SHA-256 are in SOURCE_MAP.json.
+Only six production Python files are new/modified relative to the previously delivered modular ZIP:
 
-This delivery reorganizes code. It does not attempt unrelated fixes or changes to scheduling assumptions, parser rules, teaching credit, site groupings, or output schemas.
+- sections/preceptor_teaching_summary.py
+- services/teaching_analysis.py
+- services/reporting_periods.py (new)
+- reports/chair_summary.py
+- reports/individual_teaching.py
+- reports/teaching_export.py
+
+All paths above are inside schedule_app/. The launcher, settings, requirements and every other production module are byte-identical to the prior modular package. Supporting documentation and test files were updated.
 
 ## Checks performed
 
-**Python compilation:** all delivered Python files compiled successfully under Python 3.13.5.
+**Compilation:** all delivered Python files compile in the local environment.
 
-**26 offline automated tests:** passed. Run the included tests with:
+**56 offline automated tests passed**, comprising the 26 existing modular tests and 30 new reporting-date tests. The existing teaching-page test explicitly selects the retained standard-year mode; it otherwise retains its previous assertions.
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The tests use invented OPD/roster data and test doubles for Streamlit and GitHub. They cover all nine sidebar choices, importing sections without rendering them, OPD template generation, upload and archived-source student schedules, individual schedule ZIPs, the named Excel report table, primary/fallback rules, stale report previews, encrypted round trips, identical/revised/different-rotation saves, wrong-key failures, teaching totals, double-student counting, duplicate handling, work-type grouping, the academic-year boundary, chair/individual report packaging, MD/PA annotations, and shift availability downloads. They do not require a live repository or real secrets.
+New tests cover inclusive boundaries; partial months and rotations; same-day ranges; periods longer than twelve months; July/year crossings without splitting; user-entered labels; leap-day validation; missing/reversed/invalid dates; old monthly-only cache rejection; daily-to-monthly reconciliation; unchanged source scans after filtering; multi-student counting; exact duplicates; conflicting work types; output CSV schemas; true date headings in Word; reporting-date JSON round trips; safe filenames; stale ZIP invalidation; empty periods; optional legacy multi-year reports; and date preference/import workflows.
 
-**70 moved function/class comparisons:** passed against the original Python syntax trees. The comparison disregarded docstring indentation caused by moving nested definitions. Two original render functions were renamed to `render` for the uniform section interface. The preceptor-email lookup was moved inside its report function, preserving its calculation, and one explanatory Excel help message now points to `schedule_app/settings.py` instead of the former monolithic file. Original settings values were compared as well.
+**Supplied OPD checks:** both mounted OPD samples were encrypted/reloaded against a simulated GitHub service and scanned. Exact partial-date counts matched an independent assignment-level count: Updated_OPD.xlsx, 82 selected student-shifts; Copy of Updated_OPD.xlsx, 61. Full-range totals matched the unfiltered scans (220 and 158 respectively). These example workbooks and their data are not included in the code package.
 
-**Page control flow:** the executable UI flow for all seven extracted branches matched after removing relocated helper definitions, constants and imports; the remaining two sections were verified as the original render functions. Branch-level imports were placed at module level so wrapping page code in `render()` does not introduce Python local-variable/import errors.
-
-**25 before-and-after scenarios, 30 downloadable payloads:** passed. These comparisons included all nine no-upload screens, populated workflows, both upload and archive-reload paths, and master schedules, individual outputs, and teaching reports generated from both OPD samples in the conversation. The sample workbooks themselves are not included in this package. Comparisons checked nested ZIP contents, CSV data, Excel XML and Word XML; ZIP metadata and document creation timestamps were ignored, as was the intentional email-mapping help-path change. All compared download filenames and widget labels/keys matched.
-
-## Test environment
-
-Python 3.13.5; pandas 2.2.3; NumPy 2.3.5; openpyxl 3.1.5; XlsxWriter 3.2.9; python-docx 1.2.0; requests 2.32.5; cryptography 46.0.4.
-
-The requirements file is unchanged from the prior app package. No extra runtime package is introduced by modularization.
+**Word layout:** representative custom-period chair and individual reports were rendered and visually inspected. The chair sample was two pages and the individual sample one page, with true inclusive dates, reconciled counts, work-type tables and no student names.
 
 ## Limits
 
-Streamlit UI calls and GitHub responses were **simulated**. Streamlit was not installed in the working environment, and a native Streamlit server/Cloud session was not launched. No live repository, token, Secrets setting, encrypted archive, or deployed app was modified. These tests demonstrate local code/output parity on the tested inputs; they do not replace a check of your own deployment after uploading the full folder structure.
+Streamlit and GitHub calls were simulated with offline test doubles. A native Streamlit server was not launched (Streamlit was unavailable in the working environment). No live repository, deployment, credential, secret or archived OPD was modified. Downloaded reports are still unencrypted staff records; do not commit them to the public repository.

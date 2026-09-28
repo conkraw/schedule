@@ -1,8 +1,10 @@
-# Pediatric Clerkship Schedule App — Modular Version
+# Pediatric Clerkship Schedule App — Modular Version with Custom Reporting Dates
 
 **Keep `app_sch_2026.py` as your Streamlit entrypoint.** It is now a 35-line launcher. Each sidebar section has its own file, and reusable Excel, archive, and Word-report code has been moved into clearly named modules.
 
-This package was built from the exact `app_sch_2026 (1)(1).py` supplied for this request. It is a reorganization, not a new scheduling workflow. All nine sidebar choices keep their original labels, order, and session-state key. The archive format, encryption settings, primary-preceptor rules, teaching calculations, work-type grouping, report layouts, CSV schemas, and download filenames are retained. No app password has been added.
+This package keeps the existing modular scheduling app and adds editable dates to **Preceptor Teaching Summary**. Choose **Custom dates**, set the start and end dates, and enter a report label such as `26-27`. The chair summary, individual reports and both CSVs use that exact inclusive period, even when it crosses July or lasts longer than twelve months. The previous July-June mode remains optional. No app password has been added.
+
+**Already using the working modular app?** Use the smaller six-file update and instructions in **UPDATE_CUSTOM_DATES.md**. It leaves the launcher, settings/mappings, requirements, archive service and all other sections untouched. A complete installation is described below.
 
 ## Update your existing deployment
 

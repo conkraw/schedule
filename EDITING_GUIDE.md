@@ -2,7 +2,7 @@
 
 ## One file for each sidebar section
 
-All section files are under **`schedule_app/sections/`**. Each contains a `render()` function that runs when that option is selected. The button labels and workflow have not been redesigned.
+All section files are under **`schedule_app/sections/`**. Each contains a `render()` function that runs when that option is selected. The teaching-summary section now includes editable date controls; the other sections retain their existing workflows.
 
 | Sidebar choice | File | What to edit here |
 |---|---|---|
@@ -12,7 +12,7 @@ All section files are under **`schedule_app/sections/`**. Each contains a `rende
 | OPD Check | `opd_check.py` | Baseline-versus-assigned OPD comparison and its Word change report. |
 | Create Individual Schedules | `create_individual_schedules.py` | Master schedule upload, individual schedule ZIP and Power Automate report workflow. |
 | OPD Archive | `opd_archive.py` | Archive screen and its reload/use-in-schedules navigation. |
-| Preceptor Teaching Summary | `preceptor_teaching_summary.py` | Academic-year selection, teaching previews and report-download buttons. |
+| Preceptor Teaching Summary | `preceptor_teaching_summary.py` | Custom date/label controls, optional standard-year selection, saved-date JSON and report downloads. |
 | OPD MD PA Conflict Detector | `opd_md_pa_conflict_detector.py` | MD/PA comparisons, available-preceptor suggestions and annotated-download controls. |
 | Shift Availability Tracker | `shift_availability_tracker.py` | Availability grids, site selection and capacity displays. |
 
@@ -53,7 +53,7 @@ These files are under **`schedule_app/reports/`**:
 | File | Purpose |
 |---|---|
 | `chair_summary.py` | Combined chair Word report, overview totals, work-type sections and preceptor tables. |
-| `individual_teaching.py` | Individual preceptor Word reports, academic-year sections and monthly work-type tables. |
+| `individual_teaching.py` | Individual preceptor Word reports, reporting-period headings and monthly work-type tables. |
 | `teaching_tables.py` | Shared table appearance used by the individual teaching report. The chair report retains its own table formatter. |
 | `teaching_export.py` | CSV creation, ZIP contents, report filenames and source/quality notes. |
 
@@ -71,7 +71,8 @@ These files are under **`schedule_app/services/`**:
 | `opd_workbooks.py` | OPD Excel template, CSV mapping into the template and hiding blank rows. |
 | `primary_preceptors.py` | One primary per represented student/week, threshold/fallback/reuse flags, email lookup and `PreceptorAssignmentTable`. |
 | `workbook_copy.py` | Copy a student worksheet to its individual workbook while retaining the existing formatting behavior. |
-| `teaching_analysis.py` | Read-only decrypted archive analysis, duplicate handling, year/month grouping, work-type assignment and subtotals. |
+| `teaching_analysis.py` | Read-only archive analysis, daily counts, exact-date filtering, duplicate handling and work-type totals. |
+| `reporting_periods.py` | NEW: custom date/label validation, saved JSON settings and report date/label helpers. Dates are entered in the app, not hard-coded here. |
 | `md_pa_analysis.py` | MD/PA date parsing, booking/availability maps and annotated Excel copies. |
 | `availability_analysis.py` | Shift parsing, Hope Drive grouping and weekly student-capacity calculations. |
 
@@ -101,3 +102,7 @@ Keep this under `schedule_app/sections/`, not a top-level `pages/` folder. This 
 ## What not to change during this installation
 
 Do not regenerate encryption keys, move encrypted archives, introduce a second app-password setting, change Power Automate column names, or replace the archive repository. Deploy the package alongside its entrypoint and keep your existing Secrets.
+
+## Changing reporting dates next year
+
+Use the **Start date**, **End date** and **Report label / academic year** controls in Preceptor Teaching Summary. No Python edit is required. See **UPDATE_CUSTOM_DATES.md** for saving/reloading a small JSON date preset.
