@@ -1,0 +1,127 @@
+"""Teaching CSV outputs and the complete reports ZIP.
+
+Extracted from the supplied app; this module performs no page rendering on import.
+"""
+
+from collections import defaultdict
+from io import BytesIO
+from schedule_app.reports.chair_summary import teaching_make_chair_summary
+from schedule_app.reports.individual_teaching import teaching_make_docx
+from schedule_app.services.opd_archive import OPDArchiveError
+from schedule_app.services.teaching_analysis import teaching_academic_label
+from schedule_app.services.teaching_analysis import teaching_annual_rows
+from schedule_app.services.teaching_analysis import teaching_name_key
+from schedule_app.services.teaching_analysis import teaching_work_type_rows
+from schedule_app.settings import TEACHING_CHAIR_SUMMARY_FILENAME
+from schedule_app.settings import TEACHING_CSV_COLUMNS
+from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT
+from schedule_app.settings import TEACHING_WORK_TYPE_CSV_COLUMNS
+from zipfile import ZIP_DEFLATED
+from zipfile import ZipFile
+import csv
+import io
+import re
+
+
+def teaching_csv_bytes(rows, columns=TEACHING_CSV_COLUMNS):
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(stream, fieldnames=list(columns), extrasaction="ignore", lineterminator="\r\n")
+    writer.writeheader()
+    for row in rows:
+        cleaned = {}
+        for column in columns:
+            value = row.get(column, "")
+            # Keep name text from becoming an Excel formula when CSV is opened.
+            if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+                value = "'" + value
+            cleaned[column] = value
+        writer.writerow(cleaned)
+    return stream.getvalue().encode("utf-8-sig")
+
+
+def teaching_build_zip(scan, selected_years):
+    """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
+    years = sorted({int(year) for year in selected_years})
+    annual = teaching_annual_rows(scan, years)
+    typed = teaching_work_type_rows(scan, years)
+    if not annual:
+        raise OPDArchiveError("No student assignments were found for the selected academic year(s); no empty report was generated.")
+    monthly_by_name = defaultdict(list)
+    for item in scan["monthly"]:
+        if item["academic_start_year"] in years:
+            monthly_by_name[item["preceptor_name"]].append(item)
+    labels = ", ".join(teaching_academic_label(year) for year in years)
+    output = BytesIO()
+    notes = [
+        "PRECEPTOR TEACHING SUMMARY", f"Selected academic year(s): {labels}",
+        f"Archive retrieved: {scan['generated_at']}", f"Repository snapshot: {scan['commit']}",
+        f"Current OPD files read: {len(scan['sources'])}", "",
+        "Source: every current OPD_YYYY-MM-DD.xlsx.enc in the configured archive folder.",
+        "Superseded Git history is not counted. The archived files are not changed.",
+        "All recognized OPD site worksheets are included, not just HOPE_DRIVE, NYES and ETOWN.",
+        "This report counts scheduled student assignments, not patient encounters or confirmed attendance.",
+        "One row in preceptor_teaching_summary.csv = one preceptor in one academic year (unchanged).",
+        "One row in preceptor_teaching_by_work_type.csv = one preceptor / academic year / work type.",
+        "The chair and individual Word reports contain work-type subtotals plus overall totals.",
+        "Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery and Complex Care are separate.",
+        "Other worksheets are kept as separate work types unless explicitly mapped in TEACHING_WORK_TYPE_MAP.",
+        "Classification uses the site of each assignment, not the preceptor's usual specialty or home division.",
+        "Every setting uses the same 4 hours per student-shift; no outpatient/inpatient weighting is added.",
+        "Work-type subtotals are checked against the overall totals before export.",
+        "An identical assignment recorded in different work types counts once under Work type needs review.",
+        f"{TEACHING_CHAIR_SUMMARY_FILENAME} = one combined Word summary for the chair.",
+        "The chair summary lists named preceptors alphabetically and keeps unresolved provider labels separate.",
+        "Academic year is July 1 through June 30 of the following calendar year.",
+        "The actual session date, not the rotation's start date, determines the month and academic year.",
+        "no_of_shifts counts student-shifts, not distinct half-days or distinct students.",
+        f"educational_hours = no_of_shifts x {TEACHING_HOURS_PER_STUDENT_SHIFT}.",
+        "Two different students in the same AM/PM session count as two assignments and eight hours.",
+        "An identical preceptor/student/date/AM-or-PM duplicate counts once, even across overlapping OPDs.",
+        "Provider availability with no student does not count. All filled student assignments are treated equally.",
+        "Names are matched case-insensitively with normalized whitespace and comma spacing; no fuzzy identity matching.",
+        "Student names and decrypted workbooks are not included in this ZIP.",
+        "Future scheduled assignments in the selected academic year(s) are included.",
+        "Providers with no assignments in the selected year(s) do not receive a report.",
+        "The summary remains a snapshot until Load / refresh archived OPDs is clicked again.", "",
+        "DATA QUALITY (the following diagnostics cover ALL scanned academic years)",
+        f"Exact duplicate student-shifts removed: {scan['duplicate_assignments_removed']}",
+        f"Future student-shifts in the entire archive when scanned: {scan['future_assignments_in_archive']}",
+    ]
+    if scan["unresolved_preceptor_labels"]:
+        notes += ["Provider/site/slot labels needing review (retained literally, not assigned to a guessed individual):"]
+        notes += ["  " + name for name in scan["unresolved_preceptor_labels"]]
+    for item in scan["warnings"]:
+        notes.append(f"Rotation {item['rotation_start']}: {item['issue']}: {item['details']}")
+    notes += ["", "WORK-TYPE GROUPING FOR ASSIGNED OPD SITES"]
+    for site, work_type in scan["site_work_type_mapping"].items():
+        notes.append(f"  {site} -> {work_type}")
+    selected_labels = {teaching_academic_label(year) for year in years}
+    conflicts = [row for row in scan.get("work_type_conflicts", []) if row["academic_year"] in selected_labels]
+    if conflicts:
+        notes += ["", "WORK-TYPE REVIEW", "See Work_Type_Review.csv. These assignments are included once in the review category."]
+    source_columns = (
+        "rotation_start", "last_scheduled_date", "archive_file", "github_blob_sha", "name_order",
+        "assigned_student_shifts_read", "assigned_student_shifts_counted",
+        "duplicate_student_shifts_removed", "missing_provider_cells",
+    )
+    with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
+        zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years))
+        zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual))
+        zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(typed, TEACHING_WORK_TYPE_CSV_COLUMNS))
+        if conflicts:
+            zf.writestr("Work_Type_Review.csv", teaching_csv_bytes(conflicts,
+                ("preceptor_name", "academic_year", "date", "shift", "conflicting_work_types", "source_sites", "no_of_student_shifts")))
+        used = set()
+        for name in sorted(monthly_by_name, key=teaching_name_key):
+            base = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")[:110] or "preceptor"
+            safe = base
+            number = 1
+            while safe.casefold() in used:
+                number += 1
+                safe = f"{base}_{number}"
+            used.add(safe.casefold())
+            zf.writestr(f"Preceptor_Reports/{safe}_Teaching_Report.docx",
+                        teaching_make_docx(name, monthly_by_name[name], scan))
+        zf.writestr("Report_Notes.txt", "\n".join(notes).encode("utf-8"))
+        zf.writestr("Archive_Sources.csv", teaching_csv_bytes(scan["sources"], source_columns))
+    return output.getvalue(), annual
