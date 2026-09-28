@@ -8,7 +8,9 @@ from io import BytesIO
 from schedule_app.reports.chair_summary import teaching_make_chair_summary
 from schedule_app.reports.individual_teaching import teaching_make_docx
 from schedule_app.services.opd_archive import OPDArchiveError
-from schedule_app.services.teaching_analysis import teaching_academic_label
+from schedule_app.services.reporting_periods import (
+    teaching_report_label, teaching_period, reporting_period_json,
+)
 from schedule_app.services.teaching_analysis import teaching_annual_rows
 from schedule_app.services.teaching_analysis import teaching_name_key
 from schedule_app.services.teaching_analysis import teaching_work_type_rows
@@ -45,12 +47,12 @@ def teaching_build_zip(scan, selected_years):
     annual = teaching_annual_rows(scan, years)
     typed = teaching_work_type_rows(scan, years)
     if not annual:
-        raise OPDArchiveError("No student assignments were found for the selected academic year(s); no empty report was generated.")
+        raise OPDArchiveError("No student assignments were found for the selected reporting period(s); no empty report was generated.")
     monthly_by_name = defaultdict(list)
     for item in scan["monthly"]:
         if item["academic_start_year"] in years:
             monthly_by_name[item["preceptor_name"]].append(item)
-    labels = ", ".join(teaching_academic_label(year) for year in years)
+    labels = ", ".join(teaching_report_label(scan, year) for year in years)
     output = BytesIO()
     notes = [
         "PRECEPTOR TEACHING SUMMARY", f"Selected academic year(s): {labels}",
@@ -87,6 +89,31 @@ def teaching_build_zip(scan, selected_years):
         f"Exact duplicate student-shifts removed: {scan['duplicate_assignments_removed']}",
         f"Future student-shifts in the entire archive when scanned: {scan['future_assignments_in_archive']}",
     ]
+    period = teaching_period(scan)
+    if period:
+        substitutions = {
+            f"Selected academic year(s): {labels}": f"Reporting label (academic_year in CSVs): {period.label}",
+            "One row in preceptor_teaching_summary.csv = one preceptor in one academic year (unchanged).":
+                "One row in preceptor_teaching_summary.csv = one preceptor in the selected custom reporting period.",
+            "One row in preceptor_teaching_by_work_type.csv = one preceptor / academic year / work type.":
+                "One row in preceptor_teaching_by_work_type.csv = one preceptor / custom reporting period / work type.",
+            "Academic year is July 1 through June 30 of the following calendar year.":
+                "The custom reporting period uses the selected inclusive start and end dates; it is not split at July 1.",
+            "The actual session date, not the rotation's start date, determines the month and academic year.":
+                "The actual session date determines inclusion. Each included assignment uses the user-entered academic_year label.",
+            "Future scheduled assignments in the selected academic year(s) are included.":
+                "Future scheduled assignments within the selected dates are included.",
+            "Providers with no assignments in the selected year(s) do not receive a report.":
+                "Providers with no assignments within the selected dates do not receive a report.",
+            "DATA QUALITY (the following diagnostics cover ALL scanned academic years)":
+                "DATA QUALITY (archive-wide counts below cover ALL scanned dates, not just the selected period)",
+        }
+        notes = [substitutions.get(line, line) for line in notes]
+        notes[2:2] = [f"Exact reporting dates: {period.start.isoformat()} through {period.end.isoformat()} (inclusive).",
+                      "Partial months and partial rotations are filtered by actual assignment date.",
+                      "Reporting_Period.json can reload these dates and the label in the app."]
+        notes += ["", "Archive_Sources.csv describes full source files, including any outside the selected period.",
+                  "File-level counts and missing-provider warnings are full-rotation diagnostics, not date-filtered teaching totals."]
     if scan["unresolved_preceptor_labels"]:
         notes += ["Provider/site/slot labels needing review (retained literally, not assigned to a guessed individual):"]
         notes += ["  " + name for name in scan["unresolved_preceptor_labels"]]
@@ -95,7 +122,7 @@ def teaching_build_zip(scan, selected_years):
     notes += ["", "WORK-TYPE GROUPING FOR ASSIGNED OPD SITES"]
     for site, work_type in scan["site_work_type_mapping"].items():
         notes.append(f"  {site} -> {work_type}")
-    selected_labels = {teaching_academic_label(year) for year in years}
+    selected_labels = {teaching_report_label(scan, year) for year in years}
     conflicts = [row for row in scan.get("work_type_conflicts", []) if row["academic_year"] in selected_labels]
     if conflicts:
         notes += ["", "WORK-TYPE REVIEW", "See Work_Type_Review.csv. These assignments are included once in the review category."]
@@ -105,6 +132,12 @@ def teaching_build_zip(scan, selected_years):
         "duplicate_student_shifts_removed", "missing_provider_cells",
     )
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
+        if period:
+            zf.writestr("Reporting_Period.json", reporting_period_json(period))
+            zf.writestr("Reporting_Period.csv", teaching_csv_bytes([{
+                "academic_year": period.label, "start_date": period.start.isoformat(),
+                "end_date": period.end.isoformat(), "both_dates_included": "YES",
+            }], ("academic_year", "start_date", "end_date", "both_dates_included")))
         zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years))
         zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual))
         zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(typed, TEACHING_WORK_TYPE_CSV_COLUMNS))

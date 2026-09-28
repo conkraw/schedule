@@ -9,7 +9,9 @@ from docx import Document
 from docx.shared import Pt
 from io import BytesIO
 from schedule_app.services.opd_archive import OPDArchiveError
-from schedule_app.services.teaching_analysis import teaching_academic_label
+from schedule_app.services.reporting_periods import (
+    teaching_report_bounds, teaching_report_label, teaching_report_heading, teaching_report_date_text,
+)
 from schedule_app.services.teaching_analysis import teaching_annual_rows
 from schedule_app.services.teaching_analysis import teaching_brief_months
 from schedule_app.services.teaching_analysis import teaching_name_key
@@ -31,7 +33,7 @@ def teaching_chair_summary_data(scan, selected_years):
     typed = teaching_work_type_rows(scan, years)
     summaries = []
     for year in years:
-        label = teaching_academic_label(year)
+        label = teaching_report_label(scan, year)
         monthly = [row for row in scan["monthly"] if row["academic_start_year"] == year]
         by_name = defaultdict(list)
         for row in monthly:
@@ -63,7 +65,7 @@ def teaching_chair_summary_data(scan, selected_years):
                 "months_brief": teaching_brief_months(row["month"] for row in type_months),
                 "source_sites": sites,
             })
-        start, end = CalendarDate(year, 7, 1), CalendarDate(year + 1, 6, 30)
+        start, end = teaching_report_bounds(scan, year)
         relevant_sources = [source for source in scan.get("sources", [])
                             if CalendarDate.fromisoformat(source["rotation_start"]) <= end
                             and CalendarDate.fromisoformat(source["last_scheduled_date"]) >= start]
@@ -100,7 +102,7 @@ def teaching_make_chair_summary(scan, selected_years):
 
     summaries = teaching_chair_summary_data(scan, selected_years)
     if not summaries or not any(item["no_of_shifts"] for item in summaries):
-        raise OPDArchiveError("No student assignments were found for the selected academic year(s); no empty chair summary was generated.")
+        raise OPDArchiveError("No student assignments were found for the selected reporting period(s); no empty chair summary was generated.")
 
     doc = Document()
     section = doc.sections[0]
@@ -143,7 +145,7 @@ def teaching_make_chair_summary(scan, selected_years):
     footer._p.append(field)
     doc.core_properties.title = "Pediatric clerkship educational effort summary"
     doc.core_properties.author = "Pediatric Clerkship"
-    doc.core_properties.subject = "Scheduled third-year student teaching by academic year and type of work"
+    doc.core_properties.subject = "Scheduled third-year student teaching by reporting period and type of work"
 
     def note(text, *, warning=False):
         p = doc.add_paragraph(text)
@@ -217,11 +219,11 @@ def teaching_make_chair_summary(scan, selected_years):
             doc.add_page_break()
         doc.add_paragraph("Preceptor educational effort", style="Title")
         doc.add_paragraph("Third-year medical student teaching", style="Subtitle")
-        doc.add_heading(f"Academic year {item['academic_year']}", level=1)
-        p = doc.add_paragraph(f"July 1, {year} - June 30, {year + 1}")
+        doc.add_heading(teaching_report_heading(scan, year), level=1)
+        p = doc.add_paragraph(teaching_report_date_text(scan, year))
         p.paragraph_format.space_after = Pt(9)
         if not item["no_of_shifts"]:
-            doc.add_paragraph("No assigned student-shifts were found in the archived schedules for this academic year. "
+            doc.add_paragraph("No assigned student-shifts were found in the archived schedules for this reporting period. "
                               "This does not establish that no teaching occurred.")
             continue
 
@@ -249,13 +251,15 @@ def teaching_make_chair_summary(scan, selected_years):
              "no_of_shifts": group["no_of_shifts"], "educational_hours": group["educational_hours"]}
             for group in item["work_types"]
         ], first_title="Type of work", total_title="All work types")
+        if scan.get("reporting_period"):
+            note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
         note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
         if any(group["work_type"] == TEACHING_WORK_TYPE_REVIEW for group in item["work_types"]):
             note("Work type needs review: identical assignments appear under different work types. Each is retained once in this review category; no setting is guessed.", warning=True)
         note(f"*One student assigned to one AM or PM shift = one student-shift and "
              f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. "
              "These are student-weighted hours, not distinct clock hours or verified attendance.")
-        note(f"Coverage: {item['source_count']} saved rotation schedule(s) overlap this academic year. "
+        note(f"Coverage: {item['source_count']} saved rotation schedule(s) overlap this reporting period. "
              "Only archived assignments are represented; missing rotations are not assumed to have no teaching. "
              "Future scheduled assignments are included.")
         if item["has_missing_provider"]:

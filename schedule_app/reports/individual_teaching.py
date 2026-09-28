@@ -9,7 +9,9 @@ from docx import Document
 from docx.shared import Pt
 from io import BytesIO
 from schedule_app.reports.teaching_tables import teaching_add_work_table
-from schedule_app.services.teaching_analysis import teaching_academic_label
+from schedule_app.services.reporting_periods import (
+    teaching_report_bounds, teaching_report_label, teaching_report_heading, teaching_report_date_text,
+)
 from schedule_app.services.teaching_analysis import teaching_brief_months
 from schedule_app.services.teaching_analysis import teaching_month_label
 from schedule_app.services.teaching_analysis import teaching_require_work_type_data
@@ -65,7 +67,7 @@ def teaching_make_docx(name, monthly, scan):
     footer._p.append(field)
     doc.core_properties.title = f"Preceptor teaching report - {name}"
     doc.core_properties.author = "Pediatric Clerkship"
-    doc.core_properties.subject = "Scheduled student-shifts by academic year and type of work"
+    doc.core_properties.subject = "Scheduled student-shifts by reporting period and type of work"
 
     def note(text, warning=False):
         paragraph = doc.add_paragraph(text)
@@ -83,8 +85,8 @@ def teaching_make_docx(name, monthly, scan):
             doc.add_page_break()
         doc.add_paragraph("Preceptor teaching report", style="Subtitle")
         doc.add_paragraph(name, style="Title")
-        doc.add_heading(f"Academic year {teaching_academic_label(year)}", level=1)
-        doc.add_paragraph(f"July 1, {year} - June 30, {year + 1}")
+        doc.add_heading(teaching_report_heading(scan, year), level=1)
+        doc.add_paragraph(teaching_report_date_text(scan, year))
         if name in scan["unresolved_preceptor_labels"]:
             note("Review required: this is a site, slot, or combined provider label, not a verified individual preceptor.", warning=True)
         total = sum(row["no_of_shifts"] for row in rows)
@@ -105,6 +107,8 @@ def teaching_make_docx(name, monthly, scan):
             ("Type of work", "Months with assignments", "Student-shifts", "Educational hours*"), overview,
             widths=(2.45, 2.15, 1.05, 1.25), number_columns=(2, 3),
             total=("All work types", "", f"{total:,}", f"{total * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
+        if scan.get("reporting_period"):
+            note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
         note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
         note(f"*One student assigned to one AM or PM shift = one student-shift and {TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. These are student-weighted scheduled hours, not distinct clock hours or verified attendance.")
         if TEACHING_WORK_TYPE_REVIEW in by_type:
