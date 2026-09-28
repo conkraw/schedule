@@ -19,6 +19,10 @@ from schedule_app.services.teaching_analysis import teaching_work_type_rows
 from schedule_app.services.teaching_analysis import teaching_work_type_sort
 from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT
 from schedule_app.settings import TEACHING_WORK_TYPE_REVIEW
+from schedule_app.services.learner_reach import (
+    reach_totals, reach_percent, REACH_DEFINITION, REACH_SCOPE_NOTE,
+    require_learner_reach_data,
+)
 
 
 def teaching_chair_summary_data(scan, selected_years):
@@ -55,7 +59,7 @@ def teaching_chair_summary_data(scan, selected_years):
             for entry in entries:
                 entry["months_brief"] = teaching_brief_months(row["month"] for row in type_months
                                                              if row["preceptor_name"] == entry["preceptor_name"])
-            sites = sorted({site for row in type_months for site in row["source_sites"]})
+            sites = sorted({site for row in entries for site in row.get("source_sites", "").split("; ") if site})
             work_types.append({
                 "work_type": work_type,
                 "named_preceptors": [row for row in entries if teaching_name_key(row["preceptor_name"]) not in review_keys],
@@ -64,6 +68,7 @@ def teaching_chair_summary_data(scan, selected_years):
                 "educational_hours": sum(row["educational_hours"] for row in entries),
                 "months_brief": teaching_brief_months(row["month"] for row in type_months),
                 "source_sites": sites,
+                **reach_totals(entries),
             })
         start, end = teaching_report_bounds(scan, year)
         relevant_sources = [source for source in scan.get("sources", [])
@@ -77,6 +82,8 @@ def teaching_chair_summary_data(scan, selected_years):
             "named_preceptors": sorted(named, key=lambda row: teaching_name_key(row["preceptor_name"])),
             "unresolved_labels": sorted(unresolved, key=lambda row: teaching_name_key(row["preceptor_name"])),
             "named_preceptor_count": len(named),
+            "named_preceptors_with_students": sum(row["no_of_shifts"] > 0 for row in named),
+            **reach_totals(rows),
             "no_of_shifts": sum(row["no_of_shifts"] for row in rows),
             "educational_hours": sum(row["educational_hours"] for row in rows),
             "months_brief": teaching_brief_months(row["month"] for row in monthly),
@@ -100,9 +107,10 @@ def teaching_make_chair_summary(scan, selected_years):
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
 
+    require_learner_reach_data(scan)
     summaries = teaching_chair_summary_data(scan, selected_years)
-    if not summaries or not any(item["no_of_shifts"] for item in summaries):
-        raise OPDArchiveError("No student assignments were found for the selected reporting period(s); no empty chair summary was generated.")
+    if not summaries or not any(item["recorded_clinical_shifts"] for item in summaries):
+        raise OPDArchiveError("No recorded OPD clinical shifts were found for the selected reporting period(s); no empty chair summary was generated.")
 
     doc = Document()
     section = doc.sections[0]
@@ -155,16 +163,16 @@ def teaching_make_chair_summary(scan, selected_years):
             run.font.color.rgb = RGBColor.from_string("8C3B25" if warning else "526475")
         return p
 
-    def add_effort_table(entries, *, pending=False, first_title=None, total_title=None):
-        table = doc.add_table(rows=1, cols=4)
+    def add_effort_table(entries, *, pending=False, first_title=None, total_title=None, total_metrics=None):
+        table = doc.add_table(rows=1, cols=6)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         table.autofit = False
         # 6.9 inches = the printable width; also set the table grid, not only cells.
-        widths = tuple(Inches(value) for value in (2.45, 2.15, 1.05, 1.25))
+        widths = tuple(Inches(value) for value in (2.35, 0.9, 0.95, 0.95, 0.8, 0.95))
         for col, width in zip(table.columns, widths):
             col.width = width
-        titles = (first_title or ("Provider label" if pending else "Preceptor"), "Months with assignments",
-                  "Student-shifts", "Educational hours*")
+        titles = (first_title or ("Provider label" if pending else "Preceptor / teaching months"),
+                  "OPD hours", "Hours with students", "Learner Reach", "Student-shifts", "Education hours*")
         repeat_header = OxmlElement("w:tblHeader")
         table.rows[0]._tr.get_or_add_trPr().append(repeat_header)
 
@@ -190,21 +198,27 @@ def teaching_make_chair_summary(scan, selected_years):
                 p.paragraph_format.space_before = p.paragraph_format.space_after = Pt(1)
                 p.paragraph_format.line_spacing = 1.0
                 p.paragraph_format.keep_with_next = heading
-                if index >= 2:
+                if index >= 1:
                     p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
                 for run in p.runs:
-                    run.font.name, run.font.size = "Calibri", Pt(10)
+                    run.font.name, run.font.size = "Calibri", Pt(9.5)
                     run.bold = heading or total
                     if heading:
                         run.font.color.rgb = RGBColor(255, 255, 255)
 
         fill_row(table.rows[0], titles, heading=True)
         for index, row in enumerate(entries):
-            fill_row(table.add_row(), (row["preceptor_name"], row["months_brief"],
+            months = row.get("months_brief", "Not recorded")
+            label = row["preceptor_name"] + "\n" + (months if row["no_of_shifts"] else "No student assignments")
+            fill_row(table.add_row(), (label, f"{row['recorded_clinical_hours']:,}",
+                                      f"{row['hours_with_students']:,}", reach_percent(row["learner_reach_pct"]),
                                       f"{row['no_of_shifts']:,}", f"{row['educational_hours']:,}"),
                      band=index % 2 == 1)
         subtotal = total_title or ("Awaiting attribution" if pending else "Named preceptors total")
-        fill_row(table.add_row(), (subtotal, "", f"{sum(row['no_of_shifts'] for row in entries):,}",
+        metrics = total_metrics if total_metrics is not None else reach_totals(entries)
+        fill_row(table.add_row(), (subtotal, f"{metrics['recorded_clinical_hours']:,}",
+                                   f"{metrics['hours_with_students']:,}", reach_percent(metrics["learner_reach_pct"]),
+                                   f"{sum(row['no_of_shifts'] for row in entries):,}",
                                    f"{sum(row['educational_hours'] for row in entries):,}"), total=True)
         # Avoid leaving the subtotal by itself at the top of a new page.
         if len(table.rows) > 2:
@@ -222,9 +236,9 @@ def teaching_make_chair_summary(scan, selected_years):
         doc.add_heading(teaching_report_heading(scan, year), level=1)
         p = doc.add_paragraph(teaching_report_date_text(scan, year))
         p.paragraph_format.space_after = Pt(9)
-        if not item["no_of_shifts"]:
-            doc.add_paragraph("No assigned student-shifts were found in the archived schedules for this reporting period. "
-                              "This does not establish that no teaching occurred.")
+        if not item["recorded_clinical_shifts"]:
+            doc.add_paragraph("No clinical shifts were recorded in the archived OPDs for this reporting period. "
+                              "This does not establish that no clinical work or teaching occurred.")
             continue
 
         p = doc.add_paragraph()
@@ -234,31 +248,48 @@ def teaching_make_chair_summary(scan, selected_years):
         p.add_run(f"{item['educational_hours']:,} educational hours").bold = True
         p.add_run(" of scheduled teaching.")
         p = doc.add_paragraph()
-        p.add_run("Named preceptors: ").bold = True
+        p.add_run("Named preceptors in OPDs: ").bold = True
         p.add_run(str(item["named_preceptor_count"]))
+        p.add_run(f" ({item['named_preceptors_with_students']} with students)")
         p.add_run("   |   Months with assignments: ").bold = True
         p.add_run(item["months_brief"])
         if item["unresolved_labels"]:
             pending_shifts = sum(row["no_of_shifts"] for row in item["unresolved_labels"])
             pending_hours = sum(row["educational_hours"] for row in item["unresolved_labels"])
             note(f"The totals include {pending_shifts:,} student-shifts ({pending_hours:,} hours) recorded under "
-                 "site, slot, or combined provider labels. These are listed separately below and are not credited to an individual.",
+                 "site, slot, or combined provider labels. Their recorded clinical hours are also included in the overall totals and Learner Reach. "
+                 "These are listed separately below and are not credited to an individual.",
                  warning=True)
 
+        p = doc.add_paragraph()
+        p.add_run("Learner Reach: " + reach_percent(item["learner_reach_pct"])).bold = True
+        p.add_run(f" — students were assigned during {item['hours_with_students']:,} of "
+                  f"{item['recorded_clinical_hours']:,} recorded OPD hours. "
+                  f"{item['hours_without_students']:,} hours had no student recorded.")
+        note("OPD hours include shifts with and without students. Hours with students count each clinical half-day once; "
+             "Learner Reach is their ratio, not an average of individual percentages.")
         doc.add_heading("Overview by type of work", level=2)
         add_effort_table([
             {"preceptor_name": group["work_type"], "months_brief": group["months_brief"],
-             "no_of_shifts": group["no_of_shifts"], "educational_hours": group["educational_hours"]}
+             "no_of_shifts": group["no_of_shifts"], "educational_hours": group["educational_hours"],
+             **{key: group[key] for key in ("recorded_clinical_hours", "recorded_clinical_shifts",
+                 "shifts_with_students", "shifts_without_students", "hours_with_students",
+                 "learner_reach_pct", "availability_review_shifts")}}
             for group in item["work_types"]
-        ], first_title="Type of work", total_title="All work types")
+        ], first_title="Type of work / teaching months", total_title="All work types", total_metrics=item)
         if scan.get("reporting_period"):
             note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
         note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
-        if any(group["work_type"] == TEACHING_WORK_TYPE_REVIEW for group in item["work_types"]):
-            note("Work type needs review: identical assignments appear under different work types. Each is retained once in this review category; no setting is guessed.", warning=True)
+        if any(group.get("availability_review_shifts") for group in item["work_types"]):
+            note("N/A: a clinical half-day is listed in multiple work types. Its clinical hours are counted once in Work type needs review, "
+                 "excluded from the named categories' hours, and the affected category percentages are withheld. Overall Learner Reach remains valid. "
+                 "See Clinical_Shift_Review.csv.", warning=True)
+        elif any(group["work_type"] == TEACHING_WORK_TYPE_REVIEW for group in item["work_types"]):
+            note("Work type needs review: identical assignments appear under different work types. Each is retained once; no setting is guessed.", warning=True)
         note(f"*One student assigned to one AM or PM shift = one student-shift and "
              f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. "
              "These are student-weighted hours, not distinct clock hours or verified attendance.")
+        note(REACH_SCOPE_NOTE)
         note(f"Coverage: {item['source_count']} saved rotation schedule(s) overlap this reporting period. "
              "Only archived assignments are represented; missing rotations are not assumed to have no teaching. "
              "Future scheduled assignments are included.")
@@ -283,6 +314,8 @@ def teaching_make_chair_summary(scan, selected_years):
                 p.paragraph_format.space_before = Pt(5)
                 p.add_run("Work-type total: ").bold = True
                 p.add_run(f"{group['no_of_shifts']:,} student-shifts | {group['educational_hours']:,} educational hours")
+        note("Preceptors with recorded clinical shifts but no student assignments are included with 0% Learner Reach. "
+             "Generic provider labels are not verified individuals. Blank student fields are not evidence of refusal or unused learner capacity.")
         note("A preceptor working in more than one setting appears in each applicable section. The overall named-preceptor count counts each person once; work-type shifts and hours add to the overall totals.")
         source = note("Source: current saved OPD schedules. "
                       f"Archive retrieved: {scan['generated_at']}. "

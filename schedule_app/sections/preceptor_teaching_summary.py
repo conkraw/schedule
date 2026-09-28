@@ -12,6 +12,10 @@ import pandas as pd
 import streamlit as st
 
 from schedule_app.reports.teaching_export import teaching_build_zip
+from schedule_app.services.learner_reach import (
+    LEARNER_REACH_SCHEMA_VERSION, LEARNER_REACH_COLUMNS, REACH_DEFINITION,
+    REACH_SCOPE_NOTE, require_learner_reach_data, reach_percent, reach_totals,
+)
 from schedule_app.services.opd_archive import GitHubOPDArchive, OPDArchiveError, get_opd_archive_config
 from schedule_app.services.reporting_periods import (
     DATE_RANGE_SCHEMA_VERSION, ReportingPeriod, read_reporting_period_json,
@@ -142,7 +146,7 @@ def render():
                          help="Choose the actual name order in your OPDs. No rotation list is required. "
                               "Commas within names are preserved; use separate rows or semicolons for multiple students.")
     options_signature = hashlib.sha256(json.dumps(
-        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, client.config.signature(), order,
+        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, client.config.signature(), order,
          TEACHING_PRECEPTOR_NAME_MAP, TEACHING_OPD_NAME_ORDER_OVERRIDES,
          TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER], sort_keys=True).encode()).hexdigest()
     if st.session_state.get("teaching_options_signature") != options_signature:
@@ -173,6 +177,7 @@ def render():
         return
     try:
         teaching_require_date_range_data(scan)
+        require_learner_reach_data(scan)
     except OPDArchiveError as exc:
         st.session_state.pop("teaching_scan", None)
         _clear_teaching_downloads()
@@ -200,7 +205,9 @@ def render():
         st.info(f"Reporting period {period.label}: {teaching_report_date_text(report_scan, selected[0])} (inclusive).")
     else:
         current = teaching_academic_start(teaching_local_today())
-        years = sorted({row["academic_start_year"] for row in scan["monthly"]} | {current}, reverse=True)
+        years = sorted({row["academic_start_year"] for row in scan["monthly"]}
+                       | {teaching_academic_start(date.fromisoformat(row["date"])) for row in scan["clinical_daily"]}
+                       | {current}, reverse=True)
         if any(year not in years for year in st.session_state.get("teaching_selected_years", [])):
             st.session_state.pop("teaching_selected_years", None)
         selected = st.multiselect("Academic year(s) to include", years, default=[current],
@@ -220,6 +227,9 @@ def render():
             st.write(", ".join(report_scan["unresolved_preceptor_labels"]))
     if report_scan.get("work_type_conflicts"):
         st.warning("Some identical assignments appear in different work types. Each counts once under Work type needs review.")
+    if report_scan.get("clinical_shift_conflicts"):
+        st.warning("Some clinical half-days appear in multiple work types. Overall Learner Reach counts each shift once; "
+                   "affected work-type percentages are N/A pending review. See Clinical_Shift_Review.csv in the ZIP.")
     with st.expander("Archive coverage and data-quality details"):
         st.caption("These file-level counts describe whole archived rotations, not just the selected date range. "
                    "The teaching totals below are date-filtered. Missing rotations are not assumed to have zero teaching.")
@@ -227,9 +237,12 @@ def render():
             st.write(f"Exact duplicate student-shifts removed across the whole archive: {scan['duplicate_assignments_removed']:,}.")
         st.dataframe(pd.DataFrame(scan["sources"]), hide_index=True, use_container_width=True)
         if scan["warnings"]:
-            st.warning("Some archived assignments have no identifiable provider. They are excluded from provider totals; "
-                       "these warnings may refer to dates outside your selected period.")
+            st.warning("Some cells were excluded: missing/nonclinical provider labels or missing '~' markers. "
+                       "These archive-wide warnings may refer to dates outside your selected period.")
             st.dataframe(pd.DataFrame(scan["warnings"]), hide_index=True, use_container_width=True)
+        if report_scan.get("clinical_shift_conflicts"):
+            st.dataframe(pd.DataFrame(report_scan["clinical_shift_conflicts"]), hide_index=True, use_container_width=True)
+        st.write(f"Repeated clinical listings combined across all archived rotations: {scan.get('duplicate_clinical_listings_removed', 0):,}.")
         if report_scan.get("work_type_conflicts"):
             st.dataframe(pd.DataFrame(report_scan["work_type_conflicts"]), hide_index=True, use_container_width=True)
         st.dataframe(pd.DataFrame([{"opd_site": site, "work_type": work_type}
@@ -237,19 +250,30 @@ def render():
                      hide_index=True, use_container_width=True)
     if not annual:
         _clear_teaching_downloads()
-        st.info("No assigned student-shifts were found for the selected reporting period. "
+        st.info("No recorded clinical shifts were found for the selected reporting period. "
                 "Adjust the dates/year selection, check the '~' name order or archive the missing OPDs. "
-                "Provider availability without a student does not count.")
+                "Named providers with blank student fields are included when present.")
         return
-    preview = pd.DataFrame(annual, columns=TEACHING_CSV_COLUMNS)
+    preview = pd.DataFrame(annual, columns=tuple(TEACHING_CSV_COLUMNS) + LEARNER_REACH_COLUMNS)
     a, b, c = st.columns(3)
     a.metric("Preceptors / provider labels", preview["preceptor_name"].nunique())
     b.metric("Assigned student-shifts", f"{preview['no_of_shifts'].sum():,}")
     c.metric("Student-weighted educational hours", f"{preview['educational_hours'].sum():,}")
+    totals = reach_totals(annual)
+    a, b, c, d = st.columns(4)
+    a.metric("Recorded OPD hours", f"{totals['recorded_clinical_hours']:,}")
+    b.metric("Hours with students", f"{totals['hours_with_students']:,}")
+    c.metric("Hours without students", f"{totals['hours_without_students']:,}")
+    d.metric("Learner Reach", reach_percent(totals["learner_reach_pct"]))
+    st.caption(REACH_DEFINITION)
+    with st.expander("What Learner Reach does and does not measure"):
+        st.write(REACH_SCOPE_NOTE)
+        st.write("Educational hours remain student-weighted; simultaneous students count twice only for that measure. "
+                 "Clinical hours and Learner Reach count the half-day once. People with recorded shifts but no assignments appear with 0%.")
     st.markdown("**Teaching by type of work**")
-    st.dataframe(pd.DataFrame(teaching_work_type_rows(report_scan, selected), columns=TEACHING_WORK_TYPE_CSV_COLUMNS),
+    st.dataframe(pd.DataFrame(teaching_work_type_rows(report_scan, selected), columns=tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS),
                  hide_index=True, use_container_width=True)
-    with st.expander("Overall totals (original CSV columns)"):
+    with st.expander("Overall totals and Learner Reach"):
         st.dataframe(preview, hide_index=True, use_container_width=True)
     st.caption("In Custom dates mode, academic_year contains your report label. All dates in that range stay in one "
                "report section, even across July. Boundary months include only the chosen days. "
@@ -275,6 +299,6 @@ def render():
                            file_name=TEACHING_CHAIR_SUMMARY_FILENAME,
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                            key="teaching_download_chair_summary")
-        st.caption("The ZIP includes the chair summary, both CSVs, individual Word reports, source notes and "
+        st.caption("The ZIP includes the chair summary, overall/work-type CSVs with Learner Reach, monthly Learner Reach CSV, individual Word reports, source notes and "
                    "(for custom dates) the exact reporting-date settings. These are unencrypted staff reports; "
                    "do not commit the downloads to the public repository.")

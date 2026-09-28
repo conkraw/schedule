@@ -18,6 +18,10 @@ from schedule_app.services.teaching_analysis import teaching_require_work_type_d
 from schedule_app.services.teaching_analysis import teaching_work_type_sort
 from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT
 from schedule_app.settings import TEACHING_WORK_TYPE_REVIEW
+from schedule_app.services.learner_reach import (
+    learner_reach_rows, reach_percent, reach_totals, require_learner_reach_data,
+    REACH_SCOPE_NOTE,
+)
 
 
 def teaching_make_docx(name, monthly, scan):
@@ -27,6 +31,7 @@ def teaching_make_docx(name, monthly, scan):
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
     teaching_require_work_type_data(scan)
+    require_learner_reach_data(scan)
     doc = Document()
     section = doc.sections[0]
     section.page_width, section.page_height = Inches(8.5), Inches(11)
@@ -93,11 +98,36 @@ def teaching_make_docx(name, monthly, scan):
         p = doc.add_paragraph()
         p.add_run("All work types: ").bold = True
         p.add_run(f"{total:,} assigned student-shifts  |  {total * TEACHING_HOURS_PER_STUDENT_SHIFT:,} educational hours")
+        reach = next((row for row in learner_reach_rows(scan, [year]) if row["preceptor_name"] == name), None)
+        if reach:
+            p = doc.add_paragraph()
+            p.add_run("Learner Reach: " + reach_percent(reach["learner_reach_pct"])).bold = True
+            p.add_run(f" — {reach['shifts_with_students']:,} of {reach['recorded_clinical_shifts']:,} recorded clinical shifts included a student.")
+            p = doc.add_paragraph(
+                f"Recorded OPD hours: {reach['recorded_clinical_hours']:,}  |  "
+                f"With students: {reach['hours_with_students']:,}  |  "
+                f"Without students: {reach['hours_without_students']:,}")
+            reach_types = [row for row in learner_reach_rows(scan, [year], by_work_type=True) if row["preceptor_name"] == name]
+            doc.add_heading("Learner Reach by type of work", level=2)
+            teaching_add_work_table(doc,
+                ("Type of work", "OPD hours", "With students", "Without students", "Learner Reach"),
+                [(row["work_type"], f"{row['recorded_clinical_hours']:,}", f"{row['hours_with_students']:,}",
+                  f"{row['hours_without_students']:,}", reach_percent(row["learner_reach_pct"])) for row in reach_types],
+                widths=(2.5, 1.1, 1.1, 1.1, 1.1), number_columns=(1, 2, 3, 4),
+                total=("All work types", f"{reach['recorded_clinical_hours']:,}", f"{reach['hours_with_students']:,}",
+                       f"{reach['hours_without_students']:,}", reach_percent(reach["learner_reach_pct"])))
+            note("Learner Reach is the percentage of recorded clinical shifts with at least one student. "
+                 "Each preceptor/date/AM-or-PM counts once, including repeated rows and simultaneous students. "
+                 "The denominator includes both assigned and blank student fields.")
+            if any(row["availability_review_shifts"] for row in reach_types):
+                note("N/A: concurrent work types prevent allocation of a clinical half-day. Those hours are counted once under "
+                     "Work type needs review, excluded from the affected category hours, and category percentages are withheld. "
+                     "Overall Learner Reach is still calculable. See Clinical_Shift_Review.csv.", warning=True)
         by_type = defaultdict(list)
         for row in type_rows:
             if row["academic_start_year"] == year:
                 by_type[row["work_type"]].append(row)
-        doc.add_heading("Educational effort by type of work", level=2)
+        doc.add_heading("Student-weighted educational effort", level=2)
         overview = []
         for work_type, items in sorted(by_type.items(), key=lambda pair: teaching_work_type_sort(pair[0])):
             count = sum(item["no_of_shifts"] for item in items)
@@ -124,9 +154,13 @@ def teaching_make_docx(name, monthly, scan):
             ("Type of work", "Month", "Student-shifts", "Educational hours*"), month_values,
             widths=(2.45, 2.15, 1.05, 1.25), number_columns=(2, 3),
             total=("All work types", "", f"{total:,}", f"{total * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
+        note(REACH_SCOPE_NOTE)
+        if reach:
+            note("Months with recorded clinical shifts: " + reach["months_scheduled"] + ". "
+                 "The monthly Learner Reach CSV in the ZIP includes months without student assignments.")
         note("Source: current encrypted OPD archive files, decrypted for this report. "
              f"Archive snapshot: {scan['commit'][:12]}. Retrieved: {scan['generated_at']}. "
-             "Only months with assignments are shown. Future scheduled assignments are included. Student names are omitted.")
+             "Educational-effort monthly detail shows only months with student assignments. Future scheduled shifts are included. Student names are omitted.")
     output = BytesIO()
     doc.save(output)
     return output.getvalue()
