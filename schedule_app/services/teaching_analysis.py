@@ -29,6 +29,9 @@ import hmac
 import json
 import re
 import secrets as _teaching_secrets
+from schedule_app.services.reporting_periods import (
+    DATE_RANGE_SCHEMA_VERSION, ReportingPeriod, teaching_report_label,
+)
 
 
 def teaching_site_key(site):
@@ -88,7 +91,7 @@ def teaching_work_type_rows(scan, selected_years):
         total = sum(item["no_of_shifts"] for item in items)
         sites = sorted({site for item in items for site in item["source_sites"]})
         rows.append({
-            "preceptor_name": name, "academic_year": teaching_academic_label(year),
+            "preceptor_name": name, "academic_year": teaching_report_label(scan, year),
             "work_type": work_type, "no_of_shifts": total,
             "months_worked": "; ".join(teaching_month_label(CalendarDate.fromisoformat(month)) for month in months),
             "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT,
@@ -312,11 +315,17 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
 
     type_counts, conflict_counts = Counter(), Counter()
     type_sites = defaultdict(set)
+    # Day-level provider aggregates allow exact custom boundaries, including
+    # mid-month cutoffs. No student names or deduplication digests are retained.
+    daily_counts, daily_sites = Counter(), defaultdict(set)
     for item in seen_assignments.values():
         key, month = item["provider_key"], item["month"]
         work_type = next(iter(item["work_types"])) if len(item["work_types"]) == 1 else TEACHING_WORK_TYPE_REVIEW
         type_counts[(key, month, work_type)] += 1
         type_sites[(key, month, work_type)].update(item["sites"])
+        day_key = (key, item["day"], work_type)
+        daily_counts[day_key] += 1
+        daily_sites[day_key].update(item["sites"])
         if len(item["work_types"]) > 1:
             # Do not silently credit the same assignment to the first site read.
             # It stays in the overall total once, in an explicit review category.
@@ -337,7 +346,15 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
         "conflicting_work_types": types, "source_sites": sites,
         "no_of_student_shifts": count,
     } for (key, day, shift, types, sites), count in sorted(conflict_counts.items())]
+    daily_by_type = [{
+        "preceptor_name": names[key], "date": day.isoformat(), "work_type": work_type,
+        "no_of_shifts": int(count), "educational_hours": int(count * TEACHING_HOURS_PER_STUDENT_SHIFT),
+        "source_sites": sorted(daily_sites[(key, day, work_type)]),
+    } for (key, day, work_type), count in sorted(
+        daily_counts.items(), key=lambda pair: (pair[0][0], pair[0][1], teaching_work_type_sort(pair[0][2]))) ]
     result = {
+        "date_range_version": DATE_RANGE_SCHEMA_VERSION,
+        "daily_by_work_type": daily_by_type,
         "version": TEACHING_REPORT_VERSION, "commit": commit,
         "generated_at": datetime.now(_teaching_timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "default_name_order": default_order, "monthly": monthly,
@@ -362,7 +379,7 @@ def teaching_annual_rows(scan, selected_years):
     for (name, start_year), items in sorted(grouped.items(), key=lambda item: (teaching_name_key(item[0][0]), item[0][1])):
         ordered = sorted(items, key=lambda item: item["month"])
         total = sum(item["no_of_shifts"] for item in ordered)
-        rows.append({"preceptor_name": name, "academic_year": teaching_academic_label(start_year),
+        rows.append({"preceptor_name": name, "academic_year": teaching_report_label(scan, start_year),
                      "no_of_shifts": total,
                      "months_worked": "; ".join(teaching_month_label(CalendarDate.fromisoformat(item["month"])) for item in ordered),
                      "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT})
@@ -389,3 +406,84 @@ def teaching_brief_months(month_values):
             label += "-" + TEACHING_MONTH_NAMES[last.month - 1][:3]
         labels.append(f"{label} {first.year}")
     return "; ".join(labels)
+
+
+def teaching_require_date_range_data(scan):
+    """Monthly totals cannot support a mid-month cutoff; require daily aggregates."""
+    teaching_require_work_type_data(scan)
+    if scan.get("date_range_version") != DATE_RANGE_SCHEMA_VERSION or not isinstance(scan.get("daily_by_work_type"), list):
+        raise OPDArchiveError("This saved scan does not contain exact teaching dates. Click Load / refresh archived OPDs once, then choose your reporting dates.")
+    expected, actual = Counter(), Counter()
+    for row in scan["monthly_by_work_type"]:
+        expected[(row["preceptor_name"], row["month"], row["work_type"])] += row["no_of_shifts"]
+    try:
+        for row in scan["daily_by_work_type"]:
+            day = CalendarDate.fromisoformat(row["date"])
+            count = row["no_of_shifts"]
+            if (type(count) is not int or count <= 0 or not row["preceptor_name"] or not row["work_type"]
+                    or row["educational_hours"] != count * TEACHING_HOURS_PER_STUDENT_SHIFT
+                    or not isinstance(row["source_sites"], list) or not row["source_sites"]):
+                raise ValueError("invalid daily aggregate")
+            actual[(row["preceptor_name"], day.replace(day=1).isoformat(), row["work_type"])] += count
+    except (KeyError, TypeError, ValueError):
+        raise OPDArchiveError("The daily teaching details are incomplete. Refresh the archived OPDs before generating a report.") from None
+    if dict(actual) != dict(expected):
+        raise OPDArchiveError("Daily teaching counts do not match monthly work-type totals. Refresh the archived OPDs; no partial report was generated.")
+
+
+def teaching_filter_date_range(scan, period):
+    """Project one full archive scan into one inclusive, user-labeled period.
+
+    Filter the *actual assignment date* before computing month/work-type totals.
+    July boundaries and twelve-month lengths play no role. No student identities
+    are needed, and the original scan is not modified. Archive source/diagnostic
+    counts still describe whole files and are explicitly labeled as such in the UI
+    and ZIP notes. Always pass the full scan, not an already filtered projection.
+    """
+    if not isinstance(period, ReportingPeriod):
+        raise OPDArchiveError("Choose a valid reporting label, start date and end date.")
+    if scan.get("reporting_period") is not None:
+        raise OPDArchiveError("Choose the reporting dates from the full archive scan, not an already filtered report.")
+    teaching_require_date_range_data(scan)
+    selected = [dict(row, source_sites=list(row["source_sites"])) for row in scan["daily_by_work_type"]
+                if period.start.isoformat() <= row["date"] <= period.end.isoformat()]
+    overall, typed, sites = Counter(), Counter(), defaultdict(set)
+    today = teaching_local_today().isoformat()
+    for row in selected:
+        month = CalendarDate.fromisoformat(row["date"]).replace(day=1).isoformat()
+        key = (row["preceptor_name"], month, row["work_type"])
+        overall[(row["preceptor_name"], month)] += row["no_of_shifts"]
+        typed[key] += row["no_of_shifts"]
+        sites[key].update(row["source_sites"])
+    # This integer is a compatibility grouping key for the existing report
+    # builders. It is NOT a July-based academic-year classification.
+    group_id = period.start.year
+    monthly = [{"preceptor_name": name, "academic_year": period.label,
+                "academic_start_year": group_id, "month": month,
+                "no_of_shifts": count, "educational_hours": count * TEACHING_HOURS_PER_STUDENT_SHIFT}
+               for (name, month), count in sorted(overall.items(), key=lambda pair: (teaching_name_key(pair[0][0]), pair[0][1]))]
+    monthly_types = [{"preceptor_name": name, "academic_year": period.label,
+                      "academic_start_year": group_id, "month": month, "work_type": work_type,
+                      "no_of_shifts": count, "educational_hours": count * TEACHING_HOURS_PER_STUDENT_SHIFT,
+                      "source_sites": sorted(sites[(name, month, work_type)])}
+                     for (name, month, work_type), count in sorted(
+                         typed.items(), key=lambda pair: (teaching_name_key(pair[0][0]), pair[0][1], teaching_work_type_sort(pair[0][2])))]
+    names = {row["preceptor_name"] for row in monthly}
+    selected_sites = {site for row in selected for site in row["source_sites"]}
+    result = dict(scan)
+    result.update({
+        "reporting_period": period.as_dict(),
+        "daily_by_work_type": selected,
+        "monthly": monthly,
+        "monthly_by_work_type": monthly_types,
+        "work_type_conflicts": [dict(row, academic_year=period.label)
+                                for row in scan.get("work_type_conflicts", [])
+                                if period.start.isoformat() <= row["date"] <= period.end.isoformat()],
+        "unresolved_preceptor_labels": [name for name in scan.get("unresolved_preceptor_labels", []) if name in names],
+        "name_variants": {name: list(values) for name, values in scan.get("name_variants", {}).items() if name in names},
+        "site_work_type_mapping": {site: label for site, label in scan.get("site_work_type_mapping", {}).items()
+                                   if site in selected_sites},
+        "future_assignments_in_period": sum(row["no_of_shifts"] for row in selected if row["date"] > today),
+    })
+    teaching_require_date_range_data(result)
+    return result
