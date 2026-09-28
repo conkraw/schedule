@@ -1,0 +1,554 @@
+{
+  "source_sha256": "dd6178636b2863c23fbbf661c5e07c15d399a52e408bb5102fed573fd79c0d9b",
+  "functions": {
+    "OPDArchiveError": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        56,
+        57
+      ]
+    },
+    "_opd_secret_settings": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        60,
+        64
+      ]
+    },
+    "OPDArchiveConfig": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        68,
+        90
+      ]
+    },
+    "get_opd_archive_config": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        93,
+        117
+      ]
+    },
+    "validate_opd_xlsx_bytes": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        120,
+        139
+      ]
+    },
+    "_opd_date": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        142,
+        159
+      ]
+    },
+    "inspect_opd_rotation": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        162,
+        211
+      ]
+    },
+    "GitHubOPDArchive": {
+      "module": "schedule_app.services.opd_archive",
+      "original_lines": [
+        214,
+        372
+      ]
+    },
+    "_opd_scope_archive_session": {
+      "module": "schedule_app.services.opd_archive_ui",
+      "original_lines": [
+        375,
+        381
+      ]
+    },
+    "_opd_upload_changed": {
+      "module": "schedule_app.services.opd_archive_ui",
+      "original_lines": [
+        384,
+        386
+      ]
+    },
+    "_opd_archive_upload_ui": {
+      "module": "schedule_app.services.opd_archive_ui",
+      "original_lines": [
+        389,
+        417
+      ]
+    },
+    "_opd_archive_picker": {
+      "module": "schedule_app.services.opd_archive_ui",
+      "original_lines": [
+        420,
+        457
+      ]
+    },
+    "_opd_use_loaded_callback": {
+      "module": "schedule_app.services.opd_archive_ui",
+      "original_lines": [
+        460,
+        466
+      ]
+    },
+    "_opd_name_key": {
+      "module": "schedule_app.services.student_schedules",
+      "original_lines": [
+        486,
+        487
+      ]
+    },
+    "split_opd_assignment": {
+      "module": "schedule_app.services.student_schedules",
+      "original_lines": [
+        490,
+        511
+      ]
+    },
+    "collect_opd_assignments": {
+      "module": "schedule_app.services.student_schedules",
+      "original_lines": [
+        514,
+        545
+      ]
+    },
+    "populate_ms_schedule": {
+      "module": "schedule_app.services.student_schedules",
+      "original_lines": [
+        548,
+        562
+      ]
+    },
+    "create_ms_schedule_template": {
+      "module": "schedule_app.services.student_schedules",
+      "original_lines": [
+        3052,
+        3170
+      ]
+    },
+    "generate_opd_workbook": {
+      "module": "schedule_app.services.opd_workbooks",
+      "original_lines": [
+        2392,
+        2557
+      ]
+    },
+    "update_excel_from_csv": {
+      "module": "schedule_app.services.opd_workbooks",
+      "original_lines": [
+        2569,
+        2647
+      ]
+    },
+    "hide_blank_rows_all_sheets": {
+      "module": "schedule_app.services.opd_workbooks",
+      "original_lines": [
+        2906,
+        2939
+      ]
+    },
+    "_normalize_name": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3354,
+        3356
+      ]
+    },
+    "_normalize_site": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3358,
+        3361
+      ]
+    },
+    "_parse_excel_date": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3369,
+        3390
+      ]
+    },
+    "_week_monday_from_date_row": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3392,
+        3398
+      ]
+    },
+    "_student_name_from_sheet": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3400,
+        3406
+      ]
+    },
+    "_parse_schedule_assignment": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3408,
+        3419
+      ]
+    },
+    "build_preceptor_assignment_report": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3421,
+        3568
+      ]
+    },
+    "build_preceptor_report_workbook": {
+      "module": "schedule_app.services.primary_preceptors",
+      "original_lines": [
+        3570,
+        3813
+      ]
+    },
+    "copy_sheet_to_new_wb": {
+      "module": "schedule_app.services.workbook_copy",
+      "original_lines": [
+        3815,
+        3942
+      ]
+    },
+    "teaching_site_key": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        632,
+        633
+      ]
+    },
+    "teaching_work_type": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        636,
+        647
+      ]
+    },
+    "teaching_work_type_sort": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        650,
+        655
+      ]
+    },
+    "teaching_require_work_type_data": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        658,
+        670
+      ]
+    },
+    "teaching_work_type_rows": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        673,
+        695
+      ]
+    },
+    "teaching_name_key": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        698,
+        700
+      ]
+    },
+    "teaching_display_name": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        703,
+        704
+      ]
+    },
+    "teaching_local_today": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        707,
+        712
+      ]
+    },
+    "teaching_academic_start": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        715,
+        716
+      ]
+    },
+    "teaching_academic_label": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        719,
+        720
+      ]
+    },
+    "teaching_month_label": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        723,
+        724
+      ]
+    },
+    "teaching_label_needs_review": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        727,
+        735
+      ]
+    },
+    "teaching_split_assignment": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        738,
+        767
+      ]
+    },
+    "teaching_extract_assignments": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        770,
+        825
+      ]
+    },
+    "teaching_scan_archives": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        828,
+        950
+      ]
+    },
+    "teaching_annual_rows": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        953,
+        967
+      ]
+    },
+    "teaching_brief_months": {
+      "module": "schedule_app.services.teaching_analysis",
+      "original_lines": [
+        1157,
+        1176
+      ]
+    },
+    "teaching_add_work_table": {
+      "module": "schedule_app.reports.teaching_tables",
+      "original_lines": [
+        986,
+        1039
+      ]
+    },
+    "teaching_make_docx": {
+      "module": "schedule_app.reports.individual_teaching",
+      "original_lines": [
+        1042,
+        1149
+      ]
+    },
+    "teaching_chair_summary_data": {
+      "module": "schedule_app.reports.chair_summary",
+      "original_lines": [
+        1179,
+        1243
+      ]
+    },
+    "teaching_make_chair_summary": {
+      "module": "schedule_app.reports.chair_summary",
+      "original_lines": [
+        1246,
+        1447
+      ]
+    },
+    "teaching_csv_bytes": {
+      "module": "schedule_app.reports.teaching_export",
+      "original_lines": [
+        970,
+        983
+      ]
+    },
+    "teaching_build_zip": {
+      "module": "schedule_app.reports.teaching_export",
+      "original_lines": [
+        1450,
+        1535
+      ]
+    },
+    "read_sheet_names": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4102,
+        4108
+      ]
+    },
+    "load_sheet": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4111,
+        4112
+      ]
+    },
+    "_try_parse_date": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4114,
+        4121
+      ]
+    },
+    "find_week_headers": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4123,
+        4159
+      ]
+    },
+    "row_to_week_monday": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4161,
+        4166
+      ]
+    },
+    "detect_am_pm_runs": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4168,
+        4192
+      ]
+    },
+    "build_maps_and_roster": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4194,
+        4318
+      ]
+    },
+    "_annot_make_copy": {
+      "module": "schedule_app.services.md_pa_analysis",
+      "original_lines": [
+        4640,
+        4747
+      ]
+    },
+    "is_date_header_row": {
+      "module": "schedule_app.services.availability_analysis",
+      "original_lines": [
+        4776,
+        4779
+      ]
+    },
+    "extract_names": {
+      "module": "schedule_app.services.availability_analysis",
+      "original_lines": [
+        4781,
+        4796
+      ]
+    },
+    "build_segmented_name_map": {
+      "module": "schedule_app.services.availability_analysis",
+      "original_lines": [
+        4798,
+        4835
+      ]
+    },
+    "fold_hope_drive_rows": {
+      "module": "schedule_app.services.availability_analysis",
+      "original_lines": [
+        4837,
+        4855
+      ]
+    },
+    "shift_order_for": {
+      "module": "schedule_app.services.availability_analysis",
+      "original_lines": [
+        4913,
+        4914
+      ]
+    },
+    "daily_caps_three_sites": {
+      "module": "schedule_app.services.availability_analysis",
+      "original_lines": [
+        4974,
+        4984
+      ]
+    },
+    "weekly_student_capacity": {
+      "module": "schedule_app.services.availability_analysis",
+      "original_lines": [
+        4988,
+        4993
+      ]
+    },
+    "render_opd_archive_page": {
+      "module": "schedule_app.sections.opd_archive",
+      "renamed": "render",
+      "original_lines": [
+        469,
+        483
+      ]
+    },
+    "render_preceptor_teaching_summary": {
+      "module": "schedule_app.sections.preceptor_teaching_summary",
+      "renamed": "render",
+      "original_lines": [
+        1538,
+        1680
+      ]
+    }
+  },
+  "sections": {
+    "Instructions": {
+      "module": "schedule_app.sections.instructions",
+      "original_lines": [
+        1895,
+        2008
+      ]
+    },
+    "Format OPD + Summary": {
+      "module": "schedule_app.sections.format_opd_summary",
+      "original_lines": [
+        2012,
+        3047
+      ]
+    },
+    "Create Student Schedule": {
+      "module": "schedule_app.sections.create_student_schedule",
+      "original_lines": [
+        3050,
+        3293
+      ]
+    },
+    "OPD Check": {
+      "module": "schedule_app.sections.opd_check",
+      "original_lines": [
+        1691,
+        1891
+      ]
+    },
+    "Create Individual Schedules": {
+      "module": "schedule_app.sections.create_individual_schedules",
+      "original_lines": [
+        3297,
+        4075
+      ]
+    },
+    "OPD MD PA Conflict Detector": {
+      "module": "schedule_app.sections.opd_md_pa_conflict_detector",
+      "original_lines": [
+        4079,
+        4767
+      ]
+    },
+    "Shift Availability Tracker": {
+      "module": "schedule_app.sections.shift_availability_tracker",
+      "original_lines": [
+        4773,
+        4996
+      ]
+    },
+    "OPD Archive": {
+      "module": "schedule_app.sections.opd_archive"
+    },
+    "Preceptor Teaching Summary": {
+      "module": "schedule_app.sections.preceptor_teaching_summary"
+    }
+  }
+}

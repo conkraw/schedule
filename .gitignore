@@ -1,0 +1,16 @@
+# Never commit actual secrets or unencrypted uploaded/generated workbooks.
+.streamlit/secrets.toml
+**/secrets.toml
+.env
+.env.*
+*.key
+*.pem
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.docx
+*.zip
+__pycache__/
+*.pyc
+# Files ending .xlsx.enc are intentionally NOT ignored.
