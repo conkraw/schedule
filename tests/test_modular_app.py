@@ -194,6 +194,7 @@ class ModularTests(unittest.TestCase):
 
     def test_teaching_page_builds_chair_and_zip(self):
         result=run_app({'schedule_app_mode':'Preceptor Teaching Summary',
+                       'teaching_reporting_mode':'Standard July-June academic years',
                        'teaching_load_archives':True,'teaching_build_zip':True,'teaching_selected_years':[2026]},
                        secrets=self.config_values,repo=self.repo)
         self.assertIn('Preceptor_Teaching_26-27.zip',result['downloads'])

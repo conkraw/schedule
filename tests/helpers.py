@@ -64,7 +64,18 @@ class FakeStreamlit(ModuleType):
         return self._value(label, kwargs, [] if kwargs.get('accept_multiple_files') else None)
 
     def text_input(self, label, value='', **kwargs):
-        return self._value(label, kwargs, value)
+        key = kwargs.get('key')
+        selected = self._value(label, kwargs, self.session_state.get(key, value) if key else value)
+        if key:
+            self.session_state[key] = selected
+        return selected
+
+    def date_input(self, label, value=None, **kwargs):
+        key = kwargs.get('key')
+        selected = self._value(label, kwargs, self.session_state.get(key, value) if key else value)
+        if key:
+            self.session_state[key] = selected
+        return selected
 
     def radio(self, label, options, index=0, **kwargs):
         key = kwargs.get('key')
