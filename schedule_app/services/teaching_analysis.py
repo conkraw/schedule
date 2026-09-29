@@ -304,7 +304,9 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             # A duplicate within Academic Pediatrics is still counted once even
             # if it is copied onto both HOPE_DRIVE and NYES worksheets. Distinct
             # students in the same shift have different identities and count twice.
+            origin = (rotation.isoformat(), site)
             if digest in seen_assignments:
+                seen_assignments[digest]["origin_counts"][origin] += 1
                 duplicates += 1
                 removed += 1
                 seen_assignments[digest]["work_types"].add(work_type)
@@ -314,6 +316,7 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             seen_assignments[digest] = {
                 "provider_key": key, "month": month, "day": item["day"], "shift": item["shift"],
                 "work_types": {work_type}, "sites": {site},
+                "origin_counts": Counter({origin: 1}),
             }
             names.setdefault(key, name)
             name_variants[key].add(original_name)
@@ -359,6 +362,45 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
         del records, loaded, clinical_sessions, ignored_cells
         if progress:
             progress(number, len(rotations))
+    # Apply the approved exception to BOTH denominators and student assignments.
+    # Do this after scanning all files: overlapping rotations may contain the
+    # outpatient listing in a different file from the nursery listing.
+    clinical.apply_outpatient_priority(names)
+    counts = Counter()
+    duplicates = future_assignments = 0
+    source_by_rotation = {row["rotation_start"]: row for row in manifests}
+    for row in manifests:
+        row["assigned_student_shifts_counted"] = 0
+        row["duplicate_student_shifts_removed"] = 0
+        row["nursery_student_assignment_listings_excluded"] = 0
+    effective_assignments = {}
+    removed_assignments = 0
+    for digest, item in seen_assignments.items():
+        identity = (item["provider_key"], item["day"], item["shift"])
+        excluded = clinical.excluded_sites_by_shift.get(identity, set())
+        remaining_origins = []
+        for (rotation_key, site), count in item["origin_counts"].items():
+            if site in excluded:
+                source_by_rotation[rotation_key]["nursery_student_assignment_listings_excluded"] += count
+            else:
+                remaining_origins.append((rotation_key, site, count))
+        if not remaining_origins:
+            removed_assignments += 1
+            continue  # A nursery-only student is NOT credited to clinic.
+        item["sites"].difference_update(excluded)
+        item["work_types"] = {observed_site_groups[site] for site in item["sites"]}
+        # Reassign first-source credit only if that source was excluded. Each
+        # retained student-shift still counts once across all duplicate listings.
+        for index, (rotation_key, site, count) in enumerate(remaining_origins):
+            credited = int(index == 0)
+            source_by_rotation[rotation_key]["assigned_student_shifts_counted"] += credited
+            source_by_rotation[rotation_key]["duplicate_student_shifts_removed"] += count - credited
+            duplicates += count - credited
+        counts[(item["provider_key"], item["month"])] += 1
+        future_assignments += int(item["day"] > today)
+        del item["origin_counts"]
+        effective_assignments[digest] = item
+    seen_assignments = effective_assignments
     monthly = [{"preceptor_name": names[key], "academic_year": teaching_academic_label(teaching_academic_start(month)),
                 "academic_start_year": teaching_academic_start(month), "month": month.isoformat(),
                 "no_of_shifts": int(count), "educational_hours": int(count * TEACHING_HOURS_PER_STUDENT_SHIFT)}
@@ -404,6 +446,7 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
     } for (key, day, work_type), count in sorted(
         daily_counts.items(), key=lambda pair: (pair[0][0], pair[0][1], teaching_work_type_sort(pair[0][2]))) ]
     result = {
+        "student_shifts_removed_by_outpatient_priority": removed_assignments,
         "date_range_version": DATE_RANGE_SCHEMA_VERSION,
         "daily_by_work_type": daily_by_type,
         "version": TEACHING_REPORT_VERSION, "commit": commit,

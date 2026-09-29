@@ -5,6 +5,9 @@ student-capacity calculation, or proof of actual clinical hours/attendance.
 The existing student-weighted educational-hour metric remains separate.
 """
 from collections import Counter, defaultdict
+from schedule_app.services.teaching_priority import (
+    OUTPATIENT_PRIORITY_VERSION, nursery_sites_to_exclude, priority_site_key,
+)
 from datetime import date
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.reporting_periods import teaching_period, teaching_report_label
@@ -62,6 +65,9 @@ class ClinicalShiftAccumulator:
     def __init__(self):
         self.shifts = {}
         self.duplicate_listings = 0
+        self.excluded_sites_by_shift = {}
+        self.priority_adjustments = []
+        self.priority_clinical_listings_excluded = 0
 
     def add(self, provider_key, row, work_type, site, *, source=None):
         identity = (provider_key, row["day"], row["shift"])
@@ -69,10 +75,14 @@ class ClinicalShiftAccumulator:
             self.duplicate_listings += 1
         item = self.shifts.setdefault(identity, {
             "work_types": set(), "sites": set(), "has_student": False, "sources": {},
+            "site_has_student": {}, "site_work_types": {}, "site_listing_counts": Counter(),
         })
         item["work_types"].add(work_type)
         item["sites"].add(site)
         item["has_student"] |= bool(row["has_student"])
+        item["site_has_student"][site] = item["site_has_student"].get(site, False) or bool(row["has_student"])
+        item["site_work_types"][site] = work_type
+        item["site_listing_counts"][site] += 1
         if source is not None:
             # One metadata record per source cell. Never include its raw value.
             source_key = (source["archive_path"], source["worksheet"], source["cell"])
@@ -80,7 +90,36 @@ class ClinicalShiftAccumulator:
                 source_key, dict(source, work_type=work_type, has_student=False))
             saved_source["has_student"] |= bool(row["has_student"])
 
+    def apply_outpatient_priority(self, names):
+        """Resolve only the authorized nursery/clinic overlap before aggregation.
+
+        Recompute has_student from RETAINED sites. A nursery learner must never
+        turn an unassigned clinic shift into a teaching shift. Idempotent.
+        """
+        for identity, item in sorted(self.shifts.items()):
+            excluded = nursery_sites_to_exclude(item["sites"])
+            if not excluded:
+                continue
+            key, day, shift = identity
+            self.excluded_sites_by_shift[identity] = excluded
+            self.priority_adjustments.append({
+                "preceptor_name": names[key], "date": day.isoformat(), "shift": shift,
+                "excluded_sites": sorted(excluded),
+                "retained_sites": sorted(item["sites"] - excluded),
+                "sources": [dict(row) for row in item["sources"].values()],
+            })
+            self.priority_clinical_listings_excluded += sum(item["site_listing_counts"][site] for site in excluded)
+            item["sites"].difference_update(excluded)
+            item["work_types"] = {item["site_work_types"][site] for site in item["sites"]}
+            item["has_student"] = any(item["site_has_student"][site] for site in item["sites"])
+            item["sources"] = {key: row for key, row in item["sources"].items()
+                               if priority_site_key(row["worksheet"]) not in excluded}
+        self.duplicate_listings = sum(
+            sum(item["site_listing_counts"][site] for site in item["sites"]) - 1
+            for item in self.shifts.values())
+
     def finish(self, names):
+        self.apply_outpatient_priority(names)
         overall, typed = {}, {}
         conflicts = []
         for (key, day, shift), item in sorted(self.shifts.items()):
@@ -104,7 +143,10 @@ class ClinicalShiftAccumulator:
                                   "sources": list(item["sources"].values())})
         def finish(rows):
             return [dict(row, source_sites=sorted(row["source_sites"])) for row in rows.values()]
-        return {"strict_conflict_source_version": STRICT_CONFLICT_SCHEMA_VERSION,
+        return {"outpatient_priority_version": OUTPATIENT_PRIORITY_VERSION,
+                "outpatient_priority_adjustments": self.priority_adjustments,
+                "nursery_clinical_listings_excluded": self.priority_clinical_listings_excluded,
+                "strict_conflict_source_version": STRICT_CONFLICT_SCHEMA_VERSION,
                 "learner_reach_version": LEARNER_REACH_SCHEMA_VERSION,
                 "clinical_daily": finish(overall), "clinical_daily_by_work_type": finish(typed),
                 "clinical_shift_conflicts": conflicts,
@@ -271,6 +313,9 @@ def filter_reach_dates(source_scan, target_scan, period):
     within = lambda row: period.start.isoformat() <= row["date"] <= period.end.isoformat()
     for field in ("clinical_daily", "clinical_daily_by_work_type", "clinical_shift_conflicts"):
         target_scan[field] = [dict(row, source_sites=list(row["source_sites"])) for row in source_scan[field] if within(row)]
+    target_scan["outpatient_priority_adjustments"] = [
+        dict(row, sources=[dict(source) for source in row["sources"]])
+        for row in source_scan.get("outpatient_priority_adjustments", []) if within(row)]
     names = {row["preceptor_name"] for row in target_scan["clinical_daily"]}
     target_scan["unresolved_preceptor_labels"] = [name for name in source_scan.get("unresolved_preceptor_labels", []) if name in names]
     target_scan["name_variants"] = {name: vals for name, vals in source_scan.get("name_variants", {}).items() if name in names}

@@ -5,6 +5,7 @@ selected reporting dates before any report/percentage/chart is produced. Only
 source coordinates and provider metadata are retained; no student names.
 """
 from datetime import date
+from schedule_app.services.teaching_priority import require_outpatient_priority_data
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.reporting_periods import teaching_period
 
@@ -31,6 +32,7 @@ class TeachingConflictError(OPDArchiveError):
 
 
 def require_conflict_source_data(scan):
+    require_outpatient_priority_data(scan)
     if scan.get("strict_conflict_source_version") != STRICT_CONFLICT_SCHEMA_VERSION:
         raise OPDArchiveError(
             "This saved scan predates source-level conflict checking. Click Load / "

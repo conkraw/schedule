@@ -38,6 +38,11 @@ from schedule_app.settings import (
     TEACHING_WORK_TYPE_CSV_COLUMNS, TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER,
 )
 
+from schedule_app.services.teaching_priority import (
+    OUTPATIENT_PRIORITY_VERSION, OUTPATIENT_PRIORITY_NOTE, PRIORITY_AUDIT_COLUMNS,
+    selected_priority_adjustments, outpatient_priority_audit_rows,
+)
+
 REPORTING_MODES = ("Custom dates", "Standard July-June academic years")
 PERIOD_FIELDS = {"label": "teaching_period_label", "start_date": "teaching_period_start",
                  "end_date": "teaching_period_end", "mode": "teaching_reporting_mode"}
@@ -151,7 +156,8 @@ def render():
     st.subheader("Preceptor Teaching Summary")
     st.write("Read current encrypted OPDs from GitHub, then generate a chair-friendly Word summary, "
              "overall and work-type CSVs, and one Word teaching report per preceptor.")
-    st.caption("Reports are blocked if a preceptor/date/AM-or-PM appears in different clinical experiences in the selected dates. "
+    st.caption(OUTPATIENT_PRIORITY_NOTE)
+    st.caption("After that exception, reports are blocked if a preceptor/date/AM-or-PM appears in different clinical experiences in the selected dates. "
                "The issue table identifies the exact archived OPDs and source cells. Every valid report includes numeric Learner Reach percentages and clinical-experience pie charts.")
     st.caption("HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Ward A, PSHCH Nursery, Complex Care "
                "and other services stay separate. One student-shift = four educational hours; two students "
@@ -171,7 +177,7 @@ def render():
                          help="Choose the actual name order in your OPDs. No rotation list is required. "
                               "Commas within names are preserved; use separate rows or semicolons for multiple students.")
     options_signature = hashlib.sha256(json.dumps(
-        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, client.config.signature(), order,
+        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, OUTPATIENT_PRIORITY_VERSION, client.config.signature(), order,
          TEACHING_PRECEPTOR_NAME_MAP, TEACHING_OPD_NAME_ORDER_OVERRIDES,
          TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER], sort_keys=True).encode()).hexdigest()
     if st.session_state.get("teaching_options_signature") != options_signature:
@@ -245,6 +251,22 @@ def render():
     if st.session_state.get("teaching_zip_signature") != signature:
         _clear_teaching_downloads()
         st.session_state["teaching_zip_signature"] = signature
+    adjustments = selected_priority_adjustments(report_scan, selected)
+    if adjustments:
+        st.info(f"Academic Pediatrics took priority over PSHCH Nursery for {len(adjustments):,} "
+                "overlapping clinical half-day(s) in these dates. Nursery hours and nursery student "
+                "assignments were excluded only for those half-days; the source OPDs were not changed.")
+        with st.expander("Outpatient priority adjustments (not conflicts)"):
+            audit_rows = outpatient_priority_audit_rows(report_scan, selected)
+            st.caption("One adjustment ID groups all relevant cells for one preceptor/date/AM-or-PM. "
+                       "Student-assigned YES/NO describes the original cell, not teaching credit. "
+                       "An unassigned clinic shift stays unassigned even if a nursery student was listed.")
+            st.dataframe(pd.DataFrame(audit_rows).reindex(columns=PRIORITY_AUDIT_COLUMNS),
+                         hide_index=True, use_container_width=True)
+            st.download_button("Download outpatient priority adjustments (CSV)",
+                               teaching_csv_bytes(audit_rows, PRIORITY_AUDIT_COLUMNS),
+                               file_name="Outpatient_Priority_Adjustments.csv", mime="text/csv",
+                               key="teaching_priority_adjustments")
     try:
         validate_teaching_report(report_scan, selected)
     except TeachingConflictError as exc:

@@ -3,6 +3,7 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.teaching_priority import outpatient_priority_report_note
 from collections import defaultdict
 from datetime import date as CalendarDate
 from docx import Document
@@ -83,6 +84,8 @@ def teaching_make_docx(name, monthly, scan):
 
     def note(text, warning=False):
         paragraph = doc.add_paragraph(text)
+        paragraph.paragraph_format.space_after = Pt(2)
+        paragraph.paragraph_format.line_spacing = 1.0
         for run in paragraph.runs:
             run.font.size = Pt(9)
             run.font.color.rgb = RGBColor.from_string("8C3B25" if warning else "526475")
@@ -145,6 +148,9 @@ def teaching_make_docx(name, monthly, scan):
             total=("All work types", "", f"{total:,}", f"{total * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
         if scan.get("reporting_period"):
             note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
+        priority_note = outpatient_priority_report_note(scan, [year], preceptor_name=name)
+        if priority_note:
+            note(priority_note)
         note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
         note(f"*One student assigned to one AM or PM shift = one student-shift and {TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. These are student-weighted scheduled hours, not distinct clock hours or verified attendance.")
         if TEACHING_WORK_TYPE_REVIEW in by_type:

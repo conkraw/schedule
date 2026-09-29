@@ -1,0 +1,56 @@
+{
+  "update": "Academic Pediatrics priority over PSHCH Nursery",
+  "base": "Schedule_App_Modular_Reach_Validation_Pies.zip",
+  "changed_python_files": [
+    {
+      "path": "schedule_app/reports/chair_summary.py",
+      "sha256": "e911d54c444c5532b10cd132618af09704587575421732e0fefc0d669605b3ed",
+      "action": "replace"
+    },
+    {
+      "path": "schedule_app/reports/individual_teaching.py",
+      "sha256": "1118b7e65fe18bc284993cc49c3c69bea10a422f48dadb99b8b3d51bd54887f5",
+      "action": "replace"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "sha256": "b8cf66c215bb4282c5b2cee850c563f75be7f0346a69e9e46fee5a3b3e6c64c4",
+      "action": "replace"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "sha256": "45e0776da90da15db5631999e3886281361b7c0f534d9fdba21011876310dc12",
+      "action": "replace"
+    },
+    {
+      "path": "schedule_app/services/learner_reach.py",
+      "sha256": "ab61a1597867a37710540d1bc5b4afa332b75eb63d61f9ea6b2360ceee1bd08d",
+      "action": "replace"
+    },
+    {
+      "path": "schedule_app/services/teaching_analysis.py",
+      "sha256": "3f7f20774d9ef158403c27d66fda46ed6cdd08587bc37a6d2e87a640c012db95",
+      "action": "replace"
+    },
+    {
+      "path": "schedule_app/services/teaching_priority.py",
+      "sha256": "14f5c09c6fda49cf5ec5975ff8747efa389107869bc81b248630b3ace8a0beff",
+      "action": "add"
+    },
+    {
+      "path": "schedule_app/services/teaching_validation.py",
+      "sha256": "2cd90713e4e169764bcfbc8a6662492751124949afb8610914b4eb67ea632246",
+      "action": "replace"
+    }
+  ],
+  "preserved": [
+    "app_sch_2026.py",
+    "schedule_app/settings.py",
+    "requirements.txt",
+    "Streamlit Secrets",
+    "original encrypted OPDs"
+  ],
+  "must_refresh_archive_scan": true,
+  "new_dependencies": [],
+  "local_automated_tests_passed": 163
+}

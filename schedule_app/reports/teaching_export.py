@@ -3,6 +3,10 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.teaching_priority import (
+    OUTPATIENT_PRIORITY_NOTE, PRIORITY_AUDIT_COLUMNS, outpatient_priority_audit_rows,
+    selected_priority_adjustments,
+)
 from schedule_app.services.teaching_validation import validate_teaching_report
 from collections import defaultdict
 from datetime import date
@@ -83,7 +87,7 @@ def teaching_build_zip(scan, selected_years):
         "Classification uses the site of each assignment, not the preceptor's usual specialty or home division.",
         "Every setting uses the same 4 hours per student-shift; no outpatient/inpatient weighting is added.",
         "Student-weighted work-type subtotals are checked against the overall educational totals before export.",
-        "An identical assignment recorded in different work types counts once under Work type needs review.",
+        "Academic Pediatrics takes priority over PSHCH Nursery on the same preceptor/date/AM-or-PM; other unresolved work-type conflicts block reports.",
         f"{TEACHING_CHAIR_SUMMARY_FILENAME} = one combined Word summary for the chair.",
         "The chair summary lists named preceptors alphabetically and keeps unresolved provider labels separate.",
         "Academic year is July 1 through June 30 of the following calendar year.",
@@ -155,7 +159,10 @@ def teaching_build_zip(scan, selected_years):
         "No student listed: keep that clinical shift in the denominator for an included preceptor. Do not reduce their denominator to teaching days only.",
         "Wholly blank cells, explicit closed/off/nonclinical labels and cells without a '~' marker are not counted as clinical shifts.",
         "Nonempty cells lacking the marker and nonclinical labels are logged by coordinate; names or shifts are not guessed.",
-        "A provider/date/AM-or-PM listed in different work types blocks the entire selected-period report until the OPDs are corrected.",
+        OUTPATIENT_PRIORITY_NOTE,
+        "Nursery student assignments are excluded, not transferred to clinic. An empty clinic student field remains an unassigned clinical shift.",
+        "Outpatient_Priority_Adjustments.csv lists the retained/excluded source cells for the selected reporting dates, without learner names.",
+        "After outpatient priority, other provider/date/AM-or-PM conflicts block the entire selected-period report until corrected.",
         "Every reported Learner Reach uses a nonzero validated denominator. No unresolved clinical work-type conflict is accepted.",
         "One pie per included clinical experience compares recorded hours with students against recorded hours without students.",
         "The pies use the exact category totals shown in the chair summary, not student-weighted educational hours.",
@@ -176,9 +183,16 @@ def teaching_build_zip(scan, selected_years):
         "assigned_student_shifts_read", "assigned_student_shifts_counted",
         "duplicate_student_shifts_removed", "missing_provider_cells",
         "clinical_provider_listings_read", "ignored_session_cells",
+        "nursery_student_assignment_listings_excluded",
     )
+    priority_rows = outpatient_priority_audit_rows(scan, years)
+    notes += [f"Outpatient-priority half-days in selected reporting dates: {len(selected_priority_adjustments(scan, years)):,}.",
+              f"Unique student-shifts removed by outpatient priority across the full archive: {scan.get('student_shifts_removed_by_outpatient_priority', 0):,}.",
+              "Archive_Sources.csv counts satisfy: assignments read = retained unique credit + retained duplicates + excluded nursery listings."]
     charts = teaching_clinical_charts(scan, teaching_chair_summary_data(scan, years))
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
+        if priority_rows:
+            zf.writestr("Outpatient_Priority_Adjustments.csv", teaching_csv_bytes(priority_rows, PRIORITY_AUDIT_COLUMNS))
         if period:
             zf.writestr("Reporting_Period.json", reporting_period_json(period))
             zf.writestr("Reporting_Period.csv", teaching_csv_bytes([{

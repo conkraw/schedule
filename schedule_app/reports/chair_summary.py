@@ -3,6 +3,7 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.teaching_priority import outpatient_priority_report_note
 from schedule_app.services.teaching_validation import validate_teaching_report
 from collections import defaultdict
 from datetime import date as CalendarDate
@@ -291,6 +292,9 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None):
             note(REACH_DETAIL_TOTAL_NOTE)
         if scan.get("reporting_period"):
             note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
+        priority_note = outpatient_priority_report_note(scan, [year])
+        if priority_note:
+            note(priority_note)
         note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
         note(f"*One student assigned to one AM or PM shift = one student-shift and "
              f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. "
