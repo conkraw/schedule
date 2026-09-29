@@ -1,7 +1,7 @@
 """Sidebar: teaching effort with exact, editable reporting periods.
 
-Only this page's date controls and teaching reports change. Archive writes,
-student schedules and the Power Automate workbook are unaffected.
+Date presets are saved by a separate controls module. OPD archive writes,
+student schedules, report calculations and the Power Automate workbook are unchanged.
 """
 from datetime import date
 from io import BytesIO
@@ -11,11 +11,20 @@ import json
 import pandas as pd
 import streamlit as st
 
-from schedule_app.reports.teaching_export import teaching_build_zip
+from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
+from schedule_app.services.teaching_validation import (
+    STRICT_CONFLICT_SCHEMA_VERSION, STRICT_REPORT_VERSION, CONFLICT_CSV_COLUMNS,
+    TeachingConflictError, validate_teaching_report, require_conflict_source_data,
+)
+from schedule_app.services.learner_reach import (
+    LEARNER_REACH_SCHEMA_VERSION, LEARNER_REACH_COLUMNS, REACH_DEFINITION,
+    REACH_SCOPE_NOTE, require_learner_reach_data, reach_percent, reach_totals,
+    PARTICIPATION_REPORT_VERSION, PARTICIPATION_SCOPE_NOTE, REACH_DETAIL_TOTAL_NOTE,
+    teaching_participation_keys, reach_group_year,
+)
 from schedule_app.services.opd_archive import GitHubOPDArchive, OPDArchiveError, get_opd_archive_config
 from schedule_app.services.reporting_periods import (
-    DATE_RANGE_SCHEMA_VERSION, ReportingPeriod, read_reporting_period_json,
-    reporting_period_json, teaching_report_date_text,
+    DATE_RANGE_SCHEMA_VERSION, teaching_report_date_text,
 )
 from schedule_app.services.teaching_analysis import (
     teaching_academic_label, teaching_academic_start, teaching_annual_rows,
@@ -28,102 +37,43 @@ from schedule_app.settings import (
     TEACHING_WORK_TYPE_CSV_COLUMNS, TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER,
 )
 
-REPORTING_MODES = ("Custom dates", "Standard July-June academic years")
-PERIOD_FIELDS = {"label": "teaching_period_label", "start_date": "teaching_period_start",
-                 "end_date": "teaching_period_end", "mode": "teaching_reporting_mode"}
+from schedule_app.services.teaching_priority import (
+    OUTPATIENT_PRIORITY_VERSION, OUTPATIENT_PRIORITY_NOTE, PRIORITY_AUDIT_COLUMNS,
+    selected_priority_adjustments, outpatient_priority_audit_rows,
+)
+
+from schedule_app.sections.reporting_date_controls import (
+    REPORTING_MODES, PERIOD_FIELDS,
+    render_period_controls as _render_period_controls,
+    remember_period_inputs as _remember_period_inputs,
+    clear_teaching_downloads as _clear_teaching_downloads,
+)
 
 
-def _remember_period_inputs():
-    """Non-widget state survives switching to another section within this session."""
-    preferences = dict(st.session_state.get("teaching_period_preferences", {}))
-    for name, key in PERIOD_FIELDS.items():
-        if key in st.session_state:
-            preferences[name] = st.session_state[key]
-    st.session_state["teaching_period_preferences"] = preferences
-
-
-def _clear_teaching_downloads():
-    st.session_state.pop("teaching_zip", None)
-    st.session_state.pop("teaching_zip_signature", None)
-
-
-def _load_period_settings():
-    """Button callback: populate controls *before* the subsequent page rerun."""
-    upload = st.session_state.get("teaching_period_json_upload")
-    try:
-        if upload is None:
-            raise OPDArchiveError("Choose a saved reporting-date JSON file first.")
-        period = read_reporting_period_json(upload.getvalue())
-    except OPDArchiveError as exc:
-        st.session_state["teaching_period_import_error"] = str(exc)
-        return
-    values = {"label": period.label, "start_date": period.start, "end_date": period.end,
-              "mode": REPORTING_MODES[0]}
-    for name, key in PERIOD_FIELDS.items():
-        st.session_state[key] = values[name]
-    st.session_state["teaching_period_preferences"] = values
-    st.session_state.pop("teaching_period_import_error", None)
-    st.session_state["teaching_period_import_ok"] = True
+def _render_conflicts(exc):
     _clear_teaching_downloads()
-
-
-def _render_period_controls():
-    preferences = st.session_state.get("teaching_period_preferences", {})
-    # Initialize values only after Streamlit has removed obsolete widget state,
-    # for example when returning from another sidebar section.
-    for name, key in PERIOD_FIELDS.items():
-        if key not in st.session_state and name in preferences:
-            st.session_state[key] = preferences[name]
-    if st.session_state.get("teaching_reporting_mode") not in REPORTING_MODES:
-        st.session_state["teaching_reporting_mode"] = REPORTING_MODES[0]
-    st.markdown("**Reporting period**")
-    mode = st.radio("Choose reporting dates", REPORTING_MODES, key="teaching_reporting_mode",
-                    horizontal=True, on_change=_remember_period_inputs)
-    period, issue = None, None
-    if mode == REPORTING_MODES[0]:
-        left, right = st.columns(2)
-        start = left.date_input("Start date (included)", value=None, min_value=date(1970, 1, 1),
-                                max_value=date(2100, 12, 31), format="MM/DD/YYYY",
-                                key="teaching_period_start", on_change=_remember_period_inputs)
-        end = right.date_input("End date (included)", value=None, min_value=date(1970, 1, 1),
-                               max_value=date(2100, 12, 31), format="MM/DD/YYYY",
-                               key="teaching_period_end", on_change=_remember_period_inputs)
-        label = st.text_input("Report label / academic year", value="", placeholder="e.g., 26-27",
-                              max_chars=60, key="teaching_period_label", on_change=_remember_period_inputs,
-                              help="This label goes in the academic_year CSV column and every Word report. "
-                                   "It does not determine the dates or force a July boundary.")
-        try:
-            period = ReportingPeriod(label, start, end)
-        except OPDArchiveError as exc:
-            issue = str(exc)
-        st.caption("Choose the exact dates you need, even for a period longer than 12 months. "
-                   "Both dates are included. Only assignments on those dates count; July 1 does not split a custom report.")
-    else:
-        st.caption("Optional original mode: July 1 through June 30, with a separate section for each selected year.")
-    _remember_period_inputs()
-    with st.expander("Save / reload these date settings (optional)"):
-        st.caption("Dates and the label stay selected while you use this session. To reuse them after closing "
-                   "the session, download the small JSON settings file and load it here next time. "
-                   "This saves no OPDs, student names or credentials and does not write to GitHub.")
-        if period is not None:
-            st.download_button("Download reporting-date settings", data=reporting_period_json(period),
-                               file_name=f"Reporting_Dates_{period.filename_part()}.json", mime="application/json",
-                               key="teaching_save_period")
-        upload = st.file_uploader("Load saved reporting-date settings (.json)", type=["json"],
-                                   key="teaching_period_json_upload")
-        st.button("Apply saved reporting dates", key="teaching_apply_period", disabled=upload is None,
-                  on_click=_load_period_settings)
-        if st.session_state.get("teaching_period_import_error"):
-            st.error(st.session_state["teaching_period_import_error"])
-        if st.session_state.pop("teaching_period_import_ok", False):
-            st.success("Reporting dates and label loaded. Generate the reports again for this period.")
-    return mode, period, issue
+    st.error(str(exc))
+    st.write("Each conflict ID groups all source cells for one preceptor/date/AM-or-PM. "
+             "A YES or NO only indicates whether a student is recorded in that cell; student names are omitted.")
+    columns = ["conflict_id", "preceptor_name", "date", "shift", "conflicting_work_types",
+               "rotation_start", "archive_file", "worksheet", "cell", "listed_work_type", "student_assigned"]
+    st.dataframe(pd.DataFrame(exc.rows).reindex(columns=columns), hide_index=True, use_container_width=True)
+    st.download_button("Download OPD conflicts to correct (CSV)",
+        data=teaching_csv_bytes(exc.rows, CONFLICT_CSV_COLUMNS),
+        file_name="OPD_Conflict_Review.csv", mime="text/csv", key="teaching_download_conflicts")
+    st.info("Open OPD Archive, select the listed rotation and download its original workbook. "
+            "Review the listed worksheets/cells and correct which clinical experience owns the shift. "
+            "Re-upload the corrected OPD in Create Student Schedule so it replaces that rotation's current archive. "
+            "Then return here and click Load / refresh archived OPDs. No teaching report or pie chart will run until conflicts in the selected dates are resolved.")
 
 
 def render():
     st.subheader("Preceptor Teaching Summary")
     st.write("Read current encrypted OPDs from GitHub, then generate a chair-friendly Word summary, "
              "overall and work-type CSVs, and one Word teaching report per preceptor.")
+    st.caption(OUTPATIENT_PRIORITY_NOTE)
+    st.caption("After that exception, reports are blocked if a preceptor/date/AM-or-PM appears in different clinical experiences in the selected dates. "
+               "The issue table identifies the exact archived OPDs and source cells. Every valid report includes numeric Learner Reach percentages and clinical-experience pie charts.")
     st.caption("HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Ward A, PSHCH Nursery, Complex Care "
                "and other services stay separate. One student-shift = four educational hours; two students "
                "at once count twice. These are scheduled student-weighted hours, not distinct clock hours.")
@@ -142,7 +92,7 @@ def render():
                          help="Choose the actual name order in your OPDs. No rotation list is required. "
                               "Commas within names are preserved; use separate rows or semicolons for multiple students.")
     options_signature = hashlib.sha256(json.dumps(
-        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, client.config.signature(), order,
+        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, OUTPATIENT_PRIORITY_VERSION, client.config.signature(), order,
          TEACHING_PRECEPTOR_NAME_MAP, TEACHING_OPD_NAME_ORDER_OVERRIDES,
          TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER], sort_keys=True).encode()).hexdigest()
     if st.session_state.get("teaching_options_signature") != options_signature:
@@ -168,11 +118,14 @@ def render():
             bar.empty()
     scan = st.session_state.get("teaching_scan")
     if scan is None:
-        st.caption("Nothing is downloaded or decrypted until you click Load / refresh archived OPDs. "
+        st.caption("No OPD is downloaded or decrypted until you click Load / refresh archived OPDs. "
+                   "Saved date presets load separately from GitHub. "
                    "This section never uploads a report or decrypted OPD to GitHub.")
         return
     try:
         teaching_require_date_range_data(scan)
+        require_learner_reach_data(scan)
+        require_conflict_source_data(scan)
     except OPDArchiveError as exc:
         st.session_state.pop("teaching_scan", None)
         _clear_teaching_downloads()
@@ -200,7 +153,9 @@ def render():
         st.info(f"Reporting period {period.label}: {teaching_report_date_text(report_scan, selected[0])} (inclusive).")
     else:
         current = teaching_academic_start(teaching_local_today())
-        years = sorted({row["academic_start_year"] for row in scan["monthly"]} | {current}, reverse=True)
+        years = sorted({row["academic_start_year"] for row in scan["monthly"]}
+                       | {teaching_academic_start(date.fromisoformat(row["date"])) for row in scan["clinical_daily"]}
+                       | {current}, reverse=True)
         if any(year not in years for year in st.session_state.get("teaching_selected_years", [])):
             st.session_state.pop("teaching_selected_years", None)
         selected = st.multiselect("Academic year(s) to include", years, default=[current],
@@ -208,18 +163,46 @@ def render():
         report_scan = scan
         selection_signature = (mode, *sorted(selected))
         file_part = teaching_academic_label(selected[0]) if len(selected) == 1 else "Multiple_Academic_Years"
-    signature = (options_signature, scan["commit"], selection_signature)
+    signature = (options_signature, scan["commit"], selection_signature, PARTICIPATION_REPORT_VERSION, STRICT_REPORT_VERSION)
     if st.session_state.get("teaching_zip_signature") != signature:
         _clear_teaching_downloads()
         st.session_state["teaching_zip_signature"] = signature
+    adjustments = selected_priority_adjustments(report_scan, selected)
+    if adjustments:
+        st.info(f"Academic Pediatrics took priority over PSHCH Nursery for {len(adjustments):,} "
+                "overlapping clinical half-day(s) in these dates. Nursery hours and nursery student "
+                "assignments were excluded only for those half-days; the source OPDs were not changed.")
+        with st.expander("Outpatient priority adjustments (not conflicts)"):
+            audit_rows = outpatient_priority_audit_rows(report_scan, selected)
+            st.caption("One adjustment ID groups all relevant cells for one preceptor/date/AM-or-PM. "
+                       "Student-assigned YES/NO describes the original cell, not teaching credit. "
+                       "An unassigned clinic shift stays unassigned even if a nursery student was listed.")
+            st.dataframe(pd.DataFrame(audit_rows).reindex(columns=PRIORITY_AUDIT_COLUMNS),
+                         hide_index=True, use_container_width=True)
+            st.download_button("Download outpatient priority adjustments (CSV)",
+                               teaching_csv_bytes(audit_rows, PRIORITY_AUDIT_COLUMNS),
+                               file_name="Outpatient_Priority_Adjustments.csv", mime="text/csv",
+                               key="teaching_priority_adjustments")
+    try:
+        validate_teaching_report(report_scan, selected)
+    except TeachingConflictError as exc:
+        _render_conflicts(exc)
+        return
+    except OPDArchiveError as exc:
+        _clear_teaching_downloads()
+        st.error(str(exc))
+        return
     annual = teaching_annual_rows(report_scan, selected)
-    if report_scan["unresolved_preceptor_labels"]:
+    eligible = teaching_participation_keys(report_scan, selected)
+    active_names = {name for name, _, _ in eligible}
+    typed = teaching_work_type_rows(report_scan, selected)
+    active_sites = {site for row in typed for site in row.get("source_sites", "").split("; ") if site}
+    review_names = [name for name in report_scan["unresolved_preceptor_labels"] if name in active_names]
+    if review_names:
         st.warning("Some provider labels identify a site/slot/combined entry rather than a person. "
                    "They remain literal and are separated from named preceptors in the Word reports.")
         with st.expander("Provider labels to review"):
-            st.write(", ".join(report_scan["unresolved_preceptor_labels"]))
-    if report_scan.get("work_type_conflicts"):
-        st.warning("Some identical assignments appear in different work types. Each counts once under Work type needs review.")
+            st.write(", ".join(review_names))
     with st.expander("Archive coverage and data-quality details"):
         st.caption("These file-level counts describe whole archived rotations, not just the selected date range. "
                    "The teaching totals below are date-filtered. Missing rotations are not assumed to have zero teaching.")
@@ -227,29 +210,44 @@ def render():
             st.write(f"Exact duplicate student-shifts removed across the whole archive: {scan['duplicate_assignments_removed']:,}.")
         st.dataframe(pd.DataFrame(scan["sources"]), hide_index=True, use_container_width=True)
         if scan["warnings"]:
-            st.warning("Some archived assignments have no identifiable provider. They are excluded from provider totals; "
-                       "these warnings may refer to dates outside your selected period.")
+            st.warning("Some cells were excluded: missing/nonclinical provider labels or missing '~' markers. "
+                       "These archive-wide warnings may refer to dates outside your selected period.")
             st.dataframe(pd.DataFrame(scan["warnings"]), hide_index=True, use_container_width=True)
+        st.write(f"Repeated clinical listings combined across all archived rotations: {scan.get('duplicate_clinical_listings_removed', 0):,}.")
         if report_scan.get("work_type_conflicts"):
             st.dataframe(pd.DataFrame(report_scan["work_type_conflicts"]), hide_index=True, use_container_width=True)
         st.dataframe(pd.DataFrame([{"opd_site": site, "work_type": work_type}
-                                  for site, work_type in report_scan["site_work_type_mapping"].items()]),
+                                  for site, work_type in report_scan["site_work_type_mapping"].items() if site in active_sites]),
                      hide_index=True, use_container_width=True)
     if not annual:
         _clear_teaching_downloads()
-        st.info("No assigned student-shifts were found for the selected reporting period. "
-                "Adjust the dates/year selection, check the '~' name order or archive the missing OPDs. "
-                "Provider availability without a student does not count.")
+        st.info("No student assignments were found for the selected reporting period. "
+                "Preceptors and services with only unassigned shifts are omitted. "
+                "Adjust the dates/year selection, check the '~' name order or archive the missing OPDs.")
         return
-    preview = pd.DataFrame(annual, columns=TEACHING_CSV_COLUMNS)
+    preview = pd.DataFrame(annual, columns=tuple(TEACHING_CSV_COLUMNS) + LEARNER_REACH_COLUMNS)
     a, b, c = st.columns(3)
     a.metric("Preceptors / provider labels", preview["preceptor_name"].nunique())
     b.metric("Assigned student-shifts", f"{preview['no_of_shifts'].sum():,}")
     c.metric("Student-weighted educational hours", f"{preview['educational_hours'].sum():,}")
+    totals = reach_totals(annual)
+    a, b, c, d = st.columns(4)
+    a.metric("Recorded OPD hours", f"{totals['recorded_clinical_hours']:,}")
+    b.metric("Hours with students", f"{totals['hours_with_students']:,}")
+    c.metric("Hours without students", f"{totals['hours_without_students']:,}")
+    d.metric("Learner Reach", reach_percent(totals["learner_reach_pct"]))
+    st.caption(PARTICIPATION_SCOPE_NOTE)
+    if sum(row["recorded_clinical_hours"] for row in typed) != totals["recorded_clinical_hours"]:
+        st.caption(REACH_DETAIL_TOTAL_NOTE)
+    st.caption(REACH_DEFINITION)
+    with st.expander("What Learner Reach does and does not measure"):
+        st.write(REACH_SCOPE_NOTE)
+        st.write("Educational hours remain student-weighted; simultaneous students count twice only for that measure. "
+                 "Clinical hours and Learner Reach count the half-day once. Wholly unassigned preceptors/categories are not listed; included preceptors retain their non-teaching shifts in the denominator.")
     st.markdown("**Teaching by type of work**")
-    st.dataframe(pd.DataFrame(teaching_work_type_rows(report_scan, selected), columns=TEACHING_WORK_TYPE_CSV_COLUMNS),
+    st.dataframe(pd.DataFrame(typed, columns=tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS),
                  hide_index=True, use_container_width=True)
-    with st.expander("Overall totals (original CSV columns)"):
+    with st.expander("Overall totals and Learner Reach"):
         st.dataframe(preview, hide_index=True, use_container_width=True)
     st.caption("In Custom dates mode, academic_year contains your report label. All dates in that range stay in one "
                "report section, even across July. Boundary months include only the chosen days. "
@@ -261,6 +259,9 @@ def render():
                 zip_bytes, _ = teaching_build_zip(report_scan, selected)
                 st.session_state["teaching_zip"] = zip_bytes
                 st.session_state["teaching_zip_signature"] = signature
+        except TeachingConflictError as exc:
+            _render_conflicts(exc)
+            return
         except OPDArchiveError as exc:
             st.error(str(exc))
         except Exception:
@@ -271,10 +272,17 @@ def render():
                            file_name=f"Preceptor_Teaching_{file_part}.zip", mime="application/zip", key="teaching_download_zip")
         with ZipFile(BytesIO(st.session_state["teaching_zip"])) as generated_zip:
             chair_bytes = generated_zip.read(TEACHING_CHAIR_SUMMARY_FILENAME)
+            chart_files = sorted(name for name in generated_zip.namelist()
+                                 if name.startswith("Learner_Reach_Charts/") and name.endswith(".png"))
+            with st.expander("Learner Reach pies by clinical experience"):
+                st.caption("Each pie compares recorded hours with students versus without students in that experience. "
+                           "These are the same category percentages shown in the chair summary, not student-weighted hours.")
+                for chart_file in chart_files:
+                    st.image(generated_zip.read(chart_file), width=680)
         st.download_button("Download chair summary only (Word)", data=chair_bytes,
                            file_name=TEACHING_CHAIR_SUMMARY_FILENAME,
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                            key="teaching_download_chair_summary")
-        st.caption("The ZIP includes the chair summary, both CSVs, individual Word reports, source notes and "
+        st.caption("The ZIP includes the chair summary with clinical-experience pies, chart PNGs and their CSV, overall/work-type CSVs with Learner Reach, monthly Learner Reach CSV, individual Word reports, source notes and "
                    "(for custom dates) the exact reporting-date settings. These are unencrypted staff reports; "
                    "do not commit the downloads to the public repository.")

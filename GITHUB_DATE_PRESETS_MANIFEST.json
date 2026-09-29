@@ -1,0 +1,26 @@
+{
+  "update": "GitHub reporting-date presets",
+  "base_package": "Schedule_App_Modular_Outpatient_Priority.zip",
+  "files": [
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "sha256": "5098868237aa64411d5897c2fd50f02c04195f3ce7b9f6d8afd6c2e19a846bda",
+      "action": "update"
+    },
+    {
+      "path": "schedule_app/sections/reporting_date_controls.py",
+      "sha256": "45538a22be75c34d787f5a336b8f99b954ad3267356e97195302aa0cb9917b25",
+      "action": "add"
+    },
+    {
+      "path": "schedule_app/services/reporting_presets.py",
+      "sha256": "dff52707e825f901194358695eac05823b72cb7972f8b79b6b129331d282a81f",
+      "action": "add"
+    }
+  ],
+  "no_new_dependencies": true,
+  "existing_secrets_unchanged": true,
+  "test_total": 212,
+  "preset_specific_tests": 49,
+  "live_github_modified": false
+}
