@@ -331,7 +331,11 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             site = teaching_site_key(item["site"])
             work_type = teaching_work_type(item["site"])
             observed_site_groups[site] = work_type
-            clinical.add(key, item, work_type, site)
+            clinical.add(key, item, work_type, site, source={
+                "rotation_start": rotation.isoformat(), "archive_path": loaded["path"],
+                "archive_file": loaded["path"].rsplit("/", 1)[-1],
+                "github_blob_sha": loaded["sha"], "worksheet": item["site"], "cell": item["cell"],
+            })
             if teaching_label_needs_review(name, loaded["details"]["site_names"]):
                 review_labels.add(key)
         for reason in sorted({row["reason"] for row in ignored_cells}):

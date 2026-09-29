@@ -3,6 +3,7 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.teaching_validation import validate_teaching_report
 from collections import defaultdict
 from datetime import date
 from schedule_app.services.learner_reach import (
@@ -11,7 +12,8 @@ from schedule_app.services.learner_reach import (
     PARTICIPATION_SCOPE_NOTE, REACH_DETAIL_TOTAL_NOTE,
 )
 from io import BytesIO
-from schedule_app.reports.chair_summary import teaching_make_chair_summary
+from schedule_app.reports.chair_summary import teaching_make_chair_summary, teaching_chair_summary_data
+from schedule_app.reports.learner_reach_charts import teaching_clinical_charts, CHART_DATA_COLUMNS
 from schedule_app.reports.individual_teaching import teaching_make_docx
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.reporting_periods import (
@@ -51,6 +53,7 @@ def teaching_build_zip(scan, selected_years):
     """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
     require_learner_reach_data(scan)
     years = sorted({int(year) for year in selected_years})
+    validate_teaching_report(scan, years)
     annual = teaching_annual_rows(scan, years)
     typed = teaching_work_type_rows(scan, years)
     if not annual:
@@ -152,8 +155,11 @@ def teaching_build_zip(scan, selected_years):
         "No student listed: keep that clinical shift in the denominator for an included preceptor. Do not reduce their denominator to teaching days only.",
         "Wholly blank cells, explicit closed/off/nonclinical labels and cells without a '~' marker are not counted as clinical shifts.",
         "Nonempty cells lacking the marker and nonclinical labels are logged by coordinate; names or shifts are not guessed.",
-        "A clinical half-day listed in different work types is counted once under Work type needs review. Category percentages are blank/N/A.",
-        "Category hours exclude unresolved concurrent work-type shifts; the overall percentage still uses each clinical shift once.",
+        "A provider/date/AM-or-PM listed in different work types blocks the entire selected-period report until the OPDs are corrected.",
+        "Every reported Learner Reach uses a nonzero validated denominator. No unresolved clinical work-type conflict is accepted.",
+        "One pie per included clinical experience compares recorded hours with students against recorded hours without students.",
+        "The pies use the exact category totals shown in the chair summary, not student-weighted educational hours.",
+        "Chart PNGs are in Learner_Reach_Charts; clinical_experience_learner_reach.csv contains their numbers.",
         "Overall percentages use total shifts with learners / total recorded shifts, never an average of provider percentages.",
         "preceptor_learner_reach_monthly.csv includes all recorded months for participating preceptor/work-type entries, including zero-teaching months. It excludes wholly nonparticipating entries.",
         f"Duplicate clinical provider listings combined across the full archive: {scan.get('duplicate_clinical_listings_removed', 0)}.",
@@ -171,6 +177,7 @@ def teaching_build_zip(scan, selected_years):
         "duplicate_student_shifts_removed", "missing_provider_cells",
         "clinical_provider_listings_read", "ignored_session_cells",
     )
+    charts = teaching_clinical_charts(scan, teaching_chair_summary_data(scan, years))
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
         if period:
             zf.writestr("Reporting_Period.json", reporting_period_json(period))
@@ -178,7 +185,11 @@ def teaching_build_zip(scan, selected_years):
                 "academic_year": period.label, "start_date": period.start.isoformat(),
                 "end_date": period.end.isoformat(), "both_dates_included": "YES",
             }], ("academic_year", "start_date", "end_date", "both_dates_included")))
-        zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years))
+        zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years, charts=charts))
+        for chart in charts:
+            zf.writestr(chart["filename"], chart["png"])
+        zf.writestr("clinical_experience_learner_reach.csv", teaching_csv_bytes(
+            [chart["data"] for chart in charts], CHART_DATA_COLUMNS))
         zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual, tuple(TEACHING_CSV_COLUMNS) + LEARNER_REACH_COLUMNS))
         zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(typed, tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS))
         monthly_reach = participating_reach_rows(scan, years, by_work_type=True, monthly=True)

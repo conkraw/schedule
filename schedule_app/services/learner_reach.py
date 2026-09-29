@@ -10,6 +10,10 @@ from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.reporting_periods import teaching_period, teaching_report_label
 from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT, TEACHING_WORK_TYPE_REVIEW
 import re
+import math
+from schedule_app.services.teaching_validation import (
+    STRICT_CONFLICT_SCHEMA_VERSION, validate_teaching_report,
+)
 
 LEARNER_REACH_SCHEMA_VERSION = 1
 # A display/export change only: existing complete scans can be reused safely.
@@ -20,7 +24,7 @@ PARTICIPATION_SCOPE_NOTE = (
     "category percentages use all shifts in that category."
 )
 REACH_DETAIL_TOTAL_NOTE = (
-    "Overall OPD hours also include shifts in unlisted settings or awaiting work-type review. "
+    "Overall OPD hours also include shifts in unlisted settings. "
     "Detail tables omit settings with no student assignments, so their OPD-hour subtotals "
     "may be lower than the overall total."
 )
@@ -59,16 +63,22 @@ class ClinicalShiftAccumulator:
         self.shifts = {}
         self.duplicate_listings = 0
 
-    def add(self, provider_key, row, work_type, site):
+    def add(self, provider_key, row, work_type, site, *, source=None):
         identity = (provider_key, row["day"], row["shift"])
         if identity in self.shifts:
             self.duplicate_listings += 1
         item = self.shifts.setdefault(identity, {
-            "work_types": set(), "sites": set(), "has_student": False,
+            "work_types": set(), "sites": set(), "has_student": False, "sources": {},
         })
         item["work_types"].add(work_type)
         item["sites"].add(site)
         item["has_student"] |= bool(row["has_student"])
+        if source is not None:
+            # One metadata record per source cell. Never include its raw value.
+            source_key = (source["archive_path"], source["worksheet"], source["cell"])
+            saved_source = item["sources"].setdefault(
+                source_key, dict(source, work_type=work_type, has_student=False))
+            saved_source["has_student"] |= bool(row["has_student"])
 
     def finish(self, names):
         overall, typed = {}, {}
@@ -90,10 +100,12 @@ class ClinicalShiftAccumulator:
             if len(item["work_types"]) > 1:
                 conflicts.append({"preceptor_name": name, "date": day.isoformat(), "shift": shift,
                                   "work_types": sorted(item["work_types"]), "source_sites": sorted(item["sites"]),
-                                  "has_student": bool(item["has_student"])})
+                                  "has_student": bool(item["has_student"]),
+                                  "sources": list(item["sources"].values())})
         def finish(rows):
             return [dict(row, source_sites=sorted(row["source_sites"])) for row in rows.values()]
-        return {"learner_reach_version": LEARNER_REACH_SCHEMA_VERSION,
+        return {"strict_conflict_source_version": STRICT_CONFLICT_SCHEMA_VERSION,
+                "learner_reach_version": LEARNER_REACH_SCHEMA_VERSION,
                 "clinical_daily": finish(overall), "clinical_daily_by_work_type": finish(typed),
                 "clinical_shift_conflicts": conflicts,
                 "duplicate_clinical_listings_removed": self.duplicate_listings}
@@ -148,22 +160,28 @@ def reach_totals(entries):
     if counts["shifts_without_students"] + with_students != total or with_students > total:
         raise OPDArchiveError("Clinical shift totals do not reconcile; a percentage cannot be reported.")
     review = sum(int(row.get("availability_review_shifts", 0)) for row in rows)
-    note = "Clinical work-type overlap: review the affected shifts before interpreting this percentage." if review else ""
+    if review:
+        raise OPDArchiveError("Reports blocked: unresolved clinical work-type conflicts. Correct the affected OPDs and refresh the archive.")
+    note = ""
     return {**counts,
             "recorded_clinical_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT,
             "hours_with_students": with_students * TEACHING_HOURS_PER_STUDENT_SHIFT,
             "hours_without_students": counts["shifts_without_students"] * TEACHING_HOURS_PER_STUDENT_SHIFT,
-            "learner_reach_pct": round(100 * with_students / total, 1) if total and not review else None,
+            "learner_reach_pct": round(100 * with_students / total, 1) if total else None,
             "availability_review_shifts": review,
             "learner_reach_note": note or ("No recorded clinical shifts in this category." if not total else "")}
 
 
 def reach_percent(value):
-    return "N/A" if value is None else f"{value:.1f}%"
+    if value is None or not math.isfinite(value) or not 0 <= value <= 100:
+        raise OPDArchiveError("Learner Reach is undefined or invalid. Reports are blocked; check recorded clinical shifts and refresh the archive.")
+    return f"{value:.1f}%"
 
 
 def learner_reach_rows(scan, selected_years, *, by_work_type=False, monthly=False):
     """Joinable rows for all recorded providers, including zero teaching assignments."""
+    selected_years = tuple(int(year) for year in selected_years)
+    validate_teaching_report(scan, selected_years)
     require_learner_reach_data(scan)
     from schedule_app.services.teaching_analysis import teaching_name_key, teaching_work_type_sort, teaching_month_label
     years = {int(year) for year in selected_years}
@@ -175,33 +193,12 @@ def learner_reach_rows(scan, selected_years, *, by_work_type=False, monthly=Fals
             key = (row["preceptor_name"], year, row.get("work_type", "") if by_work_type else "",
                    day.replace(day=1).isoformat() if monthly else "")
             grouped[key].append(row)
-    reviews = Counter()
-    review_sites = defaultdict(set)
-    if by_work_type:
-        for row in scan.get("clinical_shift_conflicts", []):
-            day = date.fromisoformat(row["date"])
-            year = reach_group_year(scan, day)
-            if year not in years:
-                continue
-            # Known dates, but no defensible allocation of the single clinical
-            # half-day to multiple concurrent settings. Never count it twice.
-            for kind in set(row["work_types"]) | {TEACHING_WORK_TYPE_REVIEW}:
-                key = (row["preceptor_name"], year, kind, day.replace(day=1).isoformat() if monthly else "")
-                grouped.setdefault(key, [])
-                reviews[key] += 1
-                review_sites[key].update(site for site in row["source_sites"]
-                                         if kind == TEACHING_WORK_TYPE_REVIEW
-                                         or scan.get("site_work_type_mapping", {}).get(site) == kind)
     results = []
     for (name, year, kind, month), items in sorted(grouped.items(), key=lambda p: (teaching_name_key(p[0][0]), p[0][1], teaching_work_type_sort(p[0][2]), p[0][3])):
         key = (name, year, kind, month)
         totals = reach_totals(items)
-        if reviews[key]:
-            totals["availability_review_shifts"] = reviews[key]
-            totals["learner_reach_pct"] = None
-            totals["learner_reach_note"] = "Concurrent work types: affected clinical shifts are counted once under Work type needs review. Listed category hours exclude those unresolved shifts; category percentage withheld."
         months = sorted({date.fromisoformat(row["date"]).replace(day=1) for row in items})
-        sites = {site for row in items for site in row["source_sites"]} | review_sites[key]
+        sites = {site for row in items for site in row["source_sites"]}
         results.append({"preceptor_name": name, "academic_start_year": year,
                         "academic_year": teaching_report_label(scan, year), **totals,
                         "months_scheduled": "; ".join(teaching_month_label(day) for day in months),

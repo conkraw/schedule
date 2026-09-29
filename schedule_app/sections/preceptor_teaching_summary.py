@@ -11,7 +11,11 @@ import json
 import pandas as pd
 import streamlit as st
 
-from schedule_app.reports.teaching_export import teaching_build_zip
+from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
+from schedule_app.services.teaching_validation import (
+    STRICT_CONFLICT_SCHEMA_VERSION, STRICT_REPORT_VERSION, CONFLICT_CSV_COLUMNS,
+    TeachingConflictError, validate_teaching_report, require_conflict_source_data,
+)
 from schedule_app.services.learner_reach import (
     LEARNER_REACH_SCHEMA_VERSION, LEARNER_REACH_COLUMNS, REACH_DEFINITION,
     REACH_SCOPE_NOTE, require_learner_reach_data, reach_percent, reach_totals,
@@ -126,10 +130,29 @@ def _render_period_controls():
     return mode, period, issue
 
 
+def _render_conflicts(exc):
+    _clear_teaching_downloads()
+    st.error(str(exc))
+    st.write("Each conflict ID groups all source cells for one preceptor/date/AM-or-PM. "
+             "A YES or NO only indicates whether a student is recorded in that cell; student names are omitted.")
+    columns = ["conflict_id", "preceptor_name", "date", "shift", "conflicting_work_types",
+               "rotation_start", "archive_file", "worksheet", "cell", "listed_work_type", "student_assigned"]
+    st.dataframe(pd.DataFrame(exc.rows).reindex(columns=columns), hide_index=True, use_container_width=True)
+    st.download_button("Download OPD conflicts to correct (CSV)",
+        data=teaching_csv_bytes(exc.rows, CONFLICT_CSV_COLUMNS),
+        file_name="OPD_Conflict_Review.csv", mime="text/csv", key="teaching_download_conflicts")
+    st.info("Open OPD Archive, select the listed rotation and download its original workbook. "
+            "Review the listed worksheets/cells and correct which clinical experience owns the shift. "
+            "Re-upload the corrected OPD in Create Student Schedule so it replaces that rotation's current archive. "
+            "Then return here and click Load / refresh archived OPDs. No teaching report or pie chart will run until conflicts in the selected dates are resolved.")
+
+
 def render():
     st.subheader("Preceptor Teaching Summary")
     st.write("Read current encrypted OPDs from GitHub, then generate a chair-friendly Word summary, "
              "overall and work-type CSVs, and one Word teaching report per preceptor.")
+    st.caption("Reports are blocked if a preceptor/date/AM-or-PM appears in different clinical experiences in the selected dates. "
+               "The issue table identifies the exact archived OPDs and source cells. Every valid report includes numeric Learner Reach percentages and clinical-experience pie charts.")
     st.caption("HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Ward A, PSHCH Nursery, Complex Care "
                "and other services stay separate. One student-shift = four educational hours; two students "
                "at once count twice. These are scheduled student-weighted hours, not distinct clock hours.")
@@ -148,7 +171,7 @@ def render():
                          help="Choose the actual name order in your OPDs. No rotation list is required. "
                               "Commas within names are preserved; use separate rows or semicolons for multiple students.")
     options_signature = hashlib.sha256(json.dumps(
-        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, client.config.signature(), order,
+        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, client.config.signature(), order,
          TEACHING_PRECEPTOR_NAME_MAP, TEACHING_OPD_NAME_ORDER_OVERRIDES,
          TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER], sort_keys=True).encode()).hexdigest()
     if st.session_state.get("teaching_options_signature") != options_signature:
@@ -180,6 +203,7 @@ def render():
     try:
         teaching_require_date_range_data(scan)
         require_learner_reach_data(scan)
+        require_conflict_source_data(scan)
     except OPDArchiveError as exc:
         st.session_state.pop("teaching_scan", None)
         _clear_teaching_downloads()
@@ -217,28 +241,30 @@ def render():
         report_scan = scan
         selection_signature = (mode, *sorted(selected))
         file_part = teaching_academic_label(selected[0]) if len(selected) == 1 else "Multiple_Academic_Years"
-    signature = (options_signature, scan["commit"], selection_signature, PARTICIPATION_REPORT_VERSION)
+    signature = (options_signature, scan["commit"], selection_signature, PARTICIPATION_REPORT_VERSION, STRICT_REPORT_VERSION)
     if st.session_state.get("teaching_zip_signature") != signature:
         _clear_teaching_downloads()
         st.session_state["teaching_zip_signature"] = signature
+    try:
+        validate_teaching_report(report_scan, selected)
+    except TeachingConflictError as exc:
+        _render_conflicts(exc)
+        return
+    except OPDArchiveError as exc:
+        _clear_teaching_downloads()
+        st.error(str(exc))
+        return
     annual = teaching_annual_rows(report_scan, selected)
     eligible = teaching_participation_keys(report_scan, selected)
     active_names = {name for name, _, _ in eligible}
     typed = teaching_work_type_rows(report_scan, selected)
     active_sites = {site for row in typed for site in row.get("source_sites", "").split("; ") if site}
     review_names = [name for name in report_scan["unresolved_preceptor_labels"] if name in active_names]
-    clinical_review = [row for row in report_scan.get("clinical_shift_conflicts", [])
-                       if (row["preceptor_name"], reach_group_year(report_scan, date.fromisoformat(row["date"])), "") in eligible]
     if review_names:
         st.warning("Some provider labels identify a site/slot/combined entry rather than a person. "
                    "They remain literal and are separated from named preceptors in the Word reports.")
         with st.expander("Provider labels to review"):
             st.write(", ".join(review_names))
-    if report_scan.get("work_type_conflicts"):
-        st.warning("Some identical assignments appear in different work types. Each counts once under Work type needs review.")
-    if clinical_review:
-        st.warning("Some clinical half-days appear in multiple work types. Overall Learner Reach counts each shift once; "
-                   "affected work-type percentages are N/A pending review. See Clinical_Shift_Review.csv in the ZIP.")
     with st.expander("Archive coverage and data-quality details"):
         st.caption("These file-level counts describe whole archived rotations, not just the selected date range. "
                    "The teaching totals below are date-filtered. Missing rotations are not assumed to have zero teaching.")
@@ -249,8 +275,6 @@ def render():
             st.warning("Some cells were excluded: missing/nonclinical provider labels or missing '~' markers. "
                        "These archive-wide warnings may refer to dates outside your selected period.")
             st.dataframe(pd.DataFrame(scan["warnings"]), hide_index=True, use_container_width=True)
-        if clinical_review:
-            st.dataframe(pd.DataFrame(clinical_review), hide_index=True, use_container_width=True)
         st.write(f"Repeated clinical listings combined across all archived rotations: {scan.get('duplicate_clinical_listings_removed', 0):,}.")
         if report_scan.get("work_type_conflicts"):
             st.dataframe(pd.DataFrame(report_scan["work_type_conflicts"]), hide_index=True, use_container_width=True)
@@ -297,6 +321,9 @@ def render():
                 zip_bytes, _ = teaching_build_zip(report_scan, selected)
                 st.session_state["teaching_zip"] = zip_bytes
                 st.session_state["teaching_zip_signature"] = signature
+        except TeachingConflictError as exc:
+            _render_conflicts(exc)
+            return
         except OPDArchiveError as exc:
             st.error(str(exc))
         except Exception:
@@ -307,10 +334,17 @@ def render():
                            file_name=f"Preceptor_Teaching_{file_part}.zip", mime="application/zip", key="teaching_download_zip")
         with ZipFile(BytesIO(st.session_state["teaching_zip"])) as generated_zip:
             chair_bytes = generated_zip.read(TEACHING_CHAIR_SUMMARY_FILENAME)
+            chart_files = sorted(name for name in generated_zip.namelist()
+                                 if name.startswith("Learner_Reach_Charts/") and name.endswith(".png"))
+            with st.expander("Learner Reach pies by clinical experience"):
+                st.caption("Each pie compares recorded hours with students versus without students in that experience. "
+                           "These are the same category percentages shown in the chair summary, not student-weighted hours.")
+                for chart_file in chart_files:
+                    st.image(generated_zip.read(chart_file), width=680)
         st.download_button("Download chair summary only (Word)", data=chair_bytes,
                            file_name=TEACHING_CHAIR_SUMMARY_FILENAME,
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                            key="teaching_download_chair_summary")
-        st.caption("The ZIP includes the chair summary, overall/work-type CSVs with Learner Reach, monthly Learner Reach CSV, individual Word reports, source notes and "
+        st.caption("The ZIP includes the chair summary with clinical-experience pies, chart PNGs and their CSV, overall/work-type CSVs with Learner Reach, monthly Learner Reach CSV, individual Word reports, source notes and "
                    "(for custom dates) the exact reporting-date settings. These are unencrypted staff reports; "
                    "do not commit the downloads to the public repository.")

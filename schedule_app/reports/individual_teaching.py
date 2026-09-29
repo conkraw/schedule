@@ -37,6 +37,8 @@ def teaching_make_docx(name, monthly, scan):
                if row["preceptor_name"] == name and int(row["no_of_shifts"]) > 0]
     if not monthly:
         raise OPDArchiveError("No student assignments were found for this preceptor in the selected reporting period; no individual report was generated.")
+    from schedule_app.services.teaching_validation import validate_teaching_report
+    validate_teaching_report(scan, {row["academic_start_year"] for row in monthly})
     doc = Document()
     section = doc.sections[0]
     section.page_width, section.page_height = Inches(8.5), Inches(11)
@@ -127,10 +129,6 @@ def teaching_make_docx(name, monthly, scan):
             note("Learner Reach is the percentage of recorded clinical shifts with at least one student. "
                  "Each preceptor/date/AM-or-PM counts once, including repeated rows and simultaneous students. "
                  "The denominator includes both assigned and blank student fields.")
-            if any(row["availability_review_shifts"] for row in reach_types):
-                note("N/A: concurrent work types prevent allocation of a clinical half-day. Those hours remain counted once overall "
-                     "but are excluded from affected category hours; category percentages are withheld. "
-                     "Overall Learner Reach is still calculable. See Clinical_Shift_Review.csv.", warning=True)
         by_type = defaultdict(list)
         for row in type_rows:
             if row["academic_start_year"] == year:

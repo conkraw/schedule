@@ -3,6 +3,7 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.teaching_validation import validate_teaching_report
 from collections import defaultdict
 from datetime import date as CalendarDate
 from docx import Document
@@ -32,6 +33,7 @@ def teaching_chair_summary_data(scan, selected_years):
     are separated from named preceptors so they are not presented as people.
     """
     years = sorted({int(year) for year in selected_years})
+    validate_teaching_report(scan, years)
     annual = teaching_annual_rows(scan, years)
     review_keys = {teaching_name_key(name) for name in scan.get("unresolved_preceptor_labels", [])}
     typed = teaching_work_type_rows(scan, years)
@@ -101,7 +103,7 @@ def teaching_chair_summary_data(scan, selected_years):
     return summaries
 
 
-def teaching_make_chair_summary(scan, selected_years):
+def teaching_make_chair_summary(scan, selected_years, *, charts=None):
     """One editable, chair-friendly Word report covering all selected years.
 
     Uses scheduled student-shifts, not unique students, elapsed hours, patient
@@ -118,6 +120,8 @@ def teaching_make_chair_summary(scan, selected_years):
     if not summaries or not any(item["no_of_shifts"] for item in summaries):
         raise OPDArchiveError("No student assignments were found for the selected reporting period(s); no empty chair summary was generated.")
 
+    from schedule_app.reports.learner_reach_charts import teaching_clinical_charts
+    chart_map = {chart["key"]: chart for chart in (charts if charts is not None else teaching_clinical_charts(scan, summaries))}
     doc = Document()
     section = doc.sections[0]
     section.page_width, section.page_height = Inches(8.5), Inches(11)
@@ -288,12 +292,6 @@ def teaching_make_chair_summary(scan, selected_years):
         if scan.get("reporting_period"):
             note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
         note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
-        if any(group.get("availability_review_shifts") for group in item["work_types"]):
-            note("N/A: a clinical half-day is listed in multiple work types. Its hours remain counted once overall but are "
-                 "excluded from affected category hours, and those category percentages are withheld. Overall Learner Reach remains valid. "
-                 "See Clinical_Shift_Review.csv.", warning=True)
-        elif any(group["work_type"] == TEACHING_WORK_TYPE_REVIEW for group in item["work_types"]):
-            note("Work type needs review: identical assignments appear under different work types. Each is retained once; no setting is guessed.", warning=True)
         note(f"*One student assigned to one AM or PM shift = one student-shift and "
              f"{TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. "
              "These are student-weighted hours, not distinct clock hours or verified attendance.")
@@ -312,6 +310,14 @@ def teaching_make_chair_summary(scan, selected_years):
             heading.paragraph_format.space_before = Pt(12)
             source_note = note("OPD site(s): " + ", ".join(group["source_sites"]))
             source_note.paragraph_format.keep_with_next = True
+            chart = chart_map.get((year, group["work_type"]))
+            if chart is None:
+                raise OPDArchiveError("A clinical experience chart is missing. No incomplete chair summary was generated.")
+            picture_paragraph = doc.add_paragraph()
+            picture_paragraph.paragraph_format.keep_with_next = True
+            picture_paragraph.paragraph_format.space_after = Pt(3)
+            picture = picture_paragraph.add_run().add_picture(BytesIO(chart["png"]), width=Inches(6.8))
+            picture._inline.docPr.set("descr", chart["alt_text"])
             if group["named_preceptors"]:
                 add_effort_table(group["named_preceptors"], total_title="Named preceptors subtotal")
             if group["unresolved_labels"]:
