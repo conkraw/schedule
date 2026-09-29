@@ -1,0 +1,24 @@
+{
+  "based_on": "Schedule_App_Modular_Learner_Reach.zip",
+  "changed_runtime_files": [
+    "schedule_app/reports/chair_summary.py",
+    "schedule_app/reports/individual_teaching.py",
+    "schedule_app/reports/teaching_export.py",
+    "schedule_app/sections/preceptor_teaching_summary.py",
+    "schedule_app/services/learner_reach.py"
+  ],
+  "unchanged": [
+    "app_sch_2026.py",
+    "schedule_app/settings.py",
+    "requirements.txt",
+    "archive services and all other sections"
+  ],
+  "validation": "108 local automated tests; simulated Streamlit/GitHub; DOCX rendering QA",
+  "sha256": {
+    "schedule_app/reports/chair_summary.py": "5e0a24d0ca01ee4bebbf9a4848a5664ad63ce4066ceb0bb429eb837646ba2658",
+    "schedule_app/reports/individual_teaching.py": "e2494b48b42b4b926b120dde5f0fc2a8a4d20586a3df7943391c3593291dba72",
+    "schedule_app/reports/teaching_export.py": "31a34640a3de45b6cdc835ee8e10249759a0e92fc59eade6382389d07866bca6",
+    "schedule_app/sections/preceptor_teaching_summary.py": "afaa7e82a63271e8f315a1c1b926201786f38d99effaf5dafe934cfe253c7337",
+    "schedule_app/services/learner_reach.py": "51c9667f4ea13d852cb662a252bfead613efba15198881190db4d2f0a69c1122"
+  }
+}

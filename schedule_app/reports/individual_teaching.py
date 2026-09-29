@@ -9,6 +9,7 @@ from docx import Document
 from docx.shared import Pt
 from io import BytesIO
 from schedule_app.reports.teaching_tables import teaching_add_work_table
+from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.reporting_periods import (
     teaching_report_bounds, teaching_report_label, teaching_report_heading, teaching_report_date_text,
 )
@@ -20,7 +21,7 @@ from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT
 from schedule_app.settings import TEACHING_WORK_TYPE_REVIEW
 from schedule_app.services.learner_reach import (
     learner_reach_rows, reach_percent, reach_totals, require_learner_reach_data,
-    REACH_SCOPE_NOTE,
+    REACH_SCOPE_NOTE, PARTICIPATION_SCOPE_NOTE, REACH_DETAIL_TOTAL_NOTE, participating_reach_rows,
 )
 
 
@@ -32,6 +33,10 @@ def teaching_make_docx(name, monthly, scan):
     from docx.oxml.ns import qn
     teaching_require_work_type_data(scan)
     require_learner_reach_data(scan)
+    monthly = [row for row in monthly
+               if row["preceptor_name"] == name and int(row["no_of_shifts"]) > 0]
+    if not monthly:
+        raise OPDArchiveError("No student assignments were found for this preceptor in the selected reporting period; no individual report was generated.")
     doc = Document()
     section = doc.sections[0]
     section.page_width, section.page_height = Inches(8.5), Inches(11)
@@ -107,21 +112,24 @@ def teaching_make_docx(name, monthly, scan):
                 f"Recorded OPD hours: {reach['recorded_clinical_hours']:,}  |  "
                 f"With students: {reach['hours_with_students']:,}  |  "
                 f"Without students: {reach['hours_without_students']:,}")
-            reach_types = [row for row in learner_reach_rows(scan, [year], by_work_type=True) if row["preceptor_name"] == name]
+            reach_types = [row for row in participating_reach_rows(scan, [year], by_work_type=True) if row["preceptor_name"] == name]
             doc.add_heading("Learner Reach by type of work", level=2)
             teaching_add_work_table(doc,
                 ("Type of work", "OPD hours", "With students", "Without students", "Learner Reach"),
                 [(row["work_type"], f"{row['recorded_clinical_hours']:,}", f"{row['hours_with_students']:,}",
                   f"{row['hours_without_students']:,}", reach_percent(row["learner_reach_pct"])) for row in reach_types],
                 widths=(2.5, 1.1, 1.1, 1.1, 1.1), number_columns=(1, 2, 3, 4),
-                total=("All work types", f"{reach['recorded_clinical_hours']:,}", f"{reach['hours_with_students']:,}",
+                total=("Overall", f"{reach['recorded_clinical_hours']:,}", f"{reach['hours_with_students']:,}",
                        f"{reach['hours_without_students']:,}", reach_percent(reach["learner_reach_pct"])))
+            note(PARTICIPATION_SCOPE_NOTE)
+            if sum(row["recorded_clinical_hours"] for row in reach_types) != reach["recorded_clinical_hours"]:
+                note(REACH_DETAIL_TOTAL_NOTE)
             note("Learner Reach is the percentage of recorded clinical shifts with at least one student. "
                  "Each preceptor/date/AM-or-PM counts once, including repeated rows and simultaneous students. "
                  "The denominator includes both assigned and blank student fields.")
             if any(row["availability_review_shifts"] for row in reach_types):
-                note("N/A: concurrent work types prevent allocation of a clinical half-day. Those hours are counted once under "
-                     "Work type needs review, excluded from the affected category hours, and category percentages are withheld. "
+                note("N/A: concurrent work types prevent allocation of a clinical half-day. Those hours remain counted once overall "
+                     "but are excluded from affected category hours; category percentages are withheld. "
                      "Overall Learner Reach is still calculable. See Clinical_Shift_Review.csv.", warning=True)
         by_type = defaultdict(list)
         for row in type_rows:

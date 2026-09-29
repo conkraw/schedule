@@ -12,6 +12,18 @@ from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT, TEACHING_WOR
 import re
 
 LEARNER_REACH_SCHEMA_VERSION = 1
+# A display/export change only: existing complete scans can be reused safely.
+PARTICIPATION_REPORT_VERSION = 1
+PARTICIPATION_SCOPE_NOTE = (
+    "Only preceptors and work types with student assignments during the selected period are listed. "
+    "Overall Learner Reach uses all recorded shifts for these preceptors, including shifts without students; "
+    "category percentages use all shifts in that category."
+)
+REACH_DETAIL_TOTAL_NOTE = (
+    "Overall OPD hours also include shifts in unlisted settings or awaiting work-type review. "
+    "Detail tables omit settings with no student assignments, so their OPD-hour subtotals "
+    "may be lower than the overall total."
+)
 LEARNER_REACH_COLUMNS = (
     "recorded_clinical_shifts", "recorded_clinical_hours", "shifts_with_students",
     "hours_with_students", "shifts_without_students", "hours_without_students",
@@ -199,16 +211,50 @@ def learner_reach_rows(scan, selected_years, *, by_work_type=False, monthly=Fals
     return results
 
 
+def teaching_participation_keys(scan, selected_years, *, by_work_type=False):
+    """Positive teaching eligibility per period, never per individual month.
+
+    The caller supplies an exact-date projection for custom dates. These keys
+    control visibility only: do not use them to delete blank clinical shifts
+    from the raw scan or from an included preceptor's overall denominator.
+    """
+    years = {int(year) for year in selected_years}
+    source = "monthly_by_work_type" if by_work_type else "monthly"
+    return {
+        (row["preceptor_name"], int(row["academic_start_year"]),
+         row["work_type"] if by_work_type else "")
+        for row in scan[source]
+        if int(row["academic_start_year"]) in years and int(row["no_of_shifts"]) > 0
+    }
+
+
+def participating_reach_rows(scan, selected_years, *, by_work_type=False, monthly=False):
+    """Report rows for teaching contributors, retaining their zero-teaching months.
+
+    Whole-period eligibility is used even for the monthly CSV. A month with no
+    students must not be removed from an included provider/category denominator.
+    """
+    years = tuple(int(year) for year in selected_years)
+    eligible = teaching_participation_keys(scan, years, by_work_type=by_work_type)
+    return [row for row in learner_reach_rows(scan, years, by_work_type=by_work_type, monthly=monthly)
+            if (row["preceptor_name"], row["academic_start_year"],
+                row["work_type"] if by_work_type else "") in eligible]
+
+
 def enrich_teaching_rows(scan, selected_years, teaching_rows, *, by_work_type=False):
-    """Preserve existing counts/column meanings; add availability and zero-teaching rows."""
+    """Enrich positive teaching rows without creating availability-only entries.
+
+    The overall join still uses ALL recorded clinical shifts for that preceptor
+    in the period, including blank student fields and hidden work types.
+    """
     from schedule_app.services.teaching_analysis import teaching_name_key, teaching_work_type_sort
     def key(row):
         return (row["preceptor_name"], row["academic_year"], row.get("work_type", "") if by_work_type else "")
-    result = {key(row): dict(row) for row in teaching_rows}
+    result = {key(row): dict(row) for row in teaching_rows if int(row["no_of_shifts"]) > 0}
     for reach in learner_reach_rows(scan, selected_years, by_work_type=by_work_type):
-        item = result.setdefault(key(reach), {"preceptor_name": reach["preceptor_name"],
-                    "academic_year": reach["academic_year"], "no_of_shifts": 0, "months_worked": "", "educational_hours": 0,
-                    **({"work_type": reach["work_type"], "source_sites": reach["source_sites"]} if by_work_type else {})})
+        item = result.get(key(reach))
+        if item is None:
+            continue  # Hide zero-teaching people/categories, not their source data.
         item.update({field: reach.get(field, "") for field in LEARNER_REACH_COLUMNS})
         if by_work_type:
             item["source_sites"] = "; ".join(sorted(set(filter(None, item.get("source_sites", "").split("; "))) | set(filter(None, reach["source_sites"].split("; ")))))

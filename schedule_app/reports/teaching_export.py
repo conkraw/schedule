@@ -7,7 +7,8 @@ from collections import defaultdict
 from datetime import date
 from schedule_app.services.learner_reach import (
     LEARNER_REACH_COLUMNS, REACH_DEFINITION, REACH_SCOPE_NOTE,
-    learner_reach_rows, reach_group_year, require_learner_reach_data,
+    participating_reach_rows, teaching_participation_keys, reach_group_year, require_learner_reach_data,
+    PARTICIPATION_SCOPE_NOTE, REACH_DETAIL_TOTAL_NOTE,
 )
 from io import BytesIO
 from schedule_app.reports.chair_summary import teaching_make_chair_summary
@@ -53,20 +54,14 @@ def teaching_build_zip(scan, selected_years):
     annual = teaching_annual_rows(scan, years)
     typed = teaching_work_type_rows(scan, years)
     if not annual:
-        raise OPDArchiveError("No recorded OPD clinical shifts were found for the selected reporting period(s); no empty report was generated.")
+        raise OPDArchiveError("No student assignments were found for the selected reporting period(s); no empty report was generated.")
     monthly_by_name = defaultdict(list)
     for item in scan["monthly"]:
-        if item["academic_start_year"] in years:
+        if item["academic_start_year"] in years and int(item["no_of_shifts"]) > 0:
             monthly_by_name[item["preceptor_name"]].append(item)
-    # Availability-only provider/periods need a Word section too. A zero marker
-    # creates the section without inventing an assigned month or a student.
-    present = {(name, row["academic_start_year"]) for name, rows in monthly_by_name.items() for row in rows}
-    for reach in learner_reach_rows(scan, years):
-        key = (reach["preceptor_name"], reach["academic_start_year"])
-        if key not in present:
-            monthly_by_name[key[0]].append({"preceptor_name": key[0], "academic_start_year": key[1],
-                "academic_year": reach["academic_year"], "no_of_shifts": 0, "educational_hours": 0})
-            present.add(key)
+    eligible = teaching_participation_keys(scan, years)
+    active_names = {name for name, _, _ in eligible}
+    active_sites = {site for row in typed for site in row.get("source_sites", "").split("; ") if site}
     labels = ", ".join(teaching_report_label(scan, year) for year in years)
     output = BytesIO()
     notes = [
@@ -75,7 +70,7 @@ def teaching_build_zip(scan, selected_years):
         f"Current OPD files read: {len(scan['sources'])}", "",
         "Source: every current OPD_YYYY-MM-DD.xlsx.enc in the configured archive folder.",
         "Superseded Git history is not counted. The archived files are not changed.",
-        "All recognized OPD site worksheets are included, not just HOPE_DRIVE, NYES and ETOWN.",
+        "All recognized OPD site worksheets are scanned. Only entries with student assignments in the selected period are listed.",
         "This report counts scheduled student assignments, not patient encounters or confirmed attendance.",
         "One row in preceptor_teaching_summary.csv = one preceptor in one academic year (unchanged).",
         "One row in preceptor_teaching_by_work_type.csv = one preceptor / academic year / work type.",
@@ -84,7 +79,7 @@ def teaching_build_zip(scan, selected_years):
         "Other worksheets are kept as separate work types unless explicitly mapped in TEACHING_WORK_TYPE_MAP.",
         "Classification uses the site of each assignment, not the preceptor's usual specialty or home division.",
         "Every setting uses the same 4 hours per student-shift; no outpatient/inpatient weighting is added.",
-        "Work-type subtotals are checked against the overall totals before export.",
+        "Student-weighted work-type subtotals are checked against the overall educational totals before export.",
         "An identical assignment recorded in different work types counts once under Work type needs review.",
         f"{TEACHING_CHAIR_SUMMARY_FILENAME} = one combined Word summary for the chair.",
         "The chair summary lists named preceptors alphabetically and keeps unresolved provider labels separate.",
@@ -129,40 +124,45 @@ def teaching_build_zip(scan, selected_years):
                       "Reporting_Period.json can reload these dates and the label in the app."]
         notes += ["", "Archive_Sources.csv describes full source files, including any outside the selected period.",
                   "File-level counts and missing-provider warnings are full-rotation diagnostics, not date-filtered teaching totals."]
-    if scan["unresolved_preceptor_labels"]:
-        notes += ["Provider/site/slot labels needing review (retained literally, not assigned to a guessed individual):"]
-        notes += ["  " + name for name in scan["unresolved_preceptor_labels"]]
+    review_names = [name for name in scan["unresolved_preceptor_labels"] if name in active_names]
+    if review_names:
+        notes += ["Participating provider/site/slot labels needing review (not assigned to a guessed individual):"]
+        notes += ["  " + name for name in review_names]
     for item in scan["warnings"]:
         notes.append(f"Rotation {item['rotation_start']}: {item['issue']}: {item['details']}")
     notes += ["", "WORK-TYPE GROUPING FOR ASSIGNED OPD SITES"]
     for site, work_type in scan["site_work_type_mapping"].items():
-        notes.append(f"  {site} -> {work_type}")
+        if site in active_sites:
+            notes.append(f"  {site} -> {work_type}")
     selected_labels = {teaching_report_label(scan, year) for year in years}
     conflicts = [row for row in scan.get("work_type_conflicts", []) if row["academic_year"] in selected_labels]
     if conflicts:
         notes += ["", "WORK-TYPE REVIEW", "See Work_Type_Review.csv. These assignments are included once in the review category."]
     notes = [line for line in notes if not line.startswith((
         "Provider availability with no student does not count.", "Providers with no assignments"))]
-    notes += ["", "LEARNER REACH", REACH_DEFINITION, REACH_SCOPE_NOTE,
+    notes += ["", "REPORT INCLUSION", PARTICIPATION_SCOPE_NOTE, REACH_DETAIL_TOTAL_NOTE,
+        "A preceptor with no student assignments in the selected period receives no report or CSV entry.",
+        "Work-type entries are included only when that preceptor has student assignments in that category during the selected period.",
+        "", "LEARNER REACH", REACH_DEFINITION, REACH_SCOPE_NOTE,
         "recorded_clinical_hours = distinct recorded provider/date/AM-or-PM shifts x 4.",
         "hours_with_students = distinct recorded clinical shifts with at least one student x 4.",
         "hours_without_students = (recorded_clinical_shifts - shifts_with_students) x 4.",
         "learner_reach_pct is a number on the 0-100 scale (80 means 80%), not the fraction 0.8.",
         "Two students in one shift count twice for no_of_shifts/educational_hours, but once for clinical shifts and Learner Reach.",
-        "No student listed: include that clinical shift in the denominator. A named provider with only unassigned shifts appears with 0%.",
+        "No student listed: keep that clinical shift in the denominator for an included preceptor. Do not reduce their denominator to teaching days only.",
         "Wholly blank cells, explicit closed/off/nonclinical labels and cells without a '~' marker are not counted as clinical shifts.",
         "Nonempty cells lacking the marker and nonclinical labels are logged by coordinate; names or shifts are not guessed.",
         "A clinical half-day listed in different work types is counted once under Work type needs review. Category percentages are blank/N/A.",
         "Category hours exclude unresolved concurrent work-type shifts; the overall percentage still uses each clinical shift once.",
         "Overall percentages use total shifts with learners / total recorded shifts, never an average of provider percentages.",
-        "preceptor_learner_reach_monthly.csv includes all recorded clinical months by work type, even without student assignments.",
+        "preceptor_learner_reach_monthly.csv includes all recorded months for participating preceptor/work-type entries, including zero-teaching months. It excludes wholly nonparticipating entries.",
         f"Duplicate clinical provider listings combined across the full archive: {scan.get('duplicate_clinical_listings_removed', 0)}.",
         "Clinical shifts with no identifiable provider cannot be attributed. Generic provider/slot labels are not verified individuals.",
     ]
     clinical_review = [dict(row, academic_year=teaching_report_label(scan, reach_group_year(scan, date.fromisoformat(row["date"]))),
                             work_types="; ".join(row["work_types"]), source_sites="; ".join(row["source_sites"]))
                        for row in scan.get("clinical_shift_conflicts", [])
-                       if reach_group_year(scan, date.fromisoformat(row["date"])) in years]
+                       if (row["preceptor_name"], reach_group_year(scan, date.fromisoformat(row["date"])), "") in eligible]
     if clinical_review:
         notes += ["Clinical_Shift_Review.csv lists concurrent clinical work-type conflicts without student identifiers."]
     source_columns = (
@@ -181,7 +181,7 @@ def teaching_build_zip(scan, selected_years):
         zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years))
         zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual, tuple(TEACHING_CSV_COLUMNS) + LEARNER_REACH_COLUMNS))
         zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(typed, tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS))
-        monthly_reach = learner_reach_rows(scan, years, by_work_type=True, monthly=True)
+        monthly_reach = participating_reach_rows(scan, years, by_work_type=True, monthly=True)
         zf.writestr("preceptor_learner_reach_monthly.csv", teaching_csv_bytes(monthly_reach,
             ("preceptor_name", "academic_year", "work_type", "month") + LEARNER_REACH_COLUMNS + ("source_sites",)))
         if clinical_review:

@@ -15,6 +15,8 @@ from schedule_app.reports.teaching_export import teaching_build_zip
 from schedule_app.services.learner_reach import (
     LEARNER_REACH_SCHEMA_VERSION, LEARNER_REACH_COLUMNS, REACH_DEFINITION,
     REACH_SCOPE_NOTE, require_learner_reach_data, reach_percent, reach_totals,
+    PARTICIPATION_REPORT_VERSION, PARTICIPATION_SCOPE_NOTE, REACH_DETAIL_TOTAL_NOTE,
+    teaching_participation_keys, reach_group_year,
 )
 from schedule_app.services.opd_archive import GitHubOPDArchive, OPDArchiveError, get_opd_archive_config
 from schedule_app.services.reporting_periods import (
@@ -215,19 +217,26 @@ def render():
         report_scan = scan
         selection_signature = (mode, *sorted(selected))
         file_part = teaching_academic_label(selected[0]) if len(selected) == 1 else "Multiple_Academic_Years"
-    signature = (options_signature, scan["commit"], selection_signature)
+    signature = (options_signature, scan["commit"], selection_signature, PARTICIPATION_REPORT_VERSION)
     if st.session_state.get("teaching_zip_signature") != signature:
         _clear_teaching_downloads()
         st.session_state["teaching_zip_signature"] = signature
     annual = teaching_annual_rows(report_scan, selected)
-    if report_scan["unresolved_preceptor_labels"]:
+    eligible = teaching_participation_keys(report_scan, selected)
+    active_names = {name for name, _, _ in eligible}
+    typed = teaching_work_type_rows(report_scan, selected)
+    active_sites = {site for row in typed for site in row.get("source_sites", "").split("; ") if site}
+    review_names = [name for name in report_scan["unresolved_preceptor_labels"] if name in active_names]
+    clinical_review = [row for row in report_scan.get("clinical_shift_conflicts", [])
+                       if (row["preceptor_name"], reach_group_year(report_scan, date.fromisoformat(row["date"])), "") in eligible]
+    if review_names:
         st.warning("Some provider labels identify a site/slot/combined entry rather than a person. "
                    "They remain literal and are separated from named preceptors in the Word reports.")
         with st.expander("Provider labels to review"):
-            st.write(", ".join(report_scan["unresolved_preceptor_labels"]))
+            st.write(", ".join(review_names))
     if report_scan.get("work_type_conflicts"):
         st.warning("Some identical assignments appear in different work types. Each counts once under Work type needs review.")
-    if report_scan.get("clinical_shift_conflicts"):
+    if clinical_review:
         st.warning("Some clinical half-days appear in multiple work types. Overall Learner Reach counts each shift once; "
                    "affected work-type percentages are N/A pending review. See Clinical_Shift_Review.csv in the ZIP.")
     with st.expander("Archive coverage and data-quality details"):
@@ -240,19 +249,19 @@ def render():
             st.warning("Some cells were excluded: missing/nonclinical provider labels or missing '~' markers. "
                        "These archive-wide warnings may refer to dates outside your selected period.")
             st.dataframe(pd.DataFrame(scan["warnings"]), hide_index=True, use_container_width=True)
-        if report_scan.get("clinical_shift_conflicts"):
-            st.dataframe(pd.DataFrame(report_scan["clinical_shift_conflicts"]), hide_index=True, use_container_width=True)
+        if clinical_review:
+            st.dataframe(pd.DataFrame(clinical_review), hide_index=True, use_container_width=True)
         st.write(f"Repeated clinical listings combined across all archived rotations: {scan.get('duplicate_clinical_listings_removed', 0):,}.")
         if report_scan.get("work_type_conflicts"):
             st.dataframe(pd.DataFrame(report_scan["work_type_conflicts"]), hide_index=True, use_container_width=True)
         st.dataframe(pd.DataFrame([{"opd_site": site, "work_type": work_type}
-                                  for site, work_type in report_scan["site_work_type_mapping"].items()]),
+                                  for site, work_type in report_scan["site_work_type_mapping"].items() if site in active_sites]),
                      hide_index=True, use_container_width=True)
     if not annual:
         _clear_teaching_downloads()
-        st.info("No recorded clinical shifts were found for the selected reporting period. "
-                "Adjust the dates/year selection, check the '~' name order or archive the missing OPDs. "
-                "Named providers with blank student fields are included when present.")
+        st.info("No student assignments were found for the selected reporting period. "
+                "Preceptors and services with only unassigned shifts are omitted. "
+                "Adjust the dates/year selection, check the '~' name order or archive the missing OPDs.")
         return
     preview = pd.DataFrame(annual, columns=tuple(TEACHING_CSV_COLUMNS) + LEARNER_REACH_COLUMNS)
     a, b, c = st.columns(3)
@@ -265,13 +274,16 @@ def render():
     b.metric("Hours with students", f"{totals['hours_with_students']:,}")
     c.metric("Hours without students", f"{totals['hours_without_students']:,}")
     d.metric("Learner Reach", reach_percent(totals["learner_reach_pct"]))
+    st.caption(PARTICIPATION_SCOPE_NOTE)
+    if sum(row["recorded_clinical_hours"] for row in typed) != totals["recorded_clinical_hours"]:
+        st.caption(REACH_DETAIL_TOTAL_NOTE)
     st.caption(REACH_DEFINITION)
     with st.expander("What Learner Reach does and does not measure"):
         st.write(REACH_SCOPE_NOTE)
         st.write("Educational hours remain student-weighted; simultaneous students count twice only for that measure. "
-                 "Clinical hours and Learner Reach count the half-day once. People with recorded shifts but no assignments appear with 0%.")
+                 "Clinical hours and Learner Reach count the half-day once. Wholly unassigned preceptors/categories are not listed; included preceptors retain their non-teaching shifts in the denominator.")
     st.markdown("**Teaching by type of work**")
-    st.dataframe(pd.DataFrame(teaching_work_type_rows(report_scan, selected), columns=tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS),
+    st.dataframe(pd.DataFrame(typed, columns=tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS),
                  hide_index=True, use_container_width=True)
     with st.expander("Overall totals and Learner Reach"):
         st.dataframe(preview, hide_index=True, use_container_width=True)
