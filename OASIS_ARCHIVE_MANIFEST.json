@@ -1,0 +1,24 @@
+{
+  "update": "OASIS Evaluation Archive",
+  "version": 1,
+  "runtime_files": [
+    {
+      "path": "app_sch_2026.py",
+      "sha256": "452f17e3968a2d69811652ffd113a2b577dc0fa5a73d067763db1b123d91363a"
+    },
+    {
+      "path": "schedule_app/sections/oasis_evaluation_archive.py",
+      "sha256": "60155d4c6a3bb531b4ea6eee250608ca76652779d7e0c042182f54107234c06c"
+    },
+    {
+      "path": "schedule_app/services/oasis_evaluations.py",
+      "sha256": "ec54b064d9a6135c54216bf9c45a0f2360290183f0164f71213c751f84a125c9"
+    }
+  ],
+  "requires_existing_modular_app": true,
+  "secrets_changed": false,
+  "requirements_changed": false,
+  "settings_changed": false,
+  "tests_passed": 360,
+  "live_deployment_changed": false
+}

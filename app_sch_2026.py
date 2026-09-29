@@ -20,6 +20,7 @@ SECTIONS = {
     "OPD Check": "opd_check",
     "Create Individual Schedules": "create_individual_schedules",
     "OPD Archive": "opd_archive",
+    "OASIS Evaluation Archive": "oasis_evaluation_archive",
     "Preceptor Teaching Summary": "preceptor_teaching_summary",
     "OPD MD PA Conflict Detector": "opd_md_pa_conflict_detector",
     "Shift Availability Tracker": "shift_availability_tracker",
