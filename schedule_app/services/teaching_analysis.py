@@ -34,6 +34,17 @@ from schedule_app.services.reporting_periods import (
 )
 
 
+from schedule_app.services.learner_reach import (
+    ClinicalShiftAccumulator, enrich_teaching_rows, filter_reach_dates,
+    nonclinical_provider, require_learner_reach_data,
+)
+
+from schedule_app.services.student_continuity import (
+    build_student_continuity_data, require_student_continuity_data,
+    filter_student_continuity_dates,
+)
+
+
 def teaching_site_key(site):
     return re.sub(r"[^A-Z0-9]+", "_", str(site or "").upper()).strip("_")
 
@@ -97,7 +108,7 @@ def teaching_work_type_rows(scan, selected_years):
             "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT,
             "source_sites": "; ".join(sites),
         })
-    return rows
+    return enrich_teaching_rows(scan, selected_years, rows, by_work_type=True) if "learner_reach_version" in scan else rows
 
 
 def teaching_name_key(value):
@@ -167,12 +178,12 @@ def teaching_split_assignment(value, order):
         provider, student_text = (left, right) if order == "Preceptor ~ Student" else (right, left)
         students = [teaching_display_name(part) for part in
                     re.split(r"[\r\n;|]+|\s+&\s+|\s+and\s+", student_text, flags=re.I)]
-        students = [name for name in students if teaching_name_key(name) not in TEACHING_EMPTY_STUDENT_LABELS]
+        students = [name for name in students if teaching_name_key(name) not in (set(TEACHING_EMPTY_STUDENT_LABELS) | {"-", "--", "—", "null"})]
         parsed.append((teaching_display_name(provider), students))
     return parsed
 
 
-def teaching_extract_assignments(raw, details, order):
+def teaching_extract_assignments(raw, details, order, *, clinical_sessions=None, ignored_cells=None):
     """Read AM/PM cells under each *actual* date, including hidden OPD rows.
 
     Returns temporary records containing student names. The caller aggregates
@@ -180,6 +191,12 @@ def teaching_extract_assignments(raw, details, order):
     """
     wb = load_workbook(BytesIO(raw), read_only=True, data_only=False)
     records, missing_provider_cells = [], []
+    # Optional output lists preserve the existing extractor's two-value return.
+    # Clinical records never contain learner identifiers.
+    if clinical_sessions is None:
+        clinical_sessions = []
+    if ignored_cells is None:
+        ignored_cells = []
     expected_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     try:
         for sheet_name in details["site_names"]:
@@ -207,18 +224,31 @@ def teaching_extract_assignments(raw, details, order):
                     if cell.data_type == "f":
                         raise OPDArchiveError(f"{sheet_name}!{cell.coordinate} contains a formula in a session cell. "
                                               "Use assignment values rather than formulas for this summary.")
+                    if cell.value is not None and str(cell.value).strip() and "~" not in str(cell.value):
+                        ignored_cells.append({"cell": f"{sheet_name}!{cell.coordinate}", "reason": "No '~' marker"})
                     try:
                         groups = teaching_split_assignment(cell.value, order)
                     except OPDArchiveError as exc:
                         raise OPDArchiveError(f"{sheet_name}!{cell.coordinate}: {exc}") from None
                     for provider, students in groups:
-                        if not students:
-                            continue  # provider availability alone earns no teaching hours
                         if teaching_name_key(provider) in TEACHING_EMPTY_STUDENT_LABELS:
-                            missing_provider_cells.append(f"{sheet_name}!{cell.coordinate}")
+                            if students:
+                                missing_provider_cells.append(f"{sheet_name}!{cell.coordinate}")
+                            elif provider:
+                                ignored_cells.append({"cell": f"{sheet_name}!{cell.coordinate}", "reason": "Empty/nonclinical provider label"})
+                            continue
+                        if nonclinical_provider(provider):
+                            ignored_cells.append({"cell": f"{sheet_name}!{cell.coordinate}", "reason": "Nonclinical provider label"})
+                            if students:
+                                missing_provider_cells.append(f"{sheet_name}!{cell.coordinate}")
                             continue
                         if current_dates is None:
-                            raise OPDArchiveError(f"{sheet_name}!{cell.coordinate} has an assignment before a date header.")
+                            raise OPDArchiveError(f"{sheet_name}!{cell.coordinate} has a provider listing before a date header.")
+                        clinical_sessions.append({
+                            "preceptor_name": provider, "has_student": bool(students),
+                            "day": current_dates[col_index], "shift": match.group(1).upper(),
+                            "site": sheet_name, "cell": cell.coordinate,
+                        })
                         for student in students:
                             records.append({
                                 "preceptor_name": provider, "student": student,
@@ -233,8 +263,9 @@ def teaching_extract_assignments(raw, details, order):
 def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progress=None):
     """Read/decrypt each current OPD at one repository snapshot, retaining work type.
 
-    Student names are temporary. Run-local keyed digests deduplicate assignments;
-    neither the digests nor learner names appear in returned aggregates or reports.
+    Student names are temporary. Run-local keyed digests deduplicate assignments
+    and group distinct teaching dates per learner. Only unlinked date groups are
+    retained in session memory; digests/names never enter returned scans/reports.
     Work-type subtotals always reconcile to the existing overall counting rules.
     """
     if default_order not in TEACHING_NAME_ORDERS:
@@ -245,6 +276,7 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
     names, name_variants, review_labels, manifests, warnings = {}, defaultdict(set), set(), [], []
     # One anonymous item per provider/student/date/AM-or-PM assignment.
     seen_assignments = {}
+    clinical = ClinicalShiftAccumulator()
     salt = _teaching_secrets.token_bytes(32)
     aliases = {teaching_name_key(k): teaching_display_name(v)
                for k, v in TEACHING_PRECEPTOR_NAME_MAP.items() if str(k).strip() and str(v).strip()}
@@ -257,7 +289,11 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             raise OPDArchiveError(f"Invalid teaching-summary name-order override for rotation {rotation.isoformat()}.")
         try:
             loaded = client.load(rotation, commit=commit)
-            records, missing_cells = teaching_extract_assignments(loaded["raw"], loaded["details"], order)
+            clinical_sessions, ignored_cells = [], []
+            records, missing_cells = teaching_extract_assignments(
+                loaded["raw"], loaded["details"], order,
+                clinical_sessions=clinical_sessions, ignored_cells=ignored_cells,
+            )
         except OPDArchiveError as exc:
             raise OPDArchiveError(f"Rotation {rotation.isoformat()}: {exc} No ZIP was generated from partial data.") from None
         counted = removed = 0
@@ -274,16 +310,27 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             # A duplicate within Academic Pediatrics is still counted once even
             # if it is copied onto both HOPE_DRIVE and NYES worksheets. Distinct
             # students in the same shift have different identities and count twice.
+            origin = (rotation.isoformat(), site)
             if digest in seen_assignments:
+                seen_assignments[digest]["origin_counts"][origin] += 1
                 duplicates += 1
                 removed += 1
                 seen_assignments[digest]["work_types"].add(work_type)
                 seen_assignments[digest]["sites"].add(site)
                 continue
             month = item["day"].replace(day=1)
+            # A separate, domain-scoped identifier links this learner's retained
+            # dates across rotations/work types. It is discarded before return.
+            student_identity = json.dumps(
+                ["student-continuity", key, teaching_name_key(item["student"])],
+                ensure_ascii=False,
+            )
+            student_key = hmac.new(salt, student_identity.encode("utf-8"), hashlib.sha256).digest()
             seen_assignments[digest] = {
+                "student_key": student_key,
                 "provider_key": key, "month": month, "day": item["day"], "shift": item["shift"],
                 "work_types": {work_type}, "sites": {site},
+                "origin_counts": Counter({origin: 1}),
             }
             names.setdefault(key, name)
             name_variants[key].add(original_name)
@@ -292,6 +339,25 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             future_assignments += int(item["day"] > today)
             if teaching_label_needs_review(name, loaded["details"]["site_names"]):
                 review_labels.add(key)
+        for item in clinical_sessions:
+            original_name = item["preceptor_name"]
+            name = aliases.get(teaching_name_key(original_name), original_name)
+            key = teaching_name_key(name)
+            names.setdefault(key, name)
+            name_variants[key].add(original_name)
+            site = teaching_site_key(item["site"])
+            work_type = teaching_work_type(item["site"])
+            observed_site_groups[site] = work_type
+            clinical.add(key, item, work_type, site, source={
+                "rotation_start": rotation.isoformat(), "archive_path": loaded["path"],
+                "archive_file": loaded["path"].rsplit("/", 1)[-1],
+                "github_blob_sha": loaded["sha"], "worksheet": item["site"], "cell": item["cell"],
+            })
+            if teaching_label_needs_review(name, loaded["details"]["site_names"]):
+                review_labels.add(key)
+        for reason in sorted({row["reason"] for row in ignored_cells}):
+            warnings.append({"rotation_start": rotation.isoformat(), "issue": reason + "; excluded",
+                             "details": ", ".join(sorted({row["cell"] for row in ignored_cells if row["reason"] == reason}))})
         if missing_cells:
             warnings.append({"rotation_start": rotation.isoformat(), "issue": "Missing provider; not attributed",
                              "details": ", ".join(sorted(set(missing_cells)))})
@@ -304,10 +370,51 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             "assigned_student_shifts_counted": counted,
             "duplicate_student_shifts_removed": removed,
             "missing_provider_cells": len(set(missing_cells)),
+            "clinical_provider_listings_read": len(clinical_sessions),
+            "ignored_session_cells": len({row["cell"] for row in ignored_cells}),
         })
-        del records, loaded
+        del records, loaded, clinical_sessions, ignored_cells
         if progress:
             progress(number, len(rotations))
+    # Apply the approved exception to BOTH denominators and student assignments.
+    # Do this after scanning all files: overlapping rotations may contain the
+    # outpatient listing in a different file from the nursery listing.
+    clinical.apply_outpatient_priority(names)
+    counts = Counter()
+    duplicates = future_assignments = 0
+    source_by_rotation = {row["rotation_start"]: row for row in manifests}
+    for row in manifests:
+        row["assigned_student_shifts_counted"] = 0
+        row["duplicate_student_shifts_removed"] = 0
+        row["nursery_student_assignment_listings_excluded"] = 0
+    effective_assignments = {}
+    removed_assignments = 0
+    for digest, item in seen_assignments.items():
+        identity = (item["provider_key"], item["day"], item["shift"])
+        excluded = clinical.excluded_sites_by_shift.get(identity, set())
+        remaining_origins = []
+        for (rotation_key, site), count in item["origin_counts"].items():
+            if site in excluded:
+                source_by_rotation[rotation_key]["nursery_student_assignment_listings_excluded"] += count
+            else:
+                remaining_origins.append((rotation_key, site, count))
+        if not remaining_origins:
+            removed_assignments += 1
+            continue  # A nursery-only student is NOT credited to clinic.
+        item["sites"].difference_update(excluded)
+        item["work_types"] = {observed_site_groups[site] for site in item["sites"]}
+        # Reassign first-source credit only if that source was excluded. Each
+        # retained student-shift still counts once across all duplicate listings.
+        for index, (rotation_key, site, count) in enumerate(remaining_origins):
+            credited = int(index == 0)
+            source_by_rotation[rotation_key]["assigned_student_shifts_counted"] += credited
+            source_by_rotation[rotation_key]["duplicate_student_shifts_removed"] += count - credited
+            duplicates += count - credited
+        counts[(item["provider_key"], item["month"])] += 1
+        future_assignments += int(item["day"] > today)
+        del item["origin_counts"]
+        effective_assignments[digest] = item
+    seen_assignments = effective_assignments
     monthly = [{"preceptor_name": names[key], "academic_year": teaching_academic_label(teaching_academic_start(month)),
                 "academic_start_year": teaching_academic_start(month), "month": month.isoformat(),
                 "no_of_shifts": int(count), "educational_hours": int(count * TEACHING_HOURS_PER_STUDENT_SHIFT)}
@@ -353,6 +460,7 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
     } for (key, day, work_type), count in sorted(
         daily_counts.items(), key=lambda pair: (pair[0][0], pair[0][1], teaching_work_type_sort(pair[0][2]))) ]
     result = {
+        "student_shifts_removed_by_outpatient_priority": removed_assignments,
         "date_range_version": DATE_RANGE_SCHEMA_VERSION,
         "daily_by_work_type": daily_by_type,
         "version": TEACHING_REPORT_VERSION, "commit": commit,
@@ -365,6 +473,11 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
         "unresolved_preceptor_labels": sorted((names[k] for k in review_labels), key=teaching_name_key),
         "name_variants": {names[k]: sorted(v) for k, v in name_variants.items() if len(v) > 1},
     }
+    # Excluded nursery learners must not contribute to unique-student counts.
+    result.update(build_student_continuity_data(seen_assignments.values(), names))
+    result.update(clinical.finish(names))
+    require_student_continuity_data(result)
+    require_learner_reach_data(result)
     teaching_require_work_type_data(result)
     return result
 
@@ -383,7 +496,7 @@ def teaching_annual_rows(scan, selected_years):
                      "no_of_shifts": total,
                      "months_worked": "; ".join(teaching_month_label(CalendarDate.fromisoformat(item["month"])) for item in ordered),
                      "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT})
-    return rows
+    return enrich_teaching_rows(scan, selected_years, rows) if "learner_reach_version" in scan else rows
 
 
 def teaching_brief_months(month_values):
@@ -435,8 +548,9 @@ def teaching_filter_date_range(scan, period):
     """Project one full archive scan into one inclusive, user-labeled period.
 
     Filter the *actual assignment date* before computing month/work-type totals.
-    July boundaries and twelve-month lengths play no role. No student identities
-    are needed, and the original scan is not modified. Archive source/diagnostic
+    July boundaries and twelve-month lengths play no role. Unlinked student-date
+    groups are filtered too, without learner names or changing the original scan.
+    Archive source/diagnostic
     counts still describe whole files and are explicitly labeled as such in the UI
     and ZIP notes. Always pass the full scan, not an already filtered projection.
     """
@@ -485,5 +599,9 @@ def teaching_filter_date_range(scan, period):
                                    if site in selected_sites},
         "future_assignments_in_period": sum(row["no_of_shifts"] for row in selected if row["date"] > today),
     })
+    if "learner_reach_version" in scan:
+        filter_reach_dates(scan, result, period)
+    if "student_continuity_version" in scan or "student_day_groups" in scan:
+        filter_student_continuity_dates(scan, result, period)
     teaching_require_date_range_data(result)
     return result

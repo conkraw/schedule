@@ -12,6 +12,9 @@ import pandas as pd
 import streamlit as st
 
 from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
+from schedule_app.services.student_continuity import (
+    STUDENT_CONTINUITY_SCHEMA_VERSION, require_student_continuity_data,
+)
 from schedule_app.services.teaching_validation import (
     STRICT_CONFLICT_SCHEMA_VERSION, STRICT_REPORT_VERSION, CONFLICT_CSV_COLUMNS,
     TeachingConflictError, validate_teaching_report, require_conflict_source_data,
@@ -77,6 +80,8 @@ def render():
     st.caption("HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Ward A, PSHCH Nursery, Complex Care "
                "and other services stay separate. One student-shift = four educational hours; two students "
                "at once count twice. These are scheduled student-weighted hours, not distinct clock hours.")
+    st.caption("Each individual Word report also shows unique students assigned and students assigned on 3+ distinct dates. "
+               "AM and PM on the same date count as one day; only dates within that report's period count.")
     mode, period, issue = _render_period_controls()
     if mode == REPORTING_MODES[0] and period is None:
         _clear_teaching_downloads()
@@ -92,7 +97,7 @@ def render():
                          help="Choose the actual name order in your OPDs. No rotation list is required. "
                               "Commas within names are preserved; use separate rows or semicolons for multiple students.")
     options_signature = hashlib.sha256(json.dumps(
-        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, OUTPATIENT_PRIORITY_VERSION, client.config.signature(), order,
+        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, OUTPATIENT_PRIORITY_VERSION, STUDENT_CONTINUITY_SCHEMA_VERSION, client.config.signature(), order,
          TEACHING_PRECEPTOR_NAME_MAP, TEACHING_OPD_NAME_ORDER_OVERRIDES,
          TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER], sort_keys=True).encode()).hexdigest()
     if st.session_state.get("teaching_options_signature") != options_signature:
@@ -126,6 +131,7 @@ def render():
         teaching_require_date_range_data(scan)
         require_learner_reach_data(scan)
         require_conflict_source_data(scan)
+        require_student_continuity_data(scan)
     except OPDArchiveError as exc:
         st.session_state.pop("teaching_scan", None)
         _clear_teaching_downloads()

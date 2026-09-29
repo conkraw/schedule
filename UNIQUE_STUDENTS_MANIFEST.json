@@ -1,0 +1,34 @@
+{
+  "base": "Schedule_App_Modular_GitHub_Date_Presets.zip",
+  "change": "Unique students and distinct-date student continuity in individual Word reports",
+  "python_files": [
+    {
+      "path": "schedule_app/reports/individual_teaching.py",
+      "new": false,
+      "sha256": "f634e9edc84ef89e51d48a08a5b8e750f39c60d1d1ae01c594fba26e40565b62"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "new": false,
+      "sha256": "f14d497e2ec7f05c6db4e4e81fe1d8ce838b3c61e1c93794bc1d30b3cfe789d3"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "new": false,
+      "sha256": "25aaacdc3bc7ea95f0fab18ed032f990ba85e27abfdc508ae54c95a013da2bc8"
+    },
+    {
+      "path": "schedule_app/services/student_continuity.py",
+      "new": true,
+      "sha256": "8024267cc033a850bfd77f8e8193396a7818178999a3139476cfa2dc93279858"
+    },
+    {
+      "path": "schedule_app/services/teaching_analysis.py",
+      "new": false,
+      "sha256": "7cdaee9ee058a593f1ed5112352a0a216573c0e8960d36f30d22c5f6f193b307"
+    }
+  ],
+  "requires_archive_refresh": true,
+  "preserves_settings_and_credentials": true,
+  "tests_passed": 249
+}
