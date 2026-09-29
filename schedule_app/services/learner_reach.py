@@ -14,6 +14,9 @@ from schedule_app.services.reporting_periods import teaching_period, teaching_re
 from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT, TEACHING_WORK_TYPE_REVIEW
 import re
 import math
+from schedule_app.services.report_diagnostics import (
+    validated_shift_counts, checked_report_reach, ReportDataError,
+)
 from schedule_app.services.teaching_validation import (
     STRICT_CONFLICT_SCHEMA_VERSION, validate_teaching_report,
 )
@@ -194,10 +197,13 @@ def reach_group_year(scan, day):
     return period.start.year if period else day.year if day.month >= 7 else day.year - 1
 
 
-def reach_totals(entries):
+def reach_totals(entries, **context):
     """Use a ratio of summed shifts, NEVER an average of percentages."""
     rows = list(entries)
-    counts = {key: sum(int(row.get(key, 0)) for row in rows) for key in REACH_COUNT_FIELDS}
+    # Empty input is an absent group; missing fields in a NONEMPTY group
+    # are a report-data error, not a zero-hour clinical schedule.
+    validated = [validated_shift_counts(row, **context) for row in rows]
+    counts = {key: sum(row[key] for row in validated) for key in REACH_COUNT_FIELDS}
     total, with_students = counts["recorded_clinical_shifts"], counts["shifts_with_students"]
     if counts["shifts_without_students"] + with_students != total or with_students > total:
         raise OPDArchiveError("Clinical shift totals do not reconcile; a percentage cannot be reported.")
@@ -299,11 +305,14 @@ def enrich_teaching_rows(scan, selected_years, teaching_rows, *, by_work_type=Fa
             item["source_sites"] = "; ".join(sorted(set(filter(None, item.get("source_sites", "").split("; "))) | set(filter(None, reach["source_sites"].split("; ")))))
     for row in result.values():
         if "recorded_clinical_shifts" not in row:
-            row.update(reach_totals([]), months_scheduled="")
+            raise ReportDataError("A teaching assignment has no matching clinical shift totals.",
+                                  metrics=row, report="Teaching summary calculations")
         # A teaching assignment without a corresponding clinical session must
         # not be presented as an ordinary zero or a reliable percentage.
         if row["no_of_shifts"] and not row["shifts_with_students"] and not row.get("availability_review_shifts"):
-            raise OPDArchiveError("A teaching assignment has no matching clinical shift. Refresh the archive before exporting.")
+            raise ReportDataError("A teaching assignment has no matching clinical shift with students.",
+                                  metrics=row, report="Teaching summary calculations")
+        row.update(checked_report_reach(row, report="Teaching summary calculations"))
     return sorted(result.values(), key=lambda row: (teaching_name_key(row["preceptor_name"]), row["academic_year"], teaching_work_type_sort(row.get("work_type", ""))))
 
 

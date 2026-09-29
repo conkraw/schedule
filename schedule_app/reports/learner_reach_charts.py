@@ -11,6 +11,7 @@ from threading import RLock
 
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.learner_reach import reach_percent, reach_totals
+from schedule_app.services.report_diagnostics import checked_report_reach
 from schedule_app.services.reporting_periods import teaching_report_label, teaching_report_date_text
 
 _CHART_LOCK = RLock()
@@ -26,6 +27,8 @@ def learner_reach_pie(work_type, metrics, period_label="", date_text=""):
     Object-oriented Figure + Agg avoids global pyplot figures in Streamlit.
     The lock also keeps rendering separate across simultaneous app sessions.
     """
+    metrics = checked_report_reach(metrics, report="Clinical experience pie chart",
+                                   work_type=str(work_type), academic_year=str(period_label))
     checked = reach_totals([metrics])
     percent = reach_percent(checked["learner_reach_pct"])
     for field in ("recorded_clinical_hours", "hours_with_students", "hours_without_students"):
@@ -83,6 +86,8 @@ def teaching_clinical_charts(scan, summaries):
             if int(group["no_of_shifts"]) <= 0:
                 continue
             work_type = group["work_type"]
+            group = checked_report_reach(group, report="Clinical experience pie chart",
+                                         work_type=work_type, academic_year=period_label)
             safe = re.sub(r"[^A-Za-z0-9._-]+", "_", work_type).strip("._")[:75] or "Experience"
             suffix = hashlib.sha256(work_type.encode()).hexdigest()[:8]
             filename = f"Learner_Reach_Charts/{year}_{safe}_{suffix}.png"

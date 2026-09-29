@@ -4,6 +4,7 @@ Extracted from the supplied app; this module performs no page rendering on impor
 """
 
 from schedule_app.services.teaching_priority import outpatient_priority_report_note
+from schedule_app.services.report_diagnostics import checked_report_reach, ReportDataError
 from collections import defaultdict
 from datetime import date as CalendarDate
 from docx import Document
@@ -124,7 +125,13 @@ def teaching_make_docx(name, monthly, scan):
         note("Counts span this report's dates and all work types. AM and PM on the same date count as one day; "
              "days need not be consecutive.")
         reach = next((row for row in learner_reach_rows(scan, [year]) if row["preceptor_name"] == name), None)
+        if reach is None:
+            raise ReportDataError("No clinical metrics were found for this included preceptor.",
+                                  report="Individual preceptor report", preceptor_name=name,
+                                  academic_year=teaching_report_label(scan, year))
         if reach:
+            reach = checked_report_reach(reach, report="Individual preceptor report",
+                                         section="Overall total")
             p = doc.add_paragraph()
             p.add_run("Learner Reach: " + reach_percent(reach["learner_reach_pct"])).bold = True
             p.add_run(f" — {reach['shifts_with_students']:,} of {reach['recorded_clinical_shifts']:,} recorded clinical shifts included a student.")
@@ -132,7 +139,10 @@ def teaching_make_docx(name, monthly, scan):
                 f"Recorded OPD hours: {reach['recorded_clinical_hours']:,}  |  "
                 f"With students: {reach['hours_with_students']:,}  |  "
                 f"Without students: {reach['hours_without_students']:,}")
-            reach_types = [row for row in participating_reach_rows(scan, [year], by_work_type=True) if row["preceptor_name"] == name]
+            reach_types = [checked_report_reach(row, report="Individual preceptor report",
+                            section="Learner Reach by type of work")
+                           for row in participating_reach_rows(scan, [year], by_work_type=True)
+                           if row["preceptor_name"] == name]
             doc.add_heading("Learner Reach by type of work", level=2)
             teaching_add_work_table(doc,
                 ("Type of work", "OPD hours", "With students", "Without students", "Learner Reach"),

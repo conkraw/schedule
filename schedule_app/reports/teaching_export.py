@@ -8,6 +8,7 @@ from schedule_app.services.teaching_priority import (
     selected_priority_adjustments,
 )
 from schedule_app.services.teaching_validation import validate_teaching_report
+from schedule_app.services.report_diagnostics import report_step
 from schedule_app.services.student_continuity import (
     require_student_continuity_data, STUDENT_CONTINUITY_NOTE, STUDENT_MATCHING_NOTE,
 )
@@ -103,9 +104,12 @@ def teaching_build_zip(scan, selected_years):
         "Provider availability with no student does not count. All filled student assignments are treated equally.",
         "Names are matched case-insensitively with normalized whitespace and comma spacing; no fuzzy identity matching.",
         "Student names and decrypted workbooks are not included in this ZIP.",
-        "INDIVIDUAL REPORT: UNIQUE STUDENTS AND CONTINUITY",
+        "CHAIR AND INDIVIDUAL REPORTS: UNIQUE STUDENTS AND CONTINUITY",
         STUDENT_CONTINUITY_NOTE,
         STUDENT_MATCHING_NOTE,
+        "The chair's Student continuity by preceptor table combines all work types for each person, "
+        "matching their individual report. Columns are not summed across preceptors because the same "
+        "student can be assigned to more than one preceptor.",
         "Unique counts use only retained assignments after outpatient/nursery priority. "
         "These counts do not change student-shifts, educational hours, Learner Reach, or clinical-experience pies.",
         "Future scheduled assignments in the selected academic year(s) are included.",
@@ -198,7 +202,12 @@ def teaching_build_zip(scan, selected_years):
     notes += [f"Outpatient-priority half-days in selected reporting dates: {len(selected_priority_adjustments(scan, years)):,}.",
               f"Unique student-shifts removed by outpatient priority across the full archive: {scan.get('student_shifts_removed_by_outpatient_priority', 0):,}.",
               "Archive_Sources.csv counts satisfy: assignments read = retained unique credit + retained duplicates + excluded nursery listings."]
-    charts = teaching_clinical_charts(scan, teaching_chair_summary_data(scan, years))
+    with report_step("Chair summary calculations"):
+        summaries = teaching_chair_summary_data(scan, years)
+    with report_step("Clinical experience pie charts"):
+        charts = teaching_clinical_charts(scan, summaries)
+    with report_step("Chair Word report"):
+        chair_bytes = teaching_make_chair_summary(scan, years, charts=charts)
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
         if priority_rows:
             zf.writestr("Outpatient_Priority_Adjustments.csv", teaching_csv_bytes(priority_rows, PRIORITY_AUDIT_COLUMNS))
@@ -208,7 +217,7 @@ def teaching_build_zip(scan, selected_years):
                 "academic_year": period.label, "start_date": period.start.isoformat(),
                 "end_date": period.end.isoformat(), "both_dates_included": "YES",
             }], ("academic_year", "start_date", "end_date", "both_dates_included")))
-        zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, teaching_make_chair_summary(scan, years, charts=charts))
+        zf.writestr(TEACHING_CHAIR_SUMMARY_FILENAME, chair_bytes)
         for chart in charts:
             zf.writestr(chart["filename"], chart["png"])
         zf.writestr("clinical_experience_learner_reach.csv", teaching_csv_bytes(
@@ -233,8 +242,9 @@ def teaching_build_zip(scan, selected_years):
                 number += 1
                 safe = f"{base}_{number}"
             used.add(safe.casefold())
-            zf.writestr(f"Preceptor_Reports/{safe}_Teaching_Report.docx",
-                        teaching_make_docx(name, monthly_by_name[name], scan))
+            with report_step("Individual preceptor Word report", preceptor_name=name, academic_year=labels):
+                individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan)
+            zf.writestr(f"Preceptor_Reports/{safe}_Teaching_Report.docx", individual_bytes)
         zf.writestr("Report_Notes.txt", "\n".join(notes).encode("utf-8"))
         zf.writestr("Archive_Sources.csv", teaching_csv_bytes(scan["sources"], source_columns))
     return output.getvalue(), annual

@@ -12,6 +12,10 @@ import pandas as pd
 import streamlit as st
 
 from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
+from schedule_app.reports.chair_summary import CHAIR_STUDENT_CONTINUITY_REPORT_VERSION
+from schedule_app.services.report_diagnostics import (
+    ReportDataError, REPORT_ISSUE_COLUMNS, REPORT_OUTPUT_VERSION, REPORT_BUILD_ID,
+)
 from schedule_app.services.student_continuity import (
     STUDENT_CONTINUITY_SCHEMA_VERSION, require_student_continuity_data,
 )
@@ -70,6 +74,22 @@ def _render_conflicts(exc):
             "Then return here and click Load / refresh archived OPDs. No teaching report or pie chart will run until conflicts in the selected dates are resolved.")
 
 
+def _render_report_issues(exc):
+    """Explain the failing report entry without exporting any learner data."""
+    _clear_teaching_downloads()
+    st.error(str(exc))
+    st.dataframe(pd.DataFrame(exc.rows).reindex(columns=REPORT_ISSUE_COLUMNS),
+                 hide_index=True, use_container_width=True)
+    st.download_button("Download report issue details (CSV)",
+        data=teaching_csv_bytes(exc.rows, REPORT_ISSUE_COLUMNS),
+        file_name="Learner_Reach_Report_Issues.csv", mime="text/csv",
+        key="teaching_download_report_issues")
+    st.info("This identifies a report-calculation or report-writing problem, not necessarily an incorrect OPD. "
+            "Restart after installing every update file and refresh archived OPDs. If it still fails, "
+            "share the issue CSV. Student names, raw OPDs, tokens and encryption keys are not included.")
+    st.caption("Report builder: " + REPORT_BUILD_ID)
+
+
 def render():
     st.subheader("Preceptor Teaching Summary")
     st.write("Read current encrypted OPDs from GitHub, then generate a chair-friendly Word summary, "
@@ -80,7 +100,7 @@ def render():
     st.caption("HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Ward A, PSHCH Nursery, Complex Care "
                "and other services stay separate. One student-shift = four educational hours; two students "
                "at once count twice. These are scheduled student-weighted hours, not distinct clock hours.")
-    st.caption("Each individual Word report also shows unique students assigned and students assigned on 3+ distinct dates. "
+    st.caption("The chair summary and each individual Word report show unique students assigned and students assigned on 3+ distinct dates. "
                "AM and PM on the same date count as one day; only dates within that report's period count.")
     mode, period, issue = _render_period_controls()
     if mode == REPORTING_MODES[0] and period is None:
@@ -169,7 +189,8 @@ def render():
         report_scan = scan
         selection_signature = (mode, *sorted(selected))
         file_part = teaching_academic_label(selected[0]) if len(selected) == 1 else "Multiple_Academic_Years"
-    signature = (options_signature, scan["commit"], selection_signature, PARTICIPATION_REPORT_VERSION, STRICT_REPORT_VERSION)
+    signature = (options_signature, scan["commit"], selection_signature, PARTICIPATION_REPORT_VERSION,
+                 STRICT_REPORT_VERSION, CHAIR_STUDENT_CONTINUITY_REPORT_VERSION, REPORT_OUTPUT_VERSION)
     if st.session_state.get("teaching_zip_signature") != signature:
         _clear_teaching_downloads()
         st.session_state["teaching_zip_signature"] = signature
@@ -198,10 +219,18 @@ def render():
         _clear_teaching_downloads()
         st.error(str(exc))
         return
-    annual = teaching_annual_rows(report_scan, selected)
+    try:
+        annual = teaching_annual_rows(report_scan, selected)
+        typed = teaching_work_type_rows(report_scan, selected)
+    except ReportDataError as exc:
+        _render_report_issues(exc)
+        return
+    except OPDArchiveError as exc:
+        _clear_teaching_downloads()
+        st.error(str(exc))
+        return
     eligible = teaching_participation_keys(report_scan, selected)
     active_names = {name for name, _, _ in eligible}
-    typed = teaching_work_type_rows(report_scan, selected)
     active_sites = {site for row in typed for site in row.get("source_sites", "").split("; ") if site}
     review_names = [name for name in report_scan["unresolved_preceptor_labels"] if name in active_names]
     if review_names:
@@ -258,6 +287,7 @@ def render():
     st.caption("In Custom dates mode, academic_year contains your report label. All dates in that range stay in one "
                "report section, even across July. Boundary months include only the chosen days. "
                "Student names are not exported. Future scheduled assignments within the selected dates are included.")
+    st.caption("Report builder: " + REPORT_BUILD_ID)
     if st.button("Create teaching reports ZIP", key="teaching_build_zip"):
         st.session_state.pop("teaching_zip", None)
         try:
@@ -268,7 +298,11 @@ def render():
         except TeachingConflictError as exc:
             _render_conflicts(exc)
             return
+        except ReportDataError as exc:
+            _render_report_issues(exc)
+            return
         except OPDArchiveError as exc:
+            _clear_teaching_downloads()
             st.error(str(exc))
         except Exception:
             st.error("The Word/CSV export could not be completed. No partial ZIP was retained. "

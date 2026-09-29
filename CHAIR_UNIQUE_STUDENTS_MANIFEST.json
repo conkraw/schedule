@@ -1,0 +1,31 @@
+{
+  "update": "Chair student continuity",
+  "based_on": "Schedule_App_Modular_Unique_Students.zip",
+  "changed_python_files": [
+    {
+      "path": "schedule_app/reports/chair_summary.py",
+      "before_sha256": "e911d54c444c5532b10cd132618af09704587575421732e0fefc0d669605b3ed",
+      "after_sha256": "bc3f0a9699185a1878f5c78f17785ac02fee9b0612e5148f48161c56c7c9466f"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "before_sha256": "f14d497e2ec7f05c6db4e4e81fe1d8ce838b3c61e1c93794bc1d30b3cfe789d3",
+      "after_sha256": "694a83c2702251b7248d8fdad6eacef0b85e0a3931ec75597104f99c85e2bb0e"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "before_sha256": "25aaacdc3bc7ea95f0fab18ed032f990ba85e27abfdc508ae54c95a013da2bc8",
+      "after_sha256": "cc6bbe4aeb0c46f63096ea7ff0b68cda08588506fe320fa9e3c1cbfe4f850c08"
+    }
+  ],
+  "scope": "Overall per-preceptor distinct student counts, matching the individual report; work-type metrics unchanged",
+  "no_student_names_exported": true,
+  "no_scan_schema_change": true,
+  "new_dependencies": [],
+  "verification": {
+    "baseline_tests_passed": 249,
+    "new_tests_passed": 23,
+    "total_tests_passed": 272,
+    "live_github_or_streamlit_tested": false
+  }
+}

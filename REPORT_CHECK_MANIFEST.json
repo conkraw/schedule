@@ -1,0 +1,66 @@
+{
+  "update": "Teaching report percentage checks and diagnostics",
+  "build_id": "2026-09-29-reach-diagnostics-2",
+  "based_on": "Schedule_App_Modular_Chair_Unique_Students.zip",
+  "live_error_reproduced": false,
+  "description": "Repairs missing derived report values only when full counts validate; preserves strict conflict blocking and provides contextual issue CSV.",
+  "files": [
+    {
+      "path": "schedule_app/reports/chair_summary.py",
+      "sha256": "839227c4443d3a3d8f2068aaba6af4f468745d64326d5715462cbf9ca42a20f1",
+      "new": false
+    },
+    {
+      "path": "schedule_app/reports/individual_teaching.py",
+      "sha256": "38b4de44ca77dd5052da2e0548aca00cb94ec9200ec2f6ba595345bc9a58559c",
+      "new": false
+    },
+    {
+      "path": "schedule_app/reports/learner_reach_charts.py",
+      "sha256": "ad51b21c2b25e3c73a69ab62113fdb147785e163a1e6c8fb8882124ab722ea90",
+      "new": false
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "sha256": "41a3fad2fa0414db454f74a5389faf989a382ab5408cc09a4a224610953a958b",
+      "new": false
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "sha256": "6358b931888e71fa7d3dda5e8b16a6f8b0ae0d41222c4cbcd1942bbf871245c3",
+      "new": false
+    },
+    {
+      "path": "schedule_app/services/learner_reach.py",
+      "sha256": "e1f6ad3b2c1b363dc01a8d01f6a2d45464a615c5ed25d84ae994b3d795c3cfc1",
+      "new": false
+    },
+    {
+      "path": "schedule_app/services/report_diagnostics.py",
+      "sha256": "64b6fe48678da1ae24dd48b88391bcdcf67614eb94575e065ab2f2af2d47dad1",
+      "new": true
+    }
+  ],
+  "unchanged_verified": [
+    "app_sch_2026.py",
+    "requirements.txt",
+    "schedule_app/settings.py",
+    "schedule_app/services/opd_archive.py",
+    "schedule_app/services/reporting_presets.py",
+    "schedule_app/services/reporting_periods.py",
+    "schedule_app/services/student_continuity.py",
+    "schedule_app/services/teaching_priority.py",
+    "schedule_app/services/teaching_analysis.py",
+    "schedule_app/services/primary_preceptors.py",
+    "schedule_app/services/student_schedules.py"
+  ],
+  "tests_passed": 297,
+  "new_tests": 25,
+  "sample_comparison": {
+    "paired_runs": 4,
+    "csv_files_identical": 24,
+    "word_body_table_text_identical": 86
+  },
+  "live_services_tested": false,
+  "new_dependencies": []
+}
