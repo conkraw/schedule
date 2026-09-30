@@ -333,7 +333,7 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
             elif provider_issues:
                 status = "Not verified: assessment source metadata needs review"
             elif missing:
-                status = f"Not verified: {len(missing)} eligible student name(s) need an external ID match"
+                status = f"Not verified: {len(missing)} eligible student name(s) need an OASIS name match"
             elif not eligible:
                 status = f"No eligible students ({minimum_shifts}+ shifts)"
             else:
@@ -376,12 +376,12 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
                                          "Review source availability, the username link and source diagnostics."))
             if missing:
                 warnings.append(_warning(name, label, rid, "Student identity", status,
-                    "Resolve exact OPD-name → Student External ID links below; the denominator has not been reduced."))
+                    "Match the OPD student name to the correct OASIS student name below; all eligible students remain in the denominator."))
                 for identity in missing:
                     display, candidates = name_lookup[(name, identity)]
                     unmatched.append({"preceptor_name": name, "academic_year": label, "student_name": display,
                                       "name_key": identity[1], "assigned_shifts": len(pairs[(name, identity)]),
-                                      "issue": "Name has multiple Student External IDs" if candidates else "No Student External ID found for OPD name"})
+                                      "issue": "More than one OASIS student record uses this name" if candidates else "OPD name needs a matching OASIS student name"})
             result_rows.append(row)
     return {"version": ASSESSMENT_VERSION, "minimum_shifts": minimum_shifts,
             "context": completion_context(scan, years), "rows": result_rows,

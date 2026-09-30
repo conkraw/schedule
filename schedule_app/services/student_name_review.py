@@ -15,7 +15,7 @@ from schedule_app.services.oasis_educator_reports import name_key
 from schedule_app.services.student_assessment_links import student_name_key
 from schedule_app.services.teaching_evaluations import active_periods
 
-STUDENT_REVIEW_UI_VERSION = 1
+STUDENT_REVIEW_UI_VERSION = 2
 
 
 def oasis_student_choices(prepared):
@@ -38,6 +38,44 @@ def oasis_student_choices(prepared):
                               "ambiguous_name": len(clean_ids) > 1}
     return dict(sorted(choices.items(), key=lambda pair: (
         student_name_key(pair[1]["oasis_student_name"]), pair[1]["external_id"])))
+
+
+
+def name_only_student_choices(choices):
+    """Return one visible option per OASIS name, carrying its record internally.
+
+    A name linked to several external IDs is shown once as needing source review,
+    not as several identical-looking choices. It cannot be saved from the name-only
+    selector. The existing pair-level choices remain available to resolve already
+    saved links and never change the encrypted catalog schema.
+    """
+    grouped = defaultdict(list)
+    for token, row in choices.items():
+        grouped[student_name_key(row["oasis_student_name"])].append((token, row))
+    result = {}
+    for key, pairs in sorted(grouped.items()):
+        pairs = sorted(pairs, key=lambda pair: pair[0])
+        ids = {row["external_id"] for _, row in pairs}
+        # A unique choice keeps its existing token so unrelated data refreshes
+        # do not change which record it represents. Ambiguity gets a new token.
+        if len(ids) == 1 and not any(row.get("ambiguous_name", False) for _, row in pairs):
+            token, row = pairs[0]
+            result[token] = dict(row)
+        else:
+            token = hashlib.sha256(json.dumps(["ambiguous_name", key], ensure_ascii=True).encode()).hexdigest()
+            result[token] = {"oasis_student_name": pairs[0][1]["oasis_student_name"],
+                             "external_id": "", "ambiguous_name": True}
+    return result
+
+
+def selected_name_student_id(choices, selection):
+    """Resolve the selected *name* internally; never guess among duplicate names."""
+    if not selection or selection not in choices:
+        raise OPDArchiveError("Choose the matching OASIS student before saving. Nothing was changed.")
+    row = choices[selection]
+    if row.get("ambiguous_name") or not row.get("external_id"):
+        raise OPDArchiveError("More than one OASIS student record uses this name. Review the source records in OER; no match was saved.")
+    return row["external_id"]
 
 
 def selected_student_id(choices, selection):
@@ -88,9 +126,9 @@ def student_name_review(inputs, scan, years, unmatched):
         result[key] = row
         if state == "Needs review":
             missing[key] = {**row, "issue": (
-                "This OASIS name has multiple Student External IDs; choose the correct student"
+                "More than one OASIS student record uses this name; review the source records in OER"
                 if len(ids) > 1 else
-                "No unique OASIS name/Student External ID match was found for this OPD name")}
+                "This OPD name needs a matching OASIS student name")}
     return {"active": result, "missing": missing,
             "eligible_missing_count": sum(row["affects_completion"] for row in missing.values())}
 

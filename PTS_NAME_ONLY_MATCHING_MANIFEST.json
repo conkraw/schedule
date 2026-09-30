@@ -1,0 +1,35 @@
+{
+  "update": "PTS name-only student matching",
+  "base_release": "Schedule_App_Modular_PTS_Minimum_Shifts.zip",
+  "changed_runtime_files": [
+    {
+      "path": "schedule_app/sections/student_name_matches.py",
+      "before_sha256": "14f99a74682e14c8d37a99ccd1de8387c4549a7c02ea1319cd26d06ec5771721",
+      "after_sha256": "e9198cceeb376fe5400b25619f277cc24be90a261df7151c336159423eb98209"
+    },
+    {
+      "path": "schedule_app/services/student_name_review.py",
+      "before_sha256": "43be9ad9d64526c7d7a1c59960b37b7c13517a80f7e27d17aa30303c762ce558",
+      "after_sha256": "2deb484e4dc71109082072f6a2fe4cf2083b958f697fa735b8205f5f54e5e02b"
+    },
+    {
+      "path": "schedule_app/services/assessment_completion.py",
+      "before_sha256": "9f1cc8a3a2092ca1e9a3bc22032d2683f027e0f805aad844795baceaf76bd560",
+      "after_sha256": "c35b518e3e3e43c872539987f5da5a860eeff01e603bdf7b1932334e74119fe4"
+    }
+  ],
+  "unchanged": [
+    "app_sch_2026.py",
+    "schedule_app/settings.py",
+    "requirements.txt",
+    "all archive and encryption services",
+    "all report builders"
+  ],
+  "tests": {
+    "passed": 948,
+    "skipped": 5,
+    "subtests_passed": 139,
+    "live_github": false,
+    "live_streamlit": false
+  }
+}
