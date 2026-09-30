@@ -7,7 +7,7 @@ from schedule_app.services.assessment_completion import (
     ASSESSMENT_VERSION, load_completion_inputs, build_completion_bundle,
     completion_context, completion_display, unverified_bundle,
 )
-from schedule_app.services.student_assessment_links import GitHubStudentAssessmentLinks, student_name_key
+from schedule_app.sections.student_name_matches import render_student_name_matches
 from schedule_app.services.opd_archive import OPDArchiveError
 
 P = "assessment_completion_"
@@ -81,6 +81,7 @@ def render_assessment_completion(archive, scan, years):
         return unverified_bundle(scan, years, "Not checked: assessment selection needs review")
     st.caption(f"Student-assessment files checked: {bundle['source_count']} | Retrieved: {bundle['retrieved_at']}. "
                "Refresh this check after new OASIS uploads or saved username changes. It never modifies originals.")
+    render_student_name_matches(archive, inputs, scan, years, unmatched)
     for direction, title in (("Student → educator", "Educators without verified student feedback"),
                              ("Preceptor → student", "Preceptors without verified completed student assessments")):
         issues = [r for r in bundle["warnings"] if r["direction"] == direction]
@@ -96,55 +97,6 @@ def render_assessment_completion(archive, scan, years):
                    "History & Physical": completion_display(r, "hp"),
                    "Either form": completion_display(r, "either"), "Status": r["assessment_status"]}
                   for r in bundle["rows"]], hide_index=True, use_container_width=True)
-    if unmatched:
-        st.warning("Some eligible OPD students cannot be matched uniquely to Student External ID. "
-                   "Their denominator has not been reduced. Only affected completion percentages are marked Not verified.")
-    with st.expander("Resolve student external-ID matches (optional)"):
-        st.caption("OPDs contain student names, not Student External ID. Exact name matches ignore case/spacing and "
-                   "the OASIS '; MD2028'-style suffix. No fuzzy matching. Corrections are encrypted in GitHub. "
-                   "Student names/IDs shown here are not added to the chair report, individual reports or report ZIP.")
-        if unmatched:
-            st.dataframe(unmatched, hide_index=True, use_container_width=True)
-        choices = {r["name_key"]: r["student_name"] for r in unmatched}
-        editing = st.checkbox("Review or correct saved student ID links", key=P + "edit_student_links")
-        if editing:
-            for key, row in inputs["student_links"]["entries"].items():
-                choices[key] = row["student_name"]
-        if choices:
-            keys = sorted(choices)
-            if st.session_state.get(P + "student_choice") not in keys:
-                st.session_state[P + "student_choice"] = keys[0]
-            key = st.selectbox("OPD student name needing an ID match", keys, key=P + "student_choice", format_func=lambda k: choices[k])
-            old = inputs["student_links"]["entries"].get(key, {})
-            suffix = hashlib.sha256((key + "|" + str(inputs["student_links"].get("sha"))).encode()).hexdigest()[:16]
-            with st.form(P + "student_form_" + suffix):
-                sid = st.text_input("Student External ID (not email or username unless it is the actual external ID)",
-                                    value=old.get("external_id", ""), key=P + "external_id_" + suffix)
-                confirm = st.checkbox("I verified that this Student External ID belongs to the selected OPD student", key=P + "confirm_id_" + suffix)
-                save = st.form_submit_button("Save student ID link encrypted in GitHub")
-            service = GitHubStudentAssessmentLinks(archive)
-            if save:
-                if not confirm:
-                    st.warning("Confirm the student's external ID before saving.")
-                else:
-                    try:
-                        inputs["student_links"] = service.save_link(choices[key], sid, expected=inputs["student_links"])
-                        st.session_state[P + "inputs"] = inputs
-                        _clear_downloads()
-                        st.rerun()
-                    except OPDArchiveError as exc:
-                        st.warning(str(exc))
-            if old:
-                remove = st.checkbox("Confirm removal of this saved student ID link", key=P + "confirm_remove_" + suffix)
-                if st.button("Remove saved student ID link", key=P + "remove", disabled=not remove):
-                    try:
-                        inputs["student_links"] = service.remove_link(choices[key], expected=inputs["student_links"])
-                        _clear_downloads()
-                        st.rerun()
-                    except OPDArchiveError as exc:
-                        st.warning(str(exc))
-        else:
-            st.info("No unresolved student names in the 3+ shift denominator.")
     if inputs["prepared"]["issues"]:
         with st.expander("Student-assessment source metadata to review"):
             st.caption("Question answers are ignored. These issues concern form identity, Student External ID, Evaluator Email or Submit Date. "

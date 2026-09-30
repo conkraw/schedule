@@ -1,0 +1,23 @@
+{
+  "update": "PTS student-name matching",
+  "runtime_files": [
+    {
+      "path": "schedule_app/sections/assessment_completion.py",
+      "action": "replace",
+      "sha256": "7d1982e1142ab6c74baf09ecd93512b38be3efd796a9e37b71c5411b6013f082"
+    },
+    {
+      "path": "schedule_app/sections/student_name_matches.py",
+      "action": "add",
+      "sha256": "0be27ad4437bb07adb51a8f68f69292c7cab308f7c53d0235de0362a448b518d"
+    },
+    {
+      "path": "schedule_app/services/student_name_review.py",
+      "action": "add",
+      "sha256": "53bbd2806e6bcadca2b64e12c2c5dbe1b15ab26c981bbbb24ef03aa0611144ee"
+    }
+  ],
+  "catalog_unchanged": "student_assessment_id_links.json.enc",
+  "new_tests_passed": 41,
+  "live_deployment_changed": false
+}
