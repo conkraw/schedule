@@ -4,6 +4,9 @@ Extracted from the supplied app; this module performs no page rendering on impor
 """
 
 from schedule_app.services.teaching_priority import outpatient_priority_report_note
+from schedule_app.services.educational_time import (
+    with_educational_time, teaching_time_rows, TIME_DEFINITION, TIME_SCOPE_NOTE,
+)
 from schedule_app.services.report_diagnostics import checked_report_reach, ReportDataError
 from collections import defaultdict
 from datetime import date as CalendarDate
@@ -86,7 +89,7 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None):
     footer._p.append(field)
     doc.core_properties.title = f"Preceptor teaching report - {name}"
     doc.core_properties.author = "Pediatric Clerkship"
-    doc.core_properties.subject = "Scheduled student-shifts by reporting period and type of work"
+    doc.core_properties.subject = "Total scheduled availability, educational hours and student continuity"
 
     def note(text, warning=False):
         paragraph = doc.add_paragraph(text)
@@ -100,10 +103,15 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None):
     grouped = defaultdict(list)
     for row in monthly:
         grouped[row["academic_start_year"]].append(row)
-    type_rows = [row for row in scan["monthly_by_work_type"] if row["preceptor_name"] == name]
-    for index, (year, rows) in enumerate(sorted(grouped.items())):
-        # A break on the next heading avoids an empty break-only page when
-        # the previous period exactly fills its last page.
+    selected = sorted(grouped)
+    overall_rows = {row["academic_year"]: row for row in teaching_time_rows(scan, selected)
+                    if row["preceptor_name"] == name}
+    service_rows = [row for row in teaching_time_rows(scan, selected, by_work_type=True)
+                    if row["preceptor_name"] == name]
+    monthly_rows = [row for row in teaching_time_rows(scan, selected, by_work_type=True, monthly=True)
+                    if row["preceptor_name"] == name]
+    for index, year in enumerate(selected):
+        label = teaching_report_label(scan, year)
         report_title = doc.add_paragraph("Preceptor teaching report", style="Subtitle")
         report_title.paragraph_format.page_break_before = bool(index)
         doc.add_paragraph(name, style="Title")
@@ -111,93 +119,59 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None):
         doc.add_paragraph(teaching_report_date_text(scan, year))
         if name in scan["unresolved_preceptor_labels"]:
             note("Review required: this is a site, slot, or combined provider label, not a verified individual preceptor.", warning=True)
-        total = sum(row["no_of_shifts"] for row in rows)
-        p = doc.add_paragraph()
-        p.add_run("All work types: ").bold = True
-        p.add_run(f"{total:,} assigned student-shifts  |  {total * TEACHING_HOURS_PER_STUDENT_SHIFT:,} educational hours")
-        continuity = student_continuity_counts(scan, name, year)
-        p = doc.add_paragraph()
-        p.add_run("Unique students assigned: ").bold = True
-        p.add_run(f"{continuity['unique_students']:,}")
-        p.add_run("   |   Students assigned on 3+ days: ").bold = True
-        p.add_run(f"{continuity['unique_students_3plus_days']:,}")
-        p.paragraph_format.keep_with_next = True
-        note("Counts span this report's dates and all work types. AM and PM on the same date count as one day; "
-             "days need not be consecutive.")
-        reach = next((row for row in learner_reach_rows(scan, [year]) if row["preceptor_name"] == name), None)
+        reach = overall_rows.get(label)
         if reach is None:
             raise ReportDataError("No clinical metrics were found for this included preceptor.",
                                   report="Individual preceptor report", preceptor_name=name,
-                                  academic_year=teaching_report_label(scan, year))
-        if reach:
-            reach = checked_report_reach(reach, report="Individual preceptor report",
-                                         section="Overall total")
-            p = doc.add_paragraph()
-            p.add_run("Learner Reach: " + reach_percent(reach["learner_reach_pct"])).bold = True
-            p.add_run(f" — {reach['shifts_with_students']:,} of {reach['recorded_clinical_shifts']:,} recorded clinical shifts included a student.")
-            p = doc.add_paragraph(
-                f"Recorded OPD hours: {reach['recorded_clinical_hours']:,}  |  "
-                f"With students: {reach['hours_with_students']:,}  |  "
-                f"Without students: {reach['hours_without_students']:,}")
-            reach_types = [checked_report_reach(row, report="Individual preceptor report",
-                            section="Learner Reach by type of work")
-                           for row in participating_reach_rows(scan, [year], by_work_type=True)
-                           if row["preceptor_name"] == name]
-            doc.add_heading("Learner Reach by type of work", level=2)
-            teaching_add_work_table(doc,
-                ("Type of work", "OPD hours", "With students", "Without students", "Learner Reach"),
-                [(row["work_type"], f"{row['recorded_clinical_hours']:,}", f"{row['hours_with_students']:,}",
-                  f"{row['hours_without_students']:,}", reach_percent(row["learner_reach_pct"])) for row in reach_types],
-                widths=(2.5, 1.1, 1.1, 1.1, 1.1), number_columns=(1, 2, 3, 4),
-                total=("Overall", f"{reach['recorded_clinical_hours']:,}", f"{reach['hours_with_students']:,}",
-                       f"{reach['hours_without_students']:,}", reach_percent(reach["learner_reach_pct"])))
-            note(PARTICIPATION_SCOPE_NOTE)
-            if sum(row["recorded_clinical_hours"] for row in reach_types) != reach["recorded_clinical_hours"]:
-                note(REACH_DETAIL_TOTAL_NOTE)
-            note("Learner Reach is the percentage of recorded clinical shifts with at least one student. "
-                 "Each preceptor/date/AM-or-PM counts once, including repeated rows and simultaneous students. "
-                 "The denominator includes both assigned and blank student fields.")
-        by_type = defaultdict(list)
-        for row in type_rows:
-            if row["academic_start_year"] == year:
-                by_type[row["work_type"]].append(row)
-        doc.add_heading("Student-weighted educational effort", level=2)
-        overview = []
-        for work_type, items in sorted(by_type.items(), key=lambda pair: teaching_work_type_sort(pair[0])):
-            count = sum(item["no_of_shifts"] for item in items)
-            overview.append((work_type, teaching_brief_months(item["month"] for item in items),
-                             f"{count:,}", f"{count * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
+                                  academic_year=label)
+        doc.add_heading("Teaching time", level=2)
+        teaching_add_work_table(doc, ("Measure", "Result"), [
+            ("Total scheduled availability", f"{reach['total_scheduled_availability_hours']:,} hours"),
+            ("Educational hours", f"{reach['educational_hours']:,} hours"),
+            ("Learner Reach", reach_percent(reach["learner_reach_pct"])),
+        ], widths=(4.9, 2.0), number_columns=(1,))
+        note(f"{reach['teaching_shifts']:,} of {reach['scheduled_shifts']:,} scheduled AM/PM shifts included at least one student.")
+        note(TIME_DEFINITION)
+        doc.add_heading("Student continuity", level=2)
+        p = doc.add_paragraph()
+        p.add_run("Unique students assigned: ").bold = True
+        p.add_run(f"{reach['unique_students']:,}")
+        p.add_run("   |   Students assigned on 3+ days: ").bold = True
+        p.add_run(f"{reach['unique_students_3plus_days']:,}")
+        p.paragraph_format.keep_with_next = True
+        note("Students are counted once across all work types in this period. Three days means three distinct dates; "
+             "AM and PM on the same date count as one day. These counts do not multiply educational hours.")
+        reach_types = [row for row in service_rows if row["academic_year"] == label]
+        doc.add_heading("By clinical experience", level=2)
+        titles = ("Clinical experience", "Total scheduled\navailability (hours)", "Educational\nhours", "Learner Reach")
+        values = [(row["work_type"], f"{row['total_scheduled_availability_hours']:,}",
+                   f"{row['educational_hours']:,}", reach_percent(row["learner_reach_pct"]))
+                  for row in reach_types]
+        teaching_add_work_table(doc, titles, values,
+            widths=(2.45, 1.75, 1.4, 1.3), number_columns=(1, 2, 3),
+            total=("Overall", f"{reach['total_scheduled_availability_hours']:,}",
+                   f"{reach['educational_hours']:,}", reach_percent(reach["learner_reach_pct"])))
+        if sum(row["total_scheduled_availability_hours"] for row in reach_types) != reach["total_scheduled_availability_hours"]:
+            note(REACH_DETAIL_TOTAL_NOTE)
+        month_values = [(row["work_type"] + " — " + teaching_month_label(CalendarDate.fromisoformat(row["month"])),
+                         f"{row['total_scheduled_availability_hours']:,}", f"{row['educational_hours']:,}",
+                         reach_percent(row["learner_reach_pct"]))
+                        for row in monthly_rows if row["academic_year"] == label]
+        # Put longer monthly breakdowns on a fresh page so their notes do not
+        # spill alone onto a near-empty final teaching page.
+        monthly_heading = doc.add_heading("Monthly detail", level=2)
+        monthly_heading.paragraph_format.page_break_before = len(month_values) > 6
         teaching_add_work_table(doc,
-            ("Type of work", "Months with assignments", "Student-shifts", "Educational hours*"), overview,
-            widths=(2.45, 2.15, 1.05, 1.25), number_columns=(2, 3),
-            total=("All work types", "", f"{total:,}", f"{total * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
-        if scan.get("reporting_period"):
-            note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
+            ("Clinical experience / month", "Total scheduled\navailability (hours)", "Educational\nhours", "Learner Reach"),
+            month_values, widths=(2.45, 1.75, 1.4, 1.3), number_columns=(1, 2, 3))
+        note("Only clinical experiences with student assignments in the selected period are listed. "
+             "For those experiences, months without students remain included in availability.")
         priority_note = outpatient_priority_report_note(scan, [year], preceptor_name=name)
         if priority_note:
             note(priority_note)
-        note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
-        note(f"*One student assigned to one AM or PM shift = one student-shift and {TEACHING_HOURS_PER_STUDENT_SHIFT} educational hours. Two students in the same shift count twice. These are student-weighted scheduled hours, not distinct clock hours or verified attendance.")
-        if TEACHING_WORK_TYPE_REVIEW in by_type:
-            note("Work type needs review: the same assignment appears under different work types. It is counted once in this review category, not credited twice or assigned to a guessed setting.", warning=True)
-        doc.add_heading("Monthly detail by type of work", level=2)
-        month_values = []
-        for work_type, items in sorted(by_type.items(), key=lambda pair: teaching_work_type_sort(pair[0])):
-            for item in sorted(items, key=lambda item: item["month"]):
-                month_values.append((work_type, teaching_month_label(CalendarDate.fromisoformat(item["month"])),
-                                     f"{item['no_of_shifts']:,}",
-                                     f"{item['no_of_shifts'] * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
-        teaching_add_work_table(doc,
-            ("Type of work", "Month", "Student-shifts", "Educational hours*"), month_values,
-            widths=(2.45, 2.15, 1.05, 1.25), number_columns=(2, 3),
-            total=("All work types", "", f"{total:,}", f"{total * TEACHING_HOURS_PER_STUDENT_SHIFT:,}"))
-        note(REACH_SCOPE_NOTE)
-        if reach:
-            note("Months with recorded clinical shifts: " + reach["months_scheduled"] + ". "
-                 "The monthly Learner Reach CSV in the ZIP includes months without student assignments.")
+        note(TIME_SCOPE_NOTE)
         note("Source: current encrypted OPDs. "
-             f"Snapshot: {scan['commit'][:12]}; retrieved: {scan['generated_at']}. "
-             "Student names omitted; future scheduled assignments included.")
+             f"Snapshot: {scan['commit'][:12]}; retrieved: {scan['generated_at']}. Student names omitted.")
         if oasis_feedback is not None:
             from schedule_app.services.teaching_evaluations import feedback_for_preceptor
             from schedule_app.reports.preceptor_evaluations import append_oasis_evaluations

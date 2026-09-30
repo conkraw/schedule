@@ -2,7 +2,7 @@
 
 This is a schedule-based coverage measure, not a teaching-quality score, a
 student-capacity calculation, or proof of actual clinical hours/attendance.
-The existing student-weighted educational-hour metric remains separate.
+Educational hours equal distinct shifts with students multiplied by four; learners do not multiply hours.
 """
 from collections import Counter, defaultdict
 from schedule_app.services.teaching_priority import (
@@ -30,9 +30,8 @@ PARTICIPATION_SCOPE_NOTE = (
     "category percentages use all shifts in that category."
 )
 REACH_DETAIL_TOTAL_NOTE = (
-    "Overall OPD hours also include shifts in unlisted settings. "
-    "Detail tables omit settings with no student assignments, so their OPD-hour subtotals "
-    "may be lower than the overall total."
+    "Overall total scheduled availability includes shifts in settings with no student assignments. "
+    "Those settings are not listed separately, so the displayed availability subtotals may be lower than the overall total."
 )
 LEARNER_REACH_COLUMNS = (
     "recorded_clinical_shifts", "recorded_clinical_hours", "shifts_with_students",
@@ -41,12 +40,12 @@ LEARNER_REACH_COLUMNS = (
 )
 REACH_COUNT_FIELDS = ("recorded_clinical_shifts", "shifts_with_students", "shifts_without_students")
 REACH_DEFINITION = (
-    "Learner Reach = recorded OPD shifts with at least one student / all recorded OPD shifts x 100. "
-    "A preceptor/date/AM-or-PM counts once, even with multiple students or repeated rows. "
-    "Both filled and blank student fields are included in the denominator."
+    "Learner Reach = educational hours / total scheduled availability x 100. "
+    "An AM or PM shift counts once per preceptor and date, even with multiple students or repeated rows. "
+    "Total scheduled availability includes shifts with and without students, including weekends."
 )
 REACH_SCOPE_NOTE = (
-    "OPD hours are four-hour equivalents of recorded sessions, not verified total clinical work. "
+    "Total scheduled availability uses four-hour equivalents of recorded AM/PM shifts, including weekends; it is not verified attendance. "
     "Blank student fields mean no student is recorded, not that the preceptor declined teaching or could accept another student. "
     "Unlisted clinical work, other learners, missing rotations and actual attendance are not measured. "
     "Repeated template provider listings can overstate availability; verify the source schedules before interpreting percentages."
@@ -312,7 +311,8 @@ def enrich_teaching_rows(scan, selected_years, teaching_rows, *, by_work_type=Fa
         if row["no_of_shifts"] and not row["shifts_with_students"] and not row.get("availability_review_shifts"):
             raise ReportDataError("A teaching assignment has no matching clinical shift with students.",
                                   metrics=row, report="Teaching summary calculations")
-        row.update(checked_report_reach(row, report="Teaching summary calculations"))
+        from schedule_app.services.educational_time import with_educational_time
+        row.update(with_educational_time(row, report="Teaching summary calculations"))
     return sorted(result.values(), key=lambda row: (teaching_name_key(row["preceptor_name"]), row["academic_year"], teaching_work_type_sort(row.get("work_type", ""))))
 
 

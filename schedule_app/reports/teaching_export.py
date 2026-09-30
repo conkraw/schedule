@@ -8,6 +8,10 @@ from schedule_app.services.teaching_priority import (
     selected_priority_adjustments,
 )
 from schedule_app.services.teaching_validation import validate_teaching_report
+from schedule_app.services.educational_time import (
+    teaching_time_rows, TIME_CSV_COLUMNS, TIME_WORK_TYPE_CSV_COLUMNS, TIME_MONTHLY_CSV_COLUMNS,
+    TIME_DEFINITION, TIME_SCOPE_NOTE, HOURS_CALCULATION_BASIS,
+)
 from schedule_app.services.report_diagnostics import report_step
 from schedule_app.services.student_continuity import (
     require_student_continuity_data, STUDENT_CONTINUITY_NOTE, STUDENT_MATCHING_NOTE,
@@ -41,7 +45,7 @@ import io
 import re
 
 
-def teaching_csv_bytes(rows, columns=TEACHING_CSV_COLUMNS):
+def teaching_csv_bytes(rows, columns=TIME_CSV_COLUMNS):
     stream = io.StringIO(newline="")
     writer = csv.DictWriter(stream, fieldnames=list(columns), extrasaction="ignore", lineterminator="\r\n")
     writer.writeheader()
@@ -83,23 +87,23 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
         "Source: every current OPD_YYYY-MM-DD.xlsx.enc in the configured archive folder.",
         "Superseded Git history is not counted. The archived files are not changed.",
         "All recognized OPD site worksheets are scanned. Only entries with student assignments in the selected period are listed.",
-        "This report counts scheduled student assignments, not patient encounters or confirmed attendance.",
+        "This report describes scheduled teaching time and student continuity, not patient encounters or confirmed attendance.",
         "One row in preceptor_teaching_summary.csv = one preceptor in one academic year (unchanged).",
         "One row in preceptor_teaching_by_work_type.csv = one preceptor / academic year / work type.",
         "The chair and individual Word reports contain work-type subtotals plus overall totals.",
         "Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery and Complex Care are separate.",
         "Other worksheets are kept as separate work types unless explicitly mapped in TEACHING_WORK_TYPE_MAP.",
         "Classification uses the site of each assignment, not the preceptor's usual specialty or home division.",
-        "Every setting uses the same 4 hours per student-shift; no outpatient/inpatient weighting is added.",
-        "Student-weighted work-type subtotals are checked against the overall educational totals before export.",
+        "Every setting uses four hours per distinct preceptor/date/AM-or-PM shift; multiple students do not multiply time.",
+        "Educational hours use the same distinct shifts as the Learner Reach numerator, overall and by clinical experience.",
         "Academic Pediatrics takes priority over PSHCH Nursery on the same preceptor/date/AM-or-PM; other unresolved work-type conflicts block reports.",
         f"{TEACHING_CHAIR_SUMMARY_FILENAME} = one combined Word summary for the chair.",
         "The chair summary lists named preceptors alphabetically and keeps unresolved provider labels separate.",
         "Academic year is July 1 through June 30 of the following calendar year.",
         "The actual session date, not the rotation's start date, determines the month and academic year.",
-        "no_of_shifts counts student-shifts, not distinct half-days or distinct students.",
-        f"educational_hours = no_of_shifts x {TEACHING_HOURS_PER_STUDENT_SHIFT}.",
-        "Two different students in the same AM/PM session count as two assignments and eight hours.",
+        "scheduled_shifts counts all recorded preceptor/date/AM-or-PM shifts; teaching_shifts counts those with at least one student.",
+        f"educational_hours = teaching_shifts x {TEACHING_HOURS_PER_STUDENT_SHIFT}.",
+        "Two or more students in one AM/PM session still represent one teaching shift and four educational hours.",
         "An identical preceptor/student/date/AM-or-PM duplicate counts once, even across overlapping OPDs.",
         "Provider availability with no student does not count. All filled student assignments are treated equally.",
         "Names are matched case-insensitively with normalized whitespace and comma spacing; no fuzzy identity matching.",
@@ -119,6 +123,12 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
         f"Exact duplicate student-shifts removed: {scan['duplicate_assignments_removed']}",
         f"Future student-shifts in the entire archive when scanned: {scan['future_assignments_in_archive']}",
     ]
+    notes += ["", "SIMPLIFIED HOURS (2026-09-30)", TIME_DEFINITION, TIME_SCOPE_NOTE,
+              f"Calculation basis: {HOURS_CALCULATION_BASIS}.",
+              "The old student-weighted educational-hours measure is no longer exported.",
+              "Teaching-summary CSV headers now use total_scheduled_availability_hours, educational_hours, "
+              "scheduled_shifts and teaching_shifts. Raw no_of_shifts is not exported in summary CSVs.",
+              "Source audit counts describe student assignments only; they are not educational hours."]
     period = teaching_period(scan)
     if period:
         substitutions = {
@@ -164,11 +174,11 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
         "A preceptor with no student assignments in the selected period receives no report or CSV entry.",
         "Work-type entries are included only when that preceptor has student assignments in that category during the selected period.",
         "", "LEARNER REACH", REACH_DEFINITION, REACH_SCOPE_NOTE,
-        "recorded_clinical_hours = distinct recorded provider/date/AM-or-PM shifts x 4.",
-        "hours_with_students = distinct recorded clinical shifts with at least one student x 4.",
-        "hours_without_students = (recorded_clinical_shifts - shifts_with_students) x 4.",
+        "total_scheduled_availability_hours = scheduled_shifts x 4, including weekends and unassigned shifts.",
+        "educational_hours = teaching_shifts x 4; two simultaneous students still count as four hours.",
+        "The difference between total scheduled availability and educational hours is scheduled time without a student.",
         "learner_reach_pct is a number on the 0-100 scale (80 means 80%), not the fraction 0.8.",
-        "Two students in one shift count twice for no_of_shifts/educational_hours, but once for clinical shifts and Learner Reach.",
+        "All published hours count a preceptor/date/AM-or-PM once. Unique-student and 3+ day counts are separate, not hour multipliers.",
         "No student listed: keep that clinical shift in the denominator for an included preceptor. Do not reduce their denominator to teaching days only.",
         "Wholly blank cells, explicit closed/off/nonclinical labels and cells without a '~' marker are not counted as clinical shifts.",
         "Nonempty cells lacking the marker and nonclinical labels are logged by coordinate; names or shifts are not guessed.",
@@ -178,7 +188,7 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
         "After outpatient priority, other provider/date/AM-or-PM conflicts block the entire selected-period report until corrected.",
         "Every reported Learner Reach uses a nonzero validated denominator. No unresolved clinical work-type conflict is accepted.",
         "One pie per included clinical experience compares recorded hours with students against recorded hours without students.",
-        "The pies use the exact category totals shown in the chair summary, not student-weighted educational hours.",
+        "The pies use the exact educational hours and total scheduled availability shown in the chair summary.",
         "Chart PNGs are in Learner_Reach_Charts; clinical_experience_learner_reach.csv contains their numbers.",
         "Overall percentages use total shifts with learners / total recorded shifts, never an average of provider percentages.",
         "preceptor_learner_reach_monthly.csv includes all recorded months for participating preceptor/work-type entries, including zero-teaching months. It excludes wholly nonparticipating entries.",
@@ -238,11 +248,12 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
             zf.writestr(chart["filename"], chart["png"])
         zf.writestr("clinical_experience_learner_reach.csv", teaching_csv_bytes(
             [chart["data"] for chart in charts], CHART_DATA_COLUMNS))
-        zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(annual, tuple(TEACHING_CSV_COLUMNS) + LEARNER_REACH_COLUMNS))
-        zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(typed, tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS))
-        monthly_reach = participating_reach_rows(scan, years, by_work_type=True, monthly=True)
-        zf.writestr("preceptor_learner_reach_monthly.csv", teaching_csv_bytes(monthly_reach,
-            ("preceptor_name", "academic_year", "work_type", "month") + LEARNER_REACH_COLUMNS + ("source_sites",)))
+        zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(
+            teaching_time_rows(scan, years), TIME_CSV_COLUMNS))
+        zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(
+            teaching_time_rows(scan, years, by_work_type=True), TIME_WORK_TYPE_CSV_COLUMNS))
+        monthly_reach = teaching_time_rows(scan, years, by_work_type=True, monthly=True)
+        zf.writestr("preceptor_learner_reach_monthly.csv", teaching_csv_bytes(monthly_reach, TIME_MONTHLY_CSV_COLUMNS))
         if clinical_review:
             zf.writestr("Clinical_Shift_Review.csv", teaching_csv_bytes(clinical_review,
                 ("preceptor_name", "academic_year", "date", "shift", "work_types", "source_sites", "has_student")))

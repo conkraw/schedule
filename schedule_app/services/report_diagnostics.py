@@ -12,8 +12,8 @@ from typing import Mapping
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.settings import TEACHING_HOURS_PER_STUDENT_SHIFT
 
-REPORT_OUTPUT_VERSION = 2
-REPORT_BUILD_ID = "2026-09-29-reach-diagnostics-2"
+REPORT_OUTPUT_VERSION = 3
+REPORT_BUILD_ID = "2026-09-30-simple-educational-hours-1"
 REPORT_ISSUE_COLUMNS = (
     "report", "section", "preceptor_name", "work_type", "academic_year",
     "recorded_clinical_shifts", "shifts_with_students", "shifts_without_students",

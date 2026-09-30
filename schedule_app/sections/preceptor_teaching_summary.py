@@ -13,6 +13,10 @@ import streamlit as st
 
 from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
 from schedule_app.reports.chair_summary import CHAIR_STUDENT_CONTINUITY_REPORT_VERSION
+from schedule_app.services.educational_time import (
+    teaching_time_rows, TIME_CSV_COLUMNS, TIME_WORK_TYPE_CSV_COLUMNS, TIME_PREVIEW_LABELS,
+    TIME_DEFINITION, TIME_SCOPE_NOTE,
+)
 from schedule_app.services.report_diagnostics import (
     ReportDataError, REPORT_ISSUE_COLUMNS, REPORT_OUTPUT_VERSION, REPORT_BUILD_ID,
 )
@@ -102,9 +106,9 @@ def render():
     st.caption(OUTPATIENT_PRIORITY_NOTE)
     st.caption("After that exception, reports are blocked if a preceptor/date/AM-or-PM appears in different clinical experiences in the selected dates. "
                "The issue table identifies the exact archived OPDs and source cells. Every valid report includes numeric Learner Reach percentages and clinical-experience pie charts.")
-    st.caption("HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Ward A, PSHCH Nursery, Complex Care "
-               "and other services stay separate. One student-shift = four educational hours; two students "
-               "at once count twice. These are scheduled student-weighted hours, not distinct clock hours.")
+    st.caption("HOPE_DRIVE + ETOWN + NYES = Academic Pediatrics. Other services stay separate. "
+               "Total scheduled availability includes weekends and shifts without students. "
+               "Educational hours count four hours per AM/PM shift with at least one student—not four hours per student.")
     st.caption("The chair summary and each individual Word report show unique students assigned and students assigned on 3+ distinct dates. "
                "AM and PM on the same date count as one day; only dates within that report's period count.")
     mode, period, issue = _render_period_controls()
@@ -262,30 +266,32 @@ def render():
                 "Preceptors and services with only unassigned shifts are omitted. "
                 "Adjust the dates/year selection, check the '~' name order or archive the missing OPDs.")
         return
-    preview = pd.DataFrame(annual, columns=tuple(TEACHING_CSV_COLUMNS) + LEARNER_REACH_COLUMNS)
-    a, b, c = st.columns(3)
-    a.metric("Preceptors / provider labels", preview["preceptor_name"].nunique())
-    b.metric("Assigned student-shifts", f"{preview['no_of_shifts'].sum():,}")
-    c.metric("Student-weighted educational hours", f"{preview['educational_hours'].sum():,}")
-    totals = reach_totals(annual)
+    # Publish only time-based columns, never the raw student-assignment counts.
+    try:
+        preview = pd.DataFrame(teaching_time_rows(report_scan, selected), columns=TIME_CSV_COLUMNS)
+        type_preview = pd.DataFrame(teaching_time_rows(report_scan, selected, by_work_type=True),
+                                    columns=TIME_WORK_TYPE_CSV_COLUMNS)
+        totals = reach_totals(annual)
+    except ReportDataError as exc:
+        _render_report_issues(exc)
+        return
     a, b, c, d = st.columns(4)
-    a.metric("Recorded OPD hours", f"{totals['recorded_clinical_hours']:,}")
-    b.metric("Hours with students", f"{totals['hours_with_students']:,}")
-    c.metric("Hours without students", f"{totals['hours_without_students']:,}")
+    a.metric("Preceptors / provider labels", preview["preceptor_name"].nunique())
+    b.metric("Total scheduled availability (hours)", f"{totals['recorded_clinical_hours']:,}")
+    c.metric("Educational hours", f"{totals['hours_with_students']:,}")
     d.metric("Learner Reach", reach_percent(totals["learner_reach_pct"]))
+    st.caption(TIME_DEFINITION)
     st.caption(PARTICIPATION_SCOPE_NOTE)
     if sum(row["recorded_clinical_hours"] for row in typed) != totals["recorded_clinical_hours"]:
         st.caption(REACH_DETAIL_TOTAL_NOTE)
-    st.caption(REACH_DEFINITION)
-    with st.expander("What Learner Reach does and does not measure"):
-        st.write(REACH_SCOPE_NOTE)
-        st.write("Educational hours remain student-weighted; simultaneous students count twice only for that measure. "
-                 "Clinical hours and Learner Reach count the half-day once. Wholly unassigned preceptors/categories are not listed; included preceptors retain their non-teaching shifts in the denominator.")
-    st.markdown("**Teaching by type of work**")
-    st.dataframe(pd.DataFrame(typed, columns=tuple(TEACHING_WORK_TYPE_CSV_COLUMNS) + LEARNER_REACH_COLUMNS),
-                 hide_index=True, use_container_width=True)
-    with st.expander("Overall totals and Learner Reach"):
-        st.dataframe(preview, hide_index=True, use_container_width=True)
+    with st.expander("How these hours are counted"):
+        st.write(TIME_SCOPE_NOTE)
+        st.write("Unique students and students assigned on 3+ days describe student continuity. "
+                 "They do not increase the hours credited for a shift.")
+    st.markdown("**Teaching by clinical experience**")
+    st.dataframe(type_preview.rename(columns=TIME_PREVIEW_LABELS), hide_index=True, use_container_width=True)
+    with st.expander("Overall totals and student continuity"):
+        st.dataframe(preview.rename(columns=TIME_PREVIEW_LABELS), hide_index=True, use_container_width=True)
     st.caption("In Custom dates mode, academic_year contains your report label. All dates in that range stay in one "
                "report section, even across July. Boundary months include only the chosen days. "
                "Student names are not exported. Future scheduled assignments within the selected dates are included.")
@@ -330,7 +336,7 @@ def render():
                                  if name.startswith("Learner_Reach_Charts/") and name.endswith(".png"))
             with st.expander("Learner Reach pies by clinical experience"):
                 st.caption("Each pie compares recorded hours with students versus without students in that experience. "
-                           "These are the same category percentages shown in the chair summary, not student-weighted hours.")
+                           "These compare educational hours with the remaining scheduled availability; they match the chair summary.")
                 for chart_file in chart_files:
                     st.image(generated_zip.read(chart_file), width=680)
         st.download_button("Download chair summary only (Word)", data=chair_bytes,

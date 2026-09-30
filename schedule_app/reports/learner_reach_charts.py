@@ -16,7 +16,7 @@ from schedule_app.services.reporting_periods import teaching_report_label, teach
 
 _CHART_LOCK = RLock()
 CHART_DATA_COLUMNS = (
-    "academic_year", "work_type", "recorded_clinical_hours", "hours_with_students",
+    "academic_year", "work_type", "total_scheduled_availability_hours", "educational_hours",
     "hours_without_students", "learner_reach_pct", "source_sites",
 )
 
@@ -59,11 +59,11 @@ def learner_reach_pie(work_type, metrics, period_label="", date_text=""):
                         fontsize=12, fontweight="bold", va="top")
             figure.text(0.40, 0.59, f"{percent} Learner Reach", fontsize=16, fontweight="bold")
             figure.legend(wedges,
-                [f"With students: {with_students:,} h ({percent})",
+                [f"Educational hours: {with_students:,} h ({percent})",
                  f"Without students: {without_students:,} h ({100 * without_students / total:.1f}%)"],
                 loc="center left", bbox_to_anchor=(0.39, 0.40), fontsize=10,
                 frameon=False, handlelength=1.1)
-            figure.text(0.40, 0.18, f"Total recorded OPD hours: {total:,}", fontsize=10)
+            figure.text(0.40, 0.18, f"Total scheduled availability: {total:,} h", fontsize=10)
             # The label and date range are also retained in image metadata/alt text.
             output = BytesIO()
             figure.savefig(output, format="png", dpi=180,
@@ -96,13 +96,14 @@ def teaching_clinical_charts(scan, summaries):
                 f"{work_type}. Reporting period {period_label}, {date_text}. "
                 f"Learner Reach {reach_percent(group['learner_reach_pct'])}: "
                 f"{group['hours_with_students']:,} of {group['recorded_clinical_hours']:,} "
-                f"recorded OPD hours included students; {group['hours_without_students']:,} hours did not. "
+                f"scheduled hours were educational hours; {group['hours_without_students']:,} hours had no student assigned. "
                 "Only preceptors with student assignments in this experience are represented."
             )
             result.append({"key": (year, work_type), "filename": filename, "png": png,
                            "alt_text": description, "caption": f"{work_type} | {period_label} | {date_text}",
                            "data": {"academic_year": period_label, "work_type": work_type,
-                                    **{key: group[key] for key in ("recorded_clinical_hours", "hours_with_students",
-                                                                 "hours_without_students", "learner_reach_pct")},
+                                    "total_scheduled_availability_hours": group["recorded_clinical_hours"],
+                                    "educational_hours": group["hours_with_students"],
+                                    **{key: group[key] for key in ("hours_without_students", "learner_reach_pct")},
                                     "source_sites": "; ".join(group["source_sites"])}})
     return result

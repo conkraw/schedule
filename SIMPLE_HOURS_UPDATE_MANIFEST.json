@@ -1,0 +1,63 @@
+{
+  "update": "Simple educational hours",
+  "build": "2026-09-30-simple-educational-hours-1",
+  "base_package": "Schedule_App_Modular_Teaching_OASIS_Links.zip",
+  "runtime_file_count": 9,
+  "files": [
+    {
+      "path": "schedule_app/reports/chair_summary.py",
+      "action": "replace",
+      "sha256": "548dd645779ebef77e147f180805f522fc1943144e77d2eb395ea27db7655671",
+      "previous_sha256": "839227c4443d3a3d8f2068aaba6af4f468745d64326d5715462cbf9ca42a20f1"
+    },
+    {
+      "path": "schedule_app/reports/individual_teaching.py",
+      "action": "replace",
+      "sha256": "38325fbe667ff7fdd8403d3c8ea089d1b5c8d70ba0525e452e9d0187788c4c02",
+      "previous_sha256": "c0859770a719ebef33156a7d90ca24b4eaec137c29cd84eb1e8f763927a0cca6"
+    },
+    {
+      "path": "schedule_app/reports/learner_reach_charts.py",
+      "action": "replace",
+      "sha256": "bba905d8e496508f64b215fa085121e7915daaeed9ab9248cbc899d44a08ff06",
+      "previous_sha256": "ad51b21c2b25e3c73a69ab62113fdb147785e163a1e6c8fb8882124ab722ea90"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "action": "replace",
+      "sha256": "e5fc86aee5492a260e0d7069e87c169e60f2bcbe363ec21629c02f2d589b19bc",
+      "previous_sha256": "a794f2a88e8ff4e37c8b29d136e786c9d3e197a5864550eccef9822a8db025ea"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "action": "replace",
+      "sha256": "9ffdb41491e0557b2abf1847b6ebdc35c8d082f42b464459a4549422b9465c87",
+      "previous_sha256": "c27750c94074f082b4b75c9f9c214fce09f146531b2491193bb8b53afaedd217"
+    },
+    {
+      "path": "schedule_app/services/educational_time.py",
+      "action": "add",
+      "sha256": "4e3019aabdfb03cd36d50ddd2693b3a027fc42eb6ea87bbe30d9315d40c5ea59",
+      "previous_sha256": null
+    },
+    {
+      "path": "schedule_app/services/learner_reach.py",
+      "action": "replace",
+      "sha256": "157d054b405bf7ac59f1290af580658cb38b4e3ac115f7a649058c613a372245",
+      "previous_sha256": "e1f6ad3b2c1b363dc01a8d01f6a2d45464a615c5ed25d84ae994b3d795c3cfc1"
+    },
+    {
+      "path": "schedule_app/services/report_diagnostics.py",
+      "action": "replace",
+      "sha256": "47629e27a628fd1e387a70edb5bbc5df2e68baa3affbfc079b55621fe4c38920",
+      "previous_sha256": "64b6fe48678da1ae24dd48b88391bcdcf67614eb94575e065ab2f2af2d47dad1"
+    },
+    {
+      "path": "schedule_app/services/teaching_analysis.py",
+      "action": "replace",
+      "sha256": "978fe8d5e48bdacb842e543f82b06ff1d37f94ac05b53ed595d641b6f1d6fd63",
+      "previous_sha256": "7cdaee9ee058a593f1ed5112352a0a216573c0e8960d36f30d22c5f6f193b307"
+    }
+  ],
+  "live_deployment_changed": false
+}

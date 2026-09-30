@@ -1,6 +1,10 @@
 """Read-only archive analysis: student-shifts, academic years, deduplication and work types.
 
-Extracted from the supplied app; this module performs no page rendering on import.
+Raw no_of_shifts and raw educational_hours in a scan remain legacy per-student
+assignment aggregates for source/continuity integrity checks. They are never
+published as preceptor time. Public annual and work-type summaries derive
+educational_hours from the unique clinical shifts with students in learner_reach.
+This module performs no page rendering on import.
 """
 
 from collections import Counter
@@ -108,7 +112,8 @@ def teaching_work_type_rows(scan, selected_years):
             "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT,
             "source_sites": "; ".join(sites),
         })
-    return enrich_teaching_rows(scan, selected_years, rows, by_work_type=True) if "learner_reach_version" in scan else rows
+    require_learner_reach_data(scan)
+    return enrich_teaching_rows(scan, selected_years, rows, by_work_type=True)
 
 
 def teaching_name_key(value):
@@ -496,7 +501,8 @@ def teaching_annual_rows(scan, selected_years):
                      "no_of_shifts": total,
                      "months_worked": "; ".join(teaching_month_label(CalendarDate.fromisoformat(item["month"])) for item in ordered),
                      "educational_hours": total * TEACHING_HOURS_PER_STUDENT_SHIFT})
-    return enrich_teaching_rows(scan, selected_years, rows) if "learner_reach_version" in scan else rows
+    require_learner_reach_data(scan)
+    return enrich_teaching_rows(scan, selected_years, rows)
 
 
 def teaching_brief_months(month_values):
