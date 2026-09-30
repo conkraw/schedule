@@ -1,4 +1,4 @@
-"""One OASIS screen: upload, encrypt, reconcile usernames, auto-save summary CSV."""
+"""One OASIS menu: educator feedback/reporting or separate student-assessment archive."""
 from __future__ import annotations
 import hashlib
 import json
@@ -16,6 +16,9 @@ from schedule_app.services.oasis_workflow import (
     load_cumulative_evaluations, make_period_summary, summary_csv,
 )
 from schedule_app.sections import oasis_date_controls
+from schedule_app.services.oasis_student_evaluations import validate_educator_upload_kind
+
+OASIS_EVALUATION_KINDS = ("Evaluations of educators", "Evaluations of students")
 
 P = "oasis_combined_"
 
@@ -55,7 +58,8 @@ def _upload_original(upload, client) -> bool:
         st.session_state.pop(P+"upload_status", None)
         return True
     raw = upload.getvalue()
-    signature = (getattr(upload, "file_id", None), hashlib.sha256(raw).hexdigest())
+    # Changing the upload signature revalidates an already-open older session.
+    signature = ("evaluation-direction-v1", getattr(upload, "file_id", None), hashlib.sha256(raw).hexdigest())
     if st.session_state.get(P+"active_upload") != signature:
         st.session_state[P+"active_upload"] = signature
         st.session_state.pop(P+"upload_status", None)
@@ -67,6 +71,8 @@ def _upload_original(upload, client) -> bool:
     if P+"upload_status" not in st.session_state:
         try:
             with st.spinner("Encrypting and verifying the original OASIS CSV in GitHub..."):
+                # Do not mistake student grades for an educator's teaching feedback.
+                validate_educator_upload_kind(raw)
                 receipt = client.save(raw)
             st.session_state[P+"upload_status"] = {"receipt": receipt}
             # Never reuse a report calculated before this upload was archived.
@@ -235,8 +241,8 @@ def _publish(archive, prepared, scope, summary):
 
 def _process(archive, period):
     client = GitHubOASISEvaluations(archive)
-    st.markdown("### Upload OASIS CSV")
-    uploaded = st.file_uploader("Upload the original or updated OASIS evaluation CSV", type=["csv"], key=P+"upload")
+    st.markdown("### Upload learner feedback about educators")
+    uploaded = st.file_uploader("Upload the original or updated educator-feedback CSV", type=["csv"], key=P+"upload")
     upload_ok = _upload_original(uploaded, client)
     if st.button("Refresh cumulative evaluations and usernames", key=P+"refresh_data"):
         _clear_loaded()
@@ -368,6 +374,13 @@ def _review_originals(archive):
 
 def render():
     st.subheader("OASIS Evaluations")
+    kind = st.radio("OASIS evaluation type", OASIS_EVALUATION_KINDS,
+                    key="oasis_evaluation_kind", horizontal=True,
+                    help="Keep learners' feedback about educators separate from preceptors' assessments of students.")
+    if kind == "Evaluations of students":
+        from schedule_app.sections.oasis_student_evaluations import render as render_student_archive
+        render_student_archive()
+        return
     st.write("Upload → encrypted original saved → correct missing usernames → encrypted educator-summary CSV saved automatically.")
     st.caption("All archived source exports contribute. New evaluations are added; repeated copies count once. "
                "Averages and comments are recalculated from responses, never by appending or averaging prior summary rows.")

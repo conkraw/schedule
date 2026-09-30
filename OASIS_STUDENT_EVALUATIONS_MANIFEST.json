@@ -1,0 +1,29 @@
+{
+  "feature": "OASIS student-evaluation encrypted archive",
+  "version": 1,
+  "based_on": "Schedule_App_Modular_Missing_Usernames.zip",
+  "runtime_files": [
+    {
+      "path": "schedule_app/sections/oasis_workflow.py",
+      "action": "replace",
+      "sha256": "f88ffbd168792c62364c78254f7d691b205971153f7d619d2b3fe2474b98104f"
+    },
+    {
+      "path": "schedule_app/sections/oasis_student_evaluations.py",
+      "action": "add",
+      "sha256": "bd3728775c759e5be380b0b1bd99f6d02359964b29e38fefbbe2cfddb7565edb"
+    },
+    {
+      "path": "schedule_app/services/oasis_student_evaluations.py",
+      "action": "add",
+      "sha256": "8a139596931e59acf718406726827e87a081c8a8a7d6e00e90c02b84af48a63a"
+    }
+  ],
+  "tests": {
+    "total": 675,
+    "passed": 673,
+    "skipped": 2,
+    "new_tests": 61,
+    "live_services": false
+  }
+}
