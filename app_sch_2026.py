@@ -20,15 +20,15 @@ SECTIONS = {
     "OPD Check": "opd_check",
     "Create Individual Schedules": "create_individual_schedules",
     "OPD Archive": "opd_archive",
-    "OASIS Evaluations": "oasis_workflow",
+    "Evaluation Records": "oasis_workflow",
     "Preceptor Teaching Summary": "preceptor_teaching_summary",
     "OPD MD PA Conflict Detector": "opd_md_pa_conflict_detector",
     "Shift Availability Tracker": "shift_availability_tracker",
 }
 
 # Migrate an open session from either former OASIS screen before creating the widget.
-if st.session_state.get("schedule_app_mode") in ("OASIS Evaluation Archive", "OASIS Educator Reports"):
-    st.session_state["schedule_app_mode"] = "OASIS Evaluations"
+if st.session_state.get("schedule_app_mode") in ("OASIS Evaluation Archive", "OASIS Educator Reports", "OASIS Evaluations"):
+    st.session_state["schedule_app_mode"] = "Evaluation Records"
 
 mode = st.sidebar.radio(
     "What do you want to do?", tuple(SECTIONS), key="schedule_app_mode"

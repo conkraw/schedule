@@ -35,23 +35,26 @@ def _selection_changed():
 def _show_details(details):
     a, b, c = st.columns(3)
     a.metric("Response rows", f"{details['row_count']:,}")
-    b.metric("Columns preserved", details["column_count"])
-    c.metric("Original size", f"{details['byte_count'] / (1024 * 1024):.2f} MiB")
+    b.metric("Reporting columns retained", details["column_count"])
+    c.metric("Stored size", f"{details['byte_count'] / (1024 * 1024):.2f} MiB")
     if details["date_range_complete"]:
         st.caption(f"Course-date coverage: {details['course_start']} to {details['course_end']}. "
                    "These are the Start Date / End Date fields, not the submission-date range. "
                    "Response rows are question-level rows, not a count of evaluations.")
     else:
-        st.warning("Some course dates are blank, unreadable, or reversed. The original CSV is preserved "
+        st.warning("Some course dates are blank, unreadable, or reversed. The reduced CSV is stored "
                    "under an undated identifier; no course dates or responses were changed.")
-    st.caption("All original columns and values are retained. Student names, evaluation answers and "
+    st.caption("Unused columns are removed before encryption. Student identities, evaluation answers and "
                "comments are not displayed on this page.")
 
 
 def render():
+    from schedule_app.services.evaluation_access import require_evaluation_access
+    if not require_evaluation_access(lock_key="evaluation_lock_oasis_evaluation_archive"):
+        return
     st.subheader("OASIS Evaluation Archive")
-    st.write("Upload the original OASIS evaluation CSV. The app encrypts it, saves it next to your "
-             "OPD archive in GitHub, then reloads and decrypts it to verify an exact match.")
+    st.write("Upload the OASIS evaluation CSV. The app removes unused columns, encrypts the reduced file, and saves it next to your "
+             "OPD archive in GitHub, then reloads and decrypts it to verify an exact match to the reduced data.")
     st.info("Each different export is kept as a separate saved snapshot. Re-uploading an identical "
             "CSV does not add another copy, even if its filename changes. Exports are not merged, "
             "and OASIS data does not change OPD teaching reports.")
@@ -68,14 +71,14 @@ def render():
             st.session_state.pop(key, None)
         st.session_state[SCOPE] = signature
     st.caption(f"Storage: {config.owner}/{config.repo} | branch {config.branch} | {client.folder}/")
-    st.caption("This page has no app-password gate. Anyone who can access the running app can use "
-               "its archive upload and original-file download functions. Follow your institution's "
+    st.caption("This legacy archive screen also requires the Evaluation Records password. "
+               "Downloads contain only the retained reporting columns. Follow your institution's "
                "approved access and storage requirements for evaluations.")
 
     uploaded = st.file_uploader(
         "Upload OASIS evaluation export (.csv) — automatically encrypted and saved",
         type=["csv"], key=UPLOAD, on_change=_upload_changed,
-        help="Up to 10 MiB. Use the original CSV export; do not first open and resave it in Excel.",
+        help="Up to 10 MiB. Use the reduced source CSV export; do not first open and resave it in Excel.",
     )
     if uploaded is not None:
         raw = uploaded.getvalue()
@@ -107,7 +110,7 @@ def render():
         else:
             receipt = state["receipt"]
             if receipt["action"] == "created":
-                st.success("OASIS export archived and verified. The original CSV can be reloaded below.")
+                st.success("OASIS export archived and verified. The reduced CSV can be reloaded below.")
             else:
                 st.success("This identical OASIS export is already archived and verified. No additional copy was saved.")
             _show_details(receipt["details"])
@@ -145,7 +148,7 @@ def render():
     if st.button("Load / decrypt selected OASIS export", key="oasis_load_export"):
         st.session_state.pop(LOADED, None)
         try:
-            with st.spinner("Retrieving and decrypting the original CSV..."):
+            with st.spinner("Retrieving and decrypting the reduced source CSV..."):
                 # Fetch current HEAD, so a removed/altered file is not silently
                 # downloaded from a stale list's historical commit.
                 loaded = client.load(selected)
@@ -158,12 +161,12 @@ def render():
             st.error("This OASIS export could not be loaded or verified. No file is available to download.")
     loaded = st.session_state.get(LOADED)
     if loaded and loaded["filename"] == selected:
-        st.success("Original OASIS CSV loaded and verified. Reloading does not write to GitHub.")
+        st.success("Reduced OASIS CSV loaded and verified. Reloading does not write to GitHub.")
         _show_details(loaded["details"])
         # Preserve exact bytes; use a neutral download filename, not patient/
         # learner/provider information in the uploaded local filename.
         download_name = selected.removesuffix(".enc")
-        st.download_button("Download original OASIS CSV", data=loaded["raw"],
+        st.download_button("Download reduced OASIS CSV", data=loaded["raw"],
                            file_name=download_name, mime="text/csv", key="oasis_download_original")
-        st.caption("The downloaded CSV is unencrypted. It has the original contents and a neutral archive filename. "
+        st.caption("The downloaded CSV is unencrypted. It has reduced reporting columns and a neutral archive filename. "
                    "Do not commit it to a public repository.")

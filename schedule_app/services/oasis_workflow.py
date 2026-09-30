@@ -31,7 +31,7 @@ from schedule_app.services.oasis_educator_reports import (
 from schedule_app.services.oasis_educator_usernames import GitHubOASISUsernames
 from schedule_app.services.reporting_periods import ReportingPeriod
 
-WORKFLOW_VERSION = 2
+WORKFLOW_VERSION = 3
 OUTPUT_FOLDER = "oasis_reports"
 MAX_SUMMARY_BYTES = 10 * 1024 * 1024
 MAX_SUMMARY_CIPHER = 15 * 1024 * 1024

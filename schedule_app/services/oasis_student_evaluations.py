@@ -1,9 +1,7 @@
-"""Original student-assessment CSV archives, separate from educator feedback.
+"""Student-assessment metadata archives, isolated from educator feedback.
 
-The three supported Evaluation titles are taken from the user's supplied export.
-No grades, comments, dates, usernames or source rows are changed. Unknown/mixed
-forms are rejected rather than silently dropping rows or guessing their direction.
-The inherited transport encrypts the original bytes and verifies every save.
+Only fields needed for identity matching, completion counts and source/date checks
+are saved. Grades, questions and student assessment comments are not persisted.
 """
 from __future__ import annotations
 
@@ -21,7 +19,7 @@ from schedule_app.services.oasis_evaluations import (
     _CSV_LOCK, inspect_oasis_csv, oasis_export_label,
 )
 
-STUDENT_ARCHIVE_VERSION = 1
+STUDENT_ARCHIVE_VERSION = 2
 STUDENT_SUBFOLDER = "oasis_student_evaluations"
 STUDENT_REQUIRED_COLUMNS = ("Student", "Submit Date")
 # Add a new title here only after confirming it assesses students, not educators.
@@ -47,7 +45,8 @@ def _form_metadata(raw: bytes, *, student_archive: bool) -> dict[str, Any]:
     The general inspector bounds bytes, rows and field length and checks quoting
     and row widths. Do not weaken these checks for an assessment export.
     """
-    details = inspect_oasis_csv(raw)
+    from schedule_app.services.oasis_privacy import STUDENT_REQUIRED
+    details = inspect_oasis_csv(raw, required_columns=STUDENT_REQUIRED if student_archive else None)
     codec = {"UTF-8": "utf-8-sig", "UTF-16": "utf-16",
              "Windows-1252": "cp1252"}[details["encoding"]]
     forms: set[tuple[str, str, str]] = set()
@@ -89,7 +88,7 @@ def _form_metadata(raw: bytes, *, student_archive: bool) -> dict[str, Any]:
                 if not student_archive and title is not None:
                     raise OASISArchiveError(
                         "This CSV contains evaluations OF STUDENTS. Select Evaluations of students "
-                        "at the top of OASIS Evaluations and upload it there. Student assessments "
+                        "at the top of Evaluation Records and upload it there. Student assessments "
                         "cannot be added to the educator-feedback archive. Nothing was saved."
                     )
                 if not student_archive:
@@ -162,16 +161,10 @@ class GitHubOASISStudentEvaluations(GitHubOASISEvaluations):
                 names.append(filename)
         return names
 
-    def save(self, raw: bytes) -> dict[str, Any]:
-        # Validate direction before any GitHub access, even for identical uploads.
-        details = inspect_student_oasis_csv(raw)
-        receipt = super().save(raw)
-        return {**receipt, "details": details}
+    def _inspect(self, raw: bytes) -> dict[str, Any]:
+        return inspect_student_oasis_csv(raw)
 
-    def load(self, filename: str, *, commit: str | None = None,
-             missing_ok: bool = False) -> dict[str, Any] | None:
-        loaded = super().load(filename, commit=commit, missing_ok=missing_ok)
-        if loaded is None:
-            return None
-        # A foreign CSV copied to this folder is not offered as a student export.
-        return {**loaded, "details": inspect_student_oasis_csv(loaded["raw"])}
+    def _minimize(self, raw: bytes) -> dict[str, Any]:
+        from schedule_app.services.oasis_privacy import minimize_oasis_csv
+        inspect_student_oasis_csv(raw)  # Reject foreign/mixed forms before saving.
+        return minimize_oasis_csv(raw, "student")

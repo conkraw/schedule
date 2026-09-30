@@ -1,10 +1,9 @@
-"""Archive original OASIS CSV snapshots beside the OPDs, never mixed into them.
+"""Encrypted, minimized OASIS source snapshots stored beside the OPDs.
 
-Each different byte-for-byte export is retained. An identical re-upload is a
-no-op. The public filename contains course dates and a keyed, opaque identifier,
-not student/provider names, free-text comments, or an unkeyed plaintext hash.
-Fernet encrypts ONLY the original CSV bytes; decrypting returns the original CSV.
-No evaluation scores, learner identities, or comments are analyzed by this module.
+Only explicitly allowed columns are persisted. Legacy snapshots are verified
+against their original identifier, then minimized IN MEMORY before they are
+returned to any caller. A separate explicit cleanup can replace current legacy
+files; it does not erase prior ciphertext from Git history.
 """
 from __future__ import annotations
 
@@ -23,7 +22,7 @@ from cryptography.fernet import InvalidToken
 
 from schedule_app.services.opd_archive import GitHubOPDArchive, OPDArchiveError
 
-OASIS_ARCHIVE_VERSION = 1
+OASIS_ARCHIVE_VERSION = 2
 OASIS_SUBFOLDER = "oasis_evaluations"
 OASIS_MAX_BYTES = 10 * 1024 * 1024
 OASIS_MAX_ENCRYPTED_BYTES = 15 * 1024 * 1024
@@ -59,13 +58,14 @@ def _course_date(text: str) -> date | None:
     return None
 
 
-def inspect_oasis_csv(raw: bytes) -> dict[str, Any]:
+def inspect_oasis_csv(raw: bytes, *, required_columns=None) -> dict[str, Any]:
     """Validate structure and return non-personal metadata without rewriting data.
 
     Blank/unreadable course dates do not prevent preserving the original; the
     archive uses an 'undated' filename if any row's course dates are uncertain.
     CSV rows represent question responses, not a count of distinct evaluations.
     """
+    required_columns = OASIS_REQUIRED_COLUMNS if required_columns is None else required_columns
     if not isinstance(raw, bytes) or not raw:
         raise OASISArchiveError("The OASIS CSV is empty. Upload the original exported CSV.")
     if len(raw) > OASIS_MAX_BYTES:
@@ -97,7 +97,7 @@ def inspect_oasis_csv(raw: bytes) -> dict[str, Any]:
             if (any(not item for item in normalized)
                     or len(set(normalized)) != len(normalized)):
                 raise OASISArchiveError("The CSV contains blank or duplicate column headers.")
-            missing = [item for item in OASIS_REQUIRED_COLUMNS if item not in normalized]
+            missing = [item for item in required_columns if item not in normalized]
             if missing:
                 # Only expected, hard-coded header names are shown.
                 raise OASISArchiveError("This is not the expected OASIS evaluation export. Missing columns: "
@@ -171,7 +171,7 @@ def oasis_export_label(filename: str) -> str:
 
 
 class GitHubOASISEvaluations:
-    """Append-only CSV snapshots using the already-configured OPD archive client.
+    """Append-only minimized CSV snapshots using the OPD archive client.
 
     Each successful save is read at its returned commit, decrypted, and compared
     byte-for-byte. No catalog is needed, so partial catalog updates cannot orphan
@@ -183,6 +183,16 @@ class GitHubOASISEvaluations:
         self.config = archive.config
         self.cipher = self.config.cipher()
         self.folder = f"{self.config.folder}/{OASIS_SUBFOLDER}"
+
+    def _inspect(self, raw: bytes) -> dict[str, Any]:
+        return inspect_oasis_csv(raw)
+
+    def _minimize(self, raw: bytes) -> dict[str, Any]:
+        # Enforce direction at the service boundary, including legacy upload UIs.
+        from schedule_app.services.oasis_student_evaluations import validate_educator_upload_kind
+        from schedule_app.services.oasis_privacy import minimize_oasis_csv
+        validate_educator_upload_kind(raw)
+        return minimize_oasis_csv(raw, "educator")
 
     def _head(self) -> str:
         try:
@@ -254,15 +264,24 @@ class GitHubOASISEvaluations:
                 "This OASIS export cannot be decrypted with the configured key(s), or its contents "
                 "were altered. Keep/restore the correct key in Streamlit Secrets. Nothing was overwritten."
             ) from None
-        details = inspect_oasis_csv(raw)
+        details = self._inspect(raw)
         if not any(hmac.compare_digest(filename, candidate)
                    for candidate in self._candidate_names(raw, details)):
             raise OASISArchiveError("The decrypted OASIS export does not match its archive identifier.")
+        # Verify the stored ciphertext/identifier first, then release only the
+        # allowed fields. No legacy full export reaches a UI download or cache.
+        minimized = self._minimize(raw)
+        details = self._inspect(minimized["raw"])
+        details["privacy"] = minimized["privacy"]
         return {"filename": filename, "path": path, "commit": commit,
-                "sha": sha, "details": details, "raw": raw}
+                "sha": sha, "details": details, "raw": minimized["raw"],
+                "privacy": minimized["privacy"]}
 
     def save(self, raw: bytes) -> dict[str, Any]:
-        details = inspect_oasis_csv(raw)  # reject invalid inputs before any GitHub operation
+        minimized = self._minimize(raw)  # BEFORE any GitHub call or encryption
+        raw = minimized["raw"]
+        details = self._inspect(raw)
+        details["privacy"] = minimized["privacy"]
         names = self._candidate_names(raw, details)
         commit = self._head()
         for name in names:
@@ -279,7 +298,7 @@ class GitHubOASISEvaluations:
         if len(token) > OASIS_MAX_ENCRYPTED_BYTES:
             raise OASISArchiveError("The encrypted export exceeds this version's archive size limit.")
         result = self._call("PUT", "/contents/" + quote(path, safe="/"), body={
-            "message": "Archive encrypted OASIS evaluation export",
+            "message": "Archive encrypted minimized evaluation data",
             "branch": self.config.branch,
             "content": base64.b64encode(token).decode("ascii"),
             # No sha: this operation may CREATE, never overwrite, a snapshot.
@@ -333,3 +352,41 @@ class GitHubOASISEvaluations:
             start, end = coverage.split("_to_")
             return (1, end, start, parts["export_id"])
         return {"filenames": sorted(filenames, key=order, reverse=True), "commit": commit}
+
+    def minimize_saved_export(self, filename: str, *, expected_sha: str) -> dict[str, Any]:
+        """Explicitly replace one current legacy export with its minimized copy.
+
+        Save + verify BEFORE deleting the old current path. Git history is NOT
+        rewritten. A failure can leave both paths, which is safe for the existing
+        evaluation/form deduplication. Concurrent edits require a fresh review.
+        """
+        current = self.load(filename)
+        if current["sha"] != expected_sha:
+            raise OASISArchiveError("The saved evaluation changed after the privacy review. Rescan before replacing it.")
+        if not current["privacy"]["needs_minimization"]:
+            return {"action": "unchanged", "filename": filename}
+        saved = self.save(current["raw"])
+        if saved["filename"] == filename:
+            raise OASISArchiveError("The replacement unexpectedly has the old identifier. No file was removed.")
+        commit = self._head()
+        original = self.load(filename, commit=commit)
+        replacement = self.load(saved["filename"], commit=commit)
+        if original["sha"] != expected_sha or not hmac.compare_digest(replacement["raw"], current["raw"]):
+            raise OASISArchiveError("The source or replacement changed during privacy cleanup. No old file was removed.")
+        result = self._call("DELETE", "/contents/" + quote(current["path"], safe="/"), body={
+            "message": "Remove superseded full evaluation export from current archive",
+            "branch": self.config.branch, "sha": expected_sha,
+        })
+        try:
+            deleted_commit = result["commit"]["sha"]
+            if not isinstance(deleted_commit, str) or not re.fullmatch(r"[0-9a-f]{40,64}", deleted_commit):
+                raise ValueError()
+        except (KeyError, TypeError, ValueError):
+            raise OASISArchiveError("The cleanup write was not confirmed. Rescan the current archive before retrying.") from None
+        if self.load(filename, commit=deleted_commit, missing_ok=True) is not None:
+            raise OASISArchiveError("The old current export is still present. Rescan before retrying cleanup.")
+        checked = self.load(saved["filename"], commit=deleted_commit)
+        if not hmac.compare_digest(checked["raw"], current["raw"]):
+            raise OASISArchiveError("The retained evaluation fields could not be verified after cleanup. Rescan before continuing.")
+        return {"action": "minimized", "filename": saved["filename"], "removed_filename": filename,
+                "commit": deleted_commit}

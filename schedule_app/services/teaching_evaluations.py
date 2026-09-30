@@ -50,7 +50,7 @@ def parse_saved_summary(loaded: dict) -> dict:
             fields = reader.fieldnames or []
             required = {"strengths_comments", "areas_for_improvement_comments"}
             if not required.issubset(fields):
-                raise OASISReportError("The saved OASIS summary lacks the combined-comment columns. Rebuild it in OASIS Evaluations.")
+                raise OASISReportError("The saved OASIS summary lacks the combined-comment columns. Rebuild it in Evaluation Records.")
             qids = [m[1] for field in fields if (m := re.fullmatch(r"q([0-9]+)_mean", field))]
             count_ids = [m[1] for field in fields if (m := re.fullmatch(r"q([0-9]+)_n", field))]
             if set(count_ids) != set(qids):
@@ -66,7 +66,7 @@ def parse_saved_summary(loaded: dict) -> dict:
         if col in fields:
             variants = {word_text(row[col]).strip() for row in rows}
             if len(variants) != 1 or not next(iter(variants)):
-                raise OASISReportError(f"Question {qid} has missing or inconsistent wording in the saved summary. Rebuild it in OASIS Evaluations.")
+                raise OASISReportError(f"Question {qid} has missing or inconsistent wording in the saved summary. Rebuild it in Evaluation Records.")
             text = next(iter(variants))
             if qid in QUESTION_TEXTS and question_key(text) != question_key(QUESTION_TEXTS[qid]):
                 raise OASISReportError(f"Question {qid} has changed wording. Review the OASIS question mapping before linking.")
@@ -75,7 +75,7 @@ def parse_saved_summary(loaded: dict) -> dict:
             # user's supplied export. Never invent a label for an unknown ID.
             text = QUESTION_TEXTS.get(qid, "")
             if not text:
-                raise OASISReportError(f"Question {qid} has no full wording in this older summary. Open OASIS Evaluations and rebuild this period with the updated app.")
+                raise OASISReportError(f"Question {qid} has no full wording in this older summary. Open Evaluation Records and rebuild this period with the updated app.")
         if not _word_compatible(text):
             raise OASISReportError(f"Question {qid} contains text that cannot be written to Word. Correct the source and rebuild.")
         questions[qid] = text

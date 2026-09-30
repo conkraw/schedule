@@ -59,18 +59,18 @@ def _upload_original(upload, client) -> bool:
         return True
     raw = upload.getvalue()
     # Changing the upload signature revalidates an already-open older session.
-    signature = ("evaluation-direction-v1", getattr(upload, "file_id", None), hashlib.sha256(raw).hexdigest())
+    signature = ("minimized-evaluation-source-v2", getattr(upload, "file_id", None), hashlib.sha256(raw).hexdigest())
     if st.session_state.get(P+"active_upload") != signature:
         st.session_state[P+"active_upload"] = signature
         st.session_state.pop(P+"upload_status", None)
         _clear_loaded()
-    if st.button("Retry original CSV save", key=P+"retry_upload",
+    if st.button("Retry reduced CSV save", key=P+"retry_upload",
                  disabled=not bool(st.session_state.get(P+"upload_status", {}).get("error"))):
         st.session_state.pop(P+"upload_status", None)
         _clear_loaded()
     if P+"upload_status" not in st.session_state:
         try:
-            with st.spinner("Encrypting and verifying the original OASIS CSV in GitHub..."):
+            with st.spinner("Encrypting and verifying the reduced OASIS CSV in GitHub..."):
                 # Do not mistake student grades for an educator's teaching feedback.
                 validate_educator_upload_kind(raw)
                 receipt = client.save(raw)
@@ -81,19 +81,23 @@ def _upload_original(upload, client) -> bool:
             st.session_state[P+"upload_status"] = {"error": exc}
         except Exception:
             st.session_state[P+"upload_status"] = {"error": OASISReportError(
-                "The original CSV save was not confirmed. Retry after checking the archive settings/connection.")}
+                "The reduced CSV save was not confirmed. Retry after checking the archive settings/connection.")}
     status = st.session_state[P+"upload_status"]
     if status.get("error"):
         _clear_output()
         _error(status["error"])
-        st.info("The uploaded original is not confirmed archived. No updated summary will be published for it.")
+        st.info("The reduced upload is not confirmed archived. No updated summary will be published for it.")
         return False
     receipt = status["receipt"]
     if receipt["action"] == "unchanged":
-        st.success("Original OASIS CSV already archived and verified; the identical file was not saved twice.")
+        st.success("Reduced OASIS CSV already archived and verified; the identical file was not saved twice.")
     else:
-        st.success("Original OASIS CSV archived, encrypted, and verified in GitHub.")
+        st.success("Reduced OASIS CSV archived, encrypted, and verified in GitHub.")
     st.caption(f"Source rows: {receipt['details']['row_count']:,}. Previous exports remain available for cumulative evaluation counts.")
+    privacy = receipt["details"].get("privacy", {})
+    st.caption(f"Retained {privacy.get('retained_column_count', receipt['details']['column_count'])} reporting columns; "
+               f"removed {privacy.get('removed_column_count', 0)} unneeded columns BEFORE encryption. "
+               "Structured student identifiers, gender and other unused demographics are not stored in new educator-feedback files.")
     return True
 
 
@@ -138,7 +142,7 @@ def _username_controls(summary, prepared, filters, service):
     if unresolved:
         _clear_output()
         st.warning(f"Action needed: {len(unresolved)} educator(s) need a missing/duplicate username corrected. "
-                   "The original is stored; the output CSV has NOT been created for this selection yet.")
+                   "The reduced source is stored; the output CSV has NOT been created for this selection yet.")
         st.dataframe([{k: e[k] for k in ("educator_name", "record_id", "issue")} for e in summary["issues"]],
                      hide_index=True, use_container_width=True)
     educators = sorted(summary["educators"], key=lambda e: (e["educator_key"] not in unresolved, e["educator_name"].casefold()))
@@ -189,7 +193,7 @@ def _username_controls(summary, prepared, filters, service):
                 except OPDArchiveError as exc:
                     _error(exc)
         st.caption("record_id is the username before @ in Evaluator Email, unless you supply an override. "
-                   "The override persists in GitHub; the original CSV is unchanged and no email is invented.")
+                   "The override persists in GitHub; the reduced source CSV is unchanged and no email is invented.")
     return educator_summary(prepared, st.session_state[P+"username_catalog"]["entries"], **filters)
 
 
@@ -340,9 +344,9 @@ def _review_saved(archive):
 def _review_originals(archive):
     """Recovery of already stored originals; not an additional generated report."""
     service = GitHubOASISEvaluations(archive)
-    with st.expander("Optional: retrieve an original archived source CSV"):
-        st.caption("Original-file recovery only. This does not generate another report, merge a file, or change your archive.")
-        if st.button("List / refresh original source exports", key=P+"list_originals"):
+    with st.expander("Optional: retrieve a reduced source CSV"):
+        st.caption("Only required reporting columns are returned. Even older full exports are reduced before download. This does not change the saved archive.")
+        if st.button("List / refresh source exports", key=P+"list_originals"):
             st.session_state.pop(P+"original_loaded", None)
             st.session_state.pop(P+"original_list", None)
             try:
@@ -354,12 +358,12 @@ def _review_originals(archive):
             return
         names = listing["filenames"]
         if not names:
-            st.info("No original exports are archived yet.")
+            st.info("No source exports are archived yet.")
             return
         if st.session_state.get(P+"original_choice") not in names:
             st.session_state.pop(P+"original_choice", None)
-        chosen = st.selectbox("Original source CSV", names, format_func=oasis_export_label, key=P+"original_choice")
-        if st.button("Load / decrypt original source CSV", key=P+"load_original"):
+        chosen = st.selectbox("Saved source CSV", names, format_func=oasis_export_label, key=P+"original_choice")
+        if st.button("Load / decrypt reduced source CSV", key=P+"load_original"):
             st.session_state.pop(P+"original_loaded", None)
             try:
                 st.session_state[P+"original_loaded"] = service.load(chosen)
@@ -367,21 +371,31 @@ def _review_originals(archive):
                 _error(exc)
         loaded = st.session_state.get(P+"original_loaded")
         if loaded and loaded["filename"] == chosen:
-            st.download_button("Download original source CSV", loaded["raw"],
+            st.download_button("Download reduced source CSV", loaded["raw"],
                                file_name=chosen.removesuffix(".enc"), mime="text/csv", key=P+"download_original")
-            st.caption("Original CSVs may include student identifiers and evaluation comments. This optional download is unencrypted.")
+            st.caption("This reduced CSV omits structured student identifiers. Educator-feedback comments remain and may identify people. The download is unencrypted.")
 
 
 def render():
-    st.subheader("OASIS Evaluations")
-    kind = st.radio("OASIS evaluation type", OASIS_EVALUATION_KINDS,
+    from schedule_app.services.evaluation_access import require_evaluation_access
+    if not require_evaluation_access(lock_key="evaluation_lock_oasis_workflow"):
+        return
+    st.subheader("Evaluation Records")
+    try:
+        privacy_archive = GitHubOPDArchive(get_opd_archive_config())
+    except OPDArchiveError as exc:
+        st.error(str(exc))
+        return
+    from schedule_app.sections.evaluation_privacy import render as render_privacy_review
+    render_privacy_review(privacy_archive)
+    kind = st.radio("Evaluation type", OASIS_EVALUATION_KINDS,
                     key="oasis_evaluation_kind", horizontal=True,
                     help="Keep learners' feedback about educators separate from preceptors' assessments of students.")
     if kind == "Evaluations of students":
         from schedule_app.sections.oasis_student_evaluations import render as render_student_archive
         render_student_archive()
         return
-    st.write("Upload → encrypted original saved → correct missing usernames → encrypted educator-summary CSV saved automatically.")
+    st.write("Upload → unnecessary columns removed → reduced CSV encrypted and saved → correct missing usernames → encrypted educator-summary CSV saved automatically.")
     st.caption("All archived source exports contribute. New evaluations are added; repeated copies count once. "
                "Averages and comments are recalculated from responses, never by appending or averaging prior summary rows.")
     try:
@@ -394,6 +408,6 @@ def render():
     _process(archive, period)
     _review_saved(archive)
     _review_originals(archive)
-    st.caption("Uses your existing GitHub token and encryption key. No app password was added. "
-               "Anyone with access to the running app can use these functions unless access is restricted elsewhere. "
+    st.caption("Uses your existing GitHub token and encryption key; only this administration section requires a password. "
+               "Linked evaluations in Preceptor Teaching Summary remain accessible there under its existing access controls. "
                "The optional review CSV is unencrypted; do not upload it to a public repository.")

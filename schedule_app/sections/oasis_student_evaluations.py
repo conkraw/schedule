@@ -1,4 +1,4 @@
-"""Student-evaluation upload/recovery inside OASIS Evaluations; no report mixing."""
+"""Student-evaluation upload/recovery inside Evaluation Records; no report mixing."""
 from __future__ import annotations
 
 import hashlib
@@ -43,23 +43,23 @@ def _scope(config):
 def _show_details(details):
     a, b, c = st.columns(3)
     a.metric("Forms in this file", f"{details['form_count']:,}")
-    b.metric("Question-response rows", f"{details['row_count']:,}")
-    c.metric("Original size", f"{details['byte_count'] / (1024 * 1024):.2f} MiB")
+    b.metric("Stored source rows", f"{details['row_count']:,}")
+    c.metric("Stored size", f"{details['byte_count'] / (1024 * 1024):.2f} MiB")
     st.caption("Includes: " + "; ".join(details["form_types"]) + ".")
     if details["date_range_complete"]:
         st.caption(f"Course-date coverage: {details['course_start']} to {details['course_end']}. "
-                   "These dates organize the original file; no Submit Date or academic-year filter is applied.")
+                   "These dates organize the saved source; no Submit Date or academic-year filter is applied.")
     else:
-        st.warning("Some course dates are blank, unreadable, or reversed. The unchanged original is "
+        st.warning("Some course dates are blank, unreadable, or reversed. The reduced CSV is "
                    "stored with an undated identifier. No source dates were guessed or corrected.")
     if details["missing_form_record_rows"]:
-        st.warning("Some rows have no Form Record identifier. They are preserved in the original, "
+        st.warning("Some rows have no Form Record identifier. They are retained in the reduced source, "
                    "but cannot contribute to the file's distinct-form count.")
     if details["blank_submit_date_rows"]:
         st.caption("Rows without a Submit Date are retained as well. Forms in this file is a source-file "
                    "count, not a claim that every form is a completed evaluation.")
-    st.caption("All original columns, identifiers, grades, comments, and line breaks are preserved. "
-               "Individual student names, answers, and comments are not displayed on this page.")
+    st.caption("Only student/evaluator matching IDs, form identifiers and dates are retained. "
+               "Questions, student assessment scores, comments, student emails and unused demographics are removed before encryption.")
 
 
 def _save_upload(uploaded, client, scope):
@@ -74,7 +74,7 @@ def _save_upload(uploaded, client, scope):
         state = None
     if state is None:
         try:
-            with st.spinner("Encrypting, saving, and verifying the original student-evaluation CSV..."):
+            with st.spinner("Encrypting, saving, and verifying the reduced student-evaluation CSV..."):
                 receipt = client.save(raw)
             state = {"signature": signature, "receipt": receipt}
             _refresh()
@@ -101,6 +101,9 @@ def _save_upload(uploaded, client, scope):
     else:
         st.success("This identical student-evaluation CSV is already archived and verified. No duplicate was saved.")
     _show_details(receipt["details"])
+    policy = receipt["details"].get("privacy", {})
+    st.caption(f"Removed {policy.get('removed_column_count', 0)} unused columns before encryption; "
+               f"retained {policy.get('retained_column_count', receipt['details']['column_count'])} metadata columns.")
     st.caption("Verified saved file: " + receipt["path"])
 
 
@@ -135,7 +138,7 @@ def _reload(client):
     if st.button("Load / decrypt selected student-evaluation CSV", key=P + "load"):
         _clear_loaded()
         try:
-            with st.spinner("Loading and decrypting the original student-evaluation CSV..."):
+            with st.spinner("Loading and decrypting the reduced student-evaluation CSV..."):
                 # Read current HEAD, not a file resurrected from an old list snapshot.
                 st.session_state[P + "loaded"] = client.load(selected)
         except OPDArchiveError as exc:
@@ -144,21 +147,25 @@ def _reload(client):
             st.error("The student-evaluation file could not be decrypted or verified. No download was prepared.")
     loaded = st.session_state.get(P + "loaded")
     if loaded and loaded.get("filename") == selected:
-        st.success("Original student-evaluation CSV loaded and verified. Reloading does not change GitHub.")
+        st.success("Reduced student-evaluation CSV loaded and verified. Reloading does not change GitHub.")
         _show_details(loaded["details"])
-        st.download_button("Download original student-evaluation CSV (optional)", loaded["raw"],
+        st.download_button("Download reduced student-evaluation CSV (optional)", loaded["raw"],
                            file_name=selected.removesuffix(".enc"), mime="text/csv", key=P + "download")
-        st.caption("This download is the unencrypted original with a neutral archive filename. "
+        st.caption("This download is the unencrypted reduced file with a neutral archive filename. "
                    "It contains identifiable student assessments; keep it out of the public repository.")
 
 
 def render():
+    from schedule_app.services.evaluation_access import require_evaluation_access
+    if not require_evaluation_access(show_lock=False):
+        return
     st.markdown("### Preceptor evaluations of students")
-    st.write("Upload the original OASIS student-evaluation CSV. It is encrypted, saved in GitHub, "
-             "then retrieved and decrypted to verify a byte-for-byte match.")
-    st.info("Archive only: these assessments stay separate from feedback about educators. "
-            "No student grades or comments are added to educator summaries, chair reports, or preceptor Word reports. "
-            "No reporting dates or username corrections are needed to save the original.")
+    st.write("Upload the OASIS student-evaluation CSV. The app removes unused columns, encrypts the reduced file, "
+             "and verifies that the saved copy decrypts to exactly those retained fields.")
+    st.info("Student assessments stay separate from feedback about educators. "
+            "Only matching/completion metadata are stored; student grades and comments are removed. "
+            "Assessment-completion percentages can still use the retained metadata. "
+            "No reporting dates or username corrections are needed to save the reduced data.")
     try:
         config = get_opd_archive_config()
         client = GitHubOASISStudentEvaluations(GitHubOPDArchive(config))
@@ -177,6 +184,5 @@ def render():
     st.caption("Each changed export is retained separately. Re-uploading identical contents—even with a "
                "different filename—does not add a copy. This archive does not merge or score evaluations.")
     _reload(client)
-    st.caption("Uses the existing GitHub token and encryption key. No app password has been added. "
-               "Anyone able to access the running app can use this upload/recovery feature unless access is "
-               "restricted elsewhere. Use institution-approved access and storage for student assessments.")
+    st.caption("Uses the existing GitHub token and encryption key. Evaluation Records requires its own password. "
+               "Other sections keep their existing access controls. Use institution-approved access and storage for student assessments.")

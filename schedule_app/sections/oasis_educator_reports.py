@@ -118,11 +118,14 @@ def _username_controls(summary, prepared, filters, service):
                     st.success("Override removed. Source email-based identification is used again; a missing email will be flagged.")
                 except OPDArchiveError as exc:
                     _show_error(exc)
-        st.caption("Saving an override never changes the original CSV or invents an email. A missing email remains flagged in the final CSV.")
+        st.caption("Saving an override never changes the reduced source CSV or invents an email. A missing email remains flagged in the final CSV.")
     return educator_summary(prepared, _effective_overrides(), **filters)
 
 
 def render():
+    from schedule_app.services.evaluation_access import require_evaluation_access
+    if not require_evaluation_access(lock_key="evaluation_lock_oasis_educator_reports"):
+        return
     st.subheader("OASIS Educator Reports")
     st.write("Create one CSV row per educator: number of evaluations, an average and response count for each multiple-choice question, "
              "and combined strengths / areas-for-improvement comments.")
@@ -309,5 +312,5 @@ def render():
         st.download_button("Download CSV + question key + detail (ZIP)", downloads["zip"],
                            file_name="OASIS_Educator_Reports.zip", mime="application/zip", key=PREFIX+"download_zip")
     st.caption("The report omits structured student identifiers, but verbatim comments may still identify someone. "
-               "CSV/ZIP downloads are unencrypted and are not automatically saved to GitHub. This section has no app-password gate; "
+               "CSV/ZIP downloads are unencrypted and are not automatically saved to GitHub. This legacy section requires the Evaluation Records password; "
                "anyone with access to the running app can use it.")

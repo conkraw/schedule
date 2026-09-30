@@ -1,0 +1,79 @@
+{
+  "release": "evaluation-records-privacy-2026-09-30",
+  "runtime_files": [
+    {
+      "path": "app_sch_2026.py",
+      "action": "replace",
+      "sha256": "26d5bbc99ac0039e0b05985a23987f912b48689f5d4a2908794c071000f2c32e"
+    },
+    {
+      "path": "schedule_app/sections/evaluation_privacy.py",
+      "action": "add",
+      "sha256": "6df8b02b3a43eb571a170f5091a8c9e032fa31b92d0e37d1418e54bd518cab87"
+    },
+    {
+      "path": "schedule_app/sections/oasis_educator_reports.py",
+      "action": "replace",
+      "sha256": "886f96f66d1afd726f404721cf728e8e97652e79da42bbf963d545740632c0c0"
+    },
+    {
+      "path": "schedule_app/sections/oasis_evaluation_archive.py",
+      "action": "replace",
+      "sha256": "23939c319a829fdcc0e3cc19f3a09838cf66f2a3c0d6bafbdc602547a8f4eb25"
+    },
+    {
+      "path": "schedule_app/sections/oasis_student_evaluations.py",
+      "action": "replace",
+      "sha256": "73ce13ceee2f45c3a4edeefcd8b9f36e25eb2e0fa12f82c8fb319df8acfc8765"
+    },
+    {
+      "path": "schedule_app/sections/oasis_workflow.py",
+      "action": "replace",
+      "sha256": "d34254a38ed348b5bbfc246fb06092cfe8048a69d74dae26193afe7f19bee12c"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_oasis_links.py",
+      "action": "replace",
+      "sha256": "b18d827c9bd32e68d2cacf0c22f3aedee061b06ff06717228551a2754cd2df07"
+    },
+    {
+      "path": "schedule_app/services/evaluation_access.py",
+      "action": "add",
+      "sha256": "0434e6b8a034339af0c5e5d1d6f431bde27de455c2e0c218812c08b29043f7d3"
+    },
+    {
+      "path": "schedule_app/services/oasis_evaluations.py",
+      "action": "replace",
+      "sha256": "2e38d90b4302576335935755b1e8f81c3b8adcf60611001fa28343dc841ebd84"
+    },
+    {
+      "path": "schedule_app/services/oasis_privacy.py",
+      "action": "add",
+      "sha256": "ef807e8c2d8d58d978bc2c2979c6555a79a5b2633e1965260983db81ddc80df5"
+    },
+    {
+      "path": "schedule_app/services/oasis_student_evaluations.py",
+      "action": "replace",
+      "sha256": "b650fd490153073b91ad5f62b420ef8095e0e95eee3a99841330a91916d6e855"
+    },
+    {
+      "path": "schedule_app/services/oasis_workflow.py",
+      "action": "replace",
+      "sha256": "95075546a7612e9efc0b179d9cd0ba4d1c75fbc8a1c2ace5cae14a66f6415be4"
+    },
+    {
+      "path": "schedule_app/services/teaching_evaluations.py",
+      "action": "replace",
+      "sha256": "b2a927cf87c15e2c91d3aa719a3c1c9bb92729f2ab5348acdd69255ccc829030"
+    }
+  ],
+  "new_dependencies": false,
+  "requires_new_secret": "evaluation_access.password",
+  "tests": {
+    "passed": 781,
+    "skipped": 2,
+    "new_tests": 54
+  },
+  "existing_encryption_key": "unchanged",
+  "live_deployment_changed": false
+}
