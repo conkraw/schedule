@@ -11,8 +11,8 @@ import streamlit as st
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
 
-# Keep scheduling sections first; protected OER and PTS are the last two choices.
-# Preserve the session key used by the existing archive navigation callbacks.
+# Keep non-OASIS labels/order and the original session key. Archive navigation callbacks
+# use schedule_app_mode to select Create Student Schedule.
 SECTIONS = {
     "Instructions": "instructions",
     "Format OPD + Summary": "format_opd_summary",
@@ -20,30 +20,15 @@ SECTIONS = {
     "OPD Check": "opd_check",
     "Create Individual Schedules": "create_individual_schedules",
     "OPD Archive": "opd_archive",
-<<<<<<< HEAD
-=======
     "OER": "oasis_workflow",
     "Preceptor Teaching Summary": "preceptor_teaching_summary",
->>>>>>> 4807eb6dbfa617d533a38997f1a3f083d9e4304d
     "OPD MD PA Conflict Detector": "opd_md_pa_conflict_detector",
     "Shift Availability Tracker": "shift_availability_tracker",
-    "OER": "oasis_workflow",
-    "PTS": "preceptor_teaching_summary",
 }
 
-<<<<<<< HEAD
-# Migrate old labels before creating the sidebar widget (including open sessions).
-LEGACY_SECTIONS = {"Evaluation Records": "OER", "OASIS Evaluation Archive": "OER",
-                   "OASIS Educator Reports": "OER", "OASIS Evaluations": "OER",
-                   "Preceptor Teaching Summary": "PTS"}
-previous_mode = st.session_state.get("schedule_app_mode")
-if previous_mode in LEGACY_SECTIONS:
-    st.session_state["schedule_app_mode"] = LEGACY_SECTIONS[previous_mode]
-=======
 # Migrate an open session from either former OASIS screen before creating the widget.
 if st.session_state.get("schedule_app_mode") in ("OASIS Evaluation Archive", "OASIS Educator Reports", "OASIS Evaluations"):
-    st.session_state["schedule_app_mode"] = "OER"
->>>>>>> 4807eb6dbfa617d533a38997f1a3f083d9e4304d
+    st.session_state["schedule_app_mode"] = "Evaluation Records"
 
 mode = st.sidebar.radio(
     "What do you want to do?", tuple(SECTIONS), key="schedule_app_mode"
