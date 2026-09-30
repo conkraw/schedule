@@ -1,0 +1,64 @@
+{
+  "release": "2026-09-30-student-assessment-completion-1",
+  "base": "Schedule_App_Modular_OASIS_Student_Evaluations.zip",
+  "runtime_files": [
+    {
+      "path": "schedule_app/reports/assessment_completion.py",
+      "action": "add",
+      "sha256": "fb613004d092bac00ea0055a6c293663c329aacc0443080a842b27d8196ef15a"
+    },
+    {
+      "path": "schedule_app/reports/chair_summary.py",
+      "action": "replace",
+      "sha256": "ad16f944c6ea34749196296ce8517dc29f0a09d3912a674ca20a2a8d11b45adc"
+    },
+    {
+      "path": "schedule_app/reports/individual_teaching.py",
+      "action": "replace",
+      "sha256": "0a1601b4ea7f82cb1fb491afd6c17c270c688b263b4d36ffea2c28c8b8c54141"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "action": "replace",
+      "sha256": "454a1d9da1cdd4584b902eefa5b8fffff0e4767fe3a9e556e4c9391738ff74b7"
+    },
+    {
+      "path": "schedule_app/sections/assessment_completion.py",
+      "action": "add",
+      "sha256": "c1440994678874cd9584606b98f0533bf1a42d74b379f22aca9c44a3cf2937d7"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_oasis_links.py",
+      "action": "replace",
+      "sha256": "b405a2f306d714c817eb78dc0b4ca815db6996244a68288bfe01f7d91c9dff81"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "action": "replace",
+      "sha256": "bb55bf17ce346d26b4af598de9c632d0c3e5a505fe26f6c2b7ec460b923effee"
+    },
+    {
+      "path": "schedule_app/services/assessment_completion.py",
+      "action": "add",
+      "sha256": "74a3f5dd887c88d9825cf461e1225f1e1cb9f4b8474c79bf0195787b80bfe6d8"
+    },
+    {
+      "path": "schedule_app/services/student_assessment_links.py",
+      "action": "add",
+      "sha256": "0a93ff4b7487b26334b122345179f296f49925ad754bc25fa635c507b203ade9"
+    },
+    {
+      "path": "schedule_app/services/teaching_analysis.py",
+      "action": "replace",
+      "sha256": "30eeab616b1514147a739788f17ab10d920ca3b37253878aefc81c778e4ad227"
+    },
+    {
+      "path": "schedule_app/services/teaching_evaluations.py",
+      "action": "replace",
+      "sha256": "fd2f5cc922f92ef1a63ca55a0b7ccf2155d2bb2c6308546876405a34ead59b2f"
+    }
+  ],
+  "requirements_changed": false,
+  "settings_changed": false,
+  "archive_migration_required": false
+}

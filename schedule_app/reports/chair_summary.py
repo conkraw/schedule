@@ -354,6 +354,8 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None):
              "Do not add these columns for a clerkship-wide unique-student total: "
              "a student may appear under multiple preceptors.")
 
+        from schedule_app.reports.assessment_completion import append_chair_completion
+        append_chair_completion(doc, scan, year)
         doc.add_heading("Preceptor detail by type of work", level=2)
         for group in item["work_types"]:
             heading = doc.add_heading(group["work_type"], level=2)

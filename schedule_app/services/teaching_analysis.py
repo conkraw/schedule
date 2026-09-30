@@ -265,7 +265,8 @@ def teaching_extract_assignments(raw, details, order, *, clinical_sessions=None,
         wb.close()
 
 
-def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progress=None):
+def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progress=None,
+                           *, commit=None, assessment_collector=None):
     """Read/decrypt each current OPD at one repository snapshot, retaining work type.
 
     Student names are temporary. Run-local keyed digests deduplicate assignments
@@ -275,7 +276,10 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
     """
     if default_order not in TEACHING_NAME_ORDERS:
         raise OPDArchiveError("Select a supported OPD name order.")
-    commit = client._head()
+    # Optional read-only assessment pass uses the exact OPD snapshot already
+    # displayed in the teaching report. Its callback receives transient names;
+    # these names are never added to the returned teaching scan.
+    commit = commit or client._head()
     rotations = client.list_rotations(commit=commit)
     counts = Counter()
     names, name_variants, review_labels, manifests, warnings = {}, defaultdict(set), set(), [], []
@@ -337,6 +341,8 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
                 "work_types": {work_type}, "sites": {site},
                 "origin_counts": Counter({origin: 1}),
             }
+            if assessment_collector is not None:
+                seen_assignments[digest]["_assessment_student"] = item["student"]
             names.setdefault(key, name)
             name_variants[key].add(original_name)
             counts[(key, month)] += 1
@@ -420,6 +426,14 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
         del item["origin_counts"]
         effective_assignments[digest] = item
     seen_assignments = effective_assignments
+    if assessment_collector is not None:
+        assessment_collector([
+            {"preceptor_name": names[item["provider_key"]],
+             "student": item.pop("_assessment_student"),
+             "date": item["day"].isoformat(), "shift": item["shift"],
+             "source_sites": sorted(item["sites"])}
+            for item in seen_assignments.values()
+        ])
     monthly = [{"preceptor_name": names[key], "academic_year": teaching_academic_label(teaching_academic_start(month)),
                 "academic_start_year": teaching_academic_start(month), "month": month.isoformat(),
                 "no_of_shifts": int(count), "educational_hours": int(count * TEACHING_HOURS_PER_STUDENT_SHIFT)}

@@ -119,12 +119,23 @@ def active_periods(scan, selected_years):
             for year in sorted(present)]
 
 
-def join_feedback(scan, selected_years, catalog, summaries_by_year):
+def join_feedback(scan, selected_years, catalog, summaries_by_year, *, allow_missing_summaries=False):
     """Link a report-period summary to only explicitly mapped active named preceptors."""
     periods, status = {}, []
     review = {name_key(n) for n in scan.get("unresolved_preceptor_labels", [])}
     for year, start, end, label in active_periods(scan, selected_years):
         summary = summaries_by_year.get(year)
+        if summary is None and allow_missing_summaries:
+            periods[str(year)] = {"start_date": start.isoformat(), "end_date": end.isoformat(),
+                                 "oasis_label": label, "summary_filename": "Not linked", "summary_sha": "",
+                                 "snapshot": "", "preceptors": {}}
+            for name in sorted({r["preceptor_name"] for r in scan["monthly"]
+                                if r["academic_start_year"] == year and int(r["no_of_shifts"]) > 0}, key=name_key):
+                status.append({"preceptor_name": name, "academic_year": label,
+                    "record_id": catalog["entries"].get(name_key(name), {}).get("record_id", ""),
+                    "oasis_educator_name": "", "evaluation_count": "",
+                    "status": "No exact-date OASIS summary linked; teaching-only report"})
+            continue
         if summary is None:
             raise OASISReportError(f"Choose and save an OASIS summary for {start} through {end}, or turn off linked evaluations.")
         if (summary["details"]["start_date"], summary["details"]["end_date"]) != (start, end):
@@ -186,7 +197,7 @@ def feedback_for_preceptor(bundle, scan, name, year):
     return {**record, **{k: v for k, v in group.items() if k != "preceptors"}}
 
 
-def load_feedback_bundle(archive, scan, years, expected_catalog, expected_summaries):
+def load_feedback_bundle(archive, scan, years, expected_catalog, expected_summaries, *, allow_missing_summaries=False):
     """Recheck the saved links and each selected summary at ONE current commit.
 
     Updated summaries/maps require a refresh so the displayed match preview and
@@ -201,6 +212,8 @@ def load_feedback_bundle(archive, scan, years, expected_catalog, expected_summar
     summaries = {}
     for year, start, end, _ in active_periods(scan, years):
         binding = catalog["report_links"].get(period_key(start, end))
+        if allow_missing_summaries and year not in expected_summaries:
+            continue
         if not binding:
             raise OASISReportError(f"No saved OASIS summary link for {start} through {end}.")
         loaded = service.load(binding["summary_filename"], commit=commit)
@@ -208,4 +221,4 @@ def load_feedback_bundle(archive, scan, years, expected_catalog, expected_summar
         if expected.get("sha") != loaded["sha"] or expected.get("filename") != loaded["filename"]:
             raise OASISReportError("A saved OASIS summary was updated. Click Refresh links and OASIS summaries to use the new evaluations.")
         summaries[year] = parse_saved_summary(loaded)
-    return join_feedback(scan, years, catalog, summaries)
+    return join_feedback(scan, years, catalog, summaries, allow_missing_summaries=allow_missing_summaries)

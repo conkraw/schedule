@@ -177,7 +177,7 @@ def _render_username_queue(service, catalog, active, missing):
     return ready
 
 
-def render_teaching_oasis_links(archive, scan, years):
+def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries=False):
     """Return (plan, ready). With linkage disabled this performs NO network calls."""
     if st.session_state.pop(P + "reset_username_controls", False):
         _reset_username_controls()
@@ -243,7 +243,8 @@ def render_teaching_oasis_links(archive, scan, years):
             if not options:
                 st.warning("No saved OASIS summary has these exact dates. Open OASIS Evaluations, load the same date preset, "
                            "and let it save the summary. Then refresh links here. Username assignments can still be saved above.")
-                ready = False
+                if not allow_missing_summaries:
+                    ready = False
                 continue
             choice_key = P + "report_choice_" + key
             if st.session_state.get(choice_key) not in options:
@@ -288,7 +289,7 @@ def render_teaching_oasis_links(archive, scan, years):
             _clear_downloads()
             return None, False
         try:
-            bundle = join_feedback(scan, years, catalog, summaries)
+            bundle = join_feedback(scan, years, catalog, summaries, allow_missing_summaries=allow_missing_summaries)
         except OPDArchiveError as exc:
             _clear_downloads(); st.error(str(exc)); return None, False
         st.markdown("**Link preview for these teaching reports**")

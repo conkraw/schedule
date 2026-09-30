@@ -275,6 +275,18 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
                 else:
                     individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan, oasis_feedback=oasis_feedback)
             zf.writestr(f"Preceptor_Reports/{safe}_Teaching_Report.docx", individual_bytes)
+        if scan.get("assessment_completion") is not None:
+            from schedule_app.services.assessment_completion import COLUMNS, METHOD_NOTE, SCOPE_NOTE, completion_rows
+            bundle = scan["assessment_completion"]
+            assessment_rows = [row for year in years for row in completion_rows(bundle, scan, year)]
+            zf.writestr("preceptor_student_assessment_completion.csv", teaching_csv_bytes(assessment_rows, COLUMNS))
+            if bundle["warnings"]:
+                zf.writestr("Evaluation_Completeness_Alerts.csv", teaching_csv_bytes(bundle["warnings"],
+                    ("preceptor_name", "academic_year", "username", "direction", "issue", "action")))
+            notes += ["", "STUDENT ASSESSMENT COMPLETION", METHOD_NOTE, SCOPE_NOTE,
+                      "The 3+ shifts denominator differs from the existing 3+ distinct days continuity measure.",
+                      "No student names, external IDs, grades or assessment comments are exported in these completion tables.",
+                      "An unverified/unchecked value is blank in CSV; it is not zero."]
         zf.writestr("Report_Notes.txt", "\n".join(notes).encode("utf-8"))
         zf.writestr("Archive_Sources.csv", teaching_csv_bytes(scan["sources"], source_columns))
     return output.getvalue(), annual

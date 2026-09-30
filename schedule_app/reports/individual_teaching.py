@@ -172,6 +172,8 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None):
         note(TIME_SCOPE_NOTE)
         note("Source: current encrypted OPDs. "
              f"Snapshot: {scan['commit'][:12]}; retrieved: {scan['generated_at']}. Student names omitted.")
+        from schedule_app.reports.assessment_completion import append_individual_completion
+        append_individual_completion(doc, scan, name, year)
         if oasis_feedback is not None:
             from schedule_app.services.teaching_evaluations import feedback_for_preceptor
             from schedule_app.reports.preceptor_evaluations import append_oasis_evaluations

@@ -54,6 +54,8 @@ from schedule_app.services.teaching_priority import (
 )
 
 from schedule_app.sections.preceptor_oasis_links import render_teaching_oasis_links
+from schedule_app.sections.assessment_completion import render_assessment_completion
+from schedule_app.services.assessment_completion import completion_signature
 from schedule_app.services.teaching_evaluations import (
     TEACHING_OASIS_REPORT_VERSION, feedback_signature, load_feedback_bundle,
 )
@@ -295,7 +297,10 @@ def render():
     st.caption("In Custom dates mode, academic_year contains your report label. All dates in that range stay in one "
                "report section, even across July. Boundary months include only the chosen days. "
                "Student names are not exported. Future scheduled assignments within the selected dates are included.")
-    plan, links_ready = render_teaching_oasis_links(client, report_scan, selected)
+    plan, links_ready = render_teaching_oasis_links(client, report_scan, selected, allow_missing_summaries=True)
+    completion = render_assessment_completion(client, report_scan, selected)
+    report_scan = dict(report_scan, assessment_completion=completion)
+    signature = signature[:-4] + (completion_signature(completion),) + signature[-4:]
     signature = signature[:-4] + (TEACHING_OASIS_REPORT_VERSION, feedback_signature(plan["bundle"]) if plan else None) + signature[-4:]
     if st.session_state.get("teaching_zip_signature") != signature:
         _clear_teaching_downloads()
@@ -311,7 +316,8 @@ def render():
                 if plan is None:
                     zip_bytes, _ = teaching_build_zip(report_scan, selected)
                 else:
-                    feedback = load_feedback_bundle(client, report_scan, selected, plan["catalog"], plan["summaries"])
+                    feedback = load_feedback_bundle(client, report_scan, selected, plan["catalog"], plan["summaries"],
+                                                    allow_missing_summaries=True)
                     zip_bytes, _ = teaching_build_zip(report_scan, selected, oasis_feedback=feedback)
                 st.session_state["teaching_zip"] = zip_bytes
                 st.session_state["teaching_zip_signature"] = signature
