@@ -11,7 +11,7 @@ import streamlit as st
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
 
-# Keep the original labels, order and session key. Archive navigation callbacks
+# Keep non-OASIS labels/order and the original session key. Archive navigation callbacks
 # use schedule_app_mode to select Create Student Schedule.
 SECTIONS = {
     "Instructions": "instructions",
@@ -20,12 +20,15 @@ SECTIONS = {
     "OPD Check": "opd_check",
     "Create Individual Schedules": "create_individual_schedules",
     "OPD Archive": "opd_archive",
-    "OASIS Evaluation Archive": "oasis_evaluation_archive",
-    "OASIS Educator Reports": "oasis_educator_reports",
+    "OASIS Evaluations": "oasis_workflow",
     "Preceptor Teaching Summary": "preceptor_teaching_summary",
     "OPD MD PA Conflict Detector": "opd_md_pa_conflict_detector",
     "Shift Availability Tracker": "shift_availability_tracker",
 }
+
+# Migrate an open session from either former OASIS screen before creating the widget.
+if st.session_state.get("schedule_app_mode") in ("OASIS Evaluation Archive", "OASIS Educator Reports"):
+    st.session_state["schedule_app_mode"] = "OASIS Evaluations"
 
 mode = st.sidebar.radio(
     "What do you want to do?", tuple(SECTIONS), key="schedule_app_mode"

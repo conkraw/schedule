@@ -296,8 +296,8 @@ class GitHubOASISEvaluations:
         return {"action": "created", "filename": filename, "path": path,
                 "sha": verified["sha"], "details": details, "commit": saved_commit}
 
-    def list_exports(self) -> dict[str, Any]:
-        commit = self._head()
+    def list_exports(self, *, commit: str | None = None) -> dict[str, Any]:
+        commit = commit or self._head()
         response = self._call("GET", "/contents/" + quote(self.folder, safe="/"),
                               params={"ref": commit}, missing_ok=True)
         if response is None:

@@ -1,0 +1,45 @@
+{
+  "update": "combined-oasis-workflow-v1",
+  "base": "Schedule_App_Modular_OASIS_Educator_Reports.zip",
+  "runtime_file_count": 5,
+  "new_dependencies": [],
+  "notes": [
+    "The current OASIS UI is described in UPDATE_OASIS_COMBINED_WORKFLOW.md; earlier OASIS UI guides/manifests describe prior releases.",
+    "Keep all existing modules. The new UI reuses original archive, calculation, username, date-preset, and reporting-period services.",
+    "All non-OASIS runtime modules and settings are unchanged.",
+    "Original source data, real credentials and evaluation-result CSVs are not shipped."
+  ],
+  "files": [
+    {
+      "path": "app_sch_2026.py",
+      "action": "replace",
+      "sha256": "d343ce9e798afae6a4f17dd2d4f37f4865a51b1eebf6770d57c5905f3a60f42e"
+    },
+    {
+      "path": "schedule_app/services/oasis_evaluations.py",
+      "action": "replace",
+      "sha256": "9b78acab3202bd7214abda7110a933f1599e3226d24214253fe30faa885d09d6"
+    },
+    {
+      "path": "schedule_app/services/oasis_workflow.py",
+      "action": "add",
+      "sha256": "3ec96a33ba4adde7d86a17cd2655856622393fb67d714ac08d102b943bcbdf53"
+    },
+    {
+      "path": "schedule_app/sections/oasis_workflow.py",
+      "action": "add",
+      "sha256": "014ce3f5ec0827d22cb4dd4935cb0b1759b2451caef03497a78b3eb0fd26fbd3"
+    },
+    {
+      "path": "schedule_app/sections/oasis_date_controls.py",
+      "action": "add",
+      "sha256": "8a5b0fc57c2149aca5fea636fe82060e0167d2f62a4ca3a45c71b06bf9d1d582"
+    }
+  ],
+  "validation": {
+    "local_tests_passed": 504,
+    "new_tests_passed": 66,
+    "live_github_tested": false,
+    "actual_streamlit_tested": false
+  }
+}
