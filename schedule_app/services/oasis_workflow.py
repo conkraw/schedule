@@ -26,12 +26,12 @@ from schedule_app.services.oasis_evaluations import (
 )
 from schedule_app.services.oasis_educator_reports import (
     OASISReportError, prepare_reports, educator_summary, csv_bytes,
-    MAX_EXPORTS, MAX_TOTAL_BYTES, validate_username,
+    MAX_EXPORTS, MAX_TOTAL_BYTES, validate_username, QUESTION_TEXTS,
 )
 from schedule_app.services.oasis_educator_usernames import GitHubOASISUsernames
 from schedule_app.services.reporting_periods import ReportingPeriod
 
-WORKFLOW_VERSION = 1
+WORKFLOW_VERSION = 2
 OUTPUT_FOLDER = "oasis_reports"
 MAX_SUMMARY_BYTES = 10 * 1024 * 1024
 MAX_SUMMARY_CIPHER = 15 * 1024 * 1024
@@ -103,8 +103,13 @@ def make_period_summary(prepared: dict, scope: OASISOutputScope, overrides=None)
     if prepared.get("workflow_version") != WORKFLOW_VERSION:
         raise OASISReportError("Refresh the cumulative OASIS data after this app update.")
     summary = educator_summary(prepared, overrides, **scope.filters())
-    # Preserve every existing report column, with period metadata appended.
-    summary["columns"] = list(summary["columns"]) + list(PERIOD_COLUMNS)
+    # Preserve existing columns. Exact source wording travels inside the ONE CSV,
+    # so linked Word reports can also render future/new questions without guessing.
+    question_columns = [f"q{qid}_question" for qid in summary["question_ids"]]
+    summary["columns"] = list(summary["columns"]) + question_columns + list(PERIOD_COLUMNS)
+    for row in summary["rows"]:
+        for qid in summary["question_ids"]:
+            row[f"q{qid}_question"] = prepared["questions"].get(qid, {}).get("question", QUESTION_TEXTS.get(qid, ""))
     for row in summary["rows"]:
         row.update(academic_year=scope.period.label,
                    report_start_date=scope.period.start.isoformat(),

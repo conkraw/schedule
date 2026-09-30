@@ -57,7 +57,7 @@ def teaching_csv_bytes(rows, columns=TEACHING_CSV_COLUMNS):
     return stream.getvalue().encode("utf-8-sig")
 
 
-def teaching_build_zip(scan, selected_years):
+def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
     """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
     require_learner_reach_data(scan)
     years = sorted({int(year) for year in selected_years})
@@ -208,6 +208,22 @@ def teaching_build_zip(scan, selected_years):
         charts = teaching_clinical_charts(scan, summaries)
     with report_step("Chair Word report"):
         chair_bytes = teaching_make_chair_summary(scan, years, charts=charts)
+    if oasis_feedback is not None:
+        from schedule_app.services.teaching_evaluations import feedback_for_preceptor
+        # Validate every included document's period before packaging anything.
+        for item in scan["monthly"]:
+            if item["academic_start_year"] in years and int(item["no_of_shifts"]) > 0:
+                feedback_for_preceptor(oasis_feedback, scan, item["preceptor_name"], item["academic_start_year"])
+        notes += ["", "LINKED OASIS EVALUATIONS",
+                  "Only explicitly username-linked teaching preceptors receive OASIS sections in their individual Word reports.",
+                  "OASIS-only educators are ignored. Unlinked/unmatched preceptors retain teaching-only reports.",
+                  "OPD teaching uses assignment dates; OASIS feedback uses Submit Date within the same exact boundaries.",
+                  "Evaluation counts and question averages come from the selected saved summary snapshot, not recomputed here.",
+                  "Questions use full source wording (the verified source dictionary supports older known-question summaries).",
+                  "Qualitative comments remain verbatim and may contain identifying details."]
+        for group in oasis_feedback["periods"].values():
+            notes.append(f"OASIS period: {group['start_date']} through {group['end_date']}; "
+                         f"source: {group['summary_filename']}; blob: {group['summary_sha']}.")
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
         if priority_rows:
             zf.writestr("Outpatient_Priority_Adjustments.csv", teaching_csv_bytes(priority_rows, PRIORITY_AUDIT_COLUMNS))
@@ -243,7 +259,10 @@ def teaching_build_zip(scan, selected_years):
                 safe = f"{base}_{number}"
             used.add(safe.casefold())
             with report_step("Individual preceptor Word report", preceptor_name=name, academic_year=labels):
-                individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan)
+                if oasis_feedback is None:
+                    individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan)
+                else:
+                    individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan, oasis_feedback=oasis_feedback)
             zf.writestr(f"Preceptor_Reports/{safe}_Teaching_Report.docx", individual_bytes)
         zf.writestr("Report_Notes.txt", "\n".join(notes).encode("utf-8"))
         zf.writestr("Archive_Sources.csv", teaching_csv_bytes(scan["sources"], source_columns))

@@ -1,0 +1,50 @@
+{
+  "update": "Teaching preceptor username links and saved OASIS summary integration",
+  "files": [
+    {
+      "file": "schedule_app/reports/individual_teaching.py",
+      "action": "replace",
+      "sha256": "c0859770a719ebef33156a7d90ca24b4eaec137c29cd84eb1e8f763927a0cca6"
+    },
+    {
+      "file": "schedule_app/reports/preceptor_evaluations.py",
+      "action": "add",
+      "sha256": "675cc66232b7a83d8715f1f4d9b89ec123f7634029a53762d4a38e7ad94f55a6"
+    },
+    {
+      "file": "schedule_app/reports/teaching_export.py",
+      "action": "replace",
+      "sha256": "a794f2a88e8ff4e37c8b29d136e786c9d3e197a5864550eccef9822a8db025ea"
+    },
+    {
+      "file": "schedule_app/sections/preceptor_oasis_links.py",
+      "action": "add",
+      "sha256": "37621197ef4aa39844edecf19a7dcc1a62f3171556a8bd1dbd87c185e16748ec"
+    },
+    {
+      "file": "schedule_app/sections/preceptor_teaching_summary.py",
+      "action": "replace",
+      "sha256": "c27750c94074f082b4b75c9f9c214fce09f146531b2491193bb8b53afaedd217"
+    },
+    {
+      "file": "schedule_app/services/oasis_workflow.py",
+      "action": "replace",
+      "sha256": "40bd6b6ac79409ebdf1d970d3137f24ddea26b9ecc789421b121795250a0190c"
+    },
+    {
+      "file": "schedule_app/services/preceptor_oasis_links.py",
+      "action": "add",
+      "sha256": "734d715c2abf4ece35f414ea0bc61c94ab9e62bf88832ee0736454b4f960b83c"
+    },
+    {
+      "file": "schedule_app/services/teaching_evaluations.py",
+      "action": "add",
+      "sha256": "a3172f4de63a4c90252043ba72e294ebf195e7e74ade5d06a0dc0fb0ebe7e328"
+    }
+  ],
+  "tests_run": 553,
+  "tests_passed": 552,
+  "tests_skipped": 1,
+  "live_github_tested": false,
+  "base": "Schedule_App_Modular_OASIS_Combined_Workflow.zip"
+}

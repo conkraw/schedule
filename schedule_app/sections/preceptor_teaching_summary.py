@@ -49,6 +49,11 @@ from schedule_app.services.teaching_priority import (
     selected_priority_adjustments, outpatient_priority_audit_rows,
 )
 
+from schedule_app.sections.preceptor_oasis_links import render_teaching_oasis_links
+from schedule_app.services.teaching_evaluations import (
+    TEACHING_OASIS_REPORT_VERSION, feedback_signature, load_feedback_bundle,
+)
+
 from schedule_app.sections.reporting_date_controls import (
     REPORTING_MODES, PERIOD_FIELDS,
     render_period_controls as _render_period_controls,
@@ -145,7 +150,7 @@ def render():
     if scan is None:
         st.caption("No OPD is downloaded or decrypted until you click Load / refresh archived OPDs. "
                    "Saved date presets load separately from GitHub. "
-                   "This section never uploads a report or decrypted OPD to GitHub.")
+                   "Only optional username/summary links and date settings are saved here; reports and decrypted OPDs are not uploaded.")
         return
     try:
         teaching_require_date_range_data(scan)
@@ -191,9 +196,6 @@ def render():
         file_part = teaching_academic_label(selected[0]) if len(selected) == 1 else "Multiple_Academic_Years"
     signature = (options_signature, scan["commit"], selection_signature, PARTICIPATION_REPORT_VERSION,
                  STRICT_REPORT_VERSION, CHAIR_STUDENT_CONTINUITY_REPORT_VERSION, REPORT_OUTPUT_VERSION)
-    if st.session_state.get("teaching_zip_signature") != signature:
-        _clear_teaching_downloads()
-        st.session_state["teaching_zip_signature"] = signature
     adjustments = selected_priority_adjustments(report_scan, selected)
     if adjustments:
         st.info(f"Academic Pediatrics took priority over PSHCH Nursery for {len(adjustments):,} "
@@ -287,12 +289,24 @@ def render():
     st.caption("In Custom dates mode, academic_year contains your report label. All dates in that range stay in one "
                "report section, even across July. Boundary months include only the chosen days. "
                "Student names are not exported. Future scheduled assignments within the selected dates are included.")
+    plan, links_ready = render_teaching_oasis_links(client, report_scan, selected)
+    signature = signature[:-4] + (TEACHING_OASIS_REPORT_VERSION, feedback_signature(plan["bundle"]) if plan else None) + signature[-4:]
+    if st.session_state.get("teaching_zip_signature") != signature:
+        _clear_teaching_downloads()
+        st.session_state["teaching_zip_signature"] = signature
+    if not links_ready:
+        _clear_teaching_downloads()
+        st.info("Resolve the OASIS link settings above, or turn off linked evaluations to create teaching-only reports.")
     st.caption("Report builder: " + REPORT_BUILD_ID)
-    if st.button("Create teaching reports ZIP", key="teaching_build_zip"):
+    if st.button("Create teaching reports ZIP", key="teaching_build_zip", disabled=not links_ready):
         st.session_state.pop("teaching_zip", None)
         try:
             with st.spinner("Creating the chair summary, CSVs and individual Word reports..."):
-                zip_bytes, _ = teaching_build_zip(report_scan, selected)
+                if plan is None:
+                    zip_bytes, _ = teaching_build_zip(report_scan, selected)
+                else:
+                    feedback = load_feedback_bundle(client, report_scan, selected, plan["catalog"], plan["summaries"])
+                    zip_bytes, _ = teaching_build_zip(report_scan, selected, oasis_feedback=feedback)
                 st.session_state["teaching_zip"] = zip_bytes
                 st.session_state["teaching_zip_signature"] = signature
         except TeachingConflictError as exc:

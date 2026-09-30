@@ -31,7 +31,7 @@ from schedule_app.services.student_continuity import (
 )
 
 
-def teaching_make_docx(name, monthly, scan):
+def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None):
     """One document per preceptor; academic years and work types stay separate."""
     from docx.shared import Inches, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -198,6 +198,10 @@ def teaching_make_docx(name, monthly, scan):
         note("Source: current encrypted OPDs. "
              f"Snapshot: {scan['commit'][:12]}; retrieved: {scan['generated_at']}. "
              "Student names omitted; future scheduled assignments included.")
+        if oasis_feedback is not None:
+            from schedule_app.services.teaching_evaluations import feedback_for_preceptor
+            from schedule_app.reports.preceptor_evaluations import append_oasis_evaluations
+            append_oasis_evaluations(doc, name, feedback_for_preceptor(oasis_feedback, scan, name, year))
     output = BytesIO()
     doc.save(output)
     return output.getvalue()
