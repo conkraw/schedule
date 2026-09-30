@@ -102,7 +102,10 @@ def _render_report_issues(exc):
 
 
 def render():
-    st.subheader("Preceptor Teaching Summary")
+    from schedule_app.services.evaluation_access import require_evaluation_access
+    if not require_evaluation_access(section_name="PTS", lock_key="evaluation_lock_pts"):
+        return
+    st.subheader("PTS")
     st.write("Read current encrypted OPDs from GitHub, then generate a chair-friendly Word summary, "
              "overall and work-type CSVs, and one Word teaching report per preceptor.")
     st.caption(OUTPATIENT_PRIORITY_NOTE)

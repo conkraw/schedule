@@ -7,6 +7,7 @@ from datetime import date
 import hashlib
 import json
 import streamlit as st
+from schedule_app.services.evaluation_access import protected_evaluation_callback
 
 from schedule_app.services.opd_archive import GitHubOPDArchive, OPDArchiveError, get_opd_archive_config
 from schedule_app.services.reporting_periods import ReportingPeriod
@@ -31,6 +32,7 @@ def clear_teaching_downloads():
     st.session_state.pop("teaching_zip_signature", None)
 
 
+@protected_evaluation_callback
 def remember_period_inputs():
     """Keep preferences across sidebar navigation without persisting every edit."""
     previous = dict(st.session_state.get("teaching_period_preferences", {}))
@@ -63,6 +65,7 @@ def _error(exc):
     st.session_state.pop(NOTICE, None)
 
 
+@protected_evaluation_callback
 def refresh_saved_presets():
     try:
         service = _service()
@@ -85,6 +88,7 @@ def _snapshot_for(service):
     return snapshot
 
 
+@protected_evaluation_callback
 def load_selected_preset(preset_id):
     """Fetch the latest catalog before applying dates from the selected dropdown row."""
     try:
@@ -115,6 +119,7 @@ def load_selected_preset(preset_id):
         _error(exc)
 
 
+@protected_evaluation_callback
 def save_current_preset(replace_id=None, confirmation_key=None):
     try:
         service = _service()
@@ -144,6 +149,7 @@ def save_current_preset(replace_id=None, confirmation_key=None):
         _error(exc)
 
 
+@protected_evaluation_callback
 def delete_selected_preset(preset_id, confirmation_key):
     try:
         service = _service()

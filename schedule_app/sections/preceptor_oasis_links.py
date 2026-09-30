@@ -1,4 +1,4 @@
-"""Optional saved OASIS linkage inside Preceptor Teaching Summary.
+"""Optional saved OASIS linkage inside PTS.
 
 Only explicit Save/Remove buttons write GitHub. Widget editing alone never writes.
 The OPD scan and existing date presets are independent of this catalog.
@@ -234,14 +234,14 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
         st.markdown("**2. Choose the saved OASIS summary for this reporting period**")
         st.caption("OASIS is filtered by Submit Date. Teaching hours use assignment dates. The exact start and end dates "
                    "must match; an already-averaged summary cannot be filtered or split into new dates. "
-                   "Use Evaluation Records to generate a matching period when necessary.")
+                   "Use OER to generate a matching period when necessary.")
         for year, start, end, label in active_periods(scan, years):
             key = period_key(start, end)
             options = [f for f in filenames if _filename_dates(f) == (start, end)]
             saved = catalog["report_links"].get(key, {}).get("summary_filename")
             st.write(f"{label}: {start:%B %d, %Y} through {end:%B %d, %Y}")
             if not options:
-                st.warning("No saved OASIS summary has these exact dates. Open Evaluation Records, load the same date preset, "
+                st.warning("No saved OASIS summary has these exact dates. Open OER, load the same date preset, "
                            "and let it save the summary. Then refresh links here. Username assignments can still be saved above.")
                 if not allow_missing_summaries:
                     ready = False

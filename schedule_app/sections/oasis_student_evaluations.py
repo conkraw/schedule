@@ -1,4 +1,4 @@
-"""Student-evaluation upload/recovery inside Evaluation Records; no report mixing."""
+"""Student-evaluation upload/recovery inside OER; no report mixing."""
 from __future__ import annotations
 
 import hashlib
@@ -184,5 +184,5 @@ def render():
     st.caption("Each changed export is retained separately. Re-uploading identical contents—even with a "
                "different filename—does not add a copy. This archive does not merge or score evaluations.")
     _reload(client)
-    st.caption("Uses the existing GitHub token and encryption key. Evaluation Records requires its own password. "
+    st.caption("Uses the existing GitHub token and encryption key. OER and PTS use the same protected-section password. "
                "Other sections keep their existing access controls. Use institution-approved access and storage for student assessments.")

@@ -71,7 +71,7 @@ def render():
             st.session_state.pop(key, None)
         st.session_state[SCOPE] = signature
     st.caption(f"Storage: {config.owner}/{config.repo} | branch {config.branch} | {client.folder}/")
-    st.caption("This legacy archive screen also requires the Evaluation Records password. "
+    st.caption("This legacy archive screen also requires the OER password. "
                "Downloads contain only the retained reporting columns. Follow your institution's "
                "approved access and storage requirements for evaluations.")
 

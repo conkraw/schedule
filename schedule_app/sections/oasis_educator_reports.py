@@ -312,5 +312,5 @@ def render():
         st.download_button("Download CSV + question key + detail (ZIP)", downloads["zip"],
                            file_name="OASIS_Educator_Reports.zip", mime="application/zip", key=PREFIX+"download_zip")
     st.caption("The report omits structured student identifiers, but verbatim comments may still identify someone. "
-               "CSV/ZIP downloads are unencrypted and are not automatically saved to GitHub. This legacy section requires the Evaluation Records password; "
+               "CSV/ZIP downloads are unencrypted and are not automatically saved to GitHub. This legacy section requires the OER password; "
                "anyone with access to the running app can use it.")

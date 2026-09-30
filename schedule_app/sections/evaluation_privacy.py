@@ -1,4 +1,4 @@
-"""Explicit current-file cleanup, available only behind Evaluation Records login."""
+"""Explicit current-file cleanup, available only behind OER login."""
 from __future__ import annotations
 import streamlit as st
 from schedule_app.services.opd_archive import OPDArchiveError

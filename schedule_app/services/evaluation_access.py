@@ -1,10 +1,12 @@
-"""A section-only shared-password gate for evaluation administration.
+"""Shared section-only password gate for OER and PTS.
 
-This does NOT gate Preceptor Teaching Summary or its linked report contents.
 No browser cookie, query parameter, or process-global flag grants access.
-Password/config changes invalidate authorization on the next section interaction.
+Both entrypoints check the gate before rendering data or doing network work.
+Date-setting callbacks also check it, because callbacks run before render().
+Other scheduling sections and their session data are not protected by this gate.
 """
 from __future__ import annotations
+from functools import wraps
 import hashlib
 import hmac
 import math
@@ -15,6 +17,12 @@ P = "_evaluation_access_"
 MIN_PASSWORD_LENGTH = 16
 IDLE_SECONDS = 30 * 60
 MAX_SESSION_SECONDS = 8 * 60 * 60
+# New boundary: do not inherit a login issued by the older OER-only gate.
+ACCESS_VERSION = "oer-pts-v2"
+PROTECTED_STATE_PREFIXES = (
+    "oasis_", "_oasis_", "oer_", "evaluation_privacy_",
+    "teaching_", "assessment_completion_", "pts_", "_pts_",
+)
 
 
 def _configured_password():
@@ -33,27 +41,30 @@ def _configured_password():
 
 
 def _fingerprint(password):
-    return hashlib.sha256(("evaluation-section-v1\0" + password).encode("utf-8")).hexdigest()
+    return hashlib.sha256((ACCESS_VERSION + "\0" + password).encode("utf-8")).hexdigest()
 
 
 def _clear_evaluation_data():
-    # These are the evaluation ADMIN screens' state keys, including cached
-    # downloads and upload widgets. OPD/teaching report state is independent.
+    """Discard OER/PTS session data, including decrypted content and report bytes.
+
+    This only removes in-session state. It never deletes files or saved mappings
+    in GitHub, and never clears unrelated OPD or individual-schedule state.
+    """
     for key in list(st.session_state):
-        if str(key).startswith(("oasis_", "_oasis_", "oer_", "evaluation_privacy_")):
+        if str(key).startswith(PROTECTED_STATE_PREFIXES):
             st.session_state.pop(key, None)
 
 
 def lock_evaluation_records():
-    """Callback: clear admin caches and authorization, not the rest of the app."""
+    """Lock both protected sections; retain this function name for compatibility."""
     _clear_evaluation_data()
     for suffix in ("auth", "issued", "last_seen", "password"):
         st.session_state.pop(P + suffix, None)
 
 
 def _login_callback():
-    # Streamlit callbacks run before widgets on the next script execution, so
-    # removing the submitted widget value here avoids retaining the password.
+    # Callbacks execute before widgets are recreated. Remove the supplied value
+    # here so the plaintext password is not retained in widget/session state.
     supplied = st.session_state.pop(P + "password", "")
     expected = _configured_password()
     now = time.time()
@@ -95,14 +106,35 @@ def evaluation_access_is_valid(*, touch=False):
     return bool(valid)
 
 
-def require_evaluation_access(*, show_lock=True, lock_key="evaluation_lock_main"):
-    """Return False before ANY evaluation widgets/data/network work if locked."""
+def protected_evaluation_callback(callback):
+    """Prevent a stale/locked date-widget callback from reading or writing GitHub.
+
+    A callback can fire before the next section render checks the password.
+    A failed check clears protected caches and lets render show the login form.
+    """
+    @wraps(callback)
+    def guarded(*args, **kwargs):
+        if not evaluation_access_is_valid(touch=True):
+            lock_evaluation_records()
+            return None
+        return callback(*args, **kwargs)
+    return guarded
+
+
+def require_evaluation_access(*, show_lock=True, lock_key="evaluation_lock_main", section_name="OER"):
+    """Return False before protected widgets/data/network work if not authorized.
+
+    The same secret and session authorization cover OER and PTS; no second
+    password or separate encryption key is introduced.
+    """
+    if section_name not in ("OER", "PTS"):
+        raise ValueError("Unknown protected section.")
     if evaluation_access_is_valid(touch=True):
         if show_lock:
-            st.sidebar.button("Lock Evaluation Records", key=lock_key, on_click=lock_evaluation_records)
+            st.sidebar.button("Lock OER / PTS", key=lock_key, on_click=lock_evaluation_records)
         return True
     lock_evaluation_records()
-    st.subheader("Evaluation Records — locked")
+    st.subheader(f"{section_name} — locked")
     if not _configured_password():
         st.error("Setup required: add [evaluation_access] password in Streamlit Secrets. "
                  "Use a unique password or passphrase of at least 16 characters, "
@@ -113,11 +145,11 @@ def require_evaluation_access(*, show_lock=True, lock_key="evaluation_lock_main"
     remaining = max(0, int(math.ceil(st.session_state.get(P + "retry_at", 0) - time.time())))
     if remaining:
         st.warning(f"Wait {remaining} seconds before trying again.")
-    st.caption("Only Evaluation Records requires this password. Access expires after 30 minutes "
-               "without an interaction in this section, or after eight hours. Other sections are not locked.")
+    st.caption("This password unlocks OER and PTS in this session. Access expires after 30 minutes "
+               "without an interaction in either protected section, or after eight hours. "
+               "Other scheduling sections remain available without this password.")
     with st.form(P + "login_form", clear_on_submit=True):
-        st.text_input("Evaluation Records password", type="password", key=P + "password",
-                      max_chars=1024)
-        st.form_submit_button("Unlock Evaluation Records", on_click=_login_callback,
+        st.text_input("OER / PTS password", type="password", key=P + "password", max_chars=1024)
+        st.form_submit_button(f"Unlock {section_name}", on_click=_login_callback,
                               disabled=bool(remaining))
     return False

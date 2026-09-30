@@ -380,7 +380,7 @@ def render():
     from schedule_app.services.evaluation_access import require_evaluation_access
     if not require_evaluation_access(lock_key="evaluation_lock_oasis_workflow"):
         return
-    st.subheader("Evaluation Records")
+    st.subheader("OER")
     try:
         privacy_archive = GitHubOPDArchive(get_opd_archive_config())
     except OPDArchiveError as exc:
@@ -408,6 +408,6 @@ def render():
     _process(archive, period)
     _review_saved(archive)
     _review_originals(archive)
-    st.caption("Uses your existing GitHub token and encryption key; only this administration section requires a password. "
-               "Linked evaluations in Preceptor Teaching Summary remain accessible there under its existing access controls. "
+    st.caption("Uses your existing GitHub token and encryption key. OER and PTS share the protected-section password. "
+               "Linked evaluation content and report downloads in PTS also require an unlocked session. "
                "The optional review CSV is unencrypted; do not upload it to a public repository.")

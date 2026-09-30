@@ -88,7 +88,7 @@ def _form_metadata(raw: bytes, *, student_archive: bool) -> dict[str, Any]:
                 if not student_archive and title is not None:
                     raise OASISArchiveError(
                         "This CSV contains evaluations OF STUDENTS. Select Evaluations of students "
-                        "at the top of Evaluation Records and upload it there. Student assessments "
+                        "at the top of OER and upload it there. Student assessments "
                         "cannot be added to the educator-feedback archive. Nothing was saved."
                     )
                 if not student_archive:

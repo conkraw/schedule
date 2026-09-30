@@ -9,6 +9,7 @@ import json
 from datetime import date
 
 import streamlit as st
+from schedule_app.services.evaluation_access import protected_evaluation_callback
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.reporting_periods import ReportingPeriod
 from schedule_app.services.reporting_presets import (
@@ -23,6 +24,7 @@ def _invalidate_output():
         st.session_state.pop("oasis_combined_" + suffix, None)
 
 
+@protected_evaluation_callback
 def _apply_period():
     try:
         period = ReportingPeriod(st.session_state.get(P+"label", ""),
@@ -37,6 +39,7 @@ def _apply_period():
         _invalidate_output()
 
 
+@protected_evaluation_callback
 def _load_preset():
     try:
         selected = st.session_state.get(P+"choice")
@@ -54,6 +57,7 @@ def _load_preset():
         st.session_state[P+"error"] = "Refresh saved presets and choose an existing reporting period."
 
 
+@protected_evaluation_callback
 def _refresh_presets(service):
     try:
         st.session_state[P+"snapshot"] = service.load()
@@ -68,6 +72,7 @@ def _confirmation(action, snapshot, *values):
     return P + action + "_" + digest
 
 
+@protected_evaluation_callback
 def _save_preset(service, replace_id, confirm_key):
     try:
         period = st.session_state.get(P+"applied")
@@ -87,6 +92,7 @@ def _save_preset(service, replace_id, confirm_key):
         st.session_state[P+"error"] = str(exc)
 
 
+@protected_evaluation_callback
 def _delete_preset(service, selected, confirm_key):
     try:
         snapshot = st.session_state[P+"snapshot"]
@@ -154,7 +160,7 @@ def render(archive) -> ReportingPeriod | None:
     else:
         st.info("Select and apply both dates and a label, or load a saved preset. The source CSV can still be archived before you choose dates.")
     with st.expander("Save or delete reporting-date presets in GitHub"):
-        st.caption("These are the same saved date presets used by Preceptor Teaching Summary. "
+        st.caption("These are the same saved date presets used by PTS. "
                    "The active OASIS dates are separate. Updating/deleting a saved preset changes the shared dropdown, "
                    "not any OPDs, evaluations, output CSVs, or another screen's active dates.")
         name = st.text_input("Preset name", key=P+"name", placeholder="For example: 26-27 evaluation year")

@@ -1,0 +1,94 @@
+{
+  "release": "2026-09-30-oer-pts-access",
+  "basis": "Schedule_App_Modular_Evaluation_Privacy.zip",
+  "runtime_file_count": 13,
+  "files": [
+    {
+      "path": "app_sch_2026.py",
+      "action": "replace",
+      "previous_sha256": "26d5bbc99ac0039e0b05985a23987f912b48689f5d4a2908794c071000f2c32e",
+      "sha256": "b07e72374531c637cd0f5b151e276dfb1d5ecf61f0462cc387370a6ffcdf2e68"
+    },
+    {
+      "path": "schedule_app/sections/evaluation_privacy.py",
+      "action": "replace",
+      "previous_sha256": "6df8b02b3a43eb571a170f5091a8c9e032fa31b92d0e37d1418e54bd518cab87",
+      "sha256": "56a55de58fcdeae0c10e3bef9d974532f9c2fe8004d6cd9ced6938ebe556c3f7"
+    },
+    {
+      "path": "schedule_app/sections/oasis_date_controls.py",
+      "action": "replace",
+      "previous_sha256": "8a5b0fc57c2149aca5fea636fe82060e0167d2f62a4ca3a45c71b06bf9d1d582",
+      "sha256": "8da287222b8c4084d96bd8df2df9b1d8d4b5a853e7cbeff60bb95466a15ef86c"
+    },
+    {
+      "path": "schedule_app/sections/oasis_educator_reports.py",
+      "action": "replace",
+      "previous_sha256": "886f96f66d1afd726f404721cf728e8e97652e79da42bbf963d545740632c0c0",
+      "sha256": "b9a19a829829eb7e6199d49fa5d623b35b89d6801d4dfa56469ce5659709b44b"
+    },
+    {
+      "path": "schedule_app/sections/oasis_evaluation_archive.py",
+      "action": "replace",
+      "previous_sha256": "23939c319a829fdcc0e3cc19f3a09838cf66f2a3c0d6bafbdc602547a8f4eb25",
+      "sha256": "8aa2471102fed8f5f2cd70e8ccfbbb9fdde6ab7356bc0eed3545873b8979bda5"
+    },
+    {
+      "path": "schedule_app/sections/oasis_student_evaluations.py",
+      "action": "replace",
+      "previous_sha256": "73ce13ceee2f45c3a4edeefcd8b9f36e25eb2e0fa12f82c8fb319df8acfc8765",
+      "sha256": "028a7717445867a2f38de4eb2a0509004e19d2377ec52b890a0d088aa6b12a95"
+    },
+    {
+      "path": "schedule_app/sections/oasis_workflow.py",
+      "action": "replace",
+      "previous_sha256": "d34254a38ed348b5bbfc246fb06092cfe8048a69d74dae26193afe7f19bee12c",
+      "sha256": "29164c3527e9ab6b7062f8ddb961e198f3f31c4f9dd8b3c74aefa8ec348ffecd"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_oasis_links.py",
+      "action": "replace",
+      "previous_sha256": "b18d827c9bd32e68d2cacf0c22f3aedee061b06ff06717228551a2754cd2df07",
+      "sha256": "df4513e2b0e660b30ac52176e6493478e758713421a5712fefe921e321768d35"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "action": "replace",
+      "previous_sha256": "bb55bf17ce346d26b4af598de9c632d0c3e5a505fe26f6c2b7ec460b923effee",
+      "sha256": "fdf8c2fd32cee6ebe953fb72275984a3e15622d183f9faacf23aafc917f467dc"
+    },
+    {
+      "path": "schedule_app/sections/reporting_date_controls.py",
+      "action": "replace",
+      "previous_sha256": "45538a22be75c34d787f5a336b8f99b954ad3267356e97195302aa0cb9917b25",
+      "sha256": "affcf34503733124f7538118549bee6411380f71755fb8d22041d1f5b1858889"
+    },
+    {
+      "path": "schedule_app/services/evaluation_access.py",
+      "action": "replace",
+      "previous_sha256": "0434e6b8a034339af0c5e5d1d6f431bde27de455c2e0c218812c08b29043f7d3",
+      "sha256": "18ae170a6fcb7e0796970f2f0432ed257a69015bde34d0dbd0b1f20454cd86f8"
+    },
+    {
+      "path": "schedule_app/services/oasis_student_evaluations.py",
+      "action": "replace",
+      "previous_sha256": "b650fd490153073b91ad5f62b420ef8095e0e95eee3a99841330a91916d6e855",
+      "sha256": "8a5ab601100a5b80bde8529b0bceb1a0da0bfc440ef18f03d09bc732c6592cc2"
+    },
+    {
+      "path": "schedule_app/services/teaching_evaluations.py",
+      "action": "replace",
+      "previous_sha256": "b2a927cf87c15e2c91d3aa719a3c1c9bb92729f2ab5348acdd69255ccc829030",
+      "sha256": "589b102895be35dec0662726b7da425c387a9f20dae73d43b8b8109d17c4ef97"
+    }
+  ],
+  "tests": {
+    "passed": 837,
+    "skipped": 3,
+    "new_access_tests_passed": 57,
+    "run_in_batches": true
+  },
+  "settings_and_requirements_unchanged": true,
+  "all_report_writers_unchanged": true,
+  "new_secrets_required": false
+}
