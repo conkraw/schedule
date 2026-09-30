@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "feature": "OASIS Educator Reports",
+  "updated_runtime_files": [
+    "app_sch_2026.py"
+  ],
+  "new_runtime_files": [
+    "schedule_app/sections/oasis_educator_reports.py",
+    "schedule_app/services/oasis_educator_reports.py",
+    "schedule_app/services/oasis_educator_usernames.py"
+  ],
+  "sha256": {
+    "app_sch_2026.py": "7ad1730a11057f6218e8cba34bcc2fd3f5aa3fa3c05513f98f927bd088b4b3f0",
+    "schedule_app/sections/oasis_educator_reports.py": "9f0392a8d0bbeee35678b2f0dc7ea6fdc0e3502ae8220fbe79c7b7866b10d9e7",
+    "schedule_app/services/oasis_educator_reports.py": "a21135e842365683d8322c7f5bde2aaa31d9224abd6d84827fda79eb3576cbf7",
+    "schedule_app/services/oasis_educator_usernames.py": "966b170eea51b989a086013bf95399b468504e8eaf35719717711bff78da9eb1"
+  },
+  "preserve": [
+    "schedule_app/settings.py",
+    "requirements.txt",
+    "Streamlit Secrets",
+    "all original OPDs and OASIS archives",
+    "saved date presets"
+  ]
+}
