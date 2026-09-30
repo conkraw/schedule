@@ -1,6 +1,6 @@
 """Read-only, unique-student assessment completion for teaching reports.
 
-Denominator: unique students with >=3 distinct retained AM/PM assignments to a
+Denominator: unique students meeting the selected minimum retained AM/PM assignments to a
 preceptor IN the selected period. Numerators: those same eligible students with
 at least one submitted target form, also IN the period. Each form type is
 separate; repeated questions, exports, or forms for a student cannot inflate it.
@@ -27,26 +27,51 @@ from schedule_app.services.teaching_evaluations import active_periods, parse_sav
 from schedule_app.services.oasis_workflow import GitHubOASISSummaries
 from schedule_app.services.teaching_analysis import teaching_scan_archives
 
-ASSESSMENT_VERSION = 1
+from schedule_app.services.assessment_settings import DEFAULT_MINIMUM_SHIFTS, validate_minimum_shifts
+
+ASSESSMENT_VERSION = 2
 CLINICAL = "*Clinical Assessment of Student"
 HP = "*PEDS History Taking & Physical Exam"
 TARGETS = {_form_key(CLINICAL): "clinical", _form_key(HP): "hp"}
 MAX_SOURCES = 100
 MAX_TOTAL_BYTES = 64 * 1024 * 1024
-METHOD_NOTE = (
-    "Eligible students were assigned to this preceptor on at least 3 distinct AM/PM shifts in the reporting period. "
-    "Each eligible student counts once per form type, even with several submitted forms. "
-    "AM and PM on the same day are two shifts. Assignment dates and OASIS Submit Date both use the displayed period."
-)
+
+def assessment_method_note(minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
+    if minimum_shifts is None:
+        return ("The minimum-shifts setting was not verified. No assessment-completion percentages "
+                "are calculated until the saved setting is available.")
+    minimum_shifts = validate_minimum_shifts(minimum_shifts)
+    unit = "shift" if minimum_shifts == 1 else "shifts"
+    return (
+        f"Eligible students were assigned to this preceptor on at least {minimum_shifts} distinct AM/PM {unit} in the reporting period. "
+        "Each eligible student counts once per form type, even with several submitted forms. "
+        "AM and PM on the same day are two shifts. Assignment dates and OASIS Submit Date both use the displayed period."
+    )
+
+
+# Backward-compatible default text; new reports call assessment_method_note with
+# the threshold recorded in the completion bundle, never a mutable global value.
+METHOD_NOTE = assessment_method_note()
+
+
+def completion_threshold(bundle):
+    value = bundle.get("minimum_shifts")
+    if value is None:
+        if any(row.get("assessment_status") == "Calculated" for row in bundle.get("rows", [])):
+            raise OPDArchiveError("Assessment results have no verified minimum-shifts setting. Recalculate completion.")
+        return None
+    return validate_minimum_shifts(value)
+
+
 SCOPE_NOTE = (
     "This is a record-completeness measure, not a judgment of teaching quality. "
     "An absent record may reflect an incomplete export or an unmatched identifier. "
     "The two form types are shown separately; this report does not establish that both are required for every student."
 )
 COLUMNS = ("preceptor_name", "academic_year", "report_start_date", "report_end_date", "record_id",
-           "eligible_students_3plus_shifts", "clinical_students_evaluated", "clinical_completion_pct",
+           "eligible_students", "clinical_students_evaluated", "clinical_completion_pct",
            "hp_students_evaluated", "hp_completion_pct", "either_students_evaluated", "either_completion_pct",
-           "clinical_forms_submitted", "hp_forms_submitted", "student_feedback_evaluations", "assessment_status")
+           "clinical_forms_submitted", "hp_forms_submitted", "student_feedback_evaluations", "assessment_status", "minimum_shifts")
 
 
 def _parse_submit(value):
@@ -239,12 +264,13 @@ def completion_context(scan, years):
         for year, start, end, label in active_periods(scan, years)]}
 
 
-def build_completion_bundle(inputs, scan, years, *, courses=None):
+def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
     """Return provider-level metrics/warnings only (no student names or IDs).
 
     A missing external ID never shrinks the denominator. That preceptor's rates
     remain Not verified until resolved; report generation itself is not blocked.
     """
+    minimum_shifts = validate_minimum_shifts(minimum_shifts)
     prepared = inputs["prepared"]
     chosen = set(courses) if courses is not None else set(prepared["courses"])
     if courses is None and len(chosen) > 1:
@@ -287,7 +313,7 @@ def build_completion_bundle(inputs, scan, years, *, courses=None):
                 "Review the source-metadata table. Percentages use identifiable matched records only; they can change after correction."))
         for name in active:
             rid = catalog["entries"].get(name_key(name), {}).get("record_id", "")
-            eligible = {identity for (n, identity), slots in pairs.items() if n == name and len(slots) >= 3}
+            eligible = {identity for (n, identity), slots in pairs.items() if n == name and len(slots) >= minimum_shifts}
             resolved = {key for kind, key in eligible if kind == "external_id"}
             missing = [identity for identity in eligible if identity[0] == "unresolved"]
             provider_forms = [f for f in period_forms if rid and f["username"] == rid]
@@ -309,11 +335,12 @@ def build_completion_bundle(inputs, scan, years, *, courses=None):
             elif missing:
                 status = f"Not verified: {len(missing)} eligible student name(s) need an external ID match"
             elif not eligible:
-                status = "No eligible students (3+ shifts)"
+                status = f"No eligible students ({minimum_shifts}+ shifts)"
             else:
                 status = "Calculated"
             row = {"preceptor_name": name, "academic_year": label, "report_start_date": begin,
-                   "report_end_date": finish, "record_id": rid, "eligible_students_3plus_shifts": len(eligible),
+                   "report_end_date": finish, "record_id": rid, "eligible_students": len(eligible),
+                   "minimum_shifts": minimum_shifts,
                    "clinical_students_evaluated": len(clinical) if status == "Calculated" else None,
                    "hp_students_evaluated": len(hp) if status == "Calculated" else None,
                    "either_students_evaluated": len(clinical | hp) if status == "Calculated" else None,
@@ -356,14 +383,17 @@ def build_completion_bundle(inputs, scan, years, *, courses=None):
                                       "name_key": identity[1], "assigned_shifts": len(pairs[(name, identity)]),
                                       "issue": "Name has multiple Student External IDs" if candidates else "No Student External ID found for OPD name"})
             result_rows.append(row)
-    return {"version": ASSESSMENT_VERSION, "context": completion_context(scan, years), "rows": result_rows,
+    return {"version": ASSESSMENT_VERSION, "minimum_shifts": minimum_shifts,
+            "context": completion_context(scan, years), "rows": result_rows,
             "warnings": warnings, "source_count": prepared["source_count"], "sources": inputs["sources"],
             "retrieved_at": inputs["retrieved_at"], "assessment_commit": inputs["commit"],
             "username_mapping_sha": catalog.get("sha"), "student_mapping_sha": inputs["student_links"].get("sha"),
             "course_ids": sorted(chosen)}, unmatched
 
 
-def unverified_bundle(scan, years, reason="Not checked: load evaluation completeness"):
+def unverified_bundle(scan, years, reason="Not checked: load evaluation completeness", *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
+    if minimum_shifts is not None:
+        minimum_shifts = validate_minimum_shifts(minimum_shifts)
     rows, warnings = [], []
     for year, start, end, label in active_periods(scan, years):
         review = set(scan.get("unresolved_preceptor_labels", []))
@@ -372,12 +402,14 @@ def unverified_bundle(scan, years, reason="Not checked: load evaluation complete
         for name in names:
             row = {key: None for key in COLUMNS}
             row.update(preceptor_name=name, academic_year=label, report_start_date=start.isoformat(),
-                       report_end_date=end.isoformat(), record_id="", assessment_status=reason, group_year=year)
+                       report_end_date=end.isoformat(), record_id="", assessment_status=reason, group_year=year,
+                       minimum_shifts=minimum_shifts)
             rows.append(row)
             for direction in ("Student → educator", "Preceptor → student"):
                 warnings.append(_warning(name, label, "", direction, reason,
                     "Load/refresh the evaluation completeness check. Teaching reports can still be generated."))
-    return {"version": ASSESSMENT_VERSION, "context": completion_context(scan, years), "rows": rows,
+    return {"version": ASSESSMENT_VERSION, "minimum_shifts": minimum_shifts,
+            "context": completion_context(scan, years), "rows": rows,
             "warnings": warnings, "source_count": 0, "sources": [], "retrieved_at": "Not checked", "course_ids": []}
 
 
@@ -390,6 +422,9 @@ def completion_rows(bundle, scan, year):
         return []
     if bundle.get("version") != ASSESSMENT_VERSION or bundle.get("context", {}).get("opd_commit") != scan["commit"]:
         raise OPDArchiveError("Refresh evaluation completeness: its OPD snapshot differs from this report.")
+    threshold = completion_threshold(bundle)
+    if any(row.get("minimum_shifts") != threshold for row in bundle["rows"]):
+        raise OPDArchiveError("Assessment results use inconsistent minimum-shifts settings. Recalculate completion.")
     wanted = completion_context(scan, [year])["periods"]
     if any(p not in bundle["context"]["periods"] for p in wanted):
         raise OPDArchiveError("Refresh evaluation completeness: its dates differ from this report.")
@@ -400,4 +435,4 @@ def completion_display(row, prefix):
     pct = row.get(prefix + "_completion_pct")
     if pct is None:
         return "No eligible students" if row["assessment_status"].startswith("No eligible") else "Not verified"
-    return f"{row[prefix + '_students_evaluated']} / {row['eligible_students_3plus_shifts']} ({pct:.1f}%)"
+    return f"{row[prefix + '_students_evaluated']} / {row['eligible_students']} ({pct:.1f}%)"

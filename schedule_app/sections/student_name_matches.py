@@ -5,6 +5,7 @@ import json
 import streamlit as st
 
 from schedule_app.services.evaluation_access import evaluation_access_is_valid, lock_evaluation_records
+from schedule_app.services.assessment_settings import DEFAULT_MINIMUM_SHIFTS, validate_minimum_shifts
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.student_assessment_links import GitHubStudentAssessmentLinks
 from schedule_app.services.student_name_review import (
@@ -110,7 +111,7 @@ def _render_editor(service, inputs, key, opd_name, choices, *, editing=False):
                 st.error(str(exc))
 
 
-def render_student_name_matches(archive, inputs, scan, years, unmatched):
+def render_student_name_matches(archive, inputs, scan, years, unmatched, *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
     """Flag unresolved names, retain confirmed links, and show a correction queue.
 
     Uses the existing encrypted ID catalog without changing its schema or any
@@ -119,6 +120,7 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched):
     if not evaluation_access_is_valid(touch=True):
         lock_evaluation_records()
         return
+    minimum_shifts = validate_minimum_shifts(minimum_shifts)
     scope = (STUDENT_REVIEW_UI_VERSION, archive.config.signature(),
              st.session_state.get("assessment_completion_scope"), inputs.get("commit"))
     if st.session_state.get(P + "scope") != scope:
@@ -140,7 +142,7 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched):
     if missing:
         st.warning(f"Student-name match needed: {len(missing):,} of {len(active):,} OPD student names in the selected dates "
                    "do not have a unique OASIS name/Student External ID match. "
-                   f"{review['eligible_missing_count']:,} unresolved name(s) affect the 3+ shift assessment check. "
+                   f"{review['eligible_missing_count']:,} unresolved name(s) affect the {minimum_shifts}+ shift assessment check. "
                    "The denominator is not reduced; only affected completion results remain Not verified.")
     elif active:
         st.success(f"All {len(active):,} OPD student names in the selected dates have an exact or saved identity match. "
@@ -162,7 +164,7 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched):
                 st.error(str(exc))
                 st.info("The existing matches were kept. A failed refresh is not treated as an empty catalog.")
         if missing:
-            st.dataframe(review_table_rows(missing), hide_index=True, use_container_width=True)
+            st.dataframe(review_table_rows(missing, minimum_shifts=minimum_shifts), hide_index=True, use_container_width=True)
             options = list(missing)
             if st.session_state.get(P + "student_choice") not in options:
                 st.session_state[P + "student_choice"] = options[0]

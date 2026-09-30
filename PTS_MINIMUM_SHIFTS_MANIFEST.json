@@ -1,0 +1,52 @@
+{
+  "release": "PTS minimum shifts \u2014 2026-09-30",
+  "base": "Schedule_App_Modular_PTS_Student_Name_Matches.zip",
+  "files": [
+    {
+      "path": "schedule_app/reports/assessment_completion.py",
+      "action": "replace",
+      "sha256": "1f90f916188d9db0a846cf7613ecea435d3f580dde9326d18279678237c81483"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "action": "replace",
+      "sha256": "b2f72f2e81e46e5c5821565a10209c906754c14885f1298a154b3b34e79bc3b7"
+    },
+    {
+      "path": "schedule_app/sections/assessment_completion.py",
+      "action": "replace",
+      "sha256": "65298fb4f68c568c7acc8ab99567919685b6e9c43847dd7ae99cada823bc2bd6"
+    },
+    {
+      "path": "schedule_app/sections/assessment_settings.py",
+      "action": "add",
+      "sha256": "1ebb9d8e9f9717ed0bd27b3a5012505667a8bf8c7c56038ba23171ef6d536c4c"
+    },
+    {
+      "path": "schedule_app/sections/student_name_matches.py",
+      "action": "replace",
+      "sha256": "14f99a74682e14c8d37a99ccd1de8387c4549a7c02ea1319cd26d06ec5771721"
+    },
+    {
+      "path": "schedule_app/services/assessment_completion.py",
+      "action": "replace",
+      "sha256": "9f1cc8a3a2092ca1e9a3bc22032d2683f027e0f805aad844795baceaf76bd560"
+    },
+    {
+      "path": "schedule_app/services/assessment_settings.py",
+      "action": "add",
+      "sha256": "f2e42797d6d0f7b676d08f7bffbd7455959c041e01aedd51408f92f6cb0e32da"
+    },
+    {
+      "path": "schedule_app/services/student_name_review.py",
+      "action": "replace",
+      "sha256": "43be9ad9d64526c7d7a1c59960b37b7c13517a80f7e27d17aa30303c762ce558"
+    }
+  ],
+  "tests": {
+    "passed": 933,
+    "skipped": 3,
+    "new_tests": 55,
+    "github_streamlit": "simulated"
+  }
+}

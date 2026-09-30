@@ -7,6 +7,7 @@ from schedule_app.services.assessment_completion import (
     ASSESSMENT_VERSION, load_completion_inputs, build_completion_bundle,
     completion_context, completion_display, unverified_bundle,
 )
+from schedule_app.sections.assessment_settings import render_assessment_threshold
 from schedule_app.sections.student_name_matches import render_student_name_matches
 from schedule_app.services.opd_archive import OPDArchiveError
 
@@ -23,6 +24,11 @@ def render_assessment_completion(archive, scan, years):
     enabled = st.checkbox("Include assessment completion and missing-evaluation alerts", value=True, key=P + "enabled")
     if not enabled:
         return None
+    minimum_shifts = render_assessment_threshold(archive)
+    if minimum_shifts is None:
+        return unverified_bundle(scan, years, "Not checked: minimum-shifts setting not verified", minimum_shifts=None)
+    # The loaded source records do not depend on the threshold. Keep them when
+    # this setting changes; recompute denominators and percentages below.
     signature = hashlib.sha256(json.dumps([ASSESSMENT_VERSION, archive.config.signature(),
                                           completion_context(scan, years)], sort_keys=True).encode()).hexdigest()
     if st.session_state.get(P + "scope") != signature:
@@ -31,7 +37,7 @@ def render_assessment_completion(archive, scan, years):
         st.session_state[P + "scope"] = signature
         _clear_downloads()
     st.caption("Two separate measures: Clinical Assessment of Student and History Taking & Physical Exam. "
-               "Eligible = the same student assigned to the preceptor for 3+ distinct AM/PM shifts, not days. "
+               f"Eligible = the same student assigned to the preceptor for {minimum_shifts}+ distinct AM/PM shifts, not days. "
                "Completed forms use Submit Date within the same reporting period. Missing records only warn; they do not stop teaching reports.")
     if st.button("Load / refresh evaluation completeness", key=P + "refresh"):
         st.session_state.pop(P + "inputs", None)
@@ -51,7 +57,7 @@ def render_assessment_completion(archive, scan, years):
             st.warning(failure + " Teaching reports remain available.")
         else:
             st.info("Click Load / refresh evaluation completeness to check both directions. Until then, the reports mark these measures as not checked.")
-        bundle = unverified_bundle(scan, years, "Not checked: assessment data could not be verified" if failure else "Not checked: load evaluation completeness")
+        bundle = unverified_bundle(scan, years, "Not checked: assessment data could not be verified" if failure else "Not checked: load evaluation completeness", minimum_shifts=minimum_shifts)
         with st.expander("Preceptors with evaluation records not yet checked"):
             st.dataframe(bundle["warnings"], hide_index=True, use_container_width=True)
         return bundle
@@ -73,15 +79,15 @@ def render_assessment_completion(archive, scan, years):
     if (st.session_state.get(LINKS_P + "include", False) and current_links is not None
             and current_links.get("sha") != inputs["catalog"].get("sha")):
         st.warning("Preceptor usernames/summary links changed. Refresh links and OASIS summaries above, then refresh evaluation completeness. Teaching reports remain available.")
-        return unverified_bundle(scan, years, "Not checked: refresh after username/summary-link changes")
+        return unverified_bundle(scan, years, "Not checked: refresh after username/summary-link changes", minimum_shifts=minimum_shifts)
     try:
-        bundle, unmatched = build_completion_bundle(inputs, scan, years, courses=selected)
+        bundle, unmatched = build_completion_bundle(inputs, scan, years, courses=selected, minimum_shifts=minimum_shifts)
     except OPDArchiveError as exc:
         st.warning(str(exc) + " Teaching reports remain available.")
-        return unverified_bundle(scan, years, "Not checked: assessment selection needs review")
+        return unverified_bundle(scan, years, "Not checked: assessment selection needs review", minimum_shifts=minimum_shifts)
     st.caption(f"Student-assessment files checked: {bundle['source_count']} | Retrieved: {bundle['retrieved_at']}. "
                "Refresh this check after new OASIS uploads or saved username changes. It never modifies originals.")
-    render_student_name_matches(archive, inputs, scan, years, unmatched)
+    render_student_name_matches(archive, inputs, scan, years, unmatched, minimum_shifts=minimum_shifts)
     for direction, title in (("Student → educator", "Educators without verified student feedback"),
                              ("Preceptor → student", "Preceptors without verified completed student assessments")):
         issues = [r for r in bundle["warnings"] if r["direction"] == direction]
@@ -92,7 +98,7 @@ def render_assessment_completion(archive, scan, years):
         else:
             st.success(title.replace("without", "with") + ": no missing-record alerts.")
     st.dataframe([{"Preceptor": r["preceptor_name"], "Period": r["academic_year"],
-                   "Students 3+ shifts": r["eligible_students_3plus_shifts"],
+                   f"Students {minimum_shifts}+ shifts": r["eligible_students"],
                    "Clinical Assessment": completion_display(r, "clinical"),
                    "History & Physical": completion_display(r, "hp"),
                    "Either form": completion_display(r, "either"), "Status": r["assessment_status"]}

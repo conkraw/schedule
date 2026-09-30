@@ -9,6 +9,7 @@ from collections import defaultdict
 import hashlib
 import json
 
+from schedule_app.services.assessment_settings import DEFAULT_MINIMUM_SHIFTS, validate_minimum_shifts
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.oasis_educator_reports import name_key
 from schedule_app.services.student_assessment_links import student_name_key
@@ -94,12 +95,13 @@ def student_name_review(inputs, scan, years, unmatched):
             "eligible_missing_count": sum(row["affects_completion"] for row in missing.values())}
 
 
-def review_table_rows(missing):
+def review_table_rows(missing, *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
     """Readable, one-row-per-name table without implying zero assessments."""
+    minimum_shifts = validate_minimum_shifts(minimum_shifts)
     return [{"OPD student name": row["student_name"], "Issue": row["issue"],
              "Preceptor(s)": "; ".join(row["preceptors"]),
              "Reporting period(s)": "; ".join(row["periods"]),
-             "Affects completion percentage": "YES" if row["affects_completion"] else "NO — below 3-shift threshold"}
+             "Affects completion percentage": "YES" if row["affects_completion"] else f"NO — below {minimum_shifts}-shift threshold"}
             for row in missing.values()]
 
 
