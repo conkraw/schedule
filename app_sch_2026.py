@@ -28,7 +28,7 @@ SECTIONS = {
 
 # Migrate an open session from either former OASIS screen before creating the widget.
 if st.session_state.get("schedule_app_mode") in ("OASIS Evaluation Archive", "OASIS Educator Reports", "OASIS Evaluations"):
-    st.session_state["schedule_app_mode"] = "Evaluation Records"
+    st.session_state["schedule_app_mode"] = "OER"
 
 mode = st.sidebar.radio(
     "What do you want to do?", tuple(SECTIONS), key="schedule_app_mode"
