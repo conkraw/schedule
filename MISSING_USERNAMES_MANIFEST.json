@@ -1,0 +1,18 @@
+{
+  "update": "missing-preceptor-usernames",
+  "base": "Schedule_App_Modular_Simple_Hours.zip",
+  "runtime_files": [
+    {
+      "path": "schedule_app/sections/preceptor_oasis_links.py",
+      "operation": "replace",
+      "sha256": "a831e6bf0c2a90b4f039838f604e8abcfe604067e86325d12b77eb3a370e4186"
+    }
+  ],
+  "tests": {
+    "passed": 613,
+    "skipped": 1,
+    "new_tests": 34,
+    "passing_subtests": 140
+  },
+  "github": "simulated; no live repository changed"
+}
