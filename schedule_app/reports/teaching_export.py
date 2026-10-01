@@ -124,7 +124,11 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None, progress=No
         "matching their individual report. Columns are not summed across preceptors because the same "
         "student can be assigned to more than one preceptor.",
         "Unique counts use only retained assignments after outpatient/nursery priority. "
-        "These counts do not change student-shifts, educational hours, Learner Reach, or clinical-experience pies.",
+        "These counts do not change educational hours, Learner Reach, or clinical-experience pies.",
+        "When assessment completion is included, continuity counts use its exact same student identities and cutoff. "
+        "Teaching hours retain the full selected period, including future scheduled shifts.",
+        "The overall teaching CSV includes student_counts_start_date, student_counts_end_date, student_counts_status, "
+        "eligible_students and minimum_shifts. Unique students and 3+ days use those student-count dates, not the hours' full period.",
         "Future scheduled assignments in the selected academic year(s) are included.",
         "Providers with no assignments in the selected year(s) do not receive a report.",
         "The summary remains a snapshot until Load / refresh archived OPDs is clicked again.", "",

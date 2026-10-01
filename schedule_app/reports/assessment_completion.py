@@ -20,6 +20,9 @@ def append_individual_completion(doc, scan, name, year):
     minimum = completion_threshold(bundle)
     title = f"Students assigned for {minimum}+ shifts" if minimum is not None else "Eligible students"
     doc.add_paragraph("Assessments as of: " + bundle["assessments_as_of"])
+    doc.add_paragraph(f"Student-count dates: {row['report_start_date']} through {row['assessment_end_date']} (included)."
+                      if row['report_start_date'] <= row['assessment_end_date'] else
+                      "No dates before this cutoff fall within the selected reporting period.")
     doc.add_paragraph(title + " by this cutoff: " + (str(denominator) if denominator is not None else "Not checked"))
     teaching_add_work_table(doc, ("Assessment form", "Eligible students assessed"), [
         ("Clinical Assessment of Student", completion_display(row, "clinical")),
@@ -75,7 +78,7 @@ def append_chair_completion(doc, scan, year):
                       "Each student counts once per preceptor/form type. 'Either form' counts the union, not the sum.")
     doc.add_paragraph(assessment_method_note(completion_threshold(bundle), as_of=bundle["assessments_as_of"]))
     doc.add_paragraph("These are per-preceptor measures across all work types. Do not sum unique students across preceptors. "
-                      "The existing 3+ days continuity measure remains separate.")
+                      "The 3+ days continuity table uses these same student identities and cutoff. Days and shifts are different measures.")
     doc.add_paragraph(SCOPE_NOTE)
     wanted = {r["preceptor_name"] for r in rows}
     labels = {r["academic_year"] for r in rows}

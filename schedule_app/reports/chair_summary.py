@@ -8,7 +8,7 @@ from schedule_app.services.educational_time import TIME_DEFINITION, TIME_SCOPE_N
 from schedule_app.services.teaching_validation import validate_teaching_report
 from schedule_app.services.report_diagnostics import checked_report_reach
 from schedule_app.services.student_continuity import (
-    require_student_continuity_data, student_continuity_counts,
+    require_student_continuity_data, student_continuity_summary, continuity_count_text, continuity_period_note,
 )
 from schedule_app.reports.teaching_tables import teaching_add_work_table
 from collections import defaultdict
@@ -35,7 +35,7 @@ from schedule_app.services.learner_reach import (
 
 # Presentation-only version: invalidate old report downloads without discarding
 # an otherwise current OPD scan or the user's selected GitHub date preset.
-CHAIR_STUDENT_CONTINUITY_REPORT_VERSION = 3
+CHAIR_STUDENT_CONTINUITY_REPORT_VERSION = 4
 
 
 def teaching_chair_summary_data(scan, selected_years):
@@ -66,7 +66,7 @@ def teaching_chair_summary_data(scan, selected_years):
             # Overall preceptor counts, identical to the individual Word report.
             # Do not sum monthly or work-type unique counts: one student may
             # appear in several months and settings with the same preceptor.
-            entry.update(student_continuity_counts(scan, row["preceptor_name"], year))
+            entry.update(student_continuity_summary(scan, row["preceptor_name"], year))
             entry["months_brief"] = teaching_brief_months(by_name[row["preceptor_name"]])
             target = unresolved if teaching_name_key(row["preceptor_name"]) in review_keys else named
             target.append(entry)
@@ -339,8 +339,8 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
             teaching_add_work_table(
                 doc,
                 ("Preceptor", "Unique students", "Students assigned on 3+ days"),
-                [(row["preceptor_name"], f"{row['unique_students']:,}",
-                  f"{row['unique_students_3plus_days']:,}")
+                [(row["preceptor_name"], continuity_count_text(row['unique_students']),
+                  continuity_count_text(row['unique_students_3plus_days']))
                  for row in item["named_preceptors"]],
                 widths=(3.25, 1.5, 2.15), number_columns=(1, 2),
             )
@@ -350,12 +350,17 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
             teaching_add_work_table(
                 doc,
                 ("Provider label", "Unique students", "Students assigned on 3+ days"),
-                [(row["preceptor_name"], f"{row['unique_students']:,}",
-                  f"{row['unique_students_3plus_days']:,}")
+                [(row["preceptor_name"], continuity_count_text(row['unique_students']),
+                  continuity_count_text(row['unique_students_3plus_days']))
                  for row in item["unresolved_labels"]],
                 widths=(3.25, 1.5, 2.15), number_columns=(1, 2),
             )
-        note("3+ days means at least three distinct dates in this period, not three shifts. "
+        note(continuity_period_note(scan, year))
+        if any(str(row.get("student_counts_status", "")).startswith("Provisional:") for row in item["named_preceptors"]):
+            note("Some student identities still need review. Continuity and eligibility use the same provisional cohort; no similar name is credited automatically.", warning=True)
+        if any(row.get("unique_students") is None for row in item["named_preceptors"]):
+            note("Student counts have not been checked. Refresh evaluation completeness; teaching-hour totals remain available.", warning=True)
+        note("3+ days means at least three distinct dates within the student-count dates, not three shifts. "
              "AM and PM on the same date count as one day; days need not be consecutive. "
              "Do not add these columns for a clerkship-wide unique-student total: "
              "a student may appear under multiple preceptors.")

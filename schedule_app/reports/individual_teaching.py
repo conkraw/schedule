@@ -30,7 +30,7 @@ from schedule_app.services.learner_reach import (
 )
 
 from schedule_app.services.student_continuity import (
-    require_student_continuity_data, student_continuity_counts,
+    require_student_continuity_data, student_continuity_counts, continuity_count_text, continuity_period_note,
 )
 
 
@@ -141,11 +141,17 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
         doc.add_heading("Student continuity", level=2)
         p = doc.add_paragraph()
         p.add_run("Unique students assigned: ").bold = True
-        p.add_run(f"{reach['unique_students']:,}")
+        p.add_run(continuity_count_text(reach['unique_students']))
         p.add_run("   |   Students assigned on 3+ days: ").bold = True
-        p.add_run(f"{reach['unique_students_3plus_days']:,}")
+        p.add_run(continuity_count_text(reach['unique_students_3plus_days']))
         p.paragraph_format.keep_with_next = True
-        note("Students are counted once across all work types in this period. Three days means three distinct dates; "
+        note(continuity_period_note(scan, year))
+        if reach.get("eligible_students") is not None:
+            note(f"Students assigned for {reach['minimum_shifts']}+ shifts by this cutoff: {reach['eligible_students']:,}. "
+                 "This is the assessment-completion denominator.")
+        if str(reach.get("student_counts_status", "")).startswith(("Not checked", "Provisional:")):
+            note(reach["student_counts_status"] + ". Refresh evaluation completeness or review names in PTS Matching.", warning=True)
+        note("Students are counted once across all work types within the student-count dates. Three days means three distinct dates; "
              "AM and PM on the same date count as one day. These counts do not multiply educational hours.")
         reach_types = [row for row in service_rows if row["academic_year"] == label]
         doc.add_heading("By clinical experience", level=2)
