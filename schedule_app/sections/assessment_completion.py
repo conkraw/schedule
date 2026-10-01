@@ -38,7 +38,7 @@ def render_assessment_completion(archive, scan, years, *, manage_students=True,
     as_of = st.date_input("Assessments as of (included)", key=date_key,
                          min_value=date(1970, 1, 1), max_value=today, format="MM/DD/YYYY",
                          on_change=clear_teaching_downloads,
-                         help="Only scheduled shifts and submitted student assessments on or before this date count toward completion. Teaching hours and linked educator-feedback periods do not change.")
+                         help="Student continuity and assessment eligibility use the same matched students and scheduled shifts through this date. Submitted student assessments use the same cutoff. Teaching hours and linked educator-feedback periods do not change.")
     if as_of is None:
         clear_teaching_downloads()
         st.info("Select an Assessments as of date to calculate completion. No date has been assumed.")
@@ -59,7 +59,7 @@ def render_assessment_completion(archive, scan, years, *, manage_students=True,
         _clear_downloads()
     st.caption("Two separate measures: Clinical Assessment of Student and History Taking & Physical Exam. "
                f"Eligible = the same student assigned to the preceptor for {minimum_shifts}+ distinct AM/PM shifts, not days. "
-               "Completed forms use Submit Date through the cutoff above. No assessment on file is a progress notice, not overdue; it does not require a name confirmation. Teaching-hour dates are unchanged.")
+               "Student continuity uses these same student identities and cutoff. Completed forms use Submit Date through the cutoff above. No assessment on file is a progress notice, not overdue; it does not require a name confirmation. Teaching-hour dates are unchanged.")
     if st.button("Load / refresh evaluation completeness", key=P + "refresh"):
         st.session_state.pop(P + "inputs", None)
         st.session_state.pop(P + "failure", None)
