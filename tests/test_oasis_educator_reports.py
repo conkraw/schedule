@@ -10,7 +10,7 @@ from unittest.mock import patch
 from zipfile import ZipFile
 
 from cryptography.fernet import Fernet
-from helpers import st, FakeGitHub, FakeResponse, Upload, secret_settings, run_app
+from helpers import st, FakeGitHub, FakeResponse, Upload, secret_settings, run_app, ROOT
 from schedule_app.services.opd_archive import OPDArchiveConfig, GitHubOPDArchive, OPDArchiveError
 from schedule_app.services.oasis_evaluations import GitHubOASISEvaluations
 from schedule_app.services.oasis_educator_reports import (
@@ -284,7 +284,8 @@ class InterfaceTests(unittest.TestCase):
         return {'schedule_app_mode':'OASIS Educator Reports','oer_source':'Upload CSV for this report only',
                 'oer_uploads':[Upload(raw or make_csv(),'example.csv')],'oer_read':True}
     def runui(self,values,state=None):
-        return run_app(values,secrets=self.secrets,state=state,repo=self.repo)
+        return run_app(values,secrets=self.secrets,state=state,repo=self.repo,evaluation_login=True,
+                       original=ROOT/"tests"/"legacy_oasis_entrypoint.py")
     def test_menu_opens_new_section(self):
         r=self.runui({'schedule_app_mode':'OASIS Educator Reports'})
         self.assertTrue(any('OASIS Educator Reports' in text for kind,text in r['messages']))

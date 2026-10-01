@@ -77,6 +77,14 @@ class FakeStreamlit(ModuleType):
             self.session_state[key] = selected
         return selected
 
+    def number_input(self, label, value="min", min_value=None, **kwargs):
+        key = kwargs.get("key")
+        initial = min_value if value == "min" and min_value is not None else (0 if value == "min" else value)
+        selected = self._value(label, kwargs, self.session_state.get(key, initial) if key else initial)
+        if key:
+            self.session_state[key] = selected
+        return selected
+
     def radio(self, label, options, index=0, **kwargs):
         key = kwargs.get('key')
         default = self.session_state.get(key, options[index]) if key else options[index]
@@ -176,6 +184,16 @@ class FakeGitHub:
         if '/branches/' in url:
             return FakeResponse(data={'commit': {'sha': self.head}})
         path = unquote(url.split('/contents/', 1)[1])
+        if method == 'DELETE':
+            old = self.tree.get(path)
+            if old is None:
+                return FakeResponse(404)
+            if json.get('sha') != self.sha(old):
+                return FakeResponse(409)
+            del self.tree[path]
+            self._commit()
+            self.write_count += 1
+            return FakeResponse(200, {'commit': {'sha': self.head}})
         if method == 'PUT':
             old = self.tree.get(path)
             if old is not None and json.get('sha') != self.sha(old):
@@ -274,8 +292,13 @@ def canonical(raw):
     return raw.replace(b'PRECEPTOR_EMAIL_MAP in app_sch_2026.py', b'PRECEPTOR_EMAIL_MAP in schedule_app/settings.py')
 
 
-def run_app(values, *, original=None, secrets=None, state=None, repo=None):
+def run_app(values, *, original=None, secrets=None, state=None, repo=None, evaluation_login=False):
     st.reset(values=values, secrets=secrets, state=state)
+    if evaluation_login:
+        from schedule_app.services.evaluation_access import _login_callback, P as ACCESS_P
+        st.secrets["evaluation_access"] = {"password": "test-only-evaluation-passphrase-2026"}
+        st.session_state[ACCESS_P + "password"] = st.secrets["evaluation_access"]["password"]
+        _login_callback()
     for value in values.values():
         values_to_seek = value if isinstance(value,list) else [value]
         for upload in values_to_seek:
@@ -288,3 +311,11 @@ def run_app(values, *, original=None, secrets=None, state=None, repo=None):
             pass
     return {'downloads':dict(st.downloads), 'messages':list(st.messages),
             'state':dict(st.session_state), 'events':list(st.events), 'widgets':list(st.widget_keys)}
+
+
+def login_for_test():
+    """Explicit authenticated fixture for protected UI/callback functional tests."""
+    from schedule_app.services.evaluation_access import _login_callback, P as ACCESS_P
+    st.secrets["evaluation_access"] = {"password": "test-only-evaluation-passphrase-2026"}
+    st.session_state[ACCESS_P + "password"] = st.secrets["evaluation_access"]["password"]
+    _login_callback()

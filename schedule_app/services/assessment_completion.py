@@ -42,11 +42,7 @@ from schedule_app.services.student_cohort import (
     validate_student_cohort_counts,
 )
 
-<<<<<<< HEAD
 ASSESSMENT_VERSION = 6
-=======
-ASSESSMENT_VERSION = 5
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
 CLINICAL = "*Clinical Assessment of Student"
 HP = "*PEDS History Taking & Physical Exam"
 TARGETS = {_form_key(CLINICAL): "clinical", _form_key(HP): "hp"}
@@ -97,13 +93,9 @@ COLUMNS = ("preceptor_name", "academic_year", "report_start_date", "report_end_d
            "assessments_as_of", "assessment_end_date", "student_names_needing_review",
            "students_without_oasis_name_record", "clinical_students_without_assessment",
            "hp_students_without_assessment", "either_students_without_assessment",
-<<<<<<< HEAD
            "unique_students", "student_counts_status",
            "clinical_unique_students_assessed_total", "hp_unique_students_assessed_total",
            "either_unique_students_assessed_total", "total_assessments_status")
-=======
-           "unique_students", "unique_students_3plus_days", "student_counts_status")
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
 
 
 def _parse_submit(value):
@@ -383,14 +375,11 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
             else:
                 status = "Calculated"
             numeric = status == "Calculated" or status.startswith("Provisional:")
-<<<<<<< HEAD
             totals_verified = bool(rid and available and not provider_issues)
             totals_status = ("Calculated" if totals_verified else
                              "Not checked: preceptor username missing" if not rid else
                              "Not checked: no student-assessment sources/course selected" if not available else
                              "Not verified: assessment source metadata needs review")
-=======
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
             row = {"preceptor_name": name, "academic_year": label, "report_start_date": begin,
                    "report_end_date": end.isoformat(), "record_id": rid, "eligible_students": len(eligible),
                    "minimum_shifts": minimum_shifts, "assessments_as_of": cutoff.isoformat(),
@@ -482,12 +471,8 @@ def unverified_bundle(scan, years, reason="Not checked: load evaluation complete
             row.update(preceptor_name=name, academic_year=label, report_start_date=start.isoformat(),
                        report_end_date=end.isoformat(), record_id="", assessment_status=reason, group_year=year,
                        minimum_shifts=minimum_shifts, assessments_as_of=cutoff.isoformat(),
-<<<<<<< HEAD
                        assessment_end_date=min(end, cutoff).isoformat(), student_counts_status=reason,
                        total_assessments_status=reason, unique_students_3plus_days=None)
-=======
-                       assessment_end_date=min(end, cutoff).isoformat(), student_counts_status=reason)
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
             rows.append(row)
             for direction in ("Student → educator", "Preceptor → student"):
                 warnings.append(_warning(name, label, "", direction, reason,
@@ -520,10 +505,7 @@ def completion_rows(bundle, scan, year):
     if bundle.get("context", {}).get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE) != scan.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE):
         raise OPDArchiveError("Ignored student entries changed. Refresh evaluation completeness.")
     for row in bundle["rows"]:
-<<<<<<< HEAD
         validate_assessed_student_totals(row)
-=======
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
         # An unloaded check has no identities or denominator; do not invent them.
         values = [row.get(k) for k in ("unique_students", "unique_students_3plus_days", "eligible_students")]
         if all(value is None for value in values) and str(row.get("student_counts_status", "")).startswith("Not checked"):
@@ -543,7 +525,6 @@ def completion_display(row, prefix):
                 "Not checked" if status.startswith("Not checked") else "Not verified")
     result = f"{row[prefix + '_students_evaluated']} / {row['eligible_students']} ({pct:.1f}%)"
     return result + ("*" if str(row.get("assessment_status", "")).startswith("Provisional:") else "")
-<<<<<<< HEAD
 
 
 def validate_assessed_student_totals(row):
@@ -575,5 +556,3 @@ def assessed_students_total_display(row, prefix="either"):
         status = str(row.get("total_assessments_status", "Not checked"))
         return "Not verified" if status.startswith("Not verified") else "Not checked"
     return f"{value:,}"
-=======
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537

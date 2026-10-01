@@ -27,7 +27,7 @@ MODES = {
     'Instructions':'instructions', 'Format OPD + Summary':'format_opd_summary',
     'Create Student Schedule':'create_student_schedule', 'OPD Check':'opd_check',
     'Create Individual Schedules':'create_individual_schedules', 'OPD Archive':'opd_archive',
-    'Preceptor Teaching Summary':'preceptor_teaching_summary',
+    'PTS':'preceptor_teaching_summary',
     'OPD MD PA Conflict Detector':'opd_md_pa_conflict_detector',
     'Shift Availability Tracker':'shift_availability_tracker',
 }
@@ -193,10 +193,10 @@ class ModularTests(unittest.TestCase):
                     self.assertNotIn(b'Learner One',contents)
 
     def test_teaching_page_builds_chair_and_zip(self):
-        result=run_app({'schedule_app_mode':'Preceptor Teaching Summary',
+        result=run_app({'schedule_app_mode':'PTS',
                        'teaching_reporting_mode':'Standard July-June academic years',
                        'teaching_load_archives':True,'teaching_build_zip':True,'teaching_selected_years':[2026]},
-                       secrets=self.config_values,repo=self.repo)
+                       secrets=self.config_values,repo=self.repo, evaluation_login=True)
         self.assertIn('Preceptor_Teaching_26-27.zip',result['downloads'])
         self.assertIn(TEACHING_CHAIR_SUMMARY_FILENAME,result['downloads'])
 

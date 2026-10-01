@@ -25,7 +25,6 @@ def append_individual_completion(doc, scan, name, year):
                       if row['report_start_date'] <= row['assessment_end_date'] else
                       "No dates before this cutoff fall within the selected reporting period.")
     doc.add_paragraph(title + " by this cutoff: " + (str(denominator) if denominator is not None else "Not checked"))
-<<<<<<< HEAD
     p = doc.add_paragraph()
     p.add_run("Total students assessed (one per student): ").bold = True
     p.add_run(assessed_students_total_display(row))
@@ -38,13 +37,6 @@ def append_individual_completion(doc, scan, name, year):
                       "The total counts each student once across either form, not once for each form. "
                       "Only submitted records within the selected dates and cutoff are counted. "
                       "Eligible students assessed is the subset meeting the minimum-shift requirement.")
-=======
-    teaching_add_work_table(doc, ("Assessment form", "Eligible students assessed"), [
-        ("Clinical Assessment of Student", completion_display(row, "clinical")),
-        ("History Taking & Physical Exam", completion_display(row, "hp")),
-        ("At least one of these forms", completion_display(row, "either")),
-    ], widths=(4.2, 2.7), number_columns=(1,))
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
     doc.add_paragraph(assessment_method_note(completion_threshold(bundle), as_of=bundle["assessments_as_of"]))
     if str(row["assessment_status"]).startswith("Provisional:"):
         doc.add_paragraph("* " + row["assessment_status"] + ". The displayed percentage uses confirmed matches only; "
@@ -89,25 +81,16 @@ def append_chair_completion(doc, scan, year):
         [(r["preceptor_name"], assessed_students_total_display(r),
           str(r["eligible_students"]) if r["eligible_students"] is not None else "Not checked",
           completion_display(r, "clinical"), completion_display(r, "hp"), completion_display(r, "either")) for r in rows],
-<<<<<<< HEAD
         widths=(1.65, 1.0, 0.75, 1.2, 1.15, 1.25), number_columns=(1, 2, 3, 4, 5))
     doc.add_paragraph("Total students assessed counts each student once across either submitted form, regardless of the number "
                       "of shifts assigned. It includes students below the minimum or absent from the OPD; it is not the "
                       "numerator of the completion percentage. Form-specific all-student totals are in the individual reports and completion CSV.")
     doc.add_paragraph("Form-result cells show evaluated eligible students / all eligible students (percentage). "
-=======
-        widths=(1.85, 0.8, 1.45, 1.4, 1.4), number_columns=(1, 2, 3, 4))
-    doc.add_paragraph("Cells show confirmed assessments / all eligible students (percentage). "
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
                       "* Provisional: possible name discrepancies remain; no similar-name record was credited automatically. "
                       "Each student counts once per preceptor/form type. 'Either form' counts the union, not the sum.")
     doc.add_paragraph(assessment_method_note(completion_threshold(bundle), as_of=bundle["assessments_as_of"]))
     doc.add_paragraph("These are per-preceptor measures across all work types. Do not sum unique students across preceptors. "
-<<<<<<< HEAD
                       "The students-assigned table uses the same OPD identities, cutoff, and minimum-shift threshold.")
-=======
-                      "The 3+ days continuity table uses these same student identities and cutoff. Days and shifts are different measures.")
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
     doc.add_paragraph(SCOPE_NOTE)
     wanted = {r["preceptor_name"] for r in rows}
     labels = {r["academic_year"] for r in rows}

@@ -1,73 +1,72 @@
-# Pediatric Clerkship Schedule App — Modular Version with Custom Reporting Dates
+## Latest correction — student-count consistency (October 1, 2026)
 
-**Keep `app_sch_2026.py` as your Streamlit entrypoint.** It is now a 35-line launcher. Each sidebar section has its own file, and reusable Excel, archive, and Word-report code has been moved into clearly named modules.
+See [UPDATE_PTS_STUDENT_COUNT_CONSISTENCY.md](UPDATE_PTS_STUDENT_COUNT_CONSISTENCY.md).
+Continuity and assessment eligibility now share reconciled identities and the assessment cutoff.
+Teaching hours remain on the full report dates. After installing, refresh both OPDs and evaluation completeness.
+This guide supersedes historical notes stating continuity stays full-period when completion is included.
 
-This package keeps the existing modular scheduling app and adds editable dates to **Preceptor Teaching Summary**. Choose **Custom dates**, set the start and end dates, and enter a report label such as `26-27`. The chair summary, individual reports and both CSVs use that exact inclusive period, even when it crosses July or lasts longer than twelve months. The previous July-June mode remains optional. No app password has been added.
+> **Latest update: documented assessment completion.** Start with
+> `UPDATE_DOCUMENTED_ASSESSMENT_COMPLETION.md`. Missing OASIS student records now
+> remain in the denominator without mandatory confirmation; completion has its
+> own cutoff. Older update guides below are historical and are superseded where
+> they required a match for every eligible student.
 
-**Already using the working modular app?** Use the smaller six-file update and instructions in **UPDATE_CUSTOM_DATES.md**. It leaves the launcher, settings/mappings, requirements, archive service and all other sections untouched. A complete installation is described below.
+# Pediatric Clerkship Schedule App
 
-## Update your existing deployment
+A modular Streamlit app. Run `streamlit run app_sch_2026.py` with the entire
+`schedule_app/` folder beside the launcher. Keep the existing requirements and
+Streamlit Secrets. Never commit secrets or downloaded unencrypted reports.
 
-1. Make a local backup of your currently working code and custom mappings.
-2. Extract this ZIP on your computer. Upload its **contents** to the same repository directory that currently contains `app_sch_2026.py`. Replace that file and add the **entire `schedule_app` folder, including its subfolders and `__init__.py` files**. Do not flatten the folders or upload only the small launcher. Uploading the ZIP itself is not installation.
-3. Keep your existing requirements, or merge the included `requirements.txt` entries into them. This refactor adds **no new third-party dependencies** relative to the previous full-app package. Do not remove extra packages your repository needs for other apps.
-4. Leave the Streamlit entrypoint set to `app_sch_2026.py` at its existing location. Restart the app after updating the files.
-5. **Keep your existing Streamlit Secrets unchanged**, including the encryption key, token, repository, branch, folder, and any old decryption keys. Do not regenerate a key, re-encrypt OPDs, or replace your archive repository.
-6. Open each section as usual. On the teaching-summary screen, use **Load / refresh archived OPDs** before generating a new ZIP. Existing archived files remain usable.
+## Current update
 
-Files must sit together like this:
+Read **UPDATE_PTS_SIMPLIFIED.md** for this release's installation steps.
 
-```text
-repository directory/
-├── app_sch_2026.py
-├── requirements.txt
-└── schedule_app/
-    ├── __init__.py
-    ├── settings.py
-    ├── sections/
-    │   ├── __init__.py
-    │   └── ...nine section files...
-    ├── services/
-    │   ├── __init__.py
-    │   └── ...archive, schedule, and analysis helpers...
-    └── reports/
-        ├── __init__.py
-        └── ...Word and teaching ZIP builders...
-```
+**PTS** is the reporting page, without routine preceptor/student tables.
+**PTS Matching** is the separate password-protected matching/ignore page, with a
+dropdown for preceptor usernames, student names, and ignored student entries.
+**OER** and **PTS** remain the final two sidebar choices; PTS Matching precedes
+them. All three use the existing `[evaluation_access] password`.
 
-**Custom entries:** The uploaded source had an empty `PRECEPTOR_EMAIL_MAP`. It is still empty, now in `schedule_app/settings.py`. Copy any entries that exist only in your deployed version into that dictionary. The same file contains teaching-name aliases, per-rotation name-order overrides, and work-type grouping settings.
+The report ZIP includes the existing chair and individual Word reports, teaching
+CSVs, applicable diagnostics, and clinical-experience charts. Shared tables are
+calculated once per build, progress is shown, and unchanged completed results
+can be reused within the protected session after existing freshness checks.
 
-## Where to edit
+## Current calculation and storage rules
 
-Start with **EDITING_GUIDE.md**. It maps every sidebar choice to a file, and separately identifies the chair Word report, individual Word reports, weekly Power Automate report, encryption/archive logic, and editable settings.
+- Total scheduled availability includes recorded AM/PM shifts, including weekends,
+  at four hours each. Educational hours count a half-day once when at least one
+  retained student is assigned; simultaneous students do not multiply time.
+- Learner Reach is educational hours / scheduled availability. Academic Pediatrics
+  combines HOPE_DRIVE, ETOWN, and NYES and takes priority over concurrent PSHCH
+  Nursery listings. Other clinical-area conflicts still block reports.
+- Only preceptors and work types with student assignments are listed. Included
+  preceptors' blank shifts remain in the availability denominator.
+- Saved custom reporting dates, unique-student counts, three-distinct-day
+  continuity, and the persisted adjustable minimum-shifts threshold are retained.
+- OER reduces source columns before encryption and saves the existing summaries.
+  PTS uses verified username/name links and optional linked OASIS feedback and
+  assessment completion. Missing records are not fabricated as completed forms.
+- Student-name matching ignores recognized program/class designations but does not
+  fuzzy-match typos. Explicit corrections and ignored labels are encrypted and
+  reversible. Names-only matching controls do not require users to type IDs.
 
-For example:
+## Editing and installation
 
-- Chair Word summary: `schedule_app/reports/chair_summary.py`
-- Individual teaching Word reports: `schedule_app/reports/individual_teaching.py`
-- Preceptor email addresses and work-type grouping: `schedule_app/settings.py`
+Use **EDITING_GUIDE.md** for module locations. `schedule_app/settings.py` contains
+your editable mappings. Keep your deployed custom entries when using a complete
+package. The small update is safer when updating an existing installation.
 
-Sections use ordinary Python imports and `render()` functions. There is no second hidden monolithic app, code stored in strings, `exec`-based section loader, or shared global dictionary of uploaded workbooks. Runtime data stays local to the page call or in the existing Streamlit session state.
+Historical `UPDATE_*.md` and `TESTING_*.md` files describe earlier releases and are
+retained for reference. This README and UPDATE_PTS_SIMPLIFIED.md supersede their
+older screen locations and current-release installation directions. In particular,
+old names such as Evaluation Records/OASIS Evaluations refer to OER; older
+student-weighted hours and app-password-free evaluation guidance are not current.
 
-## Running locally
+See TESTING_PTS_SIMPLIFIED.md for the latest local verification and its limits.
 
-From this extracted directory, with your existing Python environment:
 
-```bash
-python -m pip install -r requirements.txt
-streamlit run app_sch_2026.py
-```
+## Latest reporting update
 
-For archive features, keep local secrets in `.streamlit/secrets.toml` and never commit that file. `secrets.example.toml` is a placeholder-only reference. Setup and offline recovery details are in **SETUP_OPD_ARCHIVE.md**.
-
-## Checks included
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-These are offline tests with invented data and simulated Streamlit/GitHub calls. They do not use real credentials or change a live repository. See **TESTING.md** for the validation actually performed, including comparisons with the supplied monolithic app.
-
-## Access and data handling
-
-The no-password behavior remains as requested. Anyone who can reach the running app can use its archive functions unless access is restricted elsewhere. Encrypted GitHub storage does not restrict who may ask the running app to decrypt a workbook. Downloaded Excel, CSV, Word, and ZIP reports are unencrypted; do not put them in the public repository. No actual secrets, OPD workbooks, or generated reports are included in this code package.
+See [Feedback, shifts and assessed-student totals](UPDATE_FEEDBACK_SHIFTS_ASSESSMENT_TOTALS.md) for the current
+feedback default, retired three-day display, and distinct assessed-student totals.

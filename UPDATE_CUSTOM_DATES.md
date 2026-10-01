@@ -1,3 +1,7 @@
+> **Historical update note:** custom date filtering remains unchanged, but the
+> local JSON save/reload controls described below have been replaced by named
+> GitHub presets. Use `UPDATE_GITHUB_DATE_PRESETS.md` for the current interface.
+
 # Editable dates for the Preceptor Teaching Summary
 
 The teaching summary now defaults to **Custom dates**. Enter an exact start date, an exact end date, and a label such as `26-27`. That entire interval is treated as one reporting period. It can cross July 1, start/end in the middle of a month or rotation, or be longer than 12 months.

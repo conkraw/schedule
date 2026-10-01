@@ -1,3 +1,7 @@
+Current Learner Reach validation: see **TESTING_LEARNER_REACH.md** (90 passing local tests).
+
+---
+
 # Validation: custom reporting dates
 
 ## Scope

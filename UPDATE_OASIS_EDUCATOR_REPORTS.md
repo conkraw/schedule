@@ -1,3 +1,5 @@
+> **Historical UI guide:** the two OASIS screens are now combined. Use `UPDATE_OASIS_COMBINED_WORKFLOW.md` for current workflow and installation instructions. Source schemas and calculation details below remain useful.
+
 # OASIS Educator Reports — install and use
 
 ## Install the small update (recommended)

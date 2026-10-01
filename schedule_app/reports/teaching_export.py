@@ -128,11 +128,7 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None, progress=No
         "When assessment completion is included, continuity counts use its exact same student identities and cutoff. "
         "Teaching hours retain the full selected period, including future scheduled shifts.",
         "The overall teaching CSV includes student_counts_start_date, student_counts_end_date, student_counts_status, "
-<<<<<<< HEAD
         "eligible_students and minimum_shifts. Unique students and shift eligibility use those student-count dates, not the hours' full period.",
-=======
-        "eligible_students and minimum_shifts. Unique students and 3+ days use those student-count dates, not the hours' full period.",
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
         "Future scheduled assignments in the selected academic year(s) are included.",
         "Providers with no assignments in the selected year(s) do not receive a report.",
         "The summary remains a snapshot until Load / refresh archived OPDs is clicked again.", "",
@@ -318,12 +314,8 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None, progress=No
                       "Completion counts only shifts and Submit Dates through the assessment cutoff, not future teaching assignments.",
                       "Students without an OASIS record remain in the denominator. No confirmation is required for absence alone.",
                       "Provisional percentages use confirmed identity matches; real name discrepancies remain reviewable.",
-<<<<<<< HEAD
                       "All-student assessment totals count each Student External ID once per form and once in the either-form union, regardless of the minimum shifts.",
                       "Eligible completion percentages use only the OPD subset meeting the selected minimum shifts; the all-student total is not their numerator.",
-=======
-                      "The selected minimum-shifts denominator differs from the existing 3+ distinct days continuity measure.",
->>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
                       "No student names, external IDs, grades or assessment comments are exported in these completion tables.",
                       "An unverified/unchecked value is blank in CSV; it is not zero."]
         zf.writestr("Report_Notes.txt", "\n".join(notes).encode("utf-8"))

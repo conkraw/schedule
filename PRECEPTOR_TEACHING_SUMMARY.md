@@ -1,3 +1,15 @@
+# Current teaching-hours definition (September 30, 2026)
+
+Read **UPDATE_SIMPLE_EDUCATIONAL_HOURS.md** first. **Total scheduled availability** counts recorded AM/PM shifts (including weekends), four hours each. **Educational hours** count shifts with at least one student, four hours each regardless of simultaneous students. **Learner Reach** is their ratio. This supersedes older student-weighted educational-hours instructions below. Historical release notes are retained for context, not as the current metric definition. Linked OASIS feedback, unique-student counts, encrypted archives, date presets, and username links remain supported.
+
+---
+
+> **Current update: outpatient priority.** Academic Pediatrics (HOPE_DRIVE, ETOWN, NYES) takes priority over PSHCH Nursery for the same preceptor/date/AM-or-PM. Both clinical hours and educational credit are recalculated before reports. See **UPDATE_OUTPATIENT_PRIORITY.md**; earlier update documents describe previous behavior.
+
+## Current inclusion rule
+
+Only preceptors and work-type entries with student assignments during the selected reporting period are shown. Blank shifts for those contributors remain in the Learner Reach denominator. Overall recorded clinical hours can include omitted settings; see UPDATE_TEACHING_CONTRIBUTORS.md for details.
+
 # Preceptor Teaching Summary
 
 Current version: teaching totals by **custom reporting period** and type of work.
@@ -8,7 +20,7 @@ Both dates are included. The actual assignment date determines inclusion, includ
 
 The original July-June mode is still available as an optional choice for standard academic-year reports. No month/day is forced in custom mode. Your exact dates were not guessed from the example months discussed in chat.
 
-To retain dates beyond the current browser session, use **Save / reload these date settings (optional)** to download and later import a small JSON file. See **UPDATE_CUSTOM_DATES.md** for detailed instructions.
+To retain dates beyond the current session, use **Save or delete date presets in GitHub**. Later, choose a preset in **Saved date presets** and click **Load selected dates**. No JSON file handling is required. See **UPDATE_GITHUB_DATE_PRESETS.md**.
 
 HOPE_DRIVE, ETOWN and NYES are grouped as Academic Pediatrics. Ward A, PSHCH Nursery and Complex Care are separate. Other sites retain separate work-type labels. See EDITING_GUIDE.md for the settings and module locations; see README.md for installation instructions.
 
@@ -40,3 +52,16 @@ Reports remain a snapshot until Load / refresh archived OPDs is clicked again. C
 ## Access
 
 The supplied app has no additional password gate, as requested. Access to the running app can expose decrypted files and generated reports unless restricted elsewhere. Encryption protects the stored GitHub contents, not who may operate the running app. Do not commit decrypted OPDs or report ZIPs to the public repository.
+
+
+## Unique students in the individual Word reports
+
+Individual Word reports now show **Unique students assigned** and **Students assigned
+on 3+ days** for each selected reporting period. Days are distinct calendar dates;
+AM and PM on the same date count as one day. Counts span work types and rotations
+within the selected period and apply the existing outpatient/nursery exclusion first.
+
+The calculation lives in `schedule_app/services/student_continuity.py`; the Word
+layout lives in `schedule_app/reports/individual_teaching.py`. No existing CSV schema
+is changed. Refresh archived OPDs once after installing this update. See
+`UPDATE_UNIQUE_STUDENTS.md` for setup, definitions, privacy and testing details.

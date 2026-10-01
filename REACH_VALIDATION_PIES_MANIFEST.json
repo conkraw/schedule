@@ -1,0 +1,26 @@
+{
+  "release": "Strict Learner Reach + Clinical Experience Pies",
+  "base": "Schedule_App_Modular_Teaching_Contributors.zip",
+  "changed_python_files": [
+    "schedule_app/reports/chair_summary.py",
+    "schedule_app/reports/individual_teaching.py",
+    "schedule_app/reports/learner_reach_charts.py",
+    "schedule_app/reports/teaching_export.py",
+    "schedule_app/sections/preceptor_teaching_summary.py",
+    "schedule_app/services/learner_reach.py",
+    "schedule_app/services/teaching_analysis.py",
+    "schedule_app/services/teaching_validation.py"
+  ],
+  "requires_one_archive_refresh": true,
+  "new_dependency": "matplotlib>=3.9,<4",
+  "sha256": {
+    "schedule_app/reports/chair_summary.py": "690d0f5ade969513ecb306643e390b98599390ee85f0df34388676f6ce7de929",
+    "schedule_app/reports/individual_teaching.py": "169f52e29f4d0aeec2c69e6d6ec2fee53bc1113446fd22f48fa6fd1e6dcd4518",
+    "schedule_app/reports/learner_reach_charts.py": "e86ed40b39de5972458769f811b107bd7d2e37cfa0d34e860887aaabdce15a6e",
+    "schedule_app/reports/teaching_export.py": "88a605636adc8a1403974889019edb4028ee05a405e0da3994b76f18507813cd",
+    "schedule_app/sections/preceptor_teaching_summary.py": "38895747934a6f321c028279d4a930b95970616a15f0f59c63781d2523e8f28d",
+    "schedule_app/services/learner_reach.py": "9c43b9976298015af59ff99bee6af67d62931c73c5398e2f6932aa639c373dbd",
+    "schedule_app/services/teaching_analysis.py": "00bdf1d732483f2bf8fc6004cc7922f595487dc6faccb0087da3441ab5879ae8",
+    "schedule_app/services/teaching_validation.py": "ff3349e1aad71165ce4871aa04bde595ac00fef3d70652112b9dd287c932ad26"
+  }
+}

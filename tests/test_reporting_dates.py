@@ -1,3 +1,4 @@
+from helpers import login_for_test
 """Exact-date reporting regression tests. Invented provider/student data only."""
 import copy
 import csv
@@ -12,6 +13,7 @@ from helpers import st, FakeGitHub, Upload, secret_settings, run_app
 from openpyxl import Workbook
 from docx import Document
 from schedule_app.services.opd_archive import GitHubOPDArchive, get_opd_archive_config, OPDArchiveError
+from schedule_app.services.educational_time import TIME_CSV_COLUMNS, TIME_WORK_TYPE_CSV_COLUMNS
 from schedule_app.services.reporting_periods import (
     ReportingPeriod, reporting_period_json, read_reporting_period_json,
     teaching_report_date_text,
@@ -20,9 +22,12 @@ from schedule_app.services.teaching_analysis import (
     teaching_scan_archives, teaching_filter_date_range, teaching_require_date_range_data,
     teaching_annual_rows, teaching_work_type_rows,
 )
+from schedule_app.services.learner_reach import LEARNER_REACH_COLUMNS
 from schedule_app.reports.chair_summary import teaching_chair_summary_data
 from schedule_app.reports.teaching_export import teaching_build_zip
-from schedule_app.sections.preceptor_teaching_summary import _load_period_settings
+from schedule_app.sections.reporting_date_controls import load_selected_preset
+from schedule_app.services.reporting_presets import GitHubReportingPresets
+from unittest.mock import patch
 from schedule_app.settings import TEACHING_CSV_COLUMNS, TEACHING_WORK_TYPE_CSV_COLUMNS, TEACHING_CHAIR_SUMMARY_FILENAME
 
 
@@ -63,7 +68,7 @@ def fixture_archive():
         ('WARD A','C6'): 'Adams, Alex ~ Learner One',
         ('COMPLEX','D6'): 'Adams, Alex ~ Learner One',
         ('WARD A','E6'): 'Brown, Blair ~ Learner Two',
-        ('COMPLEX','E6'): 'Brown, Blair ~ Learner Two',
+        ('WARD A','E7'): 'Brown, Blair ~ Learner Two', # benign same-work-type duplicate
     }))
     client.save(small_opd(date(2027,3,15), {
         ('NYES','C6'): 'Adams, Alex ~ Learner One',
@@ -102,12 +107,12 @@ class ReportingDatesTests(unittest.TestCase):
         self.assertEqual(sum(r['no_of_shifts'] for r in self.rows),9)
         self.assertEqual({r['preceptor_name']:r['no_of_shifts'] for r in self.rows},
                          {'Adams, Alex':6,'Brown, Blair':2,'Diaz, Drew':1})
-        self.assertEqual(sum(r['educational_hours'] for r in self.rows),36)
+        self.assertEqual(sum(r['educational_hours'] for r in self.rows),28)
 
     def test_july_does_not_split_custom_period(self):
         self.assertEqual({r['academic_year'] for r in self.rows},{'26-27'})
         self.assertEqual({r['academic_start_year'] for r in self.view['monthly']},{2026})
-        self.assertEqual(len(self.rows),3)
+        self.assertEqual(len(self.rows),3) # only teaching contributors are listed
         self.assertEqual(len(teaching_chair_summary_data(self.view,[2026])),1)
 
     def test_same_day_counts_both_students(self):
@@ -115,7 +120,7 @@ class ReportingDatesTests(unittest.TestCase):
         rows=teaching_annual_rows(view,[2026])
         self.assertEqual(len(rows),1)
         self.assertEqual(rows[0]['no_of_shifts'],2)
-        self.assertEqual(rows[0]['educational_hours'],8)
+        self.assertEqual(rows[0]['educational_hours'],4)
 
     def test_custom_label_is_not_derived_from_start_year(self):
         view=teaching_filter_date_range(self.scan,ReportingPeriod('Teaching cohort 2027',self.period.start,self.period.end))
@@ -137,16 +142,21 @@ class ReportingDatesTests(unittest.TestCase):
     def test_work_type_subtotals_reconcile(self):
         typed=teaching_work_type_rows(self.view,[2026])
         self.assertEqual(sum(r['no_of_shifts'] for r in typed),9)
-        self.assertEqual(sum(r['educational_hours'] for r in typed),36)
+        self.assertEqual(sum(r['educational_hours'] for r in typed),28)
         self.assertEqual({r['work_type'] for r in typed},
-                         {'Academic Pediatrics','Ward A','PSHCH Nursery','Complex Care','Work type needs review'})
+                         {'Academic Pediatrics','Ward A','PSHCH Nursery','Complex Care'})
 
-    def test_cross_type_duplicates_count_once_and_use_custom_label(self):
-        conflicts=self.view['work_type_conflicts']
-        self.assertEqual(len(conflicts),1)
-        self.assertEqual(conflicts[0]['no_of_student_shifts'],1)
-        self.assertEqual(conflicts[0]['academic_year'],'26-27')
+    def test_cross_type_duplicates_block_within_custom_dates(self):
+        from schedule_app.services.teaching_validation import TeachingConflictError
+        from test_learner_reach import scan_cells
+        scan,*_=scan_cells({('NYES','B6'):'Example, Provider ~ Student One',
+                           ('COMPLEX','B6'):'Example, Provider ~ Student One'})
+        view=teaching_filter_date_range(scan,ReportingPeriod('Custom cohort',date(2026,9,7),date(2026,9,8)))
+        self.assertEqual(view['work_type_conflicts'][0]['academic_year'],'Custom cohort')
+        with self.assertRaises(TeachingConflictError):
+            teaching_build_zip(view,[2026])
         self.assertEqual(self.scan['duplicate_assignments_removed'],2)
+
 
     def test_aggregate_scan_not_changed_by_filters(self):
         before=copy.deepcopy(self.scan)
@@ -201,8 +211,8 @@ class ReportingDatesTests(unittest.TestCase):
     def test_csv_columns_and_period_metadata(self):
         with ZipFile(BytesIO(self.zip_bytes)) as z:
             self.assertIsNone(z.testzip())
-            for file,headers in [('preceptor_teaching_summary.csv',TEACHING_CSV_COLUMNS),
-                                 ('preceptor_teaching_by_work_type.csv',TEACHING_WORK_TYPE_CSV_COLUMNS)]:
+            for file,headers in [('preceptor_teaching_summary.csv',TIME_CSV_COLUMNS),
+                                 ('preceptor_teaching_by_work_type.csv',TIME_WORK_TYPE_CSV_COLUMNS)]:
                 reader=csv.DictReader(StringIO(z.read(file).decode('utf-8-sig')))
                 self.assertEqual(tuple(reader.fieldnames),tuple(headers))
                 self.assertEqual({r['academic_year'] for r in reader},{'26-27'})
@@ -226,6 +236,7 @@ class ReportingDatesTests(unittest.TestCase):
         data=teaching_chair_summary_data(self.view,[2026])[0]
         self.assertEqual(data['source_count'],3)
         self.assertEqual(data['named_preceptor_count'],3)
+        self.assertEqual(data['named_preceptors_with_students'],3)
         self.assertEqual(data['unresolved_labels'],[])
         self.assertFalse(data['has_missing_provider'])
         with ZipFile(BytesIO(self.zip_bytes)) as z:
@@ -244,11 +255,11 @@ class ReportingDatesTests(unittest.TestCase):
             self.assertIn('July 1, 2026 - June 30, 2027',chair)
 
     def run_ui(self,extra=None,state=None):
-        values={'schedule_app_mode':'Preceptor Teaching Summary',
+        values={'schedule_app_mode':'PTS',
                 'teaching_period_start':self.period.start,'teaching_period_end':self.period.end,
                 'teaching_period_label':self.period.label}
         values.update(extra or {})
-        return run_app(values,secrets=self.secrets,state=state,repo=self.repo)
+        return run_app(values,secrets=self.secrets,state=state,repo=self.repo, evaluation_login=True)
 
     def test_ui_builds_custom_zip(self):
         result=self.run_ui({'teaching_load_archives':True,'teaching_build_zip':True})
@@ -278,20 +289,26 @@ class ReportingDatesTests(unittest.TestCase):
         state=result['state']
         for key in ('teaching_period_start','teaching_period_end','teaching_period_label','teaching_reporting_mode'):
             state.pop(key,None)
-        again=run_app({'schedule_app_mode':'Preceptor Teaching Summary'},secrets=self.secrets,state=state,repo=self.repo)
+        again=run_app({'schedule_app_mode':'PTS'},secrets=self.secrets,state=state,repo=self.repo, evaluation_login=True)
         self.assertEqual(again['state']['teaching_period_start'],self.period.start)
         self.assertEqual(again['state']['teaching_period_label'],self.period.label)
 
-    def test_ui_import_saved_period_callback(self):
-        st.reset(state={'teaching_period_json_upload':Upload(reporting_period_json(self.period),'dates.json'),
-                        'teaching_zip':b'old'})
-        _load_period_settings()
+    def test_ui_load_github_period_callback(self):
+        # The local JSON uploader was deliberately replaced with a GitHub preset.
+        service=GitHubReportingPresets(self.client)
+        initial=service.load()
+        receipt=service.save('Callback example',self.period,initial)
+        st.reset(secrets=self.secrets,state={'teaching_presets_snapshot':receipt['snapshot'],
+                                           'teaching_zip':b'old'})
+        login_for_test()
+        with patch('schedule_app.services.opd_archive.requests.request',self.repo.request):
+            load_selected_preset(receipt['preset_id'])
         self.assertEqual(st.session_state['teaching_period_start'],self.period.start)
         self.assertEqual(st.session_state['teaching_period_label'],'26-27')
         self.assertNotIn('teaching_zip',st.session_state)
 
     def test_ui_defaults_do_not_guess_user_dates(self):
-        result=run_app({'schedule_app_mode':'Preceptor Teaching Summary'},secrets=self.secrets,repo=self.repo)
+        result=run_app({'schedule_app_mode':'PTS'},secrets=self.secrets,repo=self.repo, evaluation_login=True)
         self.assertIsNone(result['state']['teaching_period_start'])
         self.assertIsNone(result['state']['teaching_period_end'])
         self.assertEqual(result['state']['teaching_reporting_mode'],'Custom dates')
@@ -299,3 +316,5 @@ class ReportingDatesTests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+# Time-based CSV schema supersedes the old student-weighted export contract.

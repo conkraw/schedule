@@ -1,3 +1,5 @@
+> **Later update:** designation-only differences now match automatically. See `UPDATE_PTS_AUTOMATIC_NAME_MATCHING.md`. The old statement below that `(MD)` requires confirmation no longer applies.
+
 # PTS: confirm student names, not external IDs
 
 ## What changed
