@@ -1,0 +1,80 @@
+{
+  "release": "2026-09-30-simple-pts-1",
+  "basis": "Schedule_App_Modular_PTS_Ignored_Students.zip",
+  "files": [
+    {
+      "action": "replace",
+      "file": "app_sch_2026.py",
+      "sha256": "362981e3f5efb63fb99fa21eb1b7246ccda64583df210e1d6df5bfa337d8108c"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/reports/chair_summary.py",
+      "sha256": "01090d1f063afdd3fcbf15e30e39e4610b0e599bce7248ca3f6be50d83617fa5"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/reports/individual_teaching.py",
+      "sha256": "532c5df07235dc4afde59e262b3106bcdd2a9aeee04d22126b75e03d8ce52774"
+    },
+    {
+      "action": "add",
+      "file": "schedule_app/reports/teaching_batch.py",
+      "sha256": "39e9e27fda8f2cbaa6425ce2533e33f62dd8142a2b2dfc6382b73fb647db682c"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/reports/teaching_export.py",
+      "sha256": "5162124393d58ff4110c1060600c84e09d0c00cdf380acd5c1923cc3dbb0c011"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/sections/assessment_completion.py",
+      "sha256": "8771a6cb8e20ced77b1867d05fa884ace62c267c5817941ed8bcfc4debdc7dd3"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/sections/preceptor_oasis_links.py",
+      "sha256": "b5a411a6fef6526aae740498a6d081422c00db9b23c0aa8778f4c1f27a8fdf21"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/sections/preceptor_teaching_summary.py",
+      "sha256": "8a0b697b892eedbe36e7f91d2a8e47130dcce868435ff0e0f4aa0a09b0912918"
+    },
+    {
+      "action": "add",
+      "file": "schedule_app/sections/pts_matching.py",
+      "sha256": "66992bd16930a387ac5ed964a9f3eaa579b61f09b25704c6b469960301f812ce"
+    },
+    {
+      "action": "add",
+      "file": "schedule_app/sections/pts_navigation.py",
+      "sha256": "cef61f45c51f396f3c28726b443b67f593b03126cdc8918324457e3a506ddb3b"
+    },
+    {
+      "action": "add",
+      "file": "schedule_app/sections/pts_workspace.py",
+      "sha256": "23eea3aee582440b3acaae668ba06b75a63cbe65df185d89ae9a97506b0b7cad"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/sections/reporting_date_controls.py",
+      "sha256": "29bec0ca52c5d0d2d448f828f89319d1d25f91439eb468fdd382f0e14bdb7fdc"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/sections/student_name_matches.py",
+      "sha256": "fadcfffc0211bead2acd7cefd0ea0ac97fbcf34b201a6bb84b908b734a0d1330"
+    },
+    {
+      "action": "replace",
+      "file": "schedule_app/services/evaluation_access.py",
+      "sha256": "d38536d01ab56f7cb53a90ef1ab9bc63f865ac085fd0e2476e9199a9971873a6"
+    }
+  ],
+  "runtime_file_count": 14,
+  "settings_changed": false,
+  "new_dependencies": false,
+  "credentials_changed": false
+}

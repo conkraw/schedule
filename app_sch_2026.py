@@ -1,7 +1,6 @@
 """Pediatric clerkship schedule app entrypoint.
 
 Run: streamlit run app_sch_2026.py
-Edit a section in schedule_app/sections/, not this launcher.
 Editable mappings are in schedule_app/settings.py.
 """
 
@@ -11,7 +10,7 @@ import streamlit as st
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
 
-# Keep scheduling sections first; protected OER and PTS are the last two choices.
+# Keep OER and PTS as the last two choices.
 # Preserve the session key used by the existing archive navigation callbacks.
 SECTIONS = {
     "Instructions": "instructions",
@@ -22,6 +21,7 @@ SECTIONS = {
     "OPD Archive": "opd_archive",
     "OPD MD PA Conflict Detector": "opd_md_pa_conflict_detector",
     "Shift Availability Tracker": "shift_availability_tracker",
+    "PTS Matching": "pts_matching",
     "OER": "oasis_workflow",
     "PTS": "preceptor_teaching_summary",
 }
@@ -33,6 +33,11 @@ LEGACY_SECTIONS = {"Evaluation Records": "OER", "OASIS Evaluation Archive": "OER
 previous_mode = st.session_state.get("schedule_app_mode")
 if previous_mode in LEGACY_SECTIONS:
     st.session_state["schedule_app_mode"] = LEGACY_SECTIONS[previous_mode]
+
+# Preserve only non-secret PTS widget choices when navigating away. Streamlit
+# normally removes widget state for controls not rendered on the next page.
+from schedule_app.sections.pts_navigation import preserve_pts_preferences
+preserve_pts_preferences()
 
 mode = st.sidebar.radio(
     "What do you want to do?", tuple(SECTIONS), key="schedule_app_mode"
