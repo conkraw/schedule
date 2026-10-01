@@ -28,6 +28,9 @@ from schedule_app.services.oasis_workflow import GitHubOASISSummaries
 from schedule_app.services.teaching_analysis import teaching_scan_archives
 from schedule_app.services.student_name_matching import StudentNameMatcher, student_name_without_designations
 
+from schedule_app.services.ignored_student_entries import (
+    GitHubIgnoredStudentEntries, EMPTY_EXCLUSION_SIGNATURE, require_matching_exclusions,
+)
 from schedule_app.services.assessment_settings import DEFAULT_MINIMUM_SHIFTS, validate_minimum_shifts
 
 ASSESSMENT_VERSION = 3
@@ -206,6 +209,8 @@ def load_completion_inputs(archive, scan, years, *, progress=None):
     only aggregated results are passed into reports and CSV downloads.
     """
     commit = archive._head()
+    ignored = GitHubIgnoredStudentEntries(archive).load(commit=commit)
+    ignored_signature = require_matching_exclusions(scan, ignored)
     service = GitHubOASISStudentEvaluations(archive)
     listing = service.list_exports(commit=commit)
     filenames = listing["filenames"]
@@ -228,7 +233,8 @@ def load_completion_inputs(archive, scan, years, *, progress=None):
     student_links = GitHubStudentAssessmentLinks(archive).load(commit=commit)
     assignments = []
     replay = teaching_scan_archives(archive, scan["default_name_order"], commit=scan["commit"],
-                                   assessment_collector=assignments.extend)
+                                   assessment_collector=assignments.extend,
+                                   ignored_student_entries=tuple(ignored["entries"]))
     # Pin to and verify the displayed OPD source set, even when other catalog
     # writes have moved Git HEAD since the OPDs were scanned.
     expected = sorted((r["archive_file"], r["github_blob_sha"]) for r in scan["sources"])
@@ -248,7 +254,8 @@ def load_completion_inputs(archive, scan, years, *, progress=None):
             summaries[str(year)] = parsed
         except OPDArchiveError:
             feedback_issues[str(year)] = "Not checked: linked educator-feedback summary could not be verified; refresh its link"
-    return {"prepared": prepared, "assignments": assignments, "catalog": catalog, "student_links": student_links,
+    return {"student_exclusions_signature": ignored_signature,
+            "prepared": prepared, "assignments": assignments, "catalog": catalog, "student_links": student_links,
             "summaries": summaries, "feedback_issues": feedback_issues, "sources": manifests,
             "opd_commit": scan["commit"], "commit": commit,
             "retrieved_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
@@ -260,7 +267,9 @@ def _warning(name, label, rid, direction, issue, action):
 
 
 def completion_context(scan, years):
-    return {"opd_commit": scan["commit"], "periods": [
+    return {"opd_commit": scan["commit"],
+            "student_exclusions_signature": scan.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE),
+            "periods": [
         [year, start.isoformat(), end.isoformat(), label]
         for year, start, end, label in active_periods(scan, years)]}
 
@@ -272,6 +281,9 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
     remain Not verified until resolved; report generation itself is not blocked.
     """
     minimum_shifts = validate_minimum_shifts(minimum_shifts)
+    if (inputs.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE)
+            != scan.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE)):
+        raise OPDArchiveError("Ignored student entries changed. Reload evaluation completeness before calculating percentages.")
     prepared = inputs["prepared"]
     chosen = set(courses) if courses is not None else set(prepared["courses"])
     if courses is None and len(chosen) > 1:

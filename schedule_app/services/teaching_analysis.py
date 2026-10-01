@@ -188,7 +188,9 @@ def teaching_split_assignment(value, order):
     return parsed
 
 
-def teaching_extract_assignments(raw, details, order, *, clinical_sessions=None, ignored_cells=None):
+def teaching_extract_assignments(raw, details, order, *, clinical_sessions=None, ignored_cells=None,
+                                 ignored_student_entries=(), student_entry_inventory=None,
+                                 excluded_student_records=None):
     """Read AM/PM cells under each *actual* date, including hidden OPD rows.
 
     Returns temporary records containing student names. The caller aggregates
@@ -196,6 +198,8 @@ def teaching_extract_assignments(raw, details, order, *, clinical_sessions=None,
     """
     wb = load_workbook(BytesIO(raw), read_only=True, data_only=False)
     records, missing_provider_cells = [], []
+    from schedule_app.services.ignored_student_entries import ignored_entry_key
+    exclusion_keys = {ignored_entry_key(name) for name in ignored_student_entries}
     # Optional output lists preserve the existing extractor's two-value return.
     # Clinical records never contain learner identifiers.
     if clinical_sessions is None:
@@ -249,6 +253,21 @@ def teaching_extract_assignments(raw, details, order, *, clinical_sessions=None,
                             continue
                         if current_dates is None:
                             raise OPDArchiveError(f"{sheet_name}!{cell.coordinate} has a provider listing before a date header.")
+                        # Collect only a protected-session name/date inventory, never report data.
+                        if student_entry_inventory is not None:
+                            for student in students:
+                                inv_key = ignored_entry_key(student)
+                                item = student_entry_inventory.setdefault(inv_key, {"student_entry": student, "dates": set()})
+                                item["dates"].add(current_dates[col_index].isoformat())
+                        retained = []
+                        for student in students:
+                            if ignored_entry_key(student) in exclusion_keys:
+                                if excluded_student_records is not None:
+                                    # No learner name/ID is put in the scan's audit counters.
+                                    excluded_student_records.append(current_dates[col_index].isoformat())
+                            else:
+                                retained.append(student)
+                        students = retained
                         clinical_sessions.append({
                             "preceptor_name": provider, "has_student": bool(students),
                             "day": current_dates[col_index], "shift": match.group(1).upper(),
@@ -266,7 +285,8 @@ def teaching_extract_assignments(raw, details, order, *, clinical_sessions=None,
 
 
 def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progress=None,
-                           *, commit=None, assessment_collector=None):
+                           *, commit=None, assessment_collector=None,
+                           ignored_student_entries=(), student_entry_collector=None):
     """Read/decrypt each current OPD at one repository snapshot, retaining work type.
 
     Student names are temporary. Run-local keyed digests deduplicate assignments
@@ -286,6 +306,9 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
     # One anonymous item per provider/student/date/AM-or-PM assignment.
     seen_assignments = {}
     clinical = ClinicalShiftAccumulator()
+    from schedule_app.services.ignored_student_entries import exclusion_signature
+    ignored_student_entries = tuple(ignored_student_entries)
+    student_entry_inventory, excluded_student_records = {}, []
     salt = _teaching_secrets.token_bytes(32)
     aliases = {teaching_name_key(k): teaching_display_name(v)
                for k, v in TEACHING_PRECEPTOR_NAME_MAP.items() if str(k).strip() and str(v).strip()}
@@ -302,6 +325,9 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             records, missing_cells = teaching_extract_assignments(
                 loaded["raw"], loaded["details"], order,
                 clinical_sessions=clinical_sessions, ignored_cells=ignored_cells,
+                ignored_student_entries=ignored_student_entries,
+                student_entry_inventory=student_entry_inventory if student_entry_collector is not None else None,
+                excluded_student_records=excluded_student_records,
             )
         except OPDArchiveError as exc:
             raise OPDArchiveError(f"Rotation {rotation.isoformat()}: {exc} No ZIP was generated from partial data.") from None
@@ -478,7 +504,12 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
         "source_sites": sorted(daily_sites[(key, day, work_type)]),
     } for (key, day, work_type), count in sorted(
         daily_counts.items(), key=lambda pair: (pair[0][0], pair[0][1], teaching_work_type_sort(pair[0][2]))) ]
+    if student_entry_collector is not None:
+        student_entry_collector([{**item, "dates": sorted(item["dates"])}
+                                 for _, item in sorted(student_entry_inventory.items())])
     result = {
+        "student_exclusions_signature": exclusion_signature(ignored_student_entries),
+        "excluded_student_entry_listings_by_date": dict(sorted(Counter(excluded_student_records).items())),
         "student_shifts_removed_by_outpatient_priority": removed_assignments,
         "date_range_version": DATE_RANGE_SCHEMA_VERSION,
         "daily_by_work_type": daily_by_type,
