@@ -124,7 +124,7 @@ def teaching_chair_summary_data(scan, selected_years):
     return summaries
 
 
-def teaching_make_chair_summary(scan, selected_years, *, charts=None):
+def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=None):
     """One editable, chair-friendly Word report covering all selected years.
 
     Educational hours count each preceptor AM/PM with students once, not once
@@ -138,7 +138,13 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None):
     from docx.oxml.ns import qn
 
     require_learner_reach_data(scan)
-    summaries = teaching_chair_summary_data(scan, selected_years)
+    if _batch is None:
+        summaries = teaching_chair_summary_data(scan, selected_years)
+    else:
+        from schedule_app.reports.teaching_batch import TeachingReportBatch
+        if not isinstance(_batch, TeachingReportBatch):
+            raise OPDArchiveError("Invalid report preparation context. Rebuild the reports.")
+        summaries = _batch.chair_summaries(scan, selected_years)
     if not summaries or not any(item["no_of_shifts"] for item in summaries):
         raise OPDArchiveError("No student assignments were found for the selected reporting period(s); no empty chair summary was generated.")
 

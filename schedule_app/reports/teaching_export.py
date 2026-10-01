@@ -61,8 +61,10 @@ def teaching_csv_bytes(rows, columns=TIME_CSV_COLUMNS):
     return stream.getvalue().encode("utf-8-sig")
 
 
-def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
+def teaching_build_zip(scan, selected_years, *, oasis_feedback=None, progress=None):
     """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
+    if progress:
+        progress(0, 1, "Checking the report data...")
     require_learner_reach_data(scan)
     years = sorted({int(year) for year in selected_years})
     validate_teaching_report(scan, years)
@@ -75,6 +77,13 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
     for item in scan["monthly"]:
         if item["academic_start_year"] in years and int(item["no_of_shifts"]) > 0:
             monthly_by_name[item["preceptor_name"]].append(item)
+    total_steps = len(monthly_by_name) + 5
+    def notify(done, text):
+        if progress:
+            progress(done, total_steps, text)
+    from schedule_app.reports.teaching_batch import TeachingReportBatch
+    batch = TeachingReportBatch(scan, years)
+    notify(1, "Preparing shared teaching totals...")
     eligible = teaching_participation_keys(scan, years)
     active_names = {name for name, _, _ in eligible}
     active_sites = {site for row in typed for site in row.get("source_sites", "").split("; ") if site}
@@ -213,11 +222,13 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
               f"Unique student-shifts removed by outpatient priority across the full archive: {scan.get('student_shifts_removed_by_outpatient_priority', 0):,}.",
               "Archive_Sources.csv counts satisfy: assignments read = retained unique credit + retained duplicates + excluded nursery listings."]
     with report_step("Chair summary calculations"):
-        summaries = teaching_chair_summary_data(scan, years)
+        summaries = batch.chair_summaries(scan, years)
+    notify(2, "Creating clinical-experience pie charts...")
     with report_step("Clinical experience pie charts"):
         charts = teaching_clinical_charts(scan, summaries)
+    notify(3, "Writing the chair summary...")
     with report_step("Chair Word report"):
-        chair_bytes = teaching_make_chair_summary(scan, years, charts=charts)
+        chair_bytes = teaching_make_chair_summary(scan, years, charts=charts, _batch=batch)
     if oasis_feedback is not None:
         from schedule_app.services.teaching_evaluations import feedback_for_preceptor
         # Validate every included document's period before packaging anything.
@@ -260,10 +271,10 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
         zf.writestr("clinical_experience_learner_reach.csv", teaching_csv_bytes(
             [chart["data"] for chart in charts], CHART_DATA_COLUMNS))
         zf.writestr("preceptor_teaching_summary.csv", teaching_csv_bytes(
-            teaching_time_rows(scan, years), TIME_CSV_COLUMNS))
+            batch.rows(scan, years), TIME_CSV_COLUMNS))
         zf.writestr("preceptor_teaching_by_work_type.csv", teaching_csv_bytes(
-            teaching_time_rows(scan, years, by_work_type=True), TIME_WORK_TYPE_CSV_COLUMNS))
-        monthly_reach = teaching_time_rows(scan, years, by_work_type=True, monthly=True)
+            batch.rows(scan, years, "work_type"), TIME_WORK_TYPE_CSV_COLUMNS))
+        monthly_reach = batch.rows(scan, years, "monthly")
         zf.writestr("preceptor_learner_reach_monthly.csv", teaching_csv_bytes(monthly_reach, TIME_MONTHLY_CSV_COLUMNS))
         if clinical_review:
             zf.writestr("Clinical_Shift_Review.csv", teaching_csv_bytes(clinical_review,
@@ -272,7 +283,8 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
             zf.writestr("Work_Type_Review.csv", teaching_csv_bytes(conflicts,
                 ("preceptor_name", "academic_year", "date", "shift", "conflicting_work_types", "source_sites", "no_of_student_shifts")))
         used = set()
-        for name in sorted(monthly_by_name, key=teaching_name_key):
+        for number_done, name in enumerate(sorted(monthly_by_name, key=teaching_name_key), start=1):
+            notify(3 + number_done, f"Writing preceptor report {number_done} of {len(monthly_by_name)}...")
             base = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")[:110] or "preceptor"
             safe = base
             number = 1
@@ -282,9 +294,9 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
             used.add(safe.casefold())
             with report_step("Individual preceptor Word report", preceptor_name=name, academic_year=labels):
                 if oasis_feedback is None:
-                    individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan)
+                    individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan, _batch=batch)
                 else:
-                    individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan, oasis_feedback=oasis_feedback)
+                    individual_bytes = teaching_make_docx(name, monthly_by_name[name], scan, oasis_feedback=oasis_feedback, _batch=batch)
             zf.writestr(f"Preceptor_Reports/{safe}_Teaching_Report.docx", individual_bytes)
         if scan.get("assessment_completion") is not None:
             from schedule_app.services.assessment_completion import COLUMNS, assessment_method_note, completion_threshold, SCOPE_NOTE, completion_rows
@@ -300,4 +312,5 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
                       "An unverified/unchecked value is blank in CSV; it is not zero."]
         zf.writestr("Report_Notes.txt", "\n".join(notes).encode("utf-8"))
         zf.writestr("Archive_Sources.csv", teaching_csv_bytes(scan["sources"], source_columns))
+    notify(total_steps, "Reports ready.")
     return output.getvalue(), annual

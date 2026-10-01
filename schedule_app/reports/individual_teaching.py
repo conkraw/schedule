@@ -34,7 +34,7 @@ from schedule_app.services.student_continuity import (
 )
 
 
-def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None):
+def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None):
     """One document per preceptor; academic years and work types stay separate."""
     from docx.shared import Inches, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -104,12 +104,18 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None):
     for row in monthly:
         grouped[row["academic_start_year"]].append(row)
     selected = sorted(grouped)
-    overall_rows = {row["academic_year"]: row for row in teaching_time_rows(scan, selected)
-                    if row["preceptor_name"] == name}
-    service_rows = [row for row in teaching_time_rows(scan, selected, by_work_type=True)
-                    if row["preceptor_name"] == name]
-    monthly_rows = [row for row in teaching_time_rows(scan, selected, by_work_type=True, monthly=True)
-                    if row["preceptor_name"] == name]
+    if _batch is None:
+        overall = teaching_time_rows(scan, selected)
+        services = teaching_time_rows(scan, selected, by_work_type=True)
+        months = teaching_time_rows(scan, selected, by_work_type=True, monthly=True)
+    else:
+        from schedule_app.reports.teaching_batch import TeachingReportBatch
+        if not isinstance(_batch, TeachingReportBatch):
+            raise OPDArchiveError("Invalid report preparation context. Rebuild the reports.")
+        overall, services, months = _batch.preceptor_rows(scan, name, selected)
+    overall_rows = {row["academic_year"]: row for row in overall if row["preceptor_name"] == name}
+    service_rows = [row for row in services if row["preceptor_name"] == name]
+    monthly_rows = [row for row in months if row["preceptor_name"] == name]
     for index, year in enumerate(selected):
         label = teaching_report_label(scan, year)
         report_title = doc.add_paragraph("Preceptor teaching report", style="Subtitle")
