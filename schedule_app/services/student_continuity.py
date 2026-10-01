@@ -12,18 +12,21 @@ from typing import Any, Iterable, Mapping
 from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.reporting_periods import ReportingPeriod, teaching_report_bounds
 
-STUDENT_CONTINUITY_SCHEMA_VERSION = 1
+STUDENT_CONTINUITY_SCHEMA_VERSION = 2
 STUDENT_CONTINUITY_NOTE = (
-    "Each student is counted once within this reporting period, across all work types. "
+    "When assessment completion is included, student continuity and eligibility use the same "
+    "reconciled student identities and the report period through Assessments as of, inclusive. "
+    "Each student is counted once across all work types. "
     "Three or more days means three distinct calendar dates, not three shifts; "
     "AM and PM on the same date count as one day. Days do not need to be consecutive. "
-    "Only assignments within the displayed dates are included."
+    "Teaching-time hours still use the full selected reporting period."
 )
 STUDENT_MATCHING_NOTE = (
-    "Unique-student counts use the student names recorded in the OPDs, ignoring "
-    "capitalization, extra spaces and comma spacing. Different spellings are not "
-    "automatically merged; different people with the same recorded name cannot "
-    "be distinguished. Student names and individual date groups are not exported."
+    "Student counts use confirmed saved matches and unique OASIS identities when completion inputs "
+    "are loaded. Recognized trailing program/class labels are ignored. No similar-looking name "
+    "is automatically credited. Students absent from OASIS remain OPD-derived cohort members. "
+    "Teaching-only counts without completion inputs are labeled OPD-name-only, not reconciled. "
+    "Student names, identifiers and individual date groups are not exported."
 )
 
 
@@ -49,7 +52,7 @@ def require_student_continuity_data(scan: Mapping[str, Any]) -> None:
     if (scan.get("student_continuity_version") != STUDENT_CONTINUITY_SCHEMA_VERSION
             or not isinstance(scan.get("student_day_groups"), list)):
         raise OPDArchiveError(
-            "This teaching scan predates unique-student reporting. Click Load / "
+            "This teaching scan predates consistent unique-student identity counting. Click Load / "
             "refresh archived OPDs once, then generate the individual reports again. "
             "Unique students cannot be recovered from old shift totals alone."
         )
@@ -106,8 +109,8 @@ def filter_student_continuity_dates(
     require_student_continuity_data(target)
 
 
-def student_continuity_counts(
-    scan: Mapping[str, Any], preceptor_name: str, group_year: int
+def _opd_continuity_counts(
+    scan: Mapping[str, Any], preceptor_name: str, group_year: int, *, end_date=None
 ) -> dict[str, int]:
     """Two overall counts for ONE report section, never a sum of monthly uniques.
 
@@ -117,6 +120,8 @@ def student_continuity_counts(
     """
     require_student_continuity_data(scan)
     start, end = (day.isoformat() for day in teaching_report_bounds(scan, group_year))
+    if end_date is not None:
+        end = min(end, end_date)
     total = three_plus = 0
     for row in scan["student_day_groups"]:
         if row["preceptor_name"] != preceptor_name:
@@ -125,3 +130,70 @@ def student_continuity_counts(
         total += int(count > 0)
         three_plus += int(count >= 3)
     return {"unique_students": total, "unique_students_3plus_days": three_plus}
+
+
+
+def student_continuity_summary(scan, preceptor_name, group_year):
+    """Public student counts plus their EXACT date/identity basis.
+
+    When a completion bundle exists its cohort is the only source for named
+    preceptors, including an explicit Not checked result. Never silently fall
+    back to full-period/raw-name counts beside a cutoff-based denominator.
+    """
+    start, end = (day.isoformat() for day in teaching_report_bounds(scan, group_year))
+    bundle = scan.get("assessment_completion")
+    if bundle is not None:
+        # Local import avoids the scan -> continuity -> assessment -> scan cycle.
+        from schedule_app.services.assessment_completion import completion_rows
+        rows = [row for row in completion_rows(bundle, scan, group_year)
+                if row["preceptor_name"] == preceptor_name]
+        if len(rows) > 1:
+            raise OPDArchiveError("Duplicate student-cohort results. Refresh evaluation completeness.")
+        end = min(end, bundle["assessments_as_of"])
+        if rows:
+            row = rows[0]
+            if row["report_start_date"] != start or row["assessment_end_date"] != end:
+                raise OPDArchiveError("Student continuity and assessment dates do not match. Refresh evaluation completeness.")
+            return {"unique_students": row.get("unique_students"),
+                    "unique_students_3plus_days": row.get("unique_students_3plus_days"),
+                    "eligible_students": row.get("eligible_students"),
+                    "minimum_shifts": row.get("minimum_shifts"),
+                    "student_counts_start_date": start, "student_counts_end_date": end,
+                    "student_counts_status": row.get("student_counts_status", "Not checked")}
+        if preceptor_name not in scan.get("unresolved_preceptor_labels", []):
+            raise OPDArchiveError("A teaching preceptor has no corresponding student-cohort result. Refresh evaluation completeness.")
+        status = "OPD-name-only: provider label is not a verified individual"
+    else:
+        status = "OPD-name-only: assessment completion not included"
+    # A teaching-only report has no completion denominator to compare against.
+    # It uses designation-normalized OPD names and explicitly discloses that it
+    # has not used the saved/OASIS identity crosswalk. No network requests here.
+    return {**_opd_continuity_counts(scan, preceptor_name, group_year, end_date=end),
+            "eligible_students": None, "minimum_shifts": None,
+            "student_counts_start_date": start, "student_counts_end_date": end,
+            "student_counts_status": status}
+
+
+def student_continuity_counts(scan, preceptor_name, group_year):
+    """Compatibility wrapper: public counts now share the completion cohort."""
+    result = student_continuity_summary(scan, preceptor_name, group_year)
+    return {key: result[key] for key in ("unique_students", "unique_students_3plus_days")}
+
+
+def continuity_count_text(value):
+    return "Not checked" if value is None else f"{value:,}"
+
+
+def continuity_period_note(scan, group_year):
+    start, end = (day.isoformat() for day in teaching_report_bounds(scan, group_year))
+    bundle = scan.get("assessment_completion")
+    if bundle is None:
+        return (f"Student-count dates: {start} through {end} (included). OPD-name-only counts; "
+                "assessment completion is not included. Enable and refresh evaluation completeness "
+                "to apply saved student matches and an assessment cutoff.")
+    finish = min(end, bundle["assessments_as_of"])
+    if finish < start:
+        return (f"Student-count cutoff: {bundle['assessments_as_of']}. No dates on or before this "
+                "cutoff fall within the selected reporting period; no students qualify yet.")
+    return (f"Student-count dates: {start} through {finish} (included). The same matched students "
+            "and cutoff are used below for assessment eligibility. Teaching time above uses the full reporting period.")

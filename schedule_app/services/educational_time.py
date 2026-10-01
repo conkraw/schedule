@@ -7,7 +7,7 @@ No source OPD, learner identifier, or encrypted GitHub record is modified here.
 """
 from schedule_app.services.report_diagnostics import checked_report_reach
 
-EDUCATIONAL_TIME_REPORT_VERSION = 1
+EDUCATIONAL_TIME_REPORT_VERSION = 2
 HOURS_CALCULATION_BASIS = "distinct_preceptor_date_am_pm"
 TIME_DEFINITION = (
     "Total scheduled availability includes all recorded AM and PM shifts in the selected dates, "
@@ -25,6 +25,8 @@ TIME_CSV_COLUMNS = (
     "preceptor_name", "academic_year", "total_scheduled_availability_hours", "educational_hours",
     "learner_reach_pct", "unique_students", "unique_students_3plus_days",
     "months_with_students", "months_scheduled", "scheduled_shifts", "teaching_shifts",
+    "student_counts_start_date", "student_counts_end_date", "student_counts_status",
+    "eligible_students", "minimum_shifts",
 )
 TIME_WORK_TYPE_CSV_COLUMNS = (
     "preceptor_name", "academic_year", "work_type", "total_scheduled_availability_hours",
@@ -40,7 +42,9 @@ TIME_PREVIEW_LABELS = {
     "total_scheduled_availability_hours": "Total scheduled availability (hours)",
     "educational_hours": "Educational hours", "learner_reach_pct": "Learner Reach (%)",
     "unique_students": "Unique students", "unique_students_3plus_days": "Students assigned on 3+ days",
-    "months_with_students": "Months with students", "months_scheduled": "Scheduled months",
+    "student_counts_start_date": "Student-count start date", "student_counts_end_date": "Student-count cutoff",
+    "student_counts_status": "Student identity basis", "eligible_students": "Students meeting minimum shifts",
+    "minimum_shifts": "Minimum shifts", "months_with_students": "Months with students", "months_scheduled": "Scheduled months",
     "scheduled_shifts": "Scheduled shifts", "teaching_shifts": "Shifts with students", "source_sites": "OPD sites",
 }
 
@@ -69,7 +73,7 @@ def teaching_time_rows(scan, selected_years, *, by_work_type=False, monthly=Fals
     """
     from schedule_app.services.teaching_analysis import teaching_annual_rows, teaching_work_type_rows
     from schedule_app.services.learner_reach import participating_reach_rows
-    from schedule_app.services.student_continuity import student_continuity_counts
+    from schedule_app.services.student_continuity import student_continuity_summary
     from schedule_app.services.reporting_periods import teaching_report_label
     years = tuple(sorted({int(year) for year in selected_years}))
     if monthly:
@@ -84,6 +88,6 @@ def teaching_time_rows(scan, selected_years, *, by_work_type=False, monthly=Fals
         value = with_educational_time(row, report="Teaching time summary")
         value["months_with_students"] = row.get("months_worked", "")
         if not by_work_type:
-            value.update(student_continuity_counts(scan, row["preceptor_name"], year_by_label[row["academic_year"]]))
+            value.update(student_continuity_summary(scan, row["preceptor_name"], year_by_label[row["academic_year"]]))
         result.append(value)
     return result

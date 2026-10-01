@@ -37,7 +37,12 @@ from schedule_app.services.assessment_progress import (
     MATCHED, ABSENT, REVIEW,
 )
 
-ASSESSMENT_VERSION = 4
+from schedule_app.services.student_cohort import (
+    STUDENT_COHORT_VERSION, group_student_assignments, student_cohort_counts,
+    validate_student_cohort_counts,
+)
+
+ASSESSMENT_VERSION = 5
 CLINICAL = "*Clinical Assessment of Student"
 HP = "*PEDS History Taking & Physical Exam"
 TARGETS = {_form_key(CLINICAL): "clinical", _form_key(HP): "hp"}
@@ -87,7 +92,8 @@ COLUMNS = ("preceptor_name", "academic_year", "report_start_date", "report_end_d
            "clinical_forms_submitted", "hp_forms_submitted", "student_feedback_evaluations", "assessment_status", "minimum_shifts",
            "assessments_as_of", "assessment_end_date", "student_names_needing_review",
            "students_without_oasis_name_record", "clinical_students_without_assessment",
-           "hp_students_without_assessment", "either_students_without_assessment")
+           "hp_students_without_assessment", "either_students_without_assessment",
+           "unique_students", "unique_students_3plus_days", "student_counts_status")
 
 
 def _parse_submit(value):
@@ -316,15 +322,8 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
         active = sorted({r["preceptor_name"] for r in scan["monthly"]
                          if r["academic_start_year"] == year and r["no_of_shifts"] > 0
                          and name_key(r["preceptor_name"]) not in review}, key=name_key)
-        pairs, name_lookup = defaultdict(set), {}
-        for a in inputs["assignments"]:
-            if a["preceptor_name"] not in active or not begin <= a["date"] <= finish:
-                continue
-            match = matcher.resolve(a["student"])
-            identity = match.identity_key
-            if match.status != MATCHED:
-                name_lookup.setdefault((a["preceptor_name"], identity), {})[match.name_key] = (a["student"], match)
-            pairs[(a["preceptor_name"], identity)].add((a["date"], a["shift"]))
+        pairs, name_lookup = group_student_assignments(
+            inputs["assignments"], matcher, active, begin, finish)
         period_forms = [f for f in prepared["forms"] if f["course"] in chosen and begin <= f["submit_date"] <= finish]
         period_issues = [i for i in prepared["issues"] if (not i.get("course") or i["course"] in chosen)
                          and (not i.get("submit_date") or begin <= i["submit_date"] <= finish)]
@@ -340,7 +339,11 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
                 "Review the source-metadata table. Percentages use identifiable matched records only; they can change after correction."))
         for name in active:
             rid = catalog["entries"].get(name_key(name), {}).get("record_id", "")
-            eligible = {identity for (n, identity), slots in pairs.items() if n == name and len(slots) >= minimum_shifts}
+            cohort, eligible = student_cohort_counts(pairs, name, minimum_shifts)
+            review_all = {identity for (provider, identity), members in name_lookup.items()
+                          if provider == name and any(match.status == REVIEW for _, match in members.values())}
+            student_status = (f"Provisional: {len(review_all)} student name(s) need review"
+                              if review_all else "Reconciled")
             resolved = {key for kind, key in eligible if kind == "external_id"}
             missing = [identity for identity in eligible if identity[0] == "opd_name"]
             review_missing = [identity for identity in missing if any(
@@ -372,6 +375,7 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
             row = {"preceptor_name": name, "academic_year": label, "report_start_date": begin,
                    "report_end_date": end.isoformat(), "record_id": rid, "eligible_students": len(eligible),
                    "minimum_shifts": minimum_shifts, "assessments_as_of": cutoff.isoformat(),
+                   **cohort, "student_counts_status": student_status,
                    "assessment_end_date": finish, "student_names_needing_review": len(review_missing),
                    "students_without_oasis_name_record": len(absent),
                    "clinical_students_evaluated": len(clinical) if numeric else None,
@@ -431,7 +435,8 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
                     if item not in unmatched:
                         unmatched.append(item)
             result_rows.append(row)
-    return {"version": ASSESSMENT_VERSION, "minimum_shifts": minimum_shifts,
+    return {"version": ASSESSMENT_VERSION, "student_cohort_version": STUDENT_COHORT_VERSION,
+            "minimum_shifts": minimum_shifts,
             "context": completion_context(scan, years, as_of=cutoff), "rows": result_rows,
             "assessments_as_of": cutoff.isoformat(),
             "warnings": warnings, "source_count": prepared["source_count"], "sources": inputs["sources"],
@@ -454,12 +459,13 @@ def unverified_bundle(scan, years, reason="Not checked: load evaluation complete
             row.update(preceptor_name=name, academic_year=label, report_start_date=start.isoformat(),
                        report_end_date=end.isoformat(), record_id="", assessment_status=reason, group_year=year,
                        minimum_shifts=minimum_shifts, assessments_as_of=cutoff.isoformat(),
-                       assessment_end_date=min(end, cutoff).isoformat())
+                       assessment_end_date=min(end, cutoff).isoformat(), student_counts_status=reason)
             rows.append(row)
             for direction in ("Student → educator", "Preceptor → student"):
                 warnings.append(_warning(name, label, "", direction, reason,
                     "Load/refresh the evaluation completeness check. Teaching reports can still be generated."))
-    return {"version": ASSESSMENT_VERSION, "minimum_shifts": minimum_shifts,
+    return {"version": ASSESSMENT_VERSION, "student_cohort_version": STUDENT_COHORT_VERSION,
+            "minimum_shifts": minimum_shifts,
             "context": completion_context(scan, years, as_of=cutoff), "rows": rows,
             "assessments_as_of": cutoff.isoformat(),
             "warnings": warnings, "source_count": 0, "sources": [], "retrieved_at": "Not checked", "course_ids": []}
@@ -481,6 +487,16 @@ def completion_rows(bundle, scan, year):
     if bundle.get("context", {}).get("assessments_as_of") != cutoff.isoformat() or any(
         row.get("assessments_as_of") != cutoff.isoformat() for row in bundle["rows"]):
         raise OPDArchiveError("Assessment dates are inconsistent. Recalculate completion before exporting.")
+    if bundle.get("student_cohort_version") != STUDENT_COHORT_VERSION:
+        raise OPDArchiveError("Refresh evaluation completeness to reconcile student continuity and eligibility.")
+    if bundle.get("context", {}).get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE) != scan.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE):
+        raise OPDArchiveError("Ignored student entries changed. Refresh evaluation completeness.")
+    for row in bundle["rows"]:
+        # An unloaded check has no identities or denominator; do not invent them.
+        values = [row.get(k) for k in ("unique_students", "unique_students_3plus_days", "eligible_students")]
+        if all(value is None for value in values) and str(row.get("student_counts_status", "")).startswith("Not checked"):
+            continue
+        validate_student_cohort_counts(row, threshold)
     wanted = completion_context(scan, [year], as_of=cutoff)["periods"]
     if any(p not in bundle["context"]["periods"] for p in wanted):
         raise OPDArchiveError("Refresh evaluation completeness: its dates differ from this report.")
