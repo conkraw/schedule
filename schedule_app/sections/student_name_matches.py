@@ -159,6 +159,9 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
         st.caption("Choose the OASIS student name that refers to the selected OPD student, then confirm the two names. "
                    "The app attaches the matching OASIS record automatically and saves your choice encrypted in GitHub. "
                    "Only unresolved OPD names appear in the first dropdown; you do not need to enter or verify an ID.")
+        st.caption("Names that differ only by capitalization, spacing, or a trailing program/class label "
+                   "such as (MD), (PA), (DO), or ; MD2028 match automatically when only one OASIS student fits. "
+                   "Only actual name differences, missing records, or ambiguous matches need review; typos are not guessed.")
         st.caption("Already matched names need no action. A saved name match does not mean an assessment exists. "
                    "If the correct student is absent, upload the relevant student-assessment CSV in OER and refresh this check; "
                    "do not choose someone else merely to clear the flag.")
