@@ -7,7 +7,11 @@ No source OPD, learner identifier, or encrypted GitHub record is modified here.
 """
 from schedule_app.services.report_diagnostics import checked_report_reach
 
+<<<<<<< HEAD
 EDUCATIONAL_TIME_REPORT_VERSION = 3
+=======
+EDUCATIONAL_TIME_REPORT_VERSION = 2
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
 HOURS_CALCULATION_BASIS = "distinct_preceptor_date_am_pm"
 TIME_DEFINITION = (
     "Total scheduled availability includes all recorded AM and PM shifts in the selected dates, "
@@ -41,7 +45,11 @@ TIME_PREVIEW_LABELS = {
     "preceptor_name": "Preceptor", "academic_year": "Reporting period", "work_type": "Clinical experience",
     "total_scheduled_availability_hours": "Total scheduled availability (hours)",
     "educational_hours": "Educational hours", "learner_reach_pct": "Learner Reach (%)",
+<<<<<<< HEAD
     "unique_students": "Unique students",
+=======
+    "unique_students": "Unique students", "unique_students_3plus_days": "Students assigned on 3+ days",
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
     "student_counts_start_date": "Student-count start date", "student_counts_end_date": "Student-count cutoff",
     "student_counts_status": "Student identity basis", "eligible_students": "Students meeting minimum shifts",
     "minimum_shifts": "Minimum shifts", "months_with_students": "Months with students", "months_scheduled": "Scheduled months",
@@ -89,6 +97,9 @@ def teaching_time_rows(scan, selected_years, *, by_work_type=False, monthly=Fals
         value["months_with_students"] = row.get("months_worked", "")
         if not by_work_type:
             value.update(student_continuity_summary(scan, row["preceptor_name"], year_by_label[row["academic_year"]]))
+<<<<<<< HEAD
         value.pop("unique_students_3plus_days", None)
+=======
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
         result.append(value)
     return result

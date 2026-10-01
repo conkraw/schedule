@@ -142,6 +142,7 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
         p = doc.add_paragraph()
         p.add_run("Unique students assigned: ").bold = True
         p.add_run(continuity_count_text(reach['unique_students']))
+<<<<<<< HEAD
         if reach.get("minimum_shifts") is not None:
             p.add_run(f"   |   Students assigned for {reach['minimum_shifts']}+ shifts: ").bold = True
             p.add_run(continuity_count_text(reach.get('eligible_students')))
@@ -153,6 +154,19 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
             note(reach["student_counts_status"] + ". Refresh evaluation completeness or review names in PTS Matching.", warning=True)
         note("Students are counted once across all work types within the student-count dates. "
              "AM and PM on the same date are two shifts. Student counts do not multiply educational hours.")
+=======
+        p.add_run("   |   Students assigned on 3+ days: ").bold = True
+        p.add_run(continuity_count_text(reach['unique_students_3plus_days']))
+        p.paragraph_format.keep_with_next = True
+        note(continuity_period_note(scan, year))
+        if reach.get("eligible_students") is not None:
+            note(f"Students assigned for {reach['minimum_shifts']}+ shifts by this cutoff: {reach['eligible_students']:,}. "
+                 "This is the assessment-completion denominator.")
+        if str(reach.get("student_counts_status", "")).startswith(("Not checked", "Provisional:")):
+            note(reach["student_counts_status"] + ". Refresh evaluation completeness or review names in PTS Matching.", warning=True)
+        note("Students are counted once across all work types within the student-count dates. Three days means three distinct dates; "
+             "AM and PM on the same date count as one day. These counts do not multiply educational hours.")
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
         reach_types = [row for row in service_rows if row["academic_year"] == label]
         doc.add_heading("By clinical experience", level=2)
         titles = ("Clinical experience", "Total scheduled\navailability (hours)", "Educational\nhours", "Learner Reach")

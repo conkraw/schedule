@@ -43,6 +43,8 @@ from schedule_app.services.learner_reach import (
     nonclinical_provider, require_learner_reach_data,
 )
 
+from schedule_app.services.student_name_matching import student_matching_key
+
 from schedule_app.services.student_continuity import (
     build_student_continuity_data, require_student_continuity_data,
     filter_student_continuity_dates,
@@ -357,7 +359,7 @@ def teaching_scan_archives(client, default_order=TEACHING_NAME_ORDERS[0], progre
             # A separate, domain-scoped identifier links this learner's retained
             # dates across rotations/work types. It is discarded before return.
             student_identity = json.dumps(
-                ["student-continuity", key, teaching_name_key(item["student"])],
+                ["student-continuity", key, student_matching_key(item["student"])],
                 ensure_ascii=False,
             )
             student_key = hmac.new(salt, student_identity.encode("utf-8"), hashlib.sha256).digest()

@@ -1,0 +1,80 @@
+{
+  "release": "2026-10-01-documented-completion-1",
+  "source_package": "Schedule_App_Modular_Completion_Review.zip",
+  "runtime_files": [
+    {
+      "action": "replace",
+      "path": "schedule_app/reports/assessment_completion.py",
+      "sha256": "e737003d5b123e82e833966e8b8c2fff63464a2db5ad1f17e1f6a26315973697",
+      "previous_sha256": "1f90f916188d9db0a846cf7613ecea435d3f580dde9326d18279678237c81483"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/reports/teaching_export.py",
+      "sha256": "dc95b07e5c81df11e3e07a6101b200a3d4cf336a6d8e23663980bf917444b1ba",
+      "previous_sha256": "5162124393d58ff4110c1060600c84e09d0c00cdf380acd5c1923cc3dbb0c011"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/assessment_completion.py",
+      "sha256": "d92a4357bf5afa420ca49380a0875195388d98733072518e2062840a116336f9",
+      "previous_sha256": "6e4786f19530adae9d8c54a33fc0cd1f18e303bd21d5a6a59876ae18820e3fe8"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/assessment_diagnostics.py",
+      "sha256": "59211829cd98d44d5f63416a9b8857d42f0e983155fa98d1329193e48cfa40ce",
+      "previous_sha256": "f6cf9da90812947d08f03f7bcd98a18a59dd0df6053b8b1cffa3fcb5430f3c86"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/pts_navigation.py",
+      "sha256": "4b8f904dfeedaddf92e99871dafd919b9277aaaa373ed4b499c9cfaad5e022b6",
+      "previous_sha256": "cef61f45c51f396f3c28726b443b67f593b03126cdc8918324457e3a506ddb3b"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/student_name_matches.py",
+      "sha256": "b2290fbf8136e95fa19107fe5dc499763e703775d94d45dd57d5a908c4ff7500",
+      "previous_sha256": "7eae3ef2c8cd7a2d10930d343342d339e93c618d5dc04eed815e9c29f076ca3d"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/services/assessment_completion.py",
+      "sha256": "34c0852bb9b355714dc41074abbf42d28ec6f604260b1b952e499bd4ea25f78a",
+      "previous_sha256": "7e03ba3d15435431c935bf3e4a8f41539462edf66229f2f7939ceec5a54df4f2"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/services/assessment_diagnostics.py",
+      "sha256": "0af917d9d4de20bae78a524b1fa070d521e5ec34907c78e802e0fedc143fcf6f",
+      "previous_sha256": "75c940b23a08f46ab7278c773cb368a4652bdd66bafde94ec53ddf1b8b865c55"
+    },
+    {
+      "action": "add",
+      "path": "schedule_app/services/assessment_progress.py",
+      "sha256": "ffdd8c70af7d89e7cf3e8604c64b59493955e3e95e63572e3082289a4bac4a3c",
+      "previous_sha256": null
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/services/student_name_review.py",
+      "sha256": "463f75c8de3d64a9d5d1912009b66a1cae01ccc7c02f2bc4c7021d155125e8f8",
+      "previous_sha256": "71517f44d929941a55a476721e3ae117077616068fb20413b6f58adcc294f5f5"
+    }
+  ],
+  "keeps": [
+    "app_sch_2026.py",
+    "schedule_app/settings.py",
+    "requirements.txt",
+    "Streamlit Secrets",
+    "encrypted archives and catalogs"
+  ],
+  "tests": {
+    "passed": 1127,
+    "skipped_historical_packaging": 6,
+    "new_tests": 32,
+    "passing_subtests": 139
+  },
+  "live_deployment_changed": false
+}

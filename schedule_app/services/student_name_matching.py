@@ -73,6 +73,12 @@ class StudentNameMatcher:
                     by_name[key].add(sid)
         self._name_ids = {key: tuple(sorted(ids)) for key, ids in by_name.items()}
         self._saved_entries = saved_entries
+        saved_by_name = defaultdict(set)
+        for name, entry in saved_entries.items():
+            sid = str(entry.get("external_id", "")).strip()
+            if sid.casefold() not in _MISSING_IDS:
+                saved_by_name[student_matching_key(name)].add(sid)
+        self._saved_by_name = {key: tuple(sorted(ids)) for key, ids in saved_by_name.items()}
 
     def resolve(self, opd_name: object) -> StudentNameMatch:
         key = student_name_key(opd_name)
@@ -81,6 +87,15 @@ class StudentNameMatcher:
             return StudentNameMatch(key, (saved_id,), "Saved match")
         matching_key = student_matching_key(opd_name)
         candidates = self._name_ids.get(matching_key, ()) if matching_key else ()
+        saved_candidates = self._saved_by_name.get(matching_key, ())
+        # Carry a confirmed correction across program-only variants, but only
+        # when no known source/saved ID contradicts it. Exact saved keys above
+        # retain priority; distinct conflicting identities are never guessed.
+        if saved_candidates:
+            combined = tuple(sorted(set(candidates) | set(saved_candidates)))
+            if len(combined) == 1:
+                return StudentNameMatch(key, combined, "Saved match (designation ignored)")
+            candidates = combined
         if len(candidates) != 1:
             status = "Needs review"
         elif key != matching_key:

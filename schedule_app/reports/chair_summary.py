@@ -338,9 +338,15 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
         if item["named_preceptors"]:
             teaching_add_work_table(
                 doc,
+<<<<<<< HEAD
                 ("Preceptor", "Unique students", "Students meeting minimum shifts"),
                 [(row["preceptor_name"], continuity_count_text(row['unique_students']),
                   continuity_count_text(row.get('eligible_students')))
+=======
+                ("Preceptor", "Unique students", "Students assigned on 3+ days"),
+                [(row["preceptor_name"], continuity_count_text(row['unique_students']),
+                  continuity_count_text(row['unique_students_3plus_days']))
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
                  for row in item["named_preceptors"]],
                 widths=(3.25, 1.5, 2.15), number_columns=(1, 2),
             )
@@ -349,9 +355,15 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
             pending.paragraph_format.keep_with_next = True
             teaching_add_work_table(
                 doc,
+<<<<<<< HEAD
                 ("Provider label", "Unique students", "Students meeting minimum shifts"),
                 [(row["preceptor_name"], continuity_count_text(row['unique_students']),
                   continuity_count_text(row.get('eligible_students')))
+=======
+                ("Provider label", "Unique students", "Students assigned on 3+ days"),
+                [(row["preceptor_name"], continuity_count_text(row['unique_students']),
+                  continuity_count_text(row['unique_students_3plus_days']))
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
                  for row in item["unresolved_labels"]],
                 widths=(3.25, 1.5, 2.15), number_columns=(1, 2),
             )
@@ -360,11 +372,18 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
             note("Some student identities still need review. Continuity and eligibility use the same provisional cohort; no similar name is credited automatically.", warning=True)
         if any(row.get("unique_students") is None for row in item["named_preceptors"]):
             note("Student counts have not been checked. Refresh evaluation completeness; teaching-hour totals remain available.", warning=True)
+<<<<<<< HEAD
         threshold = scan.get("assessment_completion", {}).get("minimum_shifts") if scan.get("assessment_completion") else None
         if threshold is not None:
             note(f"Minimum for assessment completion: {threshold} AM/PM shifts. AM and PM on the same date are two shifts.")
         note("Do not add student counts across preceptors: a student may appear under more than one preceptor. "
              "Student counts do not multiply educational hours.")
+=======
+        note("3+ days means at least three distinct dates within the student-count dates, not three shifts. "
+             "AM and PM on the same date count as one day; days need not be consecutive. "
+             "Do not add these columns for a clerkship-wide unique-student total: "
+             "a student may appear under multiple preceptors.")
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
 
         from schedule_app.reports.assessment_completion import append_chair_completion
         append_chair_completion(doc, scan, year)

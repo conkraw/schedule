@@ -1,0 +1,66 @@
+{
+  "release": "2026-10-01-student-cohort-consistency-1",
+  "base_package": "Schedule_App_Modular_Documented_Completion.zip",
+  "runtime_files": [
+    {
+      "path": "schedule_app/reports/assessment_completion.py",
+      "action": "replace",
+      "sha256": "1db6301f1510a975a2d43dad7681fe3c3a1ee77268435ff7f44f8115d95ee3e4"
+    },
+    {
+      "path": "schedule_app/reports/chair_summary.py",
+      "action": "replace",
+      "sha256": "87e8cba85f2ba7f1eb8d1c65e21c1616cfd6e16883bea1542c04f1e3e29bec72"
+    },
+    {
+      "path": "schedule_app/reports/individual_teaching.py",
+      "action": "replace",
+      "sha256": "4358b6cdced40680fb78af9be0b657c9fe3894ad5a0d3263202f8fb668b40b6e"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "action": "replace",
+      "sha256": "555690243e3959b61f69c527d0d00f5eab834e0badf68dc4cafe5544d20de2e6"
+    },
+    {
+      "path": "schedule_app/sections/assessment_completion.py",
+      "action": "replace",
+      "sha256": "e1fc246d40c7ccfd7eb77dedd77cc77237566071001ac2545e142199289d52a5"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "action": "replace",
+      "sha256": "5eb964c1520c55d3fb1513a8e1d90047a3056ff302db6cdd59a5a905ea593ab3"
+    },
+    {
+      "path": "schedule_app/services/assessment_completion.py",
+      "action": "replace",
+      "sha256": "bda2c0d1f8f8fd0079efe5faf3962f2e8c6b8f8493499f9e5fa4a43a036f6ee1"
+    },
+    {
+      "path": "schedule_app/services/educational_time.py",
+      "action": "replace",
+      "sha256": "142401c6ada041a9f8618346dbe060940ad9a9608036ab30cc7bd133533ce632"
+    },
+    {
+      "path": "schedule_app/services/student_cohort.py",
+      "action": "add",
+      "sha256": "4e510c4f1feafc9fc8e3edafd508b11b2762ba6441ad1f126ceb465c24df8cb9"
+    },
+    {
+      "path": "schedule_app/services/student_continuity.py",
+      "action": "replace",
+      "sha256": "c9987b78adc92160d80843255c9106929dc79a482de1124d3f01a66d48f11a44"
+    },
+    {
+      "path": "schedule_app/services/student_name_matching.py",
+      "action": "replace",
+      "sha256": "97f5bceccff6a4173d29b8901ab697a8157d75613d4d19cce7ef99248a7706fd"
+    },
+    {
+      "path": "schedule_app/services/teaching_analysis.py",
+      "action": "replace",
+      "sha256": "ac0c8fa6116ba83301aa01d61f5e01a18e276b412e463e67ad8d2ce9fefcf5c7"
+    }
+  ]
+}

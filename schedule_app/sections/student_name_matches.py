@@ -119,7 +119,7 @@ def _render_editor(service, inputs, key, opd_name, choices, *, editing=False):
                 st.error(str(exc))
 
 
-def render_student_name_matches(archive, inputs, scan, years, unmatched, *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS, show_tables=True):
+def render_student_name_matches(archive, inputs, scan, years, unmatched, *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS, show_tables=True, as_of=None):
     """Flag unresolved names, retain confirmed links, and show a correction queue.
 
     Uses the existing encrypted ID catalog without changing its schema or any
@@ -129,7 +129,9 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
         lock_evaluation_records()
         return
     minimum_shifts = validate_minimum_shifts(minimum_shifts)
-    scope = (STUDENT_REVIEW_UI_VERSION, archive.config.signature(),
+    from schedule_app.services.assessment_progress import assessment_as_of
+    as_of = assessment_as_of(as_of)
+    scope = (STUDENT_REVIEW_UI_VERSION, as_of.isoformat(), archive.config.signature(),
              st.session_state.get("assessment_completion_scope"), inputs.get("commit"))
     if st.session_state.get(P + "scope") != scope:
         _reset_controls()
@@ -141,12 +143,12 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
     notice = st.session_state.pop(P + "notice", None)
     if notice:
         st.success(notice)
-    review = student_name_review(inputs, scan, years, unmatched)
+    review = student_name_review(inputs, scan, years, unmatched, as_of=as_of)
     active, missing = review["active"], review["missing"]
     # A focus from the report check narrows only this correction queue. It never
     # removes students from the computation or changes saved mappings.
     focus = st.session_state.get(FOCUS_KEY)
-    focused = focused_missing_names(missing, unmatched, focus, completion_context(scan, years))
+    focused = focused_missing_names(missing, unmatched, focus, completion_context(scan, years, as_of=as_of))
     if focus is not None and focused is None:
         st.session_state.pop(FOCUS_KEY, None)
         focus = None
@@ -159,10 +161,11 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
                    "still need to be matched to the correct OASIS student name. "
                    f"{review['eligible_missing_count']:,} unresolved name(s) affect the {minimum_shifts}+ shift assessment check. "
                    "Match the two names below; no ID lookup is needed. All eligible students stay in the denominator, "
-                   "and only affected completion results remain Not verified.")
+                   "and affected numeric completion results are labeled provisional.")
     elif active:
-        st.success(f"All {len(active):,} OPD student names in the selected dates have an exact or saved identity match. "
-                   "This confirms identity matching, not that every assessment has been completed.")
+        st.success("No student-name discrepancies currently require review. Missing assessments are a separate progress measure.")
+    if review["absent"]:
+        st.info(f"{len(review['absent']):,} OPD student name(s) have no record in the loaded OASIS data. No confirmation is needed; eligible students remain in the denominator. This does not mean an assessment is overdue.")
 
     with st.expander("Resolve OPD student names to OASIS", expanded=bool(missing)):
         st.caption("Choose the OASIS student name that refers to the selected OPD student, then confirm the two names. "
@@ -170,12 +173,12 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
                    "Only unresolved OPD names appear in the first dropdown; you do not need to enter or verify an ID.")
         st.caption("Names that differ only by capitalization, spacing, or a trailing program/class label "
                    "such as (MD), (PA), (DO), or ; MD2028 match automatically when only one OASIS student fits. "
-                   "Only actual name differences, missing records, or ambiguous matches need review; typos are not guessed.")
+                   "Only possible name differences or ambiguous matches need review. A missing OASIS record alone needs no confirmation; typos are not guessed.")
         st.caption("For a note or student entry you do not want included, choose Ignored student entries in the PTS Matching dropdown. "
                    "That removes the entry from PTS calculations and alerts; do not link a note to an actual student.")
         st.caption("Already matched names need no action. A saved name match does not mean an assessment exists. "
-                   "If the correct student is absent, upload the relevant student-assessment CSV in OER and refresh this check; "
-                   "do not choose someone else merely to clear the flag.")
+                   "If the student has never been evaluated, leave the record alone. Refresh after a later OER upload. "
+                   "Do not choose someone else merely to add assessment credit.")
         if st.button("Refresh saved student matches", key=P + "refresh"):
             _clear_downloads()
             try:
@@ -209,7 +212,21 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
         elif active and focused is None:
             st.info("No student-name corrections are needed for these dates. The missing-name dropdown is hidden.")
         elif not active:
-            st.info("No assigned OPD student names are available for these dates and named teaching preceptors.")
+            st.info("No assigned OPD student names are available through the assessment cutoff for these dates and named teaching preceptors.")
+
+    if review["absent"]:
+        with st.expander("Students not found in OASIS (optional — no action required)"):
+            st.caption("No confirmation is needed for these names. Use this correction only when you know the same student is listed under a different spelling; otherwise leave the name unchanged.")
+            if show_tables or st.checkbox("Show names with no OASIS record (optional)", value=False, key=P + "show_absent"):
+                st.dataframe([{"OPD student name": r["student_name"], "Status": "No assessment on file"}
+                              for r in review["absent"].values()], hide_index=True, use_container_width=True)
+            if st.checkbox("I know one of these students has a different OASIS spelling", value=False, key=P + "correct_absent"):
+                options = list(review["absent"])
+                if st.session_state.get(P + "absent_choice") not in options:
+                    st.session_state[P + "absent_choice"] = options[0]
+                key = st.selectbox("OPD name to correct (optional)", options, key=P + "absent_choice",
+                                   format_func=lambda k: review["absent"][k]["student_name"])
+                _render_editor(service, inputs, key, review["absent"][key]["student_name"], choices)
 
     entries = inputs["student_links"]["entries"]
     if entries:

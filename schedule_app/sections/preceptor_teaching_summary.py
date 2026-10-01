@@ -29,7 +29,11 @@ from schedule_app.services.teaching_evaluations import TEACHING_OASIS_REPORT_VER
 from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
 from schedule_app.settings import TEACHING_CHAIR_SUMMARY_FILENAME
 
+<<<<<<< HEAD
 PTS_REPORT_SCREEN_VERSION = "2026-10-01-feedback-shifts-assessed-totals-1"
+=======
+PTS_REPORT_SCREEN_VERSION = "2026-10-01-student-cohort-consistency-1"
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
 
 
 def _optional_details(scan, report_scan, selected):

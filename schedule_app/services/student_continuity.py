@@ -17,8 +17,13 @@ STUDENT_CONTINUITY_NOTE = (
     "When assessment completion is included, student continuity and eligibility use the same "
     "reconciled student identities and the report period through Assessments as of, inclusive. "
     "Each student is counted once across all work types. "
+<<<<<<< HEAD
     "Eligibility uses the selected minimum number of distinct AM/PM shifts; "
     "AM and PM on the same date are two shifts. "
+=======
+    "Three or more days means three distinct calendar dates, not three shifts; "
+    "AM and PM on the same date count as one day. Days do not need to be consecutive. "
+>>>>>>> 706c8e4168ede05bba26315c4418e919cab7d537
     "Teaching-time hours still use the full selected reporting period."
 )
 STUDENT_MATCHING_NOTE = (

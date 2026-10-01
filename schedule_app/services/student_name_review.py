@@ -18,7 +18,11 @@ from schedule_app.services.student_name_matching import (
     StudentNameMatcher, student_matching_key, student_name_without_designations,
 )
 
-STUDENT_REVIEW_UI_VERSION = 3
+from schedule_app.services.assessment_progress import (
+    AssessmentIdentityResolver, assessment_as_of, MATCHED, ABSENT, REVIEW,
+)
+
+STUDENT_REVIEW_UI_VERSION = 4
 
 
 def oasis_student_choices(prepared):
@@ -88,14 +92,17 @@ def selected_student_id(choices, selection):
     return choices[selection]["external_id"]
 
 
-def student_name_review(inputs, scan, years, unmatched):
+def student_name_review(inputs, scan, years, unmatched, *, as_of=None):
     """Return all current assigned names and a missing-only correction queue.
 
-    Includes below-threshold names for proactive correction; only the existing
+    Possible name discrepancies form the routine queue. Absent OASIS names stay
+    separate and need no confirmation. Includes below-threshold names for proactive
+    correction; only the existing
     `unmatched` results determine which flags affect completion percentages.
     A confirmed saved ID is reused even if no assessment exists for it in this
     period. Absence of an assessment is not absence of an identity match.
     """
+    cutoff = assessment_as_of(as_of)
     review = {name_key(name) for name in scan.get("unresolved_preceptor_labels", [])}
     active = {}
     for year, start, end, label in active_periods(scan, years):
@@ -103,7 +110,7 @@ def student_name_review(inputs, scan, years, unmatched):
                     if row["academic_start_year"] == year and row["no_of_shifts"] > 0
                     and name_key(row["preceptor_name"]) not in review}
         for row in inputs["assignments"]:
-            if row["preceptor_name"] not in teachers or not start.isoformat() <= row["date"] <= end.isoformat():
+            if row["preceptor_name"] not in teachers or not start.isoformat() <= row["date"] <= min(end, cutoff).isoformat():
                 continue
             key = student_name_key(row["student"])
             if not key:
@@ -115,22 +122,25 @@ def student_name_review(inputs, scan, years, unmatched):
     affects = defaultdict(set)
     for row in unmatched:
         affects[row["name_key"]].add(row["preceptor_name"])
-    matcher = StudentNameMatcher(inputs["prepared"]["name_ids"], inputs["student_links"]["entries"])
-    result, missing = {}, {}
+    matcher = AssessmentIdentityResolver(inputs["prepared"], inputs["student_links"]["entries"])
+    result, missing, absent = {}, {}, {}
     for key, item in sorted(active.items()):
         match = matcher.resolve(item["student_name"])
-        ids, state = match.candidate_ids, match.match_status
+        ids, state = match.candidate_ids, match.status
         row = {"name_key": key, "student_name": item["student_name"],
                "preceptors": sorted(item["preceptors"], key=name_key),
                "periods": sorted(item["periods"]), "match_status": state,
                "affects_completion": bool(affects[key])}
         result[key] = row
-        if state == "Needs review":
+        if state == REVIEW:
             missing[key] = {**row, "issue": (
                 "More than one OASIS student record uses this name; review the source records in OER"
                 if len(ids) > 1 else
-                "This OPD name needs a matching OASIS student name")}
-    return {"active": result, "missing": missing,
+                "Possible spelling/name difference; confirm only if these are the same person"),
+                "suggested_names": list(match.suggestions)}
+        elif state == ABSENT:
+            absent[key] = {**row, "issue": "No OASIS student record found; no confirmation required"}
+    return {"active": result, "missing": missing, "absent": absent,
             "eligible_missing_count": sum(row["affects_completion"] for row in missing.values())}
 
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-DIAGNOSTICS_UI_VERSION = "2026-10-01-completion-review-1"
+DIAGNOSTICS_UI_VERSION = "2026-10-01-documented-completion-2"
 FOCUS_KEY = "assessment_completion_diagnostics_focus"
 
 
@@ -17,7 +17,7 @@ def unavailable_completion_choices(bundle):
     choices = {}
     for row in bundle.get("rows", []):
         status = str(row.get("assessment_status", ""))
-        if status == "Calculated" or status.startswith("No eligible students"):
+        if (status == "Calculated" and not row.get("either_students_without_assessment")) or status.startswith("No eligible students"):
             continue
         token = hashlib.sha256(json.dumps([
             row.get("preceptor_name"), row.get("group_year"),
@@ -37,13 +37,15 @@ def unresolved_students_for_row(row, unmatched):
     """
     found = {}
     for item in unmatched:
+        if item.get("match_category") == "No assessment on file":
+            continue
         if (item.get("preceptor_name") != row.get("preceptor_name")
                 or item.get("academic_year") != row.get("academic_year")):
             continue
         # Optional exact boundaries make this forward compatible with richer
         # engine diagnostics without changing the existing result schema.
         if any(item.get(k) is not None and item.get(k) != row.get(k)
-               for k in ("group_year", "report_start_date", "report_end_date")):
+               for k in ("group_year", "report_start_date", "report_end_date", "assessments_as_of")):
             continue
         key = item.get("name_key")
         if not key:
@@ -63,6 +65,9 @@ def completion_review_detail(row, unmatched):
         "report_start_date": row.get("report_start_date", ""),
         "report_end_date": row.get("report_end_date", ""),
         "record_id": row.get("record_id", ""),
+        "assessments_as_of": row.get("assessments_as_of", ""),
+        "students_without_oasis_name_record": row.get("students_without_oasis_name_record"),
+        "either_students_without_assessment": row.get("either_students_without_assessment"),
         "minimum_shifts": row.get("minimum_shifts"),
         "eligible_students": row.get("eligible_students"),
         "assessment_status": row.get("assessment_status", ""),
@@ -78,7 +83,8 @@ def make_student_review_focus(bundle, row):
             "group_year": row.get("group_year"),
             "academic_year": row.get("academic_year"),
             "report_start_date": row.get("report_start_date"),
-            "report_end_date": row.get("report_end_date")}
+            "report_end_date": row.get("report_end_date"),
+            "assessments_as_of": row.get("assessments_as_of")}
 
 
 def focused_missing_names(missing, unmatched, focus, context):
