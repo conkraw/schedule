@@ -234,6 +234,17 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None):
         for group in oasis_feedback["periods"].values():
             notes.append(f"OASIS period: {group['start_date']} through {group['end_date']}; "
                          f"source: {group['summary_filename']}; blob: {group['summary_sha']}.")
+    ignored_counts = scan.get("excluded_student_entry_listings_by_date", {})
+    if ignored_counts:
+        from schedule_app.services.teaching_evaluations import active_periods
+        bounds = [(start.isoformat(), end.isoformat()) for _, start, end, _ in active_periods(scan, years)]
+        excluded = sum(count for day, count in ignored_counts.items() if any(start <= day <= end for start, end in bounds))
+        if excluded:
+            notes += ["", "EXPLICIT OPD STUDENT-ENTRY EXCLUSIONS",
+                      f"{excluded} source student-entry listing(s) were deliberately excluded in the selected dates.",
+                      "Repeated rows may be included in this source-listing count; it is not a unique-student count.",
+                      "Ignored labels/names are omitted from this ZIP. Clinical availability is retained; ignored entries do not earn educational hours or enter assessment eligibility.",
+                      "Restore entries in PTS to include them again. Source OPDs and OASIS records were not changed."]
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
         if priority_rows:
             zf.writestr("Outpatient_Priority_Adjustments.csv", teaching_csv_bytes(priority_rows, PRIORITY_AUDIT_COLUMNS))
