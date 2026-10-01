@@ -68,11 +68,19 @@ from schedule_app.sections.reporting_date_controls import (
 )
 
 
+from schedule_app.sections.ignored_student_entries import (
+    render_ignored_student_entries, load_ignored_student_entries_ui, P as IGNORE_P,
+)
+from schedule_app.services.ignored_student_entries import (
+    GitHubIgnoredStudentEntries, exclusion_signature, EXCLUSION_VERSION, require_matching_exclusions,
+)
+
+
 def _render_conflicts(exc):
     _clear_teaching_downloads()
     st.error(str(exc))
     st.write("Each conflict ID groups all source cells for one preceptor/date/AM-or-PM. "
-             "A YES or NO only indicates whether a student is recorded in that cell; student names are omitted.")
+             "A YES or NO indicates whether a non-ignored student remains in that cell; student names are omitted.")
     columns = ["conflict_id", "preceptor_name", "date", "shift", "conflicting_work_types",
                "rotation_start", "archive_file", "worksheet", "cell", "listed_work_type", "student_assigned"]
     st.dataframe(pd.DataFrame(exc.rows).reindex(columns=columns), hide_index=True, use_container_width=True)
@@ -130,23 +138,49 @@ def render():
                          key="teaching_name_order",
                          help="Choose the actual name order in your OPDs. No rotation list is required. "
                               "Commas within names are preserved; use separate rows or semicolons for multiple students.")
+    ignored_catalog = load_ignored_student_entries_ui(client, order)
+    if ignored_catalog is None:
+        _clear_teaching_downloads()
+        return
+    ignored_signature = exclusion_signature(ignored_catalog["entries"])
     options_signature = hashlib.sha256(json.dumps(
-        [TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, OUTPATIENT_PRIORITY_VERSION, STUDENT_CONTINUITY_SCHEMA_VERSION, client.config.signature(), order,
+        [EXCLUSION_VERSION, ignored_signature, TEACHING_REPORT_VERSION, DATE_RANGE_SCHEMA_VERSION, LEARNER_REACH_SCHEMA_VERSION, STRICT_CONFLICT_SCHEMA_VERSION, OUTPATIENT_PRIORITY_VERSION, STUDENT_CONTINUITY_SCHEMA_VERSION, client.config.signature(), order,
          TEACHING_PRECEPTOR_NAME_MAP, TEACHING_OPD_NAME_ORDER_OVERRIDES,
          TEACHING_WORK_TYPE_MAP, TEACHING_WORK_TYPE_ORDER], sort_keys=True).encode()).hexdigest()
     if st.session_state.get("teaching_options_signature") != options_signature:
-        for key in ("teaching_scan", "teaching_zip", "teaching_zip_signature", "teaching_selected_years"):
+        # Keep reporting-year selections; the available-year check below drops
+        # only values that no longer exist in the loaded source data.
+        for key in ("teaching_scan", "teaching_zip", "teaching_zip_signature"):
             st.session_state.pop(key, None)
         st.session_state["teaching_options_signature"] = options_signature
-    if st.button("Load / refresh archived OPDs", key="teaching_load_archives", type="primary"):
+    reload_clicked = st.button("Load / refresh archived OPDs", key="teaching_load_archives", type="primary")
+    pending = st.session_state.pop(IGNORE_P + "rescan", None)
+    auto_rescan = bool(pending and pending.get("scope") == client.config.signature() and pending.get("order") == order)
+    if reload_clicked or auto_rescan:
         st.session_state.pop("teaching_scan", None)
+        st.session_state.pop("assessment_completion_inputs", None)
+        st.session_state.pop("assessment_completion_scope", None)
         _clear_teaching_downloads()
         bar = st.progress(0, text="Reading the current encrypted archive...")
         try:
-            with st.spinner("Decrypting OPDs and counting student assignments..."):
+            with st.spinner("Decrypting OPDs and counting retained student assignments..."):
+                # A new explicit scan also refreshes other users' exclusion edits.
+                current = GitHubIgnoredStudentEntries(client).load()
+                if exclusion_signature(current["entries"]) != ignored_signature:
+                    st.session_state[IGNORE_P + "catalog"] = current
+                    st.session_state[IGNORE_P + "rescan"] = {
+                        "scope": client.config.signature(), "order": order,
+                        "commit": pending.get("commit") if auto_rescan and not reload_clicked else None,
+                    }
+                    st.rerun()
+                inventory = []
                 scan = teaching_scan_archives(
                     client, order,
+                    commit=pending.get("commit") if auto_rescan and not reload_clicked else None,
+                    ignored_student_entries=tuple(ignored_catalog["entries"]),
+                    student_entry_collector=inventory.extend,
                     progress=lambda n, total: bar.progress(n / total, text=f"Read {n} of {total} current OPD files"))
+            st.session_state[IGNORE_P + "inventory"] = inventory
             st.session_state["teaching_scan"] = scan
         except OPDArchiveError as exc:
             st.error(str(exc))
@@ -155,13 +189,17 @@ def render():
                      "Check the workbook layout and installed requirements, then retry.")
         finally:
             bar.empty()
+    if render_ignored_student_entries(client, order, period=period if mode == REPORTING_MODES[0] else None) is None:
+        _clear_teaching_downloads()
+        return
     scan = st.session_state.get("teaching_scan")
     if scan is None:
         st.caption("No OPD is downloaded or decrypted until you click Load / refresh archived OPDs. "
                    "Saved date presets load separately from GitHub. "
-                   "Only optional username/summary links and date settings are saved here; reports and decrypted OPDs are not uploaded.")
+                   "Only optional username/summary links, ignored student entries, and date settings are saved here; reports and decrypted OPDs are not uploaded.")
         return
     try:
+        require_matching_exclusions(scan, ignored_catalog)
         teaching_require_date_range_data(scan)
         require_learner_reach_data(scan)
         require_conflict_source_data(scan)
@@ -213,7 +251,7 @@ def render():
         with st.expander("Outpatient priority adjustments (not conflicts)"):
             audit_rows = outpatient_priority_audit_rows(report_scan, selected)
             st.caption("One adjustment ID groups all relevant cells for one preceptor/date/AM-or-PM. "
-                       "Student-assigned YES/NO describes the original cell, not teaching credit. "
+                       "Student-assigned YES/NO reflects saved student-entry exclusions but not nursery-priority teaching credit. "
                        "An unassigned clinic shift stays unassigned even if a nursery student was listed.")
             st.dataframe(pd.DataFrame(audit_rows).reindex(columns=PRIORITY_AUDIT_COLUMNS),
                          hide_index=True, use_container_width=True)
@@ -316,6 +354,8 @@ def render():
         st.session_state.pop("teaching_zip", None)
         try:
             with st.spinner("Creating the chair summary, CSVs and individual Word reports..."):
+                # Detect a concurrent exclusion edit before publishing any report.
+                require_matching_exclusions(report_scan, GitHubIgnoredStudentEntries(client).load())
                 if plan is None:
                     zip_bytes, _ = teaching_build_zip(report_scan, selected)
                 else:

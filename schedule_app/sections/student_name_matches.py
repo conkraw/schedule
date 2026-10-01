@@ -162,6 +162,8 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
         st.caption("Names that differ only by capitalization, spacing, or a trailing program/class label "
                    "such as (MD), (PA), (DO), or ; MD2028 match automatically when only one OASIS student fits. "
                    "Only actual name differences, missing records, or ambiguous matches need review; typos are not guessed.")
+        st.caption("For a note or student entry you do not want included, use Ignore or restore OPD student entries near the top of PTS. "
+                   "That removes the entry from PTS calculations and alerts; do not link a note to an actual student.")
         st.caption("Already matched names need no action. A saved name match does not mean an assessment exists. "
                    "If the correct student is absent, upload the relevant student-assessment CSV in OER and refresh this check; "
                    "do not choose someone else merely to clear the flag.")
