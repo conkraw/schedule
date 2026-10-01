@@ -1,0 +1,30 @@
+{
+  "release": "pts-automatic-designation-matching-2026-09-30",
+  "base": "Schedule_App_Modular_PTS_Name_Only_Matching.zip",
+  "runtime_files": [
+    {
+      "path": "schedule_app/services/assessment_completion.py",
+      "action": "replace",
+      "base_sha256": "c35b518e3e3e43c872539987f5da5a860eeff01e603bdf7b1932334e74119fe4",
+      "sha256": "c21b5705a45277f6734b37e55dc1da2b4ad9a2d929fb5b8082b1c226b542ee25"
+    },
+    {
+      "path": "schedule_app/services/student_name_review.py",
+      "action": "replace",
+      "base_sha256": "2deb484e4dc71109082072f6a2fe4cf2083b958f697fa735b8205f5f54e5e02b",
+      "sha256": "71517f44d929941a55a476721e3ae117077616068fb20413b6f58adcc294f5f5"
+    },
+    {
+      "path": "schedule_app/sections/student_name_matches.py",
+      "action": "replace",
+      "base_sha256": "e9198cceeb376fe5400b25619f277cc24be90a261df7151c336159423eb98209",
+      "sha256": "a13463ab9f064e0de4c39237939584817af95c948ccdd356dc6d8810b1da99ee"
+    },
+    {
+      "path": "schedule_app/services/student_name_matching.py",
+      "action": "add",
+      "base_sha256": null,
+      "sha256": "6c6d93ebfb72618a2e384f0c6dc184495e646e6d5e8a4ec91044327b3c6f239f"
+    }
+  ]
+}
