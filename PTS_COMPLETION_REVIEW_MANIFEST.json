@@ -1,0 +1,29 @@
+{
+  "release": "2026-10-01-completion-review-1",
+  "basis": "Schedule_App_Modular_PTS_Simplified.zip",
+  "files": [
+    {
+      "path": "schedule_app/sections/assessment_completion.py",
+      "action": "replace",
+      "sha256": "6e4786f19530adae9d8c54a33fc0cd1f18e303bd21d5a6a59876ae18820e3fe8"
+    },
+    {
+      "path": "schedule_app/sections/assessment_diagnostics.py",
+      "action": "add",
+      "sha256": "f6cf9da90812947d08f03f7bcd98a18a59dd0df6053b8b1cffa3fcb5430f3c86"
+    },
+    {
+      "path": "schedule_app/sections/student_name_matches.py",
+      "action": "replace",
+      "sha256": "7eae3ef2c8cd7a2d10930d343342d339e93c618d5dc04eed815e9c29f076ca3d"
+    },
+    {
+      "path": "schedule_app/services/assessment_diagnostics.py",
+      "action": "add",
+      "sha256": "75c940b23a08f46ab7278c773cb368a4652bdd66bafde94ec53ddf1b8b865c55"
+    }
+  ],
+  "new_tests": 25,
+  "regression_passed": 1095,
+  "regression_skipped": 6
+}

@@ -10,6 +10,8 @@ from schedule_app.services.assessment_completion import (
 from schedule_app.sections.assessment_settings import render_assessment_threshold
 from schedule_app.sections.student_name_matches import render_student_name_matches
 from schedule_app.services.opd_archive import OPDArchiveError
+from schedule_app.services.assessment_diagnostics import DIAGNOSTICS_UI_VERSION
+from schedule_app.sections.assessment_diagnostics import render_completion_diagnostics
 
 P = "assessment_completion_"
 
@@ -30,7 +32,7 @@ def render_assessment_completion(archive, scan, years, *, manage_students=True,
         return unverified_bundle(scan, years, "Not checked: minimum-shifts setting not verified", minimum_shifts=None)
     # The loaded source records do not depend on the threshold. Keep them when
     # this setting changes; recompute denominators and percentages below.
-    signature = hashlib.sha256(json.dumps([ASSESSMENT_VERSION, archive.config.signature(),
+    signature = hashlib.sha256(json.dumps([ASSESSMENT_VERSION, DIAGNOSTICS_UI_VERSION, archive.config.signature(),
                                           completion_context(scan, years)], sort_keys=True).encode()).hexdigest()
     if st.session_state.get(P + "scope") != signature:
         for key in ("inputs", "failure", "course_choice", "student_choice"):
@@ -101,6 +103,7 @@ def render_assessment_completion(archive, scan, years, *, manage_students=True,
                        "affected results remain Not verified.")
     if matching_only:
         return bundle
+    render_completion_diagnostics(archive, inputs, bundle, unmatched)
     for direction, title in (("Student → educator", "Educators without verified student feedback"),
                              ("Preceptor → student", "Preceptors without verified completed student assessments")):
         issues = [r for r in bundle["warnings"] if r["direction"] == direction]

@@ -7,6 +7,8 @@ import streamlit as st
 from schedule_app.services.evaluation_access import evaluation_access_is_valid, lock_evaluation_records
 from schedule_app.services.assessment_settings import DEFAULT_MINIMUM_SHIFTS, validate_minimum_shifts
 from schedule_app.services.opd_archive import OPDArchiveError
+from schedule_app.services.assessment_diagnostics import FOCUS_KEY, focused_missing_names
+from schedule_app.services.assessment_completion import completion_context
 from schedule_app.services.student_assessment_links import GitHubStudentAssessmentLinks
 from schedule_app.services.student_name_review import (
     STUDENT_REVIEW_UI_VERSION, oasis_student_choices, student_name_review,
@@ -141,6 +143,13 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
         st.success(notice)
     review = student_name_review(inputs, scan, years, unmatched)
     active, missing = review["active"], review["missing"]
+    # A focus from the report check narrows only this correction queue. It never
+    # removes students from the computation or changes saved mappings.
+    focus = st.session_state.get(FOCUS_KEY)
+    focused = focused_missing_names(missing, unmatched, focus, completion_context(scan, years))
+    if focus is not None and focused is None:
+        st.session_state.pop(FOCUS_KEY, None)
+        focus = None
     choices = oasis_student_choices(inputs["prepared"])
     service = GitHubStudentAssessmentLinks(archive)
 
@@ -176,18 +185,30 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
             except OPDArchiveError as exc:
                 st.error(str(exc))
                 st.info("The existing matches were kept. A failed refresh is not treated as an empty catalog.")
-        if missing:
+        queue = missing
+        if focused is not None:
+            queue = focused
+            st.info(f"Focused review: {focus['preceptor_name']} — {focus['academic_year']}. "
+                    "Only unresolved eligible names for this preceptor/period are listed. "
+                    "All other students remain in the calculations.")
+            if st.button("Show all unmatched student names", key=P + "clear_diagnostic_focus"):
+                st.session_state.pop(FOCUS_KEY, None)
+                st.rerun()
+            if not queue:
+                st.success("The eligible student-name matches for this focused preceptor are resolved. "
+                           "Return to PTS and create a fresh ZIP. Other source or evaluation issues may still need review.")
+        if queue:
             if show_tables or st.checkbox("Show unmatched-name details (optional)", key=P + "show_unmatched", value=False):
-                st.dataframe(review_table_rows(missing, minimum_shifts=minimum_shifts), hide_index=True, use_container_width=True)
-            options = list(missing)
+                st.dataframe(review_table_rows(queue, minimum_shifts=minimum_shifts), hide_index=True, use_container_width=True)
+            options = list(queue)
             if st.session_state.get(P + "student_choice") not in options:
                 st.session_state[P + "student_choice"] = options[0]
             key = st.selectbox("OPD students needing an OASIS match", options, key=P + "student_choice",
-                               format_func=lambda k: missing[k]["student_name"])
-            _render_editor(service, inputs, key, missing[key]["student_name"], choices)
-        elif active:
+                               format_func=lambda k: queue[k]["student_name"])
+            _render_editor(service, inputs, key, queue[key]["student_name"], choices)
+        elif active and focused is None:
             st.info("No student-name corrections are needed for these dates. The missing-name dropdown is hidden.")
-        else:
+        elif not active:
             st.info("No assigned OPD student names are available for these dates and named teaching preceptors.")
 
     entries = inputs["student_links"]["entries"]
