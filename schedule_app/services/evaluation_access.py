@@ -1,7 +1,7 @@
-"""Shared section-only password gate for OER and PTS.
+"""Shared section-only password gate for OER, PTS and PTS Matching.
 
 No browser cookie, query parameter, or process-global flag grants access.
-Both entrypoints check the gate before rendering data or doing network work.
+All three entrypoints check the gate before rendering data or doing network work.
 Date-setting callbacks also check it, because callbacks run before render().
 Other scheduling sections and their session data are not protected by this gate.
 """
@@ -56,7 +56,7 @@ def _clear_evaluation_data():
 
 
 def lock_evaluation_records():
-    """Lock both protected sections; retain this function name for compatibility."""
+    """Lock the protected sections; retain this function name for compatibility."""
     _clear_evaluation_data()
     for suffix in ("auth", "issued", "last_seen", "password"):
         st.session_state.pop(P + suffix, None)
@@ -124,10 +124,10 @@ def protected_evaluation_callback(callback):
 def require_evaluation_access(*, show_lock=True, lock_key="evaluation_lock_main", section_name="OER"):
     """Return False before protected widgets/data/network work if not authorized.
 
-    The same secret and session authorization cover OER and PTS; no second
+    The same secret and session authorization cover OER, PTS and PTS Matching; no second
     password or separate encryption key is introduced.
     """
-    if section_name not in ("OER", "PTS"):
+    if section_name not in ("OER", "PTS", "PTS Matching"):
         raise ValueError("Unknown protected section.")
     if evaluation_access_is_valid(touch=True):
         if show_lock:
@@ -145,8 +145,8 @@ def require_evaluation_access(*, show_lock=True, lock_key="evaluation_lock_main"
     remaining = max(0, int(math.ceil(st.session_state.get(P + "retry_at", 0) - time.time())))
     if remaining:
         st.warning(f"Wait {remaining} seconds before trying again.")
-    st.caption("This password unlocks OER and PTS in this session. Access expires after 30 minutes "
-               "without an interaction in either protected section, or after eight hours. "
+    st.caption("This password unlocks OER, PTS and PTS Matching in this session. Access expires after 30 minutes "
+               "without an interaction in a protected section, or after eight hours. "
                "Other scheduling sections remain available without this password.")
     with st.form(P + "login_form", clear_on_submit=True):
         st.text_input("OER / PTS password", type="password", key=P + "password", max_chars=1024)
