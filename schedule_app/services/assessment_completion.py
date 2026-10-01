@@ -32,15 +32,19 @@ from schedule_app.services.ignored_student_entries import (
     GitHubIgnoredStudentEntries, EMPTY_EXCLUSION_SIGNATURE, require_matching_exclusions,
 )
 from schedule_app.services.assessment_settings import DEFAULT_MINIMUM_SHIFTS, validate_minimum_shifts
+from schedule_app.services.assessment_progress import (
+    AssessmentIdentityResolver, assessment_as_of, completion_window, has_documented_percentage,
+    MATCHED, ABSENT, REVIEW,
+)
 
-ASSESSMENT_VERSION = 3
+ASSESSMENT_VERSION = 4
 CLINICAL = "*Clinical Assessment of Student"
 HP = "*PEDS History Taking & Physical Exam"
 TARGETS = {_form_key(CLINICAL): "clinical", _form_key(HP): "hp"}
 MAX_SOURCES = 100
 MAX_TOTAL_BYTES = 64 * 1024 * 1024
 
-def assessment_method_note(minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
+def assessment_method_note(minimum_shifts=DEFAULT_MINIMUM_SHIFTS, *, as_of=None):
     if minimum_shifts is None:
         return ("The minimum-shifts setting was not verified. No assessment-completion percentages "
                 "are calculated until the saved setting is available.")
@@ -49,7 +53,10 @@ def assessment_method_note(minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
     return (
         f"Eligible students were assigned to this preceptor on at least {minimum_shifts} distinct AM/PM {unit} in the reporting period. "
         "Each eligible student counts once per form type, even with several submitted forms. "
-        "AM and PM on the same day are two shifts. Assignment dates and OASIS Submit Date both use the displayed period."
+        "AM and PM on the same day are two shifts. Both assignment dates and OASIS Submit Date "
+        "are limited to the reporting period through the Assessments as of date, inclusive. "
+        "Students with no assessment on file remain in the denominator; the numerator includes only confirmed matches."
+        + (f" Assessments as of: {as_of}." if as_of else "")
     )
 
 
@@ -61,7 +68,7 @@ METHOD_NOTE = assessment_method_note()
 def completion_threshold(bundle):
     value = bundle.get("minimum_shifts")
     if value is None:
-        if any(row.get("assessment_status") == "Calculated" for row in bundle.get("rows", [])):
+        if any(has_documented_percentage(row) for row in bundle.get("rows", [])):
             raise OPDArchiveError("Assessment results have no verified minimum-shifts setting. Recalculate completion.")
         return None
     return validate_minimum_shifts(value)
@@ -69,13 +76,18 @@ def completion_threshold(bundle):
 
 SCOPE_NOTE = (
     "This is a record-completeness measure, not a judgment of teaching quality. "
-    "An absent record may reflect an incomplete export or an unmatched identifier. "
+    "No assessment on file means not found in the loaded records, not overdue or never completed. "
+    "An absent record may reflect a new student or an incomplete export. "
+    "Provisional percentages use confirmed matches only and may change after a name correction. "
     "The two form types are shown separately; this report does not establish that both are required for every student."
 )
 COLUMNS = ("preceptor_name", "academic_year", "report_start_date", "report_end_date", "record_id",
            "eligible_students", "clinical_students_evaluated", "clinical_completion_pct",
            "hp_students_evaluated", "hp_completion_pct", "either_students_evaluated", "either_completion_pct",
-           "clinical_forms_submitted", "hp_forms_submitted", "student_feedback_evaluations", "assessment_status", "minimum_shifts")
+           "clinical_forms_submitted", "hp_forms_submitted", "student_feedback_evaluations", "assessment_status", "minimum_shifts",
+           "assessments_as_of", "assessment_end_date", "student_names_needing_review",
+           "students_without_oasis_name_record", "clinical_students_without_assessment",
+           "hp_students_without_assessment", "either_students_without_assessment")
 
 
 def _parse_submit(value):
@@ -126,13 +138,15 @@ def prepare_student_assessments(exports):
                     if sid.casefold() in {"nan", "n/a", "none", "null", "-", "--"}:
                         sid = ""
                     key = student_name_key(student)
+                    if key:
+                        names.setdefault(key, student_name_without_designations(student))
                     if key and sid:
                         name_ids[key].add(sid)
-                        names.setdefault(key, student_name_without_designations(student))
+                    if course:
+                        courses.add(course)
                     target = TARGETS.get(_form_key(row["Evaluation"]))
                     if target is None:
                         continue
-                    courses.add(course)
                     fid = row["Form Record"].strip()
                     if not course or not fid:
                         issues.append({"issue": "Missing Course ID or Form Record", "source": filename,
@@ -266,36 +280,39 @@ def _warning(name, label, rid, direction, issue, action):
             "direction": direction, "issue": issue, "action": action}
 
 
-def completion_context(scan, years):
+def completion_context(scan, years, *, as_of=None):
     return {"opd_commit": scan["commit"],
+            "assessments_as_of": assessment_as_of(as_of).isoformat(),
             "student_exclusions_signature": scan.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE),
             "periods": [
         [year, start.isoformat(), end.isoformat(), label]
         for year, start, end, label in active_periods(scan, years)]}
 
 
-def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
+def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts=DEFAULT_MINIMUM_SHIFTS, as_of=None):
     """Return provider-level metrics/warnings only (no student names or IDs).
 
-    A missing external ID never shrinks the denominator. That preceptor's rates
-    remain Not verified until resolved; report generation itself is not blocked.
+    An OPD student without an OASIS record stays eligible with no documented
+    assessment. Plausible name discrepancies are provisional, never auto-linked.
+    Genuine source failures still produce unknown results, not invented zeroes.
     """
     minimum_shifts = validate_minimum_shifts(minimum_shifts)
     if (inputs.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE)
             != scan.get("student_exclusions_signature", EMPTY_EXCLUSION_SIGNATURE)):
         raise OPDArchiveError("Ignored student entries changed. Reload evaluation completeness before calculating percentages.")
+    cutoff = assessment_as_of(as_of)
     prepared = inputs["prepared"]
     chosen = set(courses) if courses is not None else set(prepared["courses"])
     if courses is None and len(chosen) > 1:
         raise OPDArchiveError("Choose the student-assessment course(s) for this teaching report; multiple courses are archived.")
     if not chosen.issubset(set(prepared["courses"])):
         raise OPDArchiveError("Refresh the assessment data: a selected course is no longer available.")
-    matcher = StudentNameMatcher(prepared["name_ids"], inputs["student_links"]["entries"])
+    matcher = AssessmentIdentityResolver(prepared, inputs["student_links"]["entries"])
     catalog = inputs["catalog"]
     review = {name_key(n) for n in scan.get("unresolved_preceptor_labels", [])}
     result_rows, warnings, unmatched = [], [], []
     for year, start, end, label in active_periods(scan, years):
-        begin, finish = start.isoformat(), end.isoformat()
+        begin, finish = completion_window(start, end, cutoff)
         active = sorted({r["preceptor_name"] for r in scan["monthly"]
                          if r["academic_start_year"] == year and r["no_of_shifts"] > 0
                          and name_key(r["preceptor_name"]) not in review}, key=name_key)
@@ -304,12 +321,9 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
             if a["preceptor_name"] not in active or not begin <= a["date"] <= finish:
                 continue
             match = matcher.resolve(a["student"])
-            skey, ids = match.name_key, match.candidate_ids
-            if len(ids) == 1:
-                identity = ("external_id", ids[0])
-            else:
-                identity = ("unresolved", skey)
-                name_lookup[(a["preceptor_name"], identity)] = (a["student"], len(ids))
+            identity = match.identity_key
+            if match.status != MATCHED:
+                name_lookup.setdefault((a["preceptor_name"], identity), {})[match.name_key] = (a["student"], match)
             pairs[(a["preceptor_name"], identity)].add((a["date"], a["shift"]))
         period_forms = [f for f in prepared["forms"] if f["course"] in chosen and begin <= f["submit_date"] <= finish]
         period_issues = [i for i in prepared["issues"] if (not i.get("course") or i["course"] in chosen)
@@ -328,7 +342,10 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
             rid = catalog["entries"].get(name_key(name), {}).get("record_id", "")
             eligible = {identity for (n, identity), slots in pairs.items() if n == name and len(slots) >= minimum_shifts}
             resolved = {key for kind, key in eligible if kind == "external_id"}
-            missing = [identity for identity in eligible if identity[0] == "unresolved"]
+            missing = [identity for identity in eligible if identity[0] == "opd_name"]
+            review_missing = [identity for identity in missing if any(
+                match.status == REVIEW for _, match in name_lookup[(name, identity)].values())]
+            absent = [identity for identity in missing if identity not in review_missing]
             provider_forms = [f for f in period_forms if rid and f["username"] == rid]
             provider_issues = [i for i in period_issues if (rid and i.get("username") == rid)
                                or (not i.get("username") and (
@@ -345,25 +362,35 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
                 status = "Not checked: no student-assessment sources/course selected"
             elif provider_issues:
                 status = "Not verified: assessment source metadata needs review"
-            elif missing:
-                status = f"Not verified: {len(missing)} eligible student name(s) need an OASIS name match"
             elif not eligible:
                 status = f"No eligible students ({minimum_shifts}+ shifts)"
+            elif review_missing:
+                status = f"Provisional: {len(review_missing)} eligible student name(s) need review"
             else:
                 status = "Calculated"
+            numeric = status == "Calculated" or status.startswith("Provisional:")
             row = {"preceptor_name": name, "academic_year": label, "report_start_date": begin,
-                   "report_end_date": finish, "record_id": rid, "eligible_students": len(eligible),
-                   "minimum_shifts": minimum_shifts,
-                   "clinical_students_evaluated": len(clinical) if status == "Calculated" else None,
-                   "hp_students_evaluated": len(hp) if status == "Calculated" else None,
-                   "either_students_evaluated": len(clinical | hp) if status == "Calculated" else None,
+                   "report_end_date": end.isoformat(), "record_id": rid, "eligible_students": len(eligible),
+                   "minimum_shifts": minimum_shifts, "assessments_as_of": cutoff.isoformat(),
+                   "assessment_end_date": finish, "student_names_needing_review": len(review_missing),
+                   "students_without_oasis_name_record": len(absent),
+                   "clinical_students_evaluated": len(clinical) if numeric else None,
+                   "hp_students_evaluated": len(hp) if numeric else None,
+                   "either_students_evaluated": len(clinical | hp) if numeric else None,
                    "clinical_forms_submitted": totals["clinical"] if rid and available and not provider_issues else None,
                    "hp_forms_submitted": totals["hp"] if rid and available and not provider_issues else None,
                    "assessment_status": status, "group_year": year,
                    "student_feedback_evaluations": None}
             for prefix in ("clinical", "hp", "either"):
                 row[prefix + "_completion_pct"] = (round(100 * row[prefix + "_students_evaluated"] / len(eligible), 1)
-                                                   if status == "Calculated" else None)
+                                                   if numeric else None)
+            for prefix in ("clinical", "hp", "either"):
+                row[prefix + "_students_without_assessment"] = (
+                    len(eligible) - row[prefix + "_students_evaluated"] if numeric else None)
+            if numeric and row["either_students_without_assessment"]:
+                warnings.append(_warning(name, label, rid, "Assessment on file",
+                    f"No assessment on file for {row['either_students_without_assessment']} of {len(eligible)} eligible students as of {cutoff.isoformat()}",
+                    "No confirmation is required for an absent student record. This is progress, not an overdue judgment; refresh after new OER uploads."))
             if rid and summary is not None:
                 row["student_feedback_evaluations"] = summary["rows_by_id"].get(rid, {}).get("evaluation_count", 0)
                 if not row["student_feedback_evaluations"]:
@@ -387,26 +414,36 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
             else:
                 warnings.append(_warning(name, label, rid, "Preceptor → student", status,
                                          "Review source availability, the username link and source diagnostics."))
-            if missing:
-                warnings.append(_warning(name, label, rid, "Student identity", status,
-                    "Match the OPD student name to the correct OASIS student name below; all eligible students remain in the denominator."))
-                for identity in missing:
-                    display, candidates = name_lookup[(name, identity)]
-                    unmatched.append({"preceptor_name": name, "academic_year": label, "student_name": display,
-                                      "name_key": identity[1], "assigned_shifts": len(pairs[(name, identity)]),
-                                      "issue": "More than one OASIS student record uses this name" if candidates else "OPD name needs a matching OASIS student name"})
+            if review_missing:
+                warnings.append(_warning(name, label, rid, "Student identity",
+                    f"Name review needed for {len(review_missing)} eligible student(s); documented percentages are provisional" if numeric else
+                    f"Name review needed for {len(review_missing)} eligible student(s); source checks are also incomplete",
+                    "Review the possible spelling/identity discrepancy in PTS Matching. No student was removed and no similar name was credited automatically."))
+            for identity in missing:
+                for display, match in name_lookup[(name, identity)].values():
+                    item = {"preceptor_name": name, "academic_year": label, "student_name": display,
+                            "name_key": match.name_key, "assigned_shifts": len(pairs[(name, identity)]),
+                            "group_year": year, "report_start_date": begin, "report_end_date": end.isoformat(),
+                            "assessments_as_of": cutoff.isoformat(), "match_category": match.status,
+                            "issue": ("Possible name difference or ambiguous OASIS identity; confirm only a genuine match"
+                                      if match.status == REVIEW else
+                                      "No OASIS student record found; no confirmation required and student stays in denominator")}
+                    if item not in unmatched:
+                        unmatched.append(item)
             result_rows.append(row)
     return {"version": ASSESSMENT_VERSION, "minimum_shifts": minimum_shifts,
-            "context": completion_context(scan, years), "rows": result_rows,
+            "context": completion_context(scan, years, as_of=cutoff), "rows": result_rows,
+            "assessments_as_of": cutoff.isoformat(),
             "warnings": warnings, "source_count": prepared["source_count"], "sources": inputs["sources"],
             "retrieved_at": inputs["retrieved_at"], "assessment_commit": inputs["commit"],
             "username_mapping_sha": catalog.get("sha"), "student_mapping_sha": inputs["student_links"].get("sha"),
             "course_ids": sorted(chosen)}, unmatched
 
 
-def unverified_bundle(scan, years, reason="Not checked: load evaluation completeness", *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
+def unverified_bundle(scan, years, reason="Not checked: load evaluation completeness", *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS, as_of=None):
     if minimum_shifts is not None:
         minimum_shifts = validate_minimum_shifts(minimum_shifts)
+    cutoff = assessment_as_of(as_of)
     rows, warnings = [], []
     for year, start, end, label in active_periods(scan, years):
         review = set(scan.get("unresolved_preceptor_labels", []))
@@ -416,13 +453,15 @@ def unverified_bundle(scan, years, reason="Not checked: load evaluation complete
             row = {key: None for key in COLUMNS}
             row.update(preceptor_name=name, academic_year=label, report_start_date=start.isoformat(),
                        report_end_date=end.isoformat(), record_id="", assessment_status=reason, group_year=year,
-                       minimum_shifts=minimum_shifts)
+                       minimum_shifts=minimum_shifts, assessments_as_of=cutoff.isoformat(),
+                       assessment_end_date=min(end, cutoff).isoformat())
             rows.append(row)
             for direction in ("Student → educator", "Preceptor → student"):
                 warnings.append(_warning(name, label, "", direction, reason,
                     "Load/refresh the evaluation completeness check. Teaching reports can still be generated."))
     return {"version": ASSESSMENT_VERSION, "minimum_shifts": minimum_shifts,
-            "context": completion_context(scan, years), "rows": rows,
+            "context": completion_context(scan, years, as_of=cutoff), "rows": rows,
+            "assessments_as_of": cutoff.isoformat(),
             "warnings": warnings, "source_count": 0, "sources": [], "retrieved_at": "Not checked", "course_ids": []}
 
 
@@ -438,7 +477,11 @@ def completion_rows(bundle, scan, year):
     threshold = completion_threshold(bundle)
     if any(row.get("minimum_shifts") != threshold for row in bundle["rows"]):
         raise OPDArchiveError("Assessment results use inconsistent minimum-shifts settings. Recalculate completion.")
-    wanted = completion_context(scan, [year])["periods"]
+    cutoff = assessment_as_of(bundle.get("assessments_as_of"))
+    if bundle.get("context", {}).get("assessments_as_of") != cutoff.isoformat() or any(
+        row.get("assessments_as_of") != cutoff.isoformat() for row in bundle["rows"]):
+        raise OPDArchiveError("Assessment dates are inconsistent. Recalculate completion before exporting.")
+    wanted = completion_context(scan, [year], as_of=cutoff)["periods"]
     if any(p not in bundle["context"]["periods"] for p in wanted):
         raise OPDArchiveError("Refresh evaluation completeness: its dates differ from this report.")
     return [row for row in bundle["rows"] if row["group_year"] == year]
@@ -447,5 +490,8 @@ def completion_rows(bundle, scan, year):
 def completion_display(row, prefix):
     pct = row.get(prefix + "_completion_pct")
     if pct is None:
-        return "No eligible students" if row["assessment_status"].startswith("No eligible") else "Not verified"
-    return f"{row[prefix + '_students_evaluated']} / {row['eligible_students']} ({pct:.1f}%)"
+        status = row["assessment_status"]
+        return ("No eligible students" if status.startswith("No eligible") else
+                "Not checked" if status.startswith("Not checked") else "Not verified")
+    result = f"{row[prefix + '_students_evaluated']} / {row['eligible_students']} ({pct:.1f}%)"
+    return result + ("*" if str(row.get("assessment_status", "")).startswith("Provisional:") else "")
