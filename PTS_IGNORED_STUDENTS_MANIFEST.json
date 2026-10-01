@@ -1,0 +1,43 @@
+{
+  "feature": "PTS ignored student entries",
+  "version": 1,
+  "base_package": "Schedule_App_Modular_PTS_Automatic_Name_Matching.zip",
+  "files": [
+    {
+      "path": "schedule_app/services/ignored_student_entries.py",
+      "action": "add",
+      "sha256": "4be31339860a152f6bcd514d503098056b48ae34ca47b6228104a036ed740166"
+    },
+    {
+      "path": "schedule_app/sections/ignored_student_entries.py",
+      "action": "add",
+      "sha256": "02368adc2f5f1489ad263e15d193335f72b85309bbf01982d360e3c5cb45fc5a"
+    },
+    {
+      "path": "schedule_app/services/teaching_analysis.py",
+      "action": "replace",
+      "sha256": "414b3f91990d373568b7924d15115fddd694db966495d909d85e8f05f62a87cc"
+    },
+    {
+      "path": "schedule_app/services/assessment_completion.py",
+      "action": "replace",
+      "sha256": "7e03ba3d15435431c935bf3e4a8f41539462edf66229f2f7939ceec5a54df4f2"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "action": "replace",
+      "sha256": "9c426d6a8e6b45b43ac6488e8f492d25b462a64b51e146a8df0a8e7b3db919fe"
+    },
+    {
+      "path": "schedule_app/sections/student_name_matches.py",
+      "action": "replace",
+      "sha256": "d9f04daa4cf669a7065f3129971881913376b3eb78879225865d2a15bfe1fdbf"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "action": "replace",
+      "sha256": "06d0a7d43d97b388a3e683bc27c1659cb2a179e216de835af4aeb6796f2c7db0"
+    }
+  ],
+  "notes": "Merge folders; preserve launcher, settings, dependencies, passwords and encryption key. Original source files are never changed."
+}
