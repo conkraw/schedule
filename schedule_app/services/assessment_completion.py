@@ -26,10 +26,11 @@ from schedule_app.services.student_assessment_links import GitHubStudentAssessme
 from schedule_app.services.teaching_evaluations import active_periods, parse_saved_summary
 from schedule_app.services.oasis_workflow import GitHubOASISSummaries
 from schedule_app.services.teaching_analysis import teaching_scan_archives
+from schedule_app.services.student_name_matching import StudentNameMatcher, student_name_without_designations
 
 from schedule_app.services.assessment_settings import DEFAULT_MINIMUM_SHIFTS, validate_minimum_shifts
 
-ASSESSMENT_VERSION = 2
+ASSESSMENT_VERSION = 3
 CLINICAL = "*Clinical Assessment of Student"
 HP = "*PEDS History Taking & Physical Exam"
 TARGETS = {_form_key(CLINICAL): "clinical", _form_key(HP): "hp"}
@@ -124,7 +125,7 @@ def prepare_student_assessments(exports):
                     key = student_name_key(student)
                     if key and sid:
                         name_ids[key].add(sid)
-                        names.setdefault(key, re.sub(r";\s*MD\s*\d{4}\s*$", "", student, flags=re.I).strip())
+                        names.setdefault(key, student_name_without_designations(student))
                     target = TARGETS.get(_form_key(row["Evaluation"]))
                     if target is None:
                         continue
@@ -277,7 +278,7 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
         raise OPDArchiveError("Choose the student-assessment course(s) for this teaching report; multiple courses are archived.")
     if not chosen.issubset(set(prepared["courses"])):
         raise OPDArchiveError("Refresh the assessment data: a selected course is no longer available.")
-    overrides = inputs["student_links"]["entries"]
+    matcher = StudentNameMatcher(prepared["name_ids"], inputs["student_links"]["entries"])
     catalog = inputs["catalog"]
     review = {name_key(n) for n in scan.get("unresolved_preceptor_labels", [])}
     result_rows, warnings, unmatched = [], [], []
@@ -290,8 +291,8 @@ def build_completion_bundle(inputs, scan, years, *, courses=None, minimum_shifts
         for a in inputs["assignments"]:
             if a["preceptor_name"] not in active or not begin <= a["date"] <= finish:
                 continue
-            skey = student_name_key(a["student"])
-            ids = [overrides[skey]["external_id"]] if skey in overrides else prepared["name_ids"].get(skey, [])
+            match = matcher.resolve(a["student"])
+            skey, ids = match.name_key, match.candidate_ids
             if len(ids) == 1:
                 identity = ("external_id", ids[0])
             else:

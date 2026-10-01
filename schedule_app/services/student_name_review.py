@@ -14,21 +14,24 @@ from schedule_app.services.opd_archive import OPDArchiveError
 from schedule_app.services.oasis_educator_reports import name_key
 from schedule_app.services.student_assessment_links import student_name_key
 from schedule_app.services.teaching_evaluations import active_periods
+from schedule_app.services.student_name_matching import (
+    StudentNameMatcher, student_matching_key, student_name_without_designations,
+)
 
-STUDENT_REVIEW_UI_VERSION = 2
+STUDENT_REVIEW_UI_VERSION = 3
 
 
 def oasis_student_choices(prepared):
     """One selectable name/ID pair per observed association; never invent an ID.
 
-    The crosswalk already omits the recognized MD-class suffix. Two IDs attached
-    to the same name remain separate choices and require explicit confirmation.
+    Known trailing program/class designations are omitted from the display.
+    Distinct records sharing that name remain ambiguous in the name-only selector.
     Aliases with the same ID may appear under each observed name.
     """
     choices = {}
     names = prepared.get("student_names", {})
     for key, ids in sorted(prepared.get("name_ids", {}).items()):
-        display = str(names.get(key) or key).strip()
+        display = student_name_without_designations(names.get(key) or key)
         clean_ids = sorted({str(sid).strip() for sid in ids if str(sid).strip()})
         for sid in clean_ids:
             if sid.casefold() in {"nan", "n/a", "none", "null", "-", "--"}:
@@ -51,7 +54,7 @@ def name_only_student_choices(choices):
     """
     grouped = defaultdict(list)
     for token, row in choices.items():
-        grouped[student_name_key(row["oasis_student_name"])].append((token, row))
+        grouped[student_matching_key(row["oasis_student_name"])].append((token, row))
     result = {}
     for key, pairs in sorted(grouped.items()):
         pairs = sorted(pairs, key=lambda pair: pair[0])
@@ -112,13 +115,11 @@ def student_name_review(inputs, scan, years, unmatched):
     affects = defaultdict(set)
     for row in unmatched:
         affects[row["name_key"]].add(row["preceptor_name"])
-    entries = inputs["student_links"]["entries"]
-    name_ids = inputs["prepared"]["name_ids"]
+    matcher = StudentNameMatcher(inputs["prepared"]["name_ids"], inputs["student_links"]["entries"])
     result, missing = {}, {}
     for key, item in sorted(active.items()):
-        ids = name_ids.get(key, [])
-        saved_id = entries.get(key, {}).get("external_id", "")
-        state = "Saved match" if saved_id else "Exact normalized name match" if len(ids) == 1 else "Needs review"
+        match = matcher.resolve(item["student_name"])
+        ids, state = match.candidate_ids, match.match_status
         row = {"name_key": key, "student_name": item["student_name"],
                "preceptors": sorted(item["preceptors"], key=name_key),
                "periods": sorted(item["periods"]), "match_status": state,
