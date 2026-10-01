@@ -16,7 +16,28 @@ from schedule_app.services.teaching_evaluations import (
 )
 
 P = "teaching_oasis_"
-USERNAME_ENTRY_UI_VERSION = 2
+USERNAME_ENTRY_UI_VERSION = 3
+FEEDBACK_PREFERENCE_KEY = P + "feedback_preference"
+
+
+def _feedback_inclusion_control():
+    """Default to saved feedback; keep explicit opt-out independent of widget life.
+
+    This preference holds no evaluation data and is protected/cleared by the
+    existing OER/PTS session gate. No new GitHub record or write is needed.
+    """
+    initial = bool(st.session_state.get(FEEDBACK_PREFERENCE_KEY, True))
+    # Initialize the widget before creation. A legacy widget's default False
+    # must not silently disable feedback after installing this correction.
+    if FEEDBACK_PREFERENCE_KEY not in st.session_state:
+        st.session_state.pop(P + "include", None)
+    enabled = st.checkbox("Include linked OASIS evaluations in individual Word reports",
+                          value=initial, key=P + "include")
+    if enabled != initial:
+        _clear_downloads()
+    st.session_state[FEEDBACK_PREFERENCE_KEY] = bool(enabled)
+    return bool(enabled)
+
 
 
 def _clear_downloads():
@@ -185,12 +206,14 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
         _reset_username_controls()
     # Keep the alert visible even when the link editor's expander is collapsed.
     username_status = st.empty()
+    feedback_status = st.empty()
     with st.expander("Link preceptors to OASIS evaluations (saved in GitHub)"):
-        enabled = st.checkbox("Include linked OASIS evaluations in individual Word reports",
-                              value=False, key=P + "include")
+        enabled = _feedback_inclusion_control()
         st.caption("Saved username links are applied automatically. Manage missing names or corrections in PTS Matching. "
                    "Only matched preceptors receive the feedback section; teaching-only reports remain available for the others.")
         if not enabled:
+            feedback_status.warning("Learner feedback is OFF. Individual reports will omit students' evaluations of preceptors. "
+                                    "Enable linked OASIS evaluations above to include saved feedback.")
             return None, True
         scope = (LINK_VERSION, TEACHING_OASIS_REPORT_VERSION, USERNAME_ENTRY_UI_VERSION, archive.config.signature())
         if st.session_state.get(P + "scope") != scope:
@@ -297,10 +320,16 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
             st.markdown("**Link preview for these teaching reports**")
             st.dataframe(bundle["status"], hide_index=True, use_container_width=True)
         linked = sum(len(group["preceptors"]) for group in bundle["periods"].values())
+        total = len(bundle["status"])
         if linked:
-            st.success(f"{linked:,} preceptor-period match(es). Their individual Word reports will include the linked OASIS evaluations.")
+            feedback_status.success(f"Learner feedback ready: {linked:,} of {total:,} preceptor-period reports will include "
+                                    "students' evaluations, question averages, and comments.")
+            if linked < total:
+                st.warning(f"{total - linked:,} report(s) have no matching feedback. Their Word documents will explain "
+                           "whether a username, matching-date summary, or evaluation row is missing.")
         else:
-            st.warning("No teaching preceptors have a matching saved username in the selected OASIS summaries. Reports will contain teaching effort only until a match is saved.")
+            feedback_status.warning("No learner feedback is attached yet. Check the saved username and exact-date OASIS summary "
+                                    "links below. Each individual report will show the reason rather than silently omitting feedback.")
         st.caption("Saved summaries are snapshots, not a live recomputation of evaluations. Refresh links after OASIS is updated. "
                    "The app checks the saved summary again before generating Word reports. "
                    "Comments remain verbatim and can contain identifying information.")

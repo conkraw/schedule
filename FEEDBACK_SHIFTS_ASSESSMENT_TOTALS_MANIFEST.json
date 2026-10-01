@@ -1,0 +1,90 @@
+{
+  "release": "2026-10-01-feedback-shifts-assessed-totals-1",
+  "baseline": "Schedule_App_Modular_Student_Count_Consistency.zip",
+  "runtime_files": [
+    {
+      "action": "replace",
+      "path": "schedule_app/reports/assessment_completion.py",
+      "sha256": "035a48fd7f5678ef680284c7e01ef37c04612ceb2ac5f9b836e556ec1c385a27"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/reports/chair_summary.py",
+      "sha256": "ce3d29acb91d8a186fa3431504e81bf76f0a9ddca9fdb2df8aa59c895fc364b7"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/reports/individual_teaching.py",
+      "sha256": "0707cfc0ad87c3329b91e92cdc3b606ef34c2837e6b7ca853a7f095d420737ff"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/reports/preceptor_evaluations.py",
+      "sha256": "cc16806c08e14bbcd00df993f3710b458b5913143184669476f71b57e64daa93"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/reports/teaching_export.py",
+      "sha256": "7fead28e79d9a582e6ddfa1061334a3b40d5b0e1ba8041b3397a281af52e082b"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/assessment_completion.py",
+      "sha256": "784c4c8fc6c644125cc66877d6572bc6ca63fab473deded87ed329b04ac4ea29"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/assessment_settings.py",
+      "sha256": "6ecefe84df1f576170315903f0c39feeab1d67b66240b3cec034892d28a228d7"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/preceptor_oasis_links.py",
+      "sha256": "dee7a72082da35463061a639ba00aa0a80e869faa0cf394a53a12c7940231b34"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "sha256": "f50e40eff3286d34228ae6b3b705bfd0d471737228d65415b9a552b724603bfe"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/sections/pts_navigation.py",
+      "sha256": "ff290b4b2437681c3ea2640c4282a545a739cb8f7b20304264c534f2b4b83ce9"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/services/assessment_completion.py",
+      "sha256": "c67536a945bda5a8306db189ddc8d8beecffbd831ccc11449135306718ba9a00"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/services/educational_time.py",
+      "sha256": "f036810113dfc5743d6feff3fc6b91af18445133dc27a62ac34386b335dc592c"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/services/student_continuity.py",
+      "sha256": "9ef5da9db0bd1a7d79249478b6178c6787dbd0b6e13d90d35a7989b5a456d8dd"
+    },
+    {
+      "action": "replace",
+      "path": "schedule_app/services/teaching_evaluations.py",
+      "sha256": "523133d68e6f2fcaa67979e4e8ac88c8e695d3763f4a36614fac2a9ac643d933"
+    }
+  ],
+  "preserved": [
+    "app_sch_2026.py",
+    "schedule_app/settings.py",
+    "requirements.txt",
+    "Streamlit Secrets",
+    "existing GitHub encryption key and source/mapping catalogs"
+  ],
+  "validation": {
+    "passed": 1196,
+    "skipped": 5,
+    "subtests_passed": 158,
+    "new_tests": 29,
+    "live_deployment_tested": false
+  }
+}

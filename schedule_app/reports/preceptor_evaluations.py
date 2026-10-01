@@ -72,3 +72,13 @@ def append_oasis_evaluations(doc, preceptor_name, feedback):
          "handle this document as evaluation data.")
     note("Source: " + feedback["summary_filename"] + ". Saved report label: " + feedback["oasis_label"] +
          ". Source file identifier: " + feedback["summary_sha"][:12] + ".")
+
+
+def append_feedback_unavailable(doc, preceptor_name, reason):
+    """Requested feedback must not disappear silently when no link/record exists."""
+    heading = doc.add_heading("Learner feedback on teaching", level=2)
+    heading.paragraph_format.keep_with_next = True
+    paragraph = doc.add_paragraph("Not attached: " + reason.rstrip(".") + ".")
+    paragraph.paragraph_format.keep_with_next = True
+    doc.add_paragraph("This is not a zero evaluation score or proof that no feedback was submitted. "
+                      "Check the preceptor username in PTS Matching and the exact-date saved OASIS summary in PTS.")

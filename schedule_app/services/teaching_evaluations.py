@@ -22,7 +22,7 @@ from schedule_app.services.oasis_workflow import GitHubOASISSummaries, inspect_s
 from schedule_app.services.preceptor_oasis_links import GitHubPreceptorOASISLinks, period_key
 from schedule_app.services.reporting_periods import teaching_report_bounds, teaching_report_label
 
-TEACHING_OASIS_REPORT_VERSION = 1
+TEACHING_OASIS_REPORT_VERSION = 2
 
 
 def word_text(value: str) -> str:
@@ -222,3 +222,17 @@ def load_feedback_bundle(archive, scan, years, expected_catalog, expected_summar
             raise OASISReportError("A saved OASIS summary was updated. Click Refresh links and OASIS summaries to use the new evaluations.")
         summaries[year] = parse_saved_summary(loaded)
     return join_feedback(scan, years, catalog, summaries, allow_missing_summaries=allow_missing_summaries)
+
+
+def feedback_status_for_preceptor(bundle, scan, name, year):
+    """Explain a missing feedback attachment without substituting a zero rating."""
+    if bundle is None:
+        return "Linked learner feedback was not requested for this report."
+    # Validate the same period/version even when no matching row exists.
+    feedback_for_preceptor(bundle, scan, name, year)
+    label = teaching_report_label(scan, year)
+    records = [row for row in bundle.get("status", [])
+               if name_key(row.get("preceptor_name")) == name_key(name) and row.get("academic_year") == label]
+    if len(records) == 1:
+        return records[0]["status"].removesuffix("; teaching-only report")
+    return "No verified feedback attachment was available for this preceptor and reporting period."

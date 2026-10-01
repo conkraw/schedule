@@ -30,7 +30,7 @@ from schedule_app.services.learner_reach import (
 )
 
 from schedule_app.services.student_continuity import (
-    require_student_continuity_data, student_continuity_counts,
+    require_student_continuity_data, student_continuity_counts, continuity_count_text, continuity_period_note,
 )
 
 
@@ -138,15 +138,21 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
         ], widths=(4.9, 2.0), number_columns=(1,))
         note(f"{reach['teaching_shifts']:,} of {reach['scheduled_shifts']:,} scheduled AM/PM shifts included at least one student.")
         note(TIME_DEFINITION)
-        doc.add_heading("Student continuity", level=2)
+        doc.add_heading("Students assigned", level=2)
         p = doc.add_paragraph()
         p.add_run("Unique students assigned: ").bold = True
-        p.add_run(f"{reach['unique_students']:,}")
-        p.add_run("   |   Students assigned on 3+ days: ").bold = True
-        p.add_run(f"{reach['unique_students_3plus_days']:,}")
+        p.add_run(continuity_count_text(reach['unique_students']))
+        if reach.get("minimum_shifts") is not None:
+            p.add_run(f"   |   Students assigned for {reach['minimum_shifts']}+ shifts: ").bold = True
+            p.add_run(continuity_count_text(reach.get('eligible_students')))
         p.paragraph_format.keep_with_next = True
-        note("Students are counted once across all work types in this period. Three days means three distinct dates; "
-             "AM and PM on the same date count as one day. These counts do not multiply educational hours.")
+        note(continuity_period_note(scan, year))
+        if reach.get("eligible_students") is not None:
+            note("The minimum-shift count is the assessment-completion denominator.")
+        if str(reach.get("student_counts_status", "")).startswith(("Not checked", "Provisional:")):
+            note(reach["student_counts_status"] + ". Refresh evaluation completeness or review names in PTS Matching.", warning=True)
+        note("Students are counted once across all work types within the student-count dates. "
+             "AM and PM on the same date are two shifts. Student counts do not multiply educational hours.")
         reach_types = [row for row in service_rows if row["academic_year"] == label]
         doc.add_heading("By clinical experience", level=2)
         titles = ("Clinical experience", "Total scheduled\navailability (hours)", "Educational\nhours", "Learner Reach")
@@ -181,9 +187,13 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
         from schedule_app.reports.assessment_completion import append_individual_completion
         append_individual_completion(doc, scan, name, year)
         if oasis_feedback is not None:
-            from schedule_app.services.teaching_evaluations import feedback_for_preceptor
-            from schedule_app.reports.preceptor_evaluations import append_oasis_evaluations
-            append_oasis_evaluations(doc, name, feedback_for_preceptor(oasis_feedback, scan, name, year))
+            from schedule_app.services.teaching_evaluations import feedback_for_preceptor, feedback_status_for_preceptor
+            from schedule_app.reports.preceptor_evaluations import append_oasis_evaluations, append_feedback_unavailable
+            feedback = feedback_for_preceptor(oasis_feedback, scan, name, year)
+            if feedback is None:
+                append_feedback_unavailable(doc, name, feedback_status_for_preceptor(oasis_feedback, scan, name, year))
+            else:
+                append_oasis_evaluations(doc, name, feedback)
     output = BytesIO()
     doc.save(output)
     return output.getvalue()

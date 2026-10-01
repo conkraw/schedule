@@ -29,7 +29,7 @@ from schedule_app.services.teaching_evaluations import TEACHING_OASIS_REPORT_VER
 from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
 from schedule_app.settings import TEACHING_CHAIR_SUMMARY_FILENAME
 
-PTS_REPORT_SCREEN_VERSION = "2026-09-30-simple-pts-1"
+PTS_REPORT_SCREEN_VERSION = "2026-10-01-feedback-shifts-assessed-totals-1"
 
 
 def _optional_details(scan, report_scan, selected):
@@ -123,8 +123,6 @@ def render():
     adjustments = selected_priority_adjustments(report_scan, selected)
     if adjustments:
         st.caption(f"Outpatient priority applied to {len(adjustments):,} Academic Pediatrics / PSHCH Nursery half-day overlap(s).")
-    if show_details:
-        _optional_details(scan, report_scan, selected)
     # PTS uses saved keys. It never renders the preceptor or student correction editors.
     plan, links_ready = render_teaching_oasis_links(client, report_scan, selected,
                                                    allow_missing_summaries=True,
@@ -132,6 +130,8 @@ def render():
     completion = render_assessment_completion(client, report_scan, selected,
                                               manage_students=False, show_tables=show_details)
     report_scan = dict(report_scan, assessment_completion=completion)
+    if show_details:
+        _optional_details(scan, report_scan, selected)
     signature = (context["signature"], PTS_REPORT_SCREEN_VERSION, completion_signature(completion),
                  TEACHING_OASIS_REPORT_VERSION, feedback_signature(plan["bundle"]) if plan else None)
     if st.session_state.get("teaching_zip_signature") != signature:

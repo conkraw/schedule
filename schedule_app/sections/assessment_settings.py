@@ -58,7 +58,7 @@ def render_assessment_threshold(archive):
                              max_value=MAX_MINIMUM_SHIFTS, step=1, format="%d", key=P + "value",
                              help="Count a student in a preceptor's assessment-completion denominator only after "
                                   "this many distinct AM/PM shifts together in the selected dates. "
-                                  "Changes save automatically, encrypted in GitHub. This is not the 3+ days continuity measure.")
+                                  "Changes save automatically, encrypted in GitHub. This setting uses AM/PM shifts, not days.")
     try:
         chosen = validate_minimum_shifts(chosen)
     except OPDArchiveError as exc:
@@ -97,5 +97,5 @@ def render_assessment_threshold(archive):
         st.caption(f"Starting minimum: {DEFAULT_MINIMUM_SHIFTS} shifts. Your first change will be saved encrypted in GitHub automatically.")
     st.caption("This is one shared PTS setting across reporting dates and app users. "
                "Only the assessment-completion denominator changes; educational hours, Learner Reach, "
-               "unique-student totals and the separate 3+ days measure do not change.")
+               "unique-student totals do not change; only minimum-shift eligibility changes.")
     return chosen

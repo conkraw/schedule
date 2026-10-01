@@ -2,6 +2,7 @@
 from schedule_app.reports.teaching_tables import teaching_add_work_table
 from schedule_app.services.assessment_completion import (
     completion_rows, completion_display, assessment_method_note, completion_threshold, SCOPE_NOTE,
+    assessed_students_total_display,
 )
 
 
@@ -13,35 +14,53 @@ def append_individual_completion(doc, scan, name, year):
     if not rows:
         return
     row = rows[0]
-    heading = doc.add_heading("Student assessment completion", level=2)
+    heading = doc.add_heading("Documented assessment completion", level=2)
     # Keep teaching time on its own readable page; feedback follows separately.
     heading.paragraph_format.page_break_before = True
     denominator = row.get("eligible_students")
     minimum = completion_threshold(bundle)
     title = f"Students assigned for {minimum}+ shifts" if minimum is not None else "Eligible students"
-    doc.add_paragraph(title + ": " + (str(denominator) if denominator is not None else "Not checked"))
-    teaching_add_work_table(doc, ("Assessment form", "Eligible students assessed"), [
-        ("Clinical Assessment of Student", completion_display(row, "clinical")),
-        ("History Taking & Physical Exam", completion_display(row, "hp")),
-        ("At least one of these forms", completion_display(row, "either")),
-    ], widths=(4.2, 2.7), number_columns=(1,))
-    doc.add_paragraph(assessment_method_note(completion_threshold(bundle)))
-    if row["assessment_status"] != "Calculated":
+    doc.add_paragraph("Assessments as of: " + bundle["assessments_as_of"])
+    doc.add_paragraph(f"Student-count dates: {row['report_start_date']} through {row['assessment_end_date']} (included)."
+                      if row['report_start_date'] <= row['assessment_end_date'] else
+                      "No dates before this cutoff fall within the selected reporting period.")
+    doc.add_paragraph(title + " by this cutoff: " + (str(denominator) if denominator is not None else "Not checked"))
+    p = doc.add_paragraph()
+    p.add_run("Total students assessed (one per student): ").bold = True
+    p.add_run(assessed_students_total_display(row))
+    teaching_add_work_table(doc, ("Assessment form", "All students\nassessed", "Eligible students assessed"), [
+        ("Clinical Assessment of Student", assessed_students_total_display(row, "clinical"), completion_display(row, "clinical")),
+        ("History Taking & Physical Exam", assessed_students_total_display(row, "hp"), completion_display(row, "hp")),
+        ("At least one of these forms", assessed_students_total_display(row, "either"), completion_display(row, "either")),
+    ], widths=(3.25, 1.25, 2.4), number_columns=(1, 2))
+    doc.add_paragraph("All students assessed counts each student once per form, regardless of scheduled shifts. "
+                      "The total counts each student once across either form, not once for each form. "
+                      "Only submitted records within the selected dates and cutoff are counted. "
+                      "Eligible students assessed is the subset meeting the minimum-shift requirement.")
+    doc.add_paragraph(assessment_method_note(completion_threshold(bundle), as_of=bundle["assessments_as_of"]))
+    if str(row["assessment_status"]).startswith("Provisional:"):
+        doc.add_paragraph("* " + row["assessment_status"] + ". The displayed percentage uses confirmed matches only; "
+                          "every eligible OPD student remains in the denominator. Review names in PTS Matching when needed.")
+    elif row["assessment_status"] != "Calculated":
         doc.add_paragraph("Review: " + row["assessment_status"] + ". The teaching-hours report is unaffected.")
     else:
-        doc.add_paragraph("Each cell shows evaluated eligible students / all eligible students (percentage). "
+        doc.add_paragraph("The percentage column shows evaluated eligible students / all eligible students. "
                           "A student assessed twice still counts once. The combined row counts either form, not the sum.")
+    if row.get("either_students_without_assessment"):
+        doc.add_paragraph(f"No assessment on file for {row['either_students_without_assessment']} of {row['eligible_students']} eligible students. "
+                          "No name confirmation is needed solely because a student is absent from OASIS.")
     doc.add_paragraph(SCOPE_NOTE)
     if any(r["preceptor_name"] == "Unattributed / other evaluator" and r["academic_year"] == row["academic_year"]
            for r in bundle["warnings"]):
         doc.add_paragraph("Some source forms could not be attributed to an evaluator and are not credited. "
                           "These source issues are listed in the app and chair summary; percentages describe identifiable matched records.")
-    issues = [r for r in bundle["warnings"] if r["preceptor_name"] == name and r["academic_year"] == row["academic_year"]]
+    issues = [r for r in bundle["warnings"] if r["preceptor_name"] == name and r["academic_year"] == row["academic_year"]
+              and r["direction"] != "Assessment on file"]
     if issues:
         doc.add_heading("Evaluation records to review", level=2)
         teaching_add_work_table(doc, ("Direction", "Review note"),
             [(r["direction"], r["issue"]) for r in issues], widths=(1.65, 5.25))
-    doc.add_paragraph("Source: archived OASIS student assessments; Submit Date uses the report's dates. "
+    doc.add_paragraph("Source: archived OASIS student assessments; Submit Date uses the report period through the assessment cutoff. "
                       f"Check retrieved: {bundle['retrieved_at']}. Student names, IDs, scores and assessment comments are omitted.")
 
 
@@ -52,24 +71,35 @@ def append_chair_completion(doc, scan, year):
     rows = completion_rows(bundle, scan, year)
     if not rows:
         return
-    heading = doc.add_heading("Student assessment completion by preceptor", level=2)
+    heading = doc.add_heading("Documented assessment completion by preceptor", level=2)
     heading.paragraph_format.page_break_before = True
     minimum = completion_threshold(bundle)
+    doc.add_paragraph("Assessments as of: " + bundle["assessments_as_of"] + ". This cutoff does not change teaching-hour totals.")
     students_title = f"Students\n{minimum}+ shifts" if minimum is not None else "Eligible\nstudents"
     teaching_add_work_table(doc,
-        ("Preceptor", students_title, "Clinical\nAssessment", "History &\nPhysical", "Either form"),
-        [(r["preceptor_name"], str(r["eligible_students"]) if r["eligible_students"] is not None else "Not checked",
+        ("Preceptor", "Total students\nassessed", students_title, "Clinical\nAssessment", "History &\nPhysical", "Either form"),
+        [(r["preceptor_name"], assessed_students_total_display(r),
+          str(r["eligible_students"]) if r["eligible_students"] is not None else "Not checked",
           completion_display(r, "clinical"), completion_display(r, "hp"), completion_display(r, "either")) for r in rows],
-        widths=(1.85, 0.8, 1.45, 1.4, 1.4), number_columns=(1, 2, 3, 4))
-    doc.add_paragraph("Cells show eligible students assessed / eligible students assigned (percentage). "
-                      "Each student counts once for each preceptor and each form type. 'Either form' counts the union, not the sum.")
-    doc.add_paragraph(assessment_method_note(completion_threshold(bundle)))
+        widths=(1.65, 1.0, 0.75, 1.2, 1.15, 1.25), number_columns=(1, 2, 3, 4, 5))
+    doc.add_paragraph("Total students assessed counts each student once across either submitted form, regardless of the number "
+                      "of shifts assigned. It includes students below the minimum or absent from the OPD; it is not the "
+                      "numerator of the completion percentage. Form-specific all-student totals are in the individual reports and completion CSV.")
+    doc.add_paragraph("Form-result cells show evaluated eligible students / all eligible students (percentage). "
+                      "* Provisional: possible name discrepancies remain; no similar-name record was credited automatically. "
+                      "Each student counts once per preceptor/form type. 'Either form' counts the union, not the sum.")
+    doc.add_paragraph(assessment_method_note(completion_threshold(bundle), as_of=bundle["assessments_as_of"]))
     doc.add_paragraph("These are per-preceptor measures across all work types. Do not sum unique students across preceptors. "
-                      "The existing 3+ days continuity measure remains separate.")
+                      "The students-assigned table uses the same OPD identities, cutoff, and minimum-shift threshold.")
     doc.add_paragraph(SCOPE_NOTE)
     wanted = {r["preceptor_name"] for r in rows}
     labels = {r["academic_year"] for r in rows}
-    issues = [r for r in bundle["warnings"] if (r["preceptor_name"] in wanted or r["preceptor_name"] == "Unattributed / other evaluator") and r["academic_year"] in labels]
+    issues = [r for r in bundle["warnings"] if (r["preceptor_name"] in wanted or r["preceptor_name"] == "Unattributed / other evaluator") and r["academic_year"] in labels
+              and r["direction"] != "Assessment on file"]
+    no_record_checks = sum(bool(row.get("either_students_without_assessment")) for row in rows)
+    if no_record_checks:
+        doc.add_paragraph(f"{no_record_checks} preceptor result(s) include eligible students with no assessment on file. "
+                          "Those students stay in the denominator. This does not mean their assessments are overdue.")
     if issues:
         doc.add_heading("Evaluation records to review", level=2)
         teaching_add_work_table(doc, ("Preceptor", "Direction", "Review note"),
