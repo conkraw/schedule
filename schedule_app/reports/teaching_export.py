@@ -306,7 +306,10 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None, progress=No
             if bundle["warnings"]:
                 zf.writestr("Evaluation_Completeness_Alerts.csv", teaching_csv_bytes(bundle["warnings"],
                     ("preceptor_name", "academic_year", "username", "direction", "issue", "action")))
-            notes += ["", "STUDENT ASSESSMENT COMPLETION", assessment_method_note(completion_threshold(bundle)), SCOPE_NOTE,
+            notes += ["", "DOCUMENTED ASSESSMENT COMPLETION", assessment_method_note(completion_threshold(bundle), as_of=bundle["assessments_as_of"]), SCOPE_NOTE,
+                      "Completion counts only shifts and Submit Dates through the assessment cutoff, not future teaching assignments.",
+                      "Students without an OASIS record remain in the denominator. No confirmation is required for absence alone.",
+                      "Provisional percentages use confirmed identity matches; real name discrepancies remain reviewable.",
                       "The selected minimum-shifts denominator differs from the existing 3+ distinct days continuity measure.",
                       "No student names, external IDs, grades or assessment comments are exported in these completion tables.",
                       "An unverified/unchecked value is blank in CSV; it is not zero."]
