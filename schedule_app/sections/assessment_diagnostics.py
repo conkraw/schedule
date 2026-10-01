@@ -33,10 +33,9 @@ def render_completion_diagnostics(archive, inputs, bundle, unmatched):
         st.success(notice)
     if not choices:
         return
-    st.warning(f"Assessment percentages need review for {len(choices):,} preceptor/report-period check(s). "
-               "Use the optional check below to see the exact reason and only the affected eligible students. "
-               "Teaching reports can still be generated; unavailable percentages are not zero.")
-    if not st.checkbox("Show why an assessment percentage is unavailable (optional)",
+    st.caption(f"Optional assessment review is available for {len(choices):,} preceptor/period result(s). "
+               "No assessment on file does not require identity confirmation. Provisional results flag possible name discrepancies.")
+    if not st.checkbox("Review documented completion or missing records (optional)",
                        value=False, key=P + "show"):
         return
     with st.expander("Check an assessment-completion result", expanded=True):
@@ -51,6 +50,9 @@ def render_completion_diagnostics(archive, inputs, bundle, unmatched):
         row = choices[selected]
         detail = completion_review_detail(row, unmatched)
         st.write("Result: " + str(detail["assessment_status"]))
+        st.caption("Assessments as of: " + str(detail["assessments_as_of"]))
+        if detail.get("either_students_without_assessment"):
+            st.info(f"No assessment on file for {detail['either_students_without_assessment']} eligible student(s). They stay in the denominator. This is not an overdue judgment.")
         st.caption("Saved preceptor username: " + (detail["record_id"] or "Not assigned"))
         denominator = detail["eligible_students"]
         st.write("Eligible students: " + (str(denominator) if denominator is not None else "Not checked")
@@ -73,13 +75,12 @@ def render_completion_diagnostics(archive, inputs, bundle, unmatched):
             st.button("Fix these student names in PTS Matching", key=P + "open_matching",
                       on_click=open_targeted_student_review,
                       args=(make_student_review_focus(bundle, row),))
-            st.caption("A student absent from all archived assessment exports cannot be verified from those "
-                       "exports alone. Check the relevant OER upload and dates. Do not match a different "
-                       "student, omit an eligible student, or assume a missing identity means no assessment.")
+            st.caption("These are possible name discrepancies, not proof of an identity. Confirm only a real match. "
+                       "An absent OASIS student with no similar-name issue requires no action and remains in the denominator.")
         else:
-            st.info("No eligible student-name mismatches were returned for this preceptor. Review the "
-                    "result message, username/source checks, or optional source-metadata diagnostics above. "
-                    "This is not an instruction to reassign a student name.")
+            st.info("No eligible student-name corrections are required for this result. "
+                    "Students who have not been evaluated do not need to be matched to another person. "
+                    "Refresh after new OER uploads; review source/username issues only when the result is not checked.")
         if st.button("Recheck saved student matches from GitHub", key=P + "recheck"):
             try:
                 saved = GitHubStudentAssessmentLinks(archive).load()

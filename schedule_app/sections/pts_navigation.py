@@ -7,7 +7,7 @@ def preserve_pts_preferences():
     # Only widget values; never buttons, upload widgets or credentials. Assigning
     # a retained key to itself interrupts Streamlit's hidden-widget cleanup.
     for key in ("teaching_name_order", "teaching_selected_years", "teaching_oasis_include",
-                "assessment_completion_enabled", "assessment_completion_course_choice",
+                "assessment_completion_enabled", "assessment_completion_course_choice", "assessment_completion_as_of",
                 "pts_matching_task"):
         if key in st.session_state:
             st.session_state[key] = st.session_state[key]
