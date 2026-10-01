@@ -19,9 +19,10 @@ def _clear_downloads():
         st.session_state.pop(key, None)
 
 
-def render_assessment_completion(archive, scan, years):
+def render_assessment_completion(archive, scan, years, *, manage_students=True,
+                                 show_tables=True, matching_only=False):
     st.markdown("**Student assessment completion and evaluation-record checks**")
-    enabled = st.checkbox("Include assessment completion and missing-evaluation alerts", value=True, key=P + "enabled")
+    enabled = True if matching_only else st.checkbox("Include assessment completion and missing-evaluation alerts", value=True, key=P + "enabled")
     if not enabled:
         return None
     minimum_shifts = render_assessment_threshold(archive)
@@ -58,8 +59,9 @@ def render_assessment_completion(archive, scan, years):
         else:
             st.info("Click Load / refresh evaluation completeness to check both directions. Until then, the reports mark these measures as not checked.")
         bundle = unverified_bundle(scan, years, "Not checked: assessment data could not be verified" if failure else "Not checked: load evaluation completeness", minimum_shifts=minimum_shifts)
-        with st.expander("Preceptors with evaluation records not yet checked"):
-            st.dataframe(bundle["warnings"], hide_index=True, use_container_width=True)
+        if show_tables:
+            with st.expander("Preceptors with evaluation records not yet checked"):
+                st.dataframe(bundle["warnings"], hide_index=True, use_container_width=True)
         return bundle
     courses = inputs["prepared"]["courses"]
     if len(courses) > 1:
@@ -76,9 +78,9 @@ def render_assessment_completion(archive, scan, years):
     # The link editor uses its own prefix; read it without changing that module.
     from schedule_app.sections.preceptor_oasis_links import P as LINKS_P
     current_links = st.session_state.get(LINKS_P + "catalog", current_links)
-    if (st.session_state.get(LINKS_P + "include", False) and current_links is not None
+    if (current_links is not None and current_links.get("scope") == inputs["catalog"].get("scope")
             and current_links.get("sha") != inputs["catalog"].get("sha")):
-        st.warning("Preceptor usernames/summary links changed. Refresh links and OASIS summaries above, then refresh evaluation completeness. Teaching reports remain available.")
+        st.warning("Preceptor usernames/summary links changed in PTS Matching. Click Load / refresh evaluation completeness to use the verified new links. Teaching reports remain available.")
         return unverified_bundle(scan, years, "Not checked: refresh after username/summary-link changes", minimum_shifts=minimum_shifts)
     try:
         bundle, unmatched = build_completion_bundle(inputs, scan, years, courses=selected, minimum_shifts=minimum_shifts)
@@ -87,23 +89,39 @@ def render_assessment_completion(archive, scan, years):
         return unverified_bundle(scan, years, "Not checked: assessment selection needs review", minimum_shifts=minimum_shifts)
     st.caption(f"Student-assessment files checked: {bundle['source_count']} | Retrieved: {bundle['retrieved_at']}. "
                "Refresh this check after new OASIS uploads or saved username changes. It never modifies originals.")
-    render_student_name_matches(archive, inputs, scan, years, unmatched, minimum_shifts=minimum_shifts)
+    if manage_students:
+        render_student_name_matches(archive, inputs, scan, years, unmatched, minimum_shifts=minimum_shifts,
+                                    show_tables=show_tables)
+    else:
+        from schedule_app.services.student_name_review import student_name_review
+        review = student_name_review(inputs, scan, years, unmatched)
+        if review["missing"]:
+            st.warning(f"Student names need review: {len(review['missing']):,}. Open PTS Matching → Student names. "
+                       f"{review['eligible_missing_count']:,} name(s) affect the selected minimum-shifts percentage; "
+                       "affected results remain Not verified.")
+    if matching_only:
+        return bundle
     for direction, title in (("Student → educator", "Educators without verified student feedback"),
                              ("Preceptor → student", "Preceptors without verified completed student assessments")):
         issues = [r for r in bundle["warnings"] if r["direction"] == direction]
         if issues:
             st.warning(f"{title}: {len(issues)} record(s) to review. This is an alert, not a report-generation block.")
-            with st.expander(title, expanded=True):
-                st.dataframe(issues, hide_index=True, use_container_width=True)
+            if show_tables:
+                with st.expander(title, expanded=False):
+                    st.dataframe(issues, hide_index=True, use_container_width=True)
         else:
             st.success(title.replace("without", "with") + ": no missing-record alerts.")
-    st.dataframe([{"Preceptor": r["preceptor_name"], "Period": r["academic_year"],
-                   f"Students {minimum_shifts}+ shifts": r["eligible_students"],
-                   "Clinical Assessment": completion_display(r, "clinical"),
-                   "History & Physical": completion_display(r, "hp"),
-                   "Either form": completion_display(r, "either"), "Status": r["assessment_status"]}
-                  for r in bundle["rows"]], hide_index=True, use_container_width=True)
+    if show_tables:
+        st.dataframe([{"Preceptor": r["preceptor_name"], "Period": r["academic_year"],
+                       f"Students {minimum_shifts}+ shifts": r["eligible_students"],
+                       "Clinical Assessment": completion_display(r, "clinical"),
+                       "History & Physical": completion_display(r, "hp"),
+                       "Either form": completion_display(r, "either"), "Status": r["assessment_status"]}
+                      for r in bundle["rows"]], hide_index=True, use_container_width=True)
     if inputs["prepared"]["issues"]:
+        st.warning(f"Student-assessment source issues: {len(inputs['prepared']['issues']):,}. "
+                   "Details are available in the optional diagnostics; only affected results are unverified.")
+    if inputs["prepared"]["issues"] and show_tables:
         with st.expander("Student-assessment source metadata to review"):
             st.caption("Question answers are ignored. These issues concern form identity, Student External ID, Evaluator Email or Submit Date. "
                        "No partial or guessed percentages are published for affected preceptors.")

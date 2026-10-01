@@ -117,7 +117,7 @@ def _render_editor(service, inputs, key, opd_name, choices, *, editing=False):
                 st.error(str(exc))
 
 
-def render_student_name_matches(archive, inputs, scan, years, unmatched, *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS):
+def render_student_name_matches(archive, inputs, scan, years, unmatched, *, minimum_shifts=DEFAULT_MINIMUM_SHIFTS, show_tables=True):
     """Flag unresolved names, retain confirmed links, and show a correction queue.
 
     Uses the existing encrypted ID catalog without changing its schema or any
@@ -162,7 +162,7 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
         st.caption("Names that differ only by capitalization, spacing, or a trailing program/class label "
                    "such as (MD), (PA), (DO), or ; MD2028 match automatically when only one OASIS student fits. "
                    "Only actual name differences, missing records, or ambiguous matches need review; typos are not guessed.")
-        st.caption("For a note or student entry you do not want included, use Ignore or restore OPD student entries near the top of PTS. "
+        st.caption("For a note or student entry you do not want included, choose Ignored student entries in the PTS Matching dropdown. "
                    "That removes the entry from PTS calculations and alerts; do not link a note to an actual student.")
         st.caption("Already matched names need no action. A saved name match does not mean an assessment exists. "
                    "If the correct student is absent, upload the relevant student-assessment CSV in OER and refresh this check; "
@@ -177,7 +177,8 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
                 st.error(str(exc))
                 st.info("The existing matches were kept. A failed refresh is not treated as an empty catalog.")
         if missing:
-            st.dataframe(review_table_rows(missing, minimum_shifts=minimum_shifts), hide_index=True, use_container_width=True)
+            if show_tables or st.checkbox("Show unmatched-name details (optional)", key=P + "show_unmatched", value=False):
+                st.dataframe(review_table_rows(missing, minimum_shifts=minimum_shifts), hide_index=True, use_container_width=True)
             options = list(missing)
             if st.session_state.get(P + "student_choice") not in options:
                 st.session_state[P + "student_choice"] = options[0]
@@ -192,11 +193,12 @@ def render_student_name_matches(archive, inputs, scan, years, unmatched, *, mini
     entries = inputs["student_links"]["entries"]
     if entries:
         with st.expander("Review or correct saved student matches (optional)"):
-            st.dataframe([{"OPD student name": row["student_name"],
-                           "Matching OASIS student name": "; ".join(names_for_external_id(choices, row["external_id"]))
-                               or "Not in the currently loaded exports",
-                           "In current reporting dates": "YES" if key in active else "NO"}
-                          for key, row in sorted(entries.items())], hide_index=True, use_container_width=True)
+            if show_tables or st.checkbox("Show saved student matches (optional)", key=P + "show_saved", value=False):
+                st.dataframe([{"OPD student name": row["student_name"],
+                               "Matching OASIS student name": "; ".join(names_for_external_id(choices, row["external_id"]))
+                                   or "Not in the currently loaded exports",
+                               "In current reporting dates": "YES" if key in active else "NO"}
+                              for key, row in sorted(entries.items())], hide_index=True, use_container_width=True)
             editing = st.checkbox("Edit or remove a saved student match", key=P + "edit_saved", value=False)
             if editing:
                 options = sorted(entries)

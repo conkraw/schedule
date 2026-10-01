@@ -129,7 +129,7 @@ def _render_username_inputs(service, catalog, name, *, existing=None, editing=Fa
     return ready
 
 
-def _render_username_queue(service, catalog, active, missing):
+def _render_username_queue(service, catalog, active, missing, *, show_tables=True):
     """Keep the routine entry dropdown limited to names that still need a key."""
     st.markdown("**1. Add missing preceptor usernames**")
     st.caption("Checks named OPD preceptors with student assignments in the selected dates. "
@@ -138,7 +138,7 @@ def _render_username_queue(service, catalog, active, missing):
     ready = True
     if missing:
         st.write(f"Usernames still needed: {len(missing):,}")
-        with st.expander("Show names missing a username"):
+        if show_tables or st.checkbox("Show missing-username list (optional)", key=P + "show_missing", value=False):
             st.dataframe([{"preceptor_name": name} for name in missing.values()],
                          hide_index=True, use_container_width=True)
         options = list(missing)
@@ -157,12 +157,13 @@ def _render_username_queue(service, catalog, active, missing):
     if catalog["entries"]:
         with st.expander("Review or correct saved username links (optional)"):
             ordered = sorted(catalog["entries"])
-            st.dataframe([
-                {"preceptor_name": catalog["entries"][key]["preceptor_name"],
-                 "username": catalog["entries"][key]["record_id"],
-                 "in_current_report": "YES" if key in active else "NO"}
-                for key in ordered
-            ], hide_index=True, use_container_width=True)
+            if show_tables or st.checkbox("Show saved-username table (optional)", key=P + "show_saved", value=False):
+                st.dataframe([
+                    {"preceptor_name": catalog["entries"][key]["preceptor_name"],
+                     "username": catalog["entries"][key]["record_id"],
+                     "in_current_report": "YES" if key in active else "NO"}
+                    for key in ordered
+                ], hide_index=True, use_container_width=True)
             editing = st.checkbox("Edit or remove an existing username link", value=False, key=P + "edit_saved")
             if editing:
                 if st.session_state.get(P + "saved_preceptor_choice") not in ordered:
@@ -177,7 +178,8 @@ def _render_username_queue(service, catalog, active, missing):
     return ready
 
 
-def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries=False):
+def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries=False,
+                                manage_usernames=True, show_tables=True):
     """Return (plan, ready). With linkage disabled this performs NO network calls."""
     if st.session_state.pop(P + "reset_username_controls", False):
         _reset_username_controls()
@@ -186,9 +188,8 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
     with st.expander("Link preceptors to OASIS evaluations (saved in GitHub)"):
         enabled = st.checkbox("Include linked OASIS evaluations in individual Word reports",
                               value=False, key=P + "include")
-        st.caption("Assign each teaching preceptor the username used as record_id in your OASIS output. "
-                   "Only explicit matches receive an evaluation section. Other teaching reports remain teaching-only; "
-                   "OASIS-only educators are ignored. No names are matched automatically.")
+        st.caption("Saved username links are applied automatically. Manage missing names or corrections in PTS Matching. "
+                   "Only matched preceptors receive the feedback section; teaching-only reports remain available for the others.")
         if not enabled:
             return None, True
         scope = (LINK_VERSION, TEACHING_OASIS_REPORT_VERSION, USERNAME_ENTRY_UI_VERSION, archive.config.signature())
@@ -213,13 +214,13 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
         if missing:
             username_status.warning(
                 f"Username needed: {len(missing):,} of {len(active):,} teaching preceptors in the selected dates "
-                "do not have a saved username. The entry dropdown below shows only these names.")
+                "do not have a saved username. Open PTS Matching → Preceptor usernames to enter only the missing names.")
         elif active:
             username_status.success(f"All {len(active):,} teaching preceptors in the selected dates have a saved username.")
         flash = st.session_state.pop(P + "notice", None)
         if flash:
             st.success(flash)
-        ready = _render_username_queue(service, catalog, active, missing)
+        ready = _render_username_queue(service, catalog, active, missing, show_tables=show_tables) if manage_usernames else True
         # Username entry must not depend on an OASIS summary being available yet.
         try:
             if P + "listing" not in st.session_state:
@@ -278,7 +279,7 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
                            f"{d['evaluation_count']:,} submitted evaluations. Only linked teaching preceptors will be used.")
             except OPDArchiveError as exc:
                 st.error(str(exc)); ready = False
-        if summaries:
+        if summaries and show_tables:
             with st.expander("Available OASIS usernames (reference only)"):
                 reference = sorted({(r["record_id"], r["educator_name"]) for s in summaries.values()
                                     for r in s["rows_by_id"].values()})
@@ -292,8 +293,9 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
             bundle = join_feedback(scan, years, catalog, summaries, allow_missing_summaries=allow_missing_summaries)
         except OPDArchiveError as exc:
             _clear_downloads(); st.error(str(exc)); return None, False
-        st.markdown("**Link preview for these teaching reports**")
-        st.dataframe(bundle["status"], hide_index=True, use_container_width=True)
+        if show_tables:
+            st.markdown("**Link preview for these teaching reports**")
+            st.dataframe(bundle["status"], hide_index=True, use_container_width=True)
         linked = sum(len(group["preceptors"]) for group in bundle["periods"].values())
         if linked:
             st.success(f"{linked:,} preceptor-period match(es). Their individual Word reports will include the linked OASIS evaluations.")
@@ -303,3 +305,55 @@ def render_teaching_oasis_links(archive, scan, years, *, allow_missing_summaries
                    "The app checks the saved summary again before generating Word reports. "
                    "Comments remain verbatim and can contain identifying information.")
         return {"catalog": catalog, "summaries": summaries, "bundle": bundle}, True
+
+
+def render_preceptor_username_management(archive, scan, years):
+    """Missing-only editor, independent of the report's feedback checkbox."""
+    from schedule_app.services.evaluation_access import evaluation_access_is_valid, lock_evaluation_records
+    if not evaluation_access_is_valid(touch=True):
+        lock_evaluation_records()
+        return
+    if st.session_state.pop(P + "reset_username_controls", False):
+        _reset_username_controls()
+    scope = (LINK_VERSION, TEACHING_OASIS_REPORT_VERSION, USERNAME_ENTRY_UI_VERSION, archive.config.signature())
+    if st.session_state.get(P + "scope") != scope:
+        _refresh()
+        st.session_state[P + "scope"] = scope
+    if st.button("Refresh saved preceptor usernames", key=P + "matching_refresh"):
+        _refresh()
+    service = GitHubPreceptorOASISLinks(archive)
+    try:
+        if P + "catalog" not in st.session_state:
+            st.session_state[P + "catalog"] = service.load()
+    except OPDArchiveError as exc:
+        st.error(str(exc))
+        st.warning("Username checks are unavailable until the saved links can be read. No links were erased.")
+        return
+    catalog = st.session_state[P + "catalog"]
+    active, missing = _username_candidates(scan, years, catalog)
+    if missing:
+        st.warning(f"Username needed: {len(missing):,} of {len(active):,} teaching preceptors. Only missing names appear below.")
+    elif active:
+        st.success(f"All {len(active):,} teaching preceptors have a saved username.")
+    notice = st.session_state.pop(P + "notice", None)
+    if notice:
+        st.success(notice)
+    if not _render_username_queue(service, catalog, active, missing, show_tables=False):
+        _clear_downloads()
+    if st.checkbox("Show OASIS usernames for reference (optional)", key=P + "matching_reference", value=False):
+        # An explicit request, not a download on every edit. Existing verified cache is reused.
+        try:
+            service_reports = GitHubOASISSummaries(archive)
+            reference = set()
+            for year, start, end, _ in active_periods(scan, years):
+                binding = catalog["report_links"].get(period_key(start, end))
+                if binding:
+                    summary = _cached_summary(service_reports, binding["summary_filename"])
+                    reference.update((r["record_id"], r["educator_name"]) for r in summary["rows_by_id"].values())
+            if reference:
+                st.dataframe([{"username": rid, "OASIS educator": name} for rid, name in sorted(reference)],
+                             hide_index=True, use_container_width=True)
+            else:
+                st.info("Choose and save an exact-date OASIS summary link in PTS to make its usernames available here.")
+        except OPDArchiveError as exc:
+            st.error(str(exc))

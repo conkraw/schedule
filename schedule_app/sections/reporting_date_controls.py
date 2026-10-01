@@ -30,6 +30,8 @@ NAME = "teaching_preset_name"
 def clear_teaching_downloads():
     st.session_state.pop("teaching_zip", None)
     st.session_state.pop("teaching_zip_signature", None)
+    st.session_state.pop("teaching_zip_payload", None)
+    st.session_state.pop("teaching_build_seconds", None)
 
 
 @protected_evaluation_callback
