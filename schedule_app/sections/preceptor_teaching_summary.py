@@ -28,8 +28,10 @@ from schedule_app.services.assessment_completion import completion_signature
 from schedule_app.services.teaching_evaluations import TEACHING_OASIS_REPORT_VERSION, feedback_signature, load_feedback_bundle
 from schedule_app.reports.teaching_export import teaching_build_zip, teaching_csv_bytes
 from schedule_app.settings import TEACHING_CHAIR_SUMMARY_FILENAME
+from schedule_app.sections.report_wording_controls import load_saved_report_wording
+from schedule_app.services.report_wording import wording_signature
 
-PTS_REPORT_SCREEN_VERSION = "2026-10-01-feedback-shifts-assessed-totals-1"
+PTS_REPORT_SCREEN_VERSION = "2026-10-02-admin-wording-1"
 
 
 def _optional_details(scan, report_scan, selected):
@@ -132,8 +134,15 @@ def render():
     report_scan = dict(report_scan, assessment_completion=completion)
     if show_details:
         _optional_details(scan, report_scan, selected)
+    try:
+        report_wording = load_saved_report_wording(client)
+    except OPDArchiveError as exc:
+        _clear_teaching_downloads()
+        st.error("Report wording is unavailable. " + str(exc))
+        return
     signature = (context["signature"], PTS_REPORT_SCREEN_VERSION, completion_signature(completion),
-                 TEACHING_OASIS_REPORT_VERSION, feedback_signature(plan["bundle"]) if plan else None)
+                 TEACHING_OASIS_REPORT_VERSION, feedback_signature(plan["bundle"]) if plan else None,
+                 wording_signature(report_wording))
     if st.session_state.get("teaching_zip_signature") != signature:
         _clear_teaching_downloads()
         st.session_state["teaching_zip_signature"] = signature
@@ -147,6 +156,13 @@ def render():
         bar = st.progress(0, text="Verifying saved settings and evaluation links...")
         started = perf_counter()
         try:
+            # One fresh wording snapshot for every file in this build. This also
+            # detects another administrator's saved edit before reusing a ZIP.
+            report_wording = load_saved_report_wording(client, refresh=True)
+            if signature[-1] != wording_signature(report_wording):
+                signature = (*signature[:-1], wording_signature(report_wording))
+                old_zip = None
+                _clear_teaching_downloads()
             require_matching_exclusions(report_scan, GitHubIgnoredStudentEntries(client).load())
             feedback = None if plan is None else load_feedback_bundle(
                 client, report_scan, selected, plan["catalog"], plan["summaries"], allow_missing_summaries=True)
@@ -154,7 +170,7 @@ def render():
                 zip_bytes = old_zip
             else:
                 zip_bytes, _ = teaching_build_zip(
-                    report_scan, selected, oasis_feedback=feedback,
+                    report_scan, selected, oasis_feedback=feedback, report_wording=report_wording,
                     progress=lambda done, total, text: bar.progress(min(1.0, done / max(total, 1)), text=text))
             if not evaluation_access_is_valid(touch=True):
                 lock_evaluation_records()

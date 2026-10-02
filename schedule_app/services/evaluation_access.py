@@ -18,10 +18,11 @@ MIN_PASSWORD_LENGTH = 16
 IDLE_SECONDS = 30 * 60
 MAX_SESSION_SECONDS = 8 * 60 * 60
 # New boundary: do not inherit a login issued by the older OER-only gate.
-ACCESS_VERSION = "oer-pts-v2"
+ACCESS_VERSION = "oer-pts-admin-v3"
 PROTECTED_STATE_PREFIXES = (
     "oasis_", "_oasis_", "oer_", "evaluation_privacy_",
     "teaching_", "assessment_completion_", "pts_", "_pts_",
+    "_admin_report_", "_report_wording_",
 )
 
 
@@ -127,11 +128,11 @@ def require_evaluation_access(*, show_lock=True, lock_key="evaluation_lock_main"
     The same secret and session authorization cover OER, PTS and PTS Matching; no second
     password or separate encryption key is introduced.
     """
-    if section_name not in ("OER", "PTS", "PTS Matching"):
+    if section_name not in ("OER", "PTS", "PTS Matching", "Admin"):
         raise ValueError("Unknown protected section.")
     if evaluation_access_is_valid(touch=True):
         if show_lock:
-            st.sidebar.button("Lock OER / PTS", key=lock_key, on_click=lock_evaluation_records)
+            st.sidebar.button("Lock OER / PTS / Admin", key=lock_key, on_click=lock_evaluation_records)
         return True
     lock_evaluation_records()
     st.subheader(f"{section_name} — locked")
@@ -145,11 +146,11 @@ def require_evaluation_access(*, show_lock=True, lock_key="evaluation_lock_main"
     remaining = max(0, int(math.ceil(st.session_state.get(P + "retry_at", 0) - time.time())))
     if remaining:
         st.warning(f"Wait {remaining} seconds before trying again.")
-    st.caption("This password unlocks OER, PTS and PTS Matching in this session. Access expires after 30 minutes "
+    st.caption("This password unlocks OER, PTS, PTS Matching and Admin in this session. Access expires after 30 minutes "
                "without an interaction in a protected section, or after eight hours. "
                "Other scheduling sections remain available without this password.")
     with st.form(P + "login_form", clear_on_submit=True):
-        st.text_input("OER / PTS password", type="password", key=P + "password", max_chars=1024)
+        st.text_input("OER / PTS / Admin password", type="password", key=P + "password", max_chars=1024)
         st.form_submit_button(f"Unlock {section_name}", on_click=_login_callback,
                               disabled=bool(remaining))
     return False

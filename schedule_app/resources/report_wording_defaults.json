@@ -1,0 +1,680 @@
+{
+  "version": 1,
+  "groups": {
+    "pts_shared": "PTS — shared explanations",
+    "individual": "PTS — individual preceptor report",
+    "chair": "PTS — chair summary",
+    "assessment": "PTS — documented assessment completion",
+    "feedback": "PTS — learner feedback section",
+    "instructions": "QGenda download instructions",
+    "opd_changes": "OPD change report",
+    "assignment_summary": "OPD weekly assignment summary",
+    "student_schedule": "Student schedules — instructions",
+    "opd_workbook": "OPD workbook — instructions",
+    "primary_report": "Power Automate workbook — Definitions"
+  },
+  "fields": {
+    "individual.text_01": {
+      "group": "individual",
+      "label": "Preceptor teaching report",
+      "default": "Preceptor teaching report",
+      "required": true,
+      "tokens": []
+    },
+    "individual.text_02": {
+      "group": "individual",
+      "label": "Teaching time",
+      "default": "Teaching time",
+      "required": true,
+      "tokens": []
+    },
+    "individual.text_03": {
+      "group": "individual",
+      "label": "Students assigned",
+      "default": "Students assigned",
+      "required": true,
+      "tokens": []
+    },
+    "individual.text_04": {
+      "group": "individual",
+      "label": "Students are counted once across all work types within the student-count dates. AM and",
+      "default": "Students are counted once across all work types within the student-count dates. AM and PM on the same date are two shifts. Student counts do not multiply educational hours.",
+      "required": false,
+      "tokens": []
+    },
+    "individual.text_05": {
+      "group": "individual",
+      "label": "By clinical experience",
+      "default": "By clinical experience",
+      "required": true,
+      "tokens": []
+    },
+    "individual.text_06": {
+      "group": "individual",
+      "label": "Monthly detail",
+      "default": "Monthly detail",
+      "required": true,
+      "tokens": []
+    },
+    "individual.text_07": {
+      "group": "individual",
+      "label": "Only clinical experiences with student assignments in the selected period are listed. ",
+      "default": "Only clinical experiences with student assignments in the selected period are listed. For those experiences, months without students remain included in availability.",
+      "required": false,
+      "tokens": []
+    },
+    "individual.text_08": {
+      "group": "individual",
+      "label": "Third-year student teaching  |  Page",
+      "default": "Third-year student teaching  |  Page ",
+      "required": true,
+      "tokens": []
+    },
+    "individual.text_09": {
+      "group": "individual",
+      "label": "Unique students assigned:",
+      "default": "Unique students assigned: ",
+      "required": true,
+      "tokens": []
+    },
+    "individual.text_10": {
+      "group": "individual",
+      "label": "The minimum-shift count is the assessment-completion denominator.",
+      "default": "The minimum-shift count is the assessment-completion denominator.",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_01": {
+      "group": "chair",
+      "label": "Preceptor educational effort",
+      "default": "Preceptor educational effort",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_02": {
+      "group": "chair",
+      "label": "Third-year medical student teaching",
+      "default": "Third-year medical student teaching",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_03": {
+      "group": "chair",
+      "label": "Overview by type of work",
+      "default": "Overview by type of work",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_04": {
+      "group": "chair",
+      "label": "Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Comple",
+      "default": "Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.",
+      "required": false,
+      "tokens": []
+    },
+    "chair.text_05": {
+      "group": "chair",
+      "label": "Students assigned by preceptor",
+      "default": "Students assigned by preceptor",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_06": {
+      "group": "chair",
+      "label": "All work types combined for each preceptor; these counts match the individual reports.",
+      "default": "All work types combined for each preceptor; these counts match the individual reports.",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_07": {
+      "group": "chair",
+      "label": "Do not add student counts across preceptors: a student may appear under more than one ",
+      "default": "Do not add student counts across preceptors: a student may appear under more than one preceptor. Student counts do not multiply educational hours.",
+      "required": false,
+      "tokens": []
+    },
+    "chair.text_08": {
+      "group": "chair",
+      "label": "Preceptor detail by type of work",
+      "default": "Preceptor detail by type of work",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_09": {
+      "group": "chair",
+      "label": "Educational effort summary  |  Page",
+      "default": "Educational effort summary  |  Page ",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_10": {
+      "group": "chair",
+      "label": "Total scheduled availability:",
+      "default": "Total scheduled availability: ",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_11": {
+      "group": "chair",
+      "label": "Educational hours:",
+      "default": "Educational hours: ",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_12": {
+      "group": "chair",
+      "label": "|   Learner Reach:",
+      "default": "   |   Learner Reach: ",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_13": {
+      "group": "chair",
+      "label": "Named preceptors with students:",
+      "default": "Named preceptors with students: ",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_14": {
+      "group": "chair",
+      "label": "|   Teaching months:",
+      "default": "   |   Teaching months: ",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_15": {
+      "group": "chair",
+      "label": "Both reporting dates are included. Boundary months contain only the selected dates; th",
+      "default": "Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_16": {
+      "group": "chair",
+      "label": "Data review: at least one source rotation overlapping this year contains assignments w",
+      "default": "Data review: at least one source rotation overlapping this year contains assignments without an identifiable preceptor. Those assignments are excluded from provider totals; review Report_Notes.txt.",
+      "required": false,
+      "tokens": []
+    },
+    "chair.text_17": {
+      "group": "chair",
+      "label": "Provider labels awaiting an individual name (not credited to a named preceptor)",
+      "default": "Provider labels awaiting an individual name (not credited to a named preceptor)",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_18": {
+      "group": "chair",
+      "label": "Assignments awaiting an individual preceptor name",
+      "default": "Assignments awaiting an individual preceptor name",
+      "required": true,
+      "tokens": []
+    },
+    "chair.text_19": {
+      "group": "chair",
+      "label": "Work-type total:",
+      "default": "Work-type total: ",
+      "required": true,
+      "tokens": []
+    },
+    "assessment.text_01": {
+      "group": "assessment",
+      "label": "Documented assessment completion",
+      "default": "Documented assessment completion",
+      "required": true,
+      "tokens": []
+    },
+    "assessment.text_02": {
+      "group": "assessment",
+      "label": "All students assessed counts each student once per form, regardless of scheduled shift",
+      "default": "All students assessed counts each student once per form, regardless of scheduled shifts. The total counts each student once across either form, not once for each form. Only submitted records within the selected dates and cutoff are counted. Eligible students assessed is the subset meeting the minimum-shift requirement.",
+      "required": false,
+      "tokens": []
+    },
+    "assessment.text_03": {
+      "group": "assessment",
+      "label": "Documented assessment completion by preceptor",
+      "default": "Documented assessment completion by preceptor",
+      "required": true,
+      "tokens": []
+    },
+    "assessment.text_04": {
+      "group": "assessment",
+      "label": "Total students assessed counts each student once across either submitted form, regardl",
+      "default": "Total students assessed counts each student once across either submitted form, regardless of the number of shifts assigned. It includes students below the minimum or absent from the OPD; it is not the numerator of the completion percentage. Form-specific all-student totals are in the individual reports and completion CSV.",
+      "required": false,
+      "tokens": []
+    },
+    "assessment.text_05": {
+      "group": "assessment",
+      "label": "Form-result cells show evaluated eligible students / all eligible students (percentage",
+      "default": "Form-result cells show evaluated eligible students / all eligible students (percentage). * Provisional: possible name discrepancies remain; no similar-name record was credited automatically. Each student counts once per preceptor/form type. 'Either form' counts the union, not the sum.",
+      "required": false,
+      "tokens": []
+    },
+    "assessment.text_06": {
+      "group": "assessment",
+      "label": "These are per-preceptor measures across all work types. Do not sum unique students acr",
+      "default": "These are per-preceptor measures across all work types. Do not sum unique students across preceptors. The students-assigned table uses the same OPD identities, cutoff, and minimum-shift threshold.",
+      "required": false,
+      "tokens": []
+    },
+    "assessment.text_07": {
+      "group": "assessment",
+      "label": "Total students assessed (one per student):",
+      "default": "Total students assessed (one per student): ",
+      "required": true,
+      "tokens": []
+    },
+    "assessment.text_08": {
+      "group": "assessment",
+      "label": "Evaluation records to review",
+      "default": "Evaluation records to review",
+      "required": true,
+      "tokens": []
+    },
+    "assessment.text_09": {
+      "group": "assessment",
+      "label": "The percentage column shows evaluated eligible students / all eligible students. A stu",
+      "default": "The percentage column shows evaluated eligible students / all eligible students. A student assessed twice still counts once. The combined row counts either form, not the sum.",
+      "required": false,
+      "tokens": []
+    },
+    "feedback.text_01": {
+      "group": "feedback",
+      "label": "Learner feedback on teaching",
+      "default": "Learner feedback on teaching",
+      "required": true,
+      "tokens": []
+    },
+    "feedback.text_02": {
+      "group": "feedback",
+      "label": "Evaluation count is the number of submitted forms, not the number of questions or uniq",
+      "default": "Evaluation count is the number of submitted forms, not the number of questions or unique students. This section describes evaluations submitted during these dates; it is not restricted to the students counted in the OPD teaching section.",
+      "required": false,
+      "tokens": []
+    },
+    "feedback.text_03": {
+      "group": "feedback",
+      "label": "Teaching questions",
+      "default": "Teaching questions",
+      "required": true,
+      "tokens": []
+    },
+    "feedback.text_04": {
+      "group": "feedback",
+      "label": "Means use the exported Multiple Choice Value for each question. Blank/N/A ratings are ",
+      "default": "Means use the exported Multiple Choice Value for each question. Blank/N/A ratings are excluded; Responses is the number of scored answers for that question. Not scored means no numeric answers were available. No composite score is calculated.",
+      "required": false,
+      "tokens": []
+    },
+    "feedback.text_05": {
+      "group": "feedback",
+      "label": "Comments are reproduced from the selected summary without rewriting. They may contain ",
+      "default": "Comments are reproduced from the selected summary without rewriting. They may contain identifying details; handle this document as evaluation data.",
+      "required": false,
+      "tokens": []
+    },
+    "feedback.text_06": {
+      "group": "feedback",
+      "label": "Submitted evaluations:",
+      "default": "Submitted evaluations: ",
+      "required": true,
+      "tokens": []
+    },
+    "feedback.text_07": {
+      "group": "feedback",
+      "label": "|   Username:",
+      "default": "   |   Username: ",
+      "required": true,
+      "tokens": []
+    },
+    "feedback.text_08": {
+      "group": "feedback",
+      "label": "Time with the preceptor",
+      "default": "Time with the preceptor",
+      "required": true,
+      "tokens": []
+    },
+    "feedback.text_09": {
+      "group": "feedback",
+      "label": "This is a mean of duration-category codes, not weeks, days, or a teaching-quality rati",
+      "default": "This is a mean of duration-category codes, not weeks, days, or a teaching-quality rating.",
+      "required": true,
+      "tokens": []
+    },
+    "pts_shared.time_definition": {
+      "group": "pts_shared",
+      "label": "How hours and Learner Reach are calculated",
+      "default": "Total scheduled availability includes all recorded AM and PM shifts in the selected dates, with or without students, including weekends. Each shift represents four hours. Educational hours include only shifts with at least one student; two or more students in the same shift still count as four hours. Learner Reach is educational hours divided by total scheduled availability.",
+      "required": false,
+      "tokens": []
+    },
+    "pts_shared.scope_note": {
+      "group": "pts_shared",
+      "label": "What scheduled availability does and does not mean",
+      "default": "These are scheduled four-hour equivalents from saved OPDs, not verified total clinical work or attendance. Repeated listings count once. Existing outpatient-over-nursery priority is applied before counting. Unlisted work is not measured; future scheduled shifts within the selected dates are included.",
+      "required": false,
+      "tokens": []
+    },
+    "pts_shared.participation": {
+      "group": "pts_shared",
+      "label": "Who appears in the reports",
+      "default": "Only preceptors and work types with student assignments during the selected period are listed. Overall Learner Reach uses all recorded shifts for these preceptors, including shifts without students; category percentages use all shifts in that category.",
+      "required": false,
+      "tokens": []
+    },
+    "pts_shared.detail_total": {
+      "group": "pts_shared",
+      "label": "Explanation when detail subtotals differ from overall availability",
+      "default": "Overall total scheduled availability includes shifts in settings with no student assignments. Those settings are not listed separately, so the displayed availability subtotals may be lower than the overall total.",
+      "required": false,
+      "tokens": []
+    },
+    "assessment.scope": {
+      "group": "assessment",
+      "label": "Interpreting documented assessment completion",
+      "default": "This is a record-completeness measure, not a judgment of teaching quality. No assessment on file means not found in the loaded records, not overdue or never completed. An absent record may reflect a new student or an incomplete export. Provisional percentages use confirmed matches only and may change after a name correction. The two form types are shown separately; this report does not establish that both are required for every student.",
+      "required": false,
+      "tokens": []
+    },
+    "individual.header": {
+      "group": "individual",
+      "label": "Page header",
+      "default": "PENN STATE  |  PEDIATRIC CLERKSHIP",
+      "required": true,
+      "tokens": []
+    },
+    "individual.opening": {
+      "group": "individual",
+      "label": "Additional opening instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "individual.closing": {
+      "group": "individual",
+      "label": "Additional closing instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "chair.header": {
+      "group": "chair",
+      "label": "Page header",
+      "default": "PENN STATE  |  PEDIATRIC CLERKSHIP",
+      "required": true,
+      "tokens": []
+    },
+    "chair.opening": {
+      "group": "chair",
+      "label": "Additional opening instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "chair.closing": {
+      "group": "chair",
+      "label": "Additional closing instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "assessment.method": {
+      "group": "assessment",
+      "label": "Minimum-shift rule and assessment method",
+      "default": "Eligible students were assigned to this preceptor on at least {minimum_shifts} distinct AM/PM {shift_word} in the reporting period. Each eligible student counts once per form type, even with several submitted forms. AM and PM on the same day are two shifts. Both assignment dates and OASIS Submit Date are limited to the reporting period through the Assessments as of date, inclusive. Students with no assessment on file remain in the denominator; the numerator includes only confirmed matches.",
+      "required": true,
+      "tokens": [
+        "minimum_shifts",
+        "shift_word"
+      ]
+    },
+    "feedback.strengths_heading": {
+      "group": "feedback",
+      "label": "Please indicate this educator's strengths",
+      "default": "Please indicate this educator's strengths",
+      "required": true,
+      "tokens": []
+    },
+    "feedback.improvement_heading": {
+      "group": "feedback",
+      "label": "Areas for Improvement",
+      "default": "Areas for Improvement",
+      "required": true,
+      "tokens": []
+    },
+    "opd_changes.title": {
+      "group": "opd_changes",
+      "label": "Report title",
+      "default": "Change Report",
+      "required": true,
+      "tokens": []
+    },
+    "opd_changes.opening": {
+      "group": "opd_changes",
+      "label": "Opening instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "opd_changes.closing": {
+      "group": "opd_changes",
+      "label": "Closing instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "assignment_summary.title": {
+      "group": "assignment_summary",
+      "label": "Report title",
+      "default": "Assignment Summary by Week",
+      "required": true,
+      "tokens": []
+    },
+    "assignment_summary.opening": {
+      "group": "assignment_summary",
+      "label": "Opening instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "assignment_summary.closing": {
+      "group": "assignment_summary",
+      "label": "Closing instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "student_schedule.self_study": {
+      "group": "student_schedule",
+      "label": "Protected Self-Study Time note",
+      "default": "*Note* Protected Self-Study Time is reserved for independent learning and completion of required coursework. Students are encouraged to use this time to complete assignments, review course materials, prepare for patient care, and reinforce concepts encountered during the clerkship.",
+      "required": false,
+      "tokens": []
+    },
+    "opd_workbook.crts": {
+      "group": "opd_workbook",
+      "label": "Clinical Reasoning Teaching Session instructions",
+      "default": "Students are to alert their preceptors when they have a Clinical Reasoning Teaching Session (CRTS).  Please allow the students to leave approximately 15 minutes prior to the start of their session so they can be prepared to actively participate.  - Thank you!",
+      "required": false,
+      "tokens": []
+    },
+    "primary_report.definition_1": {
+      "group": "primary_report",
+      "label": "Report scope",
+      "default": "HOPE_DRIVE, NYES, and ETOWN only",
+      "required": false,
+      "tokens": []
+    },
+    "primary_report.definition_2": {
+      "group": "primary_report",
+      "label": "Primary preceptor",
+      "default": "Exactly one per student/week. The app prefers the highest-session preceptor with at least 3 sessions. If nobody reaches 3, the highest-session preceptor is still selected and flagged.",
+      "required": false,
+      "tokens": []
+    },
+    "primary_report.definition_3": {
+      "group": "primary_report",
+      "label": "Repeated primary",
+      "default": "The same preceptor may be primary for multiple students. Those primary rows are flagged for visibility.",
+      "required": false,
+      "tokens": []
+    },
+    "primary_report.definition_4": {
+      "group": "primary_report",
+      "label": "Fragmented preceptor",
+      "default": "YES when no_of_sessions < 3.",
+      "required": false,
+      "tokens": []
+    },
+    "primary_report.definition_5": {
+      "group": "primary_report",
+      "label": "Primary preceptor flag",
+      "default": "YES when the selected primary has fewer than 3 sessions or the same preceptor is primary for multiple students that week.",
+      "required": false,
+      "tokens": []
+    },
+    "primary_report.definition_6": {
+      "group": "primary_report",
+      "label": "Email mapping",
+      "default": "Emails come from PRECEPTOR_EMAIL_MAP in the Streamlit source code.",
+      "required": false,
+      "tokens": []
+    },
+    "pts_shared.zip_instructions": {
+      "group": "pts_shared",
+      "label": "Additional instructions in Report_Notes.txt",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "instructions.title": {
+      "group": "instructions",
+      "label": "Report title",
+      "default": "Qgenda Report Instructions",
+      "required": true,
+      "tokens": []
+    },
+    "instructions.date_prefix": {
+      "group": "instructions",
+      "label": "Date-range label",
+      "default": "Date range: ",
+      "required": true,
+      "tokens": []
+    },
+    "instructions.intro": {
+      "group": "instructions",
+      "label": "First instruction",
+      "default": "1. Go to https://login.qgenda.com/",
+      "required": false,
+      "tokens": []
+    },
+    "instructions.opening": {
+      "group": "instructions",
+      "label": "Additional opening instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "instructions.closing": {
+      "group": "instructions",
+      "label": "Additional closing instructions",
+      "default": "",
+      "required": false,
+      "tokens": []
+    },
+    "instructions.report_1_title": {
+      "group": "instructions",
+      "label": "Download 1: heading",
+      "default": "Report 1 – Penn State Health Hershey Medical Center - Academic General Pediatrics",
+      "required": true,
+      "tokens": []
+    },
+    "instructions.report_1_steps": {
+      "group": "instructions",
+      "label": "Download 1: steps (one per line)",
+      "default": "Click Penn State Health Hershey Medical Center - Academic General Pediatrics → Schedule → Reports\nSet Report Type to Calendar by Task\nSet Format to Excel\nEnter Start Date: {start_date} and End Date: {end_date}\nEnsure Calendar starts on Monday\nShow Staff by Last Name, First Name\nShow Tasks by Short Name\nClick Run Report",
+      "required": true,
+      "tokens": [
+        "end_date",
+        "start_date"
+      ]
+    },
+    "instructions.report_2_title": {
+      "group": "instructions",
+      "label": "Download 2: heading",
+      "default": "Report 2 – Penn State Health Children's Hospital – Hospitalists",
+      "required": true,
+      "tokens": []
+    },
+    "instructions.report_2_steps": {
+      "group": "instructions",
+      "label": "Download 2: steps (one per line)",
+      "default": "Click Penn State Health Children's Hospital → Schedule → Reports\nSet Report Type to Calendar by Task\nSet Format to Excel\nEnter Start Date: {start_date} and End Date: {end_date}\nEnsure Calendar starts on Monday\nShow Staff by Last Name, First Name\nShow Tasks by Long Name\nClick Run Report",
+      "required": true,
+      "tokens": [
+        "end_date",
+        "start_date"
+      ]
+    },
+    "instructions.report_3_title": {
+      "group": "instructions",
+      "label": "Download 3: heading",
+      "default": "Report 3 – Department of Pediatrics (Admin - Adolescent Med)",
+      "required": true,
+      "tokens": []
+    },
+    "instructions.report_3_steps": {
+      "group": "instructions",
+      "label": "Download 3: steps (one per line)",
+      "default": "Click Department of Pediatrics → Schedule → Reports\nSelect Admin - Adolescent Med in top-right corner\nSet Report Type to Calendar by Task\nSet Format to Excel\nEnter Start Date: {start_date} and End Date: {end_date}\nEnsure Calendar starts on Monday\nShow Staff by Last Name, First Name\nShow Tasks by Long Name\nClick Run Report",
+      "required": true,
+      "tokens": [
+        "end_date",
+        "start_date"
+      ]
+    },
+    "instructions.report_4_title": {
+      "group": "instructions",
+      "label": "Download 4: heading",
+      "default": "Report 4 – Department of Pediatrics (Complex Care)",
+      "required": true,
+      "tokens": []
+    },
+    "instructions.report_4_steps": {
+      "group": "instructions",
+      "label": "Download 4: steps (one per line)",
+      "default": "Click Department of Pediatrics → Schedule → Reports\nSelect Complex Care in top-right corner\nSet Report Type to Calendar by Task\nSet Format to Excel\nEnter Start Date: {start_date} and End Date: {end_date}\nEnsure Calendar starts on Monday\nShow Staff by Last Name, First Name\nShow Tasks by Long Name\nClick Run Report",
+      "required": true,
+      "tokens": [
+        "end_date",
+        "start_date"
+      ]
+    },
+    "instructions.screen_intro": {
+      "group": "instructions",
+      "label": "On-screen website instruction",
+      "default": "Please go to https://login.qgenda.com/",
+      "required": false,
+      "tokens": []
+    },
+    "instructions.screen_summary": {
+      "group": "instructions",
+      "label": "On-screen date instruction",
+      "default": "Download four files and create reports based on **{start_long}** → **{end_long}**.",
+      "required": true,
+      "tokens": [
+        "end_long",
+        "start_long"
+      ]
+    },
+    "instructions.screen_download": {
+      "group": "instructions",
+      "label": "On-screen download prompt",
+      "default": "Download instructions here:",
+      "required": false,
+      "tokens": []
+    }
+  }
+}

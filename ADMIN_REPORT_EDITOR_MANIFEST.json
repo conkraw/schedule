@@ -1,0 +1,122 @@
+{
+  "release": "2026-10-02-admin-report-editor-1",
+  "base_release": "Feedback Shifts Assessment Totals",
+  "runtime_files": [
+    {
+      "path": "app_sch_2026.py",
+      "action": "replace",
+      "sha256": "dbab3f4b753005403c6370ac686587d219f534fb1883364d39a524840a4f6ec1"
+    },
+    {
+      "path": "schedule_app/reports/assessment_completion.py",
+      "action": "replace",
+      "sha256": "2a2a32b9dd304891acb797e2c2cb9dfa361ea332e52edde9573ac045336e5331"
+    },
+    {
+      "path": "schedule_app/reports/chair_summary.py",
+      "action": "replace",
+      "sha256": "a83ae8d5bc3009812974c66c8353b125c508d2c9ad9f2d7805ad2a8c1c776e9c"
+    },
+    {
+      "path": "schedule_app/reports/individual_teaching.py",
+      "action": "replace",
+      "sha256": "1a06a1c3b0421abdd00c80350d125dcb7f8e66446db5af98b49fbf92c210f390"
+    },
+    {
+      "path": "schedule_app/reports/preceptor_evaluations.py",
+      "action": "replace",
+      "sha256": "3b1f259f3794971dbea081c5ba8d342372457d812da839ceffdcff403e02fab7"
+    },
+    {
+      "path": "schedule_app/reports/qgenda_instructions.py",
+      "action": "add",
+      "sha256": "18c32e8148037001c2918c17995260b7ba07f3c802ccc1a067a255727db7677f"
+    },
+    {
+      "path": "schedule_app/reports/report_appearance.py",
+      "action": "add",
+      "sha256": "203b2b5645bc539f4bea50fcec3a9ed42f07b6cf06e8fd684efdbb006395855a"
+    },
+    {
+      "path": "schedule_app/reports/teaching_export.py",
+      "action": "replace",
+      "sha256": "8652cfaf837253c7a6e35e56d4f3f75cd1361045e7eb20c72bcdf1a7c2bd9cd8"
+    },
+    {
+      "path": "schedule_app/sections/admin.py",
+      "action": "add",
+      "sha256": "592d8da129f94bad232bf2a71bbf76a1a1a85ec01b577f26f33270e5b23e30d3"
+    },
+    {
+      "path": "schedule_app/sections/create_individual_schedules.py",
+      "action": "replace",
+      "sha256": "329bd9c0f26e4624184b07058004b7f36418106ecd4be90f5b16c6f6d0ce654d"
+    },
+    {
+      "path": "schedule_app/sections/create_student_schedule.py",
+      "action": "replace",
+      "sha256": "0495be49a42d8fdd5858d4b7317f1d099d8578749405e5f725ef5567d2e6a353"
+    },
+    {
+      "path": "schedule_app/sections/format_opd_summary.py",
+      "action": "replace",
+      "sha256": "3db88be74c6b7b3d610b8c67e16ee05c1689941af2e7d4975643a43682fb8106"
+    },
+    {
+      "path": "schedule_app/sections/instructions.py",
+      "action": "replace",
+      "sha256": "29426ea6042582f7c50ec8a4dbf8c6c7e547ed2b11d7be5224394711aad14ac8"
+    },
+    {
+      "path": "schedule_app/sections/opd_check.py",
+      "action": "replace",
+      "sha256": "ef233fe2aa411d88496b943e864847682bb565494b1ce1f3cdf6bd474af76ae4"
+    },
+    {
+      "path": "schedule_app/sections/preceptor_teaching_summary.py",
+      "action": "replace",
+      "sha256": "5e1948c124c6dda159a491b6639bbb5e76c40869bbe75a211e1795bdb84e75d4"
+    },
+    {
+      "path": "schedule_app/sections/report_wording_controls.py",
+      "action": "add",
+      "sha256": "420a1127062e1b5a069e34281f8340f462f7a02d674677bfa4f156e484f68a2f"
+    },
+    {
+      "path": "schedule_app/services/evaluation_access.py",
+      "action": "replace",
+      "sha256": "c9e244559c2852852cd44d9de8543c60128b4f7c2477c94b653b5ed653224f67"
+    },
+    {
+      "path": "schedule_app/services/opd_workbooks.py",
+      "action": "replace",
+      "sha256": "2847da1228e15f40bc6e85d00097cec4064b7f4b186690e616ec8b6b700a47b1"
+    },
+    {
+      "path": "schedule_app/services/primary_preceptors.py",
+      "action": "replace",
+      "sha256": "05c9534afa1f349a39a46a4f09df0bcdfcc133934db8e304b6fb4fa22bcabbab"
+    },
+    {
+      "path": "schedule_app/services/report_wording.py",
+      "action": "add",
+      "sha256": "da28c1ab3aa277c8aced51abc3d0d4be04b7e92eed7162febdf1a289b556e1ce"
+    },
+    {
+      "path": "schedule_app/services/student_schedules.py",
+      "action": "replace",
+      "sha256": "d8b90014fc83b6ad9af3e3360fcac9b0d73731a482c356742a7b00c1ebfd8723"
+    },
+    {
+      "path": "schedule_app/resources/report_wording_defaults.json",
+      "action": "add",
+      "sha256": "bd7f72853808019700d2e72a8a86598e92b920cc67cc60ab3f49f5e49b26f24e"
+    }
+  ],
+  "unchanged": [
+    "schedule_app/settings.py",
+    "requirements.txt",
+    "all existing calculation and identity-catalog services other than the presentation integrations listed"
+  ],
+  "new_storage": "<configured archive folder>/report_wording.json.enc"
+}

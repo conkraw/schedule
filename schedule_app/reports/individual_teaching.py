@@ -3,6 +3,9 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+from schedule_app.reports.report_appearance import apply_report_appearance, add_report_message
+
 from schedule_app.services.teaching_priority import outpatient_priority_report_note
 from schedule_app.services.educational_time import (
     with_educational_time, teaching_time_rows, TIME_DEFINITION, TIME_SCOPE_NOTE,
@@ -34,6 +37,7 @@ from schedule_app.services.student_continuity import (
 )
 
 
+@with_report_wording
 def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None):
     """One document per preceptor; academic years and work types stay separate."""
     from docx.shared import Inches, RGBColor
@@ -78,12 +82,12 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
     subtitle.paragraph_format.space_after = Pt(7)
     subtitle.paragraph_format.keep_with_next = True
     header = section.header.paragraphs[0]
-    header.text = "PENN STATE  |  PEDIATRIC CLERKSHIP"
+    header.text = rt('individual.header')
     header.runs[0].font.size = Pt(9)
     header.runs[0].font.color.rgb = RGBColor.from_string("526475")
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    footer.add_run("Third-year student teaching  |  Page ").font.size = Pt(9)
+    footer.add_run(rt('individual.text_08')).font.size = Pt(9)
     field = OxmlElement("w:fldSimple")
     field.set(qn("w:instr"), "PAGE")
     footer._p.append(field)
@@ -118,11 +122,12 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
     monthly_rows = [row for row in months if row["preceptor_name"] == name]
     for index, year in enumerate(selected):
         label = teaching_report_label(scan, year)
-        report_title = doc.add_paragraph("Preceptor teaching report", style="Subtitle")
+        report_title = doc.add_paragraph(rt('individual.text_01'), style="Subtitle")
         report_title.paragraph_format.page_break_before = bool(index)
         doc.add_paragraph(name, style="Title")
         doc.add_heading(teaching_report_heading(scan, year), level=1)
         doc.add_paragraph(teaching_report_date_text(scan, year))
+        add_report_message(doc, 'individual.opening')
         if name in scan["unresolved_preceptor_labels"]:
             note("Review required: this is a site, slot, or combined provider label, not a verified individual preceptor.", warning=True)
         reach = overall_rows.get(label)
@@ -130,17 +135,17 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
             raise ReportDataError("No clinical metrics were found for this included preceptor.",
                                   report="Individual preceptor report", preceptor_name=name,
                                   academic_year=label)
-        doc.add_heading("Teaching time", level=2)
+        doc.add_heading(rt('individual.text_02'), level=2)
         teaching_add_work_table(doc, ("Measure", "Result"), [
             ("Total scheduled availability", f"{reach['total_scheduled_availability_hours']:,} hours"),
             ("Educational hours", f"{reach['educational_hours']:,} hours"),
             ("Learner Reach", reach_percent(reach["learner_reach_pct"])),
         ], widths=(4.9, 2.0), number_columns=(1,))
         note(f"{reach['teaching_shifts']:,} of {reach['scheduled_shifts']:,} scheduled AM/PM shifts included at least one student.")
-        note(TIME_DEFINITION)
-        doc.add_heading("Students assigned", level=2)
+        note(rt('pts_shared.time_definition'))
+        doc.add_heading(rt('individual.text_03'), level=2)
         p = doc.add_paragraph()
-        p.add_run("Unique students assigned: ").bold = True
+        p.add_run(rt('individual.text_09')).bold = True
         p.add_run(continuity_count_text(reach['unique_students']))
         if reach.get("minimum_shifts") is not None:
             p.add_run(f"   |   Students assigned for {reach['minimum_shifts']}+ shifts: ").bold = True
@@ -148,13 +153,12 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
         p.paragraph_format.keep_with_next = True
         note(continuity_period_note(scan, year))
         if reach.get("eligible_students") is not None:
-            note("The minimum-shift count is the assessment-completion denominator.")
+            note(rt('individual.text_10'))
         if str(reach.get("student_counts_status", "")).startswith(("Not checked", "Provisional:")):
             note(reach["student_counts_status"] + ". Refresh evaluation completeness or review names in PTS Matching.", warning=True)
-        note("Students are counted once across all work types within the student-count dates. "
-             "AM and PM on the same date are two shifts. Student counts do not multiply educational hours.")
+        note(rt('individual.text_04'))
         reach_types = [row for row in service_rows if row["academic_year"] == label]
-        doc.add_heading("By clinical experience", level=2)
+        doc.add_heading(rt('individual.text_05'), level=2)
         titles = ("Clinical experience", "Total scheduled\navailability (hours)", "Educational\nhours", "Learner Reach")
         values = [(row["work_type"], f"{row['total_scheduled_availability_hours']:,}",
                    f"{row['educational_hours']:,}", reach_percent(row["learner_reach_pct"]))
@@ -164,24 +168,23 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
             total=("Overall", f"{reach['total_scheduled_availability_hours']:,}",
                    f"{reach['educational_hours']:,}", reach_percent(reach["learner_reach_pct"])))
         if sum(row["total_scheduled_availability_hours"] for row in reach_types) != reach["total_scheduled_availability_hours"]:
-            note(REACH_DETAIL_TOTAL_NOTE)
+            note(rt('pts_shared.detail_total'))
         month_values = [(row["work_type"] + " — " + teaching_month_label(CalendarDate.fromisoformat(row["month"])),
                          f"{row['total_scheduled_availability_hours']:,}", f"{row['educational_hours']:,}",
                          reach_percent(row["learner_reach_pct"]))
                         for row in monthly_rows if row["academic_year"] == label]
         # Put longer monthly breakdowns on a fresh page so their notes do not
         # spill alone onto a near-empty final teaching page.
-        monthly_heading = doc.add_heading("Monthly detail", level=2)
+        monthly_heading = doc.add_heading(rt('individual.text_06'), level=2)
         monthly_heading.paragraph_format.page_break_before = len(month_values) > 6
         teaching_add_work_table(doc,
             ("Clinical experience / month", "Total scheduled\navailability (hours)", "Educational\nhours", "Learner Reach"),
             month_values, widths=(2.45, 1.75, 1.4, 1.3), number_columns=(1, 2, 3))
-        note("Only clinical experiences with student assignments in the selected period are listed. "
-             "For those experiences, months without students remain included in availability.")
+        note(rt('individual.text_07'))
         priority_note = outpatient_priority_report_note(scan, [year], preceptor_name=name)
         if priority_note:
             note(priority_note)
-        note(TIME_SCOPE_NOTE)
+        note(rt('pts_shared.scope_note'))
         note("Source: current encrypted OPDs. "
              f"Snapshot: {scan['commit'][:12]}; retrieved: {scan['generated_at']}. Student names omitted.")
         from schedule_app.reports.assessment_completion import append_individual_completion
@@ -194,6 +197,8 @@ def teaching_make_docx(name, monthly, scan, *, oasis_feedback=None, _batch=None)
                 append_feedback_unavailable(doc, name, feedback_status_for_preceptor(oasis_feedback, scan, name, year))
             else:
                 append_oasis_evaluations(doc, name, feedback)
+    add_report_message(doc, 'individual.closing')
+    apply_report_appearance(doc, 'individual')
     output = BytesIO()
     doc.save(output)
     return output.getvalue()

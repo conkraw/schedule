@@ -23,8 +23,10 @@ import hashlib
 import hmac
 import pandas as pd
 import streamlit as st
+from schedule_app.sections.report_wording_controls import with_saved_report_wording
 
 
+@with_saved_report_wording
 def render():
     """Render the Create Student Schedule sidebar section."""
     st.subheader("Create Student Schedule")

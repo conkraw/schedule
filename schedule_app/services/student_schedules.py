@@ -3,6 +3,8 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+
 from io import BytesIO
 from openpyxl import load_workbook
 from schedule_app.services.opd_archive import OPDArchiveError
@@ -142,9 +144,7 @@ def create_ms_schedule_template(students, dates):
         #        "available during this time period and has not made an absence request, the student "
         #        "will be cited for unprofessionalism and will risk failing the course.")
 
-        note = ("*Note* Protected Self-Study Time is reserved for independent learning and completion of required "
-                "coursework. Students are encouraged to use this time to complete assignments, review course materials, "
-                "prepare for patient care, and reinforce concepts encountered during the clerkship.")
+        note = (rt('student_schedule.self_study'))
 
         ws.merge_range('C1:H2', note, f2)
 

@@ -3,6 +3,8 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+
 from collections import Counter
 from datetime import datetime
 from datetime import timedelta
@@ -420,27 +422,23 @@ def build_preceptor_report_workbook(report_df):
         {"bold": True, "valign": "top", "text_wrap": True}
     )
     definitions = [
-        ("Report scope", "HOPE_DRIVE, NYES, and ETOWN only"),
+        ("Report scope", rt('primary_report.definition_1')),
         (
             "Primary preceptor",
-            "Exactly one per student/week. The app prefers the highest-session "
-            "preceptor with at least 3 sessions. If nobody reaches 3, the "
-            "highest-session preceptor is still selected and flagged.",
+            rt('primary_report.definition_2'),
         ),
         (
             "Repeated primary",
-            "The same preceptor may be primary for multiple students. Those "
-            "primary rows are flagged for visibility.",
+            rt('primary_report.definition_3'),
         ),
-        ("Fragmented preceptor", "YES when no_of_sessions < 3."),
+        ("Fragmented preceptor", rt('primary_report.definition_4')),
         (
             "Primary preceptor flag",
-            "YES when the selected primary has fewer than 3 sessions or the "
-            "same preceptor is primary for multiple students that week.",
+            rt('primary_report.definition_5'),
         ),
         (
             "Email mapping",
-            "Emails come from PRECEPTOR_EMAIL_MAP in the Streamlit source code.",
+            rt('primary_report.definition_6'),
         ),
     ]
     for row_idx, (label, definition) in enumerate(definitions):

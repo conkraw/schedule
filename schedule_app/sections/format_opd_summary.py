@@ -3,6 +3,8 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+
 from docx import Document
 from docx.enum.section import WD_ORIENT
 from schedule_app.services.opd_workbooks import generate_opd_workbook
@@ -13,9 +15,12 @@ import pandas as pd
 import random
 import re
 import streamlit as st
+from schedule_app.sections.report_wording_controls import with_saved_report_wording
+from schedule_app.reports.report_appearance import apply_report_appearance, add_report_message
 import zipfile
 
 
+@with_saved_report_wording
 def render():
     """Render the Format OPD + Summary sidebar section."""
     # ─── Inputs ────────────────────────────────────────────────────────────────────
@@ -742,7 +747,8 @@ def render():
         section.orientation = WD_ORIENT.LANDSCAPE
         section.page_width, section.page_height = section.page_height, section.page_width
         
-        doc.add_heading("Assignment Summary by Week", level=1)
+        doc.add_heading(rt('assignment_summary.title'), level=1)
+        add_report_message(doc, 'assignment_summary.opening')
         
         cols  = df_summary.columns.tolist()
         table = doc.add_table(rows=1, cols=len(cols), style="Table Grid")
@@ -757,6 +763,8 @@ def render():
         
         # **Save** into bytes
         word_io = io.BytesIO()
+        add_report_message(doc, 'assignment_summary.closing')
+        apply_report_appearance(doc, 'assignment_summary')
         doc.save(word_io)
         word_io.seek(0)
         word_bytes = word_io.read()

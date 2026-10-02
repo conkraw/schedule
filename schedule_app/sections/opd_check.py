@@ -3,14 +3,19 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+
 from collections import defaultdict
 from docx import Document
 import io
 import numpy as np
 import pandas as pd
 import streamlit as st
+from schedule_app.sections.report_wording_controls import with_saved_report_wording
+from schedule_app.reports.report_appearance import apply_report_appearance, add_report_message
 
 
+@with_saved_report_wording
 def render():
     """Render the OPD Check sidebar section."""
     DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
@@ -158,7 +163,8 @@ def render():
         #
     
     doc = Document()
-    doc.add_heading('Change Report', level=1)
+    doc.add_heading(rt('opd_changes.title'), level=1)
+    add_report_message(doc, 'opd_changes.opening')
     
     for sheet, change in (locals().get('results') or {}).items():
         doc.add_heading(sheet, level=2)
@@ -200,6 +206,8 @@ def render():
 
     # Save to in-memory buffer
     word_file = io.BytesIO()
+    add_report_message(doc, 'opd_changes.closing')
+    apply_report_appearance(doc, 'opd_changes')
     doc.save(word_file)
     word_file.seek(0)
     

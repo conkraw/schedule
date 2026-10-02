@@ -3,6 +3,9 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+from schedule_app.reports.report_appearance import apply_report_appearance, add_report_message
+
 from schedule_app.services.teaching_priority import outpatient_priority_report_note
 from schedule_app.services.educational_time import TIME_DEFINITION, TIME_SCOPE_NOTE
 from schedule_app.services.teaching_validation import validate_teaching_report
@@ -124,6 +127,7 @@ def teaching_chair_summary_data(scan, selected_years):
     return summaries
 
 
+@with_report_wording
 def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=None):
     """One editable, chair-friendly Word report covering all selected years.
 
@@ -180,12 +184,12 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
     subtitle.paragraph_format.space_after = Pt(12)
     subtitle.paragraph_format.keep_with_next = True
     header = section.header.paragraphs[0]
-    header.text = "PENN STATE  |  PEDIATRIC CLERKSHIP"
+    header.text = rt('chair.header')
     header.runs[0].font.size = Pt(9)
     header.runs[0].font.color.rgb = RGBColor.from_string("526475")
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    footer.add_run("Educational effort summary  |  Page ").font.size = Pt(9)
+    footer.add_run(rt('chair.text_09')).font.size = Pt(9)
     field = OxmlElement("w:fldSimple")
     field.set(qn("w:instr"), "PAGE")
     footer._p.append(field)
@@ -276,35 +280,36 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
         item = checked_report_reach(item, report="Chair summary", section="Overall total")
         if index:
             doc.add_page_break()
-        doc.add_paragraph("Preceptor educational effort", style="Title")
-        doc.add_paragraph("Third-year medical student teaching", style="Subtitle")
+        doc.add_paragraph(rt('chair.text_01'), style="Title")
+        doc.add_paragraph(rt('chair.text_02'), style="Subtitle")
         doc.add_heading(teaching_report_heading(scan, year), level=1)
         p = doc.add_paragraph(teaching_report_date_text(scan, year))
         p.paragraph_format.space_after = Pt(9)
+        add_report_message(doc, 'chair.opening')
         if not item["recorded_clinical_shifts"]:
             doc.add_paragraph("No clinical shifts were recorded in the archived OPDs for this reporting period. "
                               "This does not establish that no clinical work or teaching occurred.")
             continue
 
         p = doc.add_paragraph()
-        p.add_run("Total scheduled availability: ").bold = True
+        p.add_run(rt('chair.text_10')).bold = True
         p.add_run(f"{item['recorded_clinical_hours']:,} hours")
         p = doc.add_paragraph()
-        p.add_run("Educational hours: ").bold = True
+        p.add_run(rt('chair.text_11')).bold = True
         p.add_run(f"{item['hours_with_students']:,} hours")
-        p.add_run("   |   Learner Reach: ").bold = True
+        p.add_run(rt('chair.text_12')).bold = True
         p.add_run(reach_percent(item["learner_reach_pct"]))
         p = doc.add_paragraph()
-        p.add_run("Named preceptors with students: ").bold = True
+        p.add_run(rt('chair.text_13')).bold = True
         p.add_run(str(item["named_preceptor_count"]))
-        p.add_run("   |   Teaching months: ").bold = True
+        p.add_run(rt('chair.text_14')).bold = True
         p.add_run(item["months_brief"])
-        note(TIME_DEFINITION)
+        note(rt('pts_shared.time_definition'))
         if item["unresolved_labels"]:
             pending_hours = sum(row["hours_with_students"] for row in item["unresolved_labels"])
             note(f"Totals include {pending_hours:,} educational hours under site, slot, or combined provider labels. "
                  "These entries are shown separately and are not credited to a guessed individual.", warning=True)
-        doc.add_heading("Overview by type of work", level=2)
+        doc.add_heading(rt('chair.text_03'), level=2)
         add_effort_table([
             {"preceptor_name": group["work_type"], "months_brief": group["months_brief"],
              "no_of_shifts": group["no_of_shifts"], "educational_hours": group["educational_hours"],
@@ -314,26 +319,25 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
             for group in item["work_types"]
         ], first_title="Type of work / teaching months", total_title="Overall", total_metrics=item,
            academic_year=item["academic_year"])
-        note(PARTICIPATION_SCOPE_NOTE)
+        note(rt('pts_shared.participation'))
         if item["has_unlisted_clinical_hours"]:
-            note(REACH_DETAIL_TOTAL_NOTE)
+            note(rt('pts_shared.detail_total'))
         if scan.get("reporting_period"):
-            note("Both reporting dates are included. Boundary months contain only the selected dates; the period is not split at July 1.")
+            note(rt('chair.text_15'))
         priority_note = outpatient_priority_report_note(scan, [year])
         if priority_note:
             note(priority_note)
-        note("Academic Pediatrics combines HOPE_DRIVE, ETOWN and NYES. Ward A, PSHCH Nursery, Complex Care and other services remain separate. No additional weighting is applied by setting.")
-        note(TIME_SCOPE_NOTE)
+        note(rt('chair.text_04'))
+        note(rt('pts_shared.scope_note'))
         note(f"Coverage: {item['source_count']} saved rotation schedule(s) overlap this reporting period. "
              "Only archived assignments are represented; missing rotations are not assumed to have no teaching. "
              "Future scheduled assignments are included.")
         if item["has_missing_provider"]:
-            note("Data review: at least one source rotation overlapping this year contains assignments without "
-                 "an identifiable preceptor. Those assignments are excluded from provider totals; review Report_Notes.txt.",
+            note(rt('chair.text_16'),
                  warning=True)
 
-        doc.add_heading("Students assigned by preceptor", level=2)
-        scope = note("All work types combined for each preceptor; these counts match the individual reports.")
+        doc.add_heading(rt('chair.text_05'), level=2)
+        scope = note(rt('chair.text_06'))
         scope.paragraph_format.keep_with_next = True
         if item["named_preceptors"]:
             teaching_add_work_table(
@@ -345,7 +349,7 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
                 widths=(3.25, 1.5, 2.15), number_columns=(1, 2),
             )
         if item["unresolved_labels"]:
-            pending = note("Provider labels awaiting an individual name (not credited to a named preceptor)", warning=True)
+            pending = note(rt('chair.text_17'), warning=True)
             pending.paragraph_format.keep_with_next = True
             teaching_add_work_table(
                 doc,
@@ -363,12 +367,11 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
         threshold = scan.get("assessment_completion", {}).get("minimum_shifts") if scan.get("assessment_completion") else None
         if threshold is not None:
             note(f"Minimum for assessment completion: {threshold} AM/PM shifts. AM and PM on the same date are two shifts.")
-        note("Do not add student counts across preceptors: a student may appear under more than one preceptor. "
-             "Student counts do not multiply educational hours.")
+        note(rt('chair.text_07'))
 
         from schedule_app.reports.assessment_completion import append_chair_completion
         append_chair_completion(doc, scan, year)
-        doc.add_heading("Preceptor detail by type of work", level=2)
+        doc.add_heading(rt('chair.text_08'), level=2)
         for group in item["work_types"]:
             heading = doc.add_heading(group["work_type"], level=2)
             heading.paragraph_format.space_before = Pt(12)
@@ -387,19 +390,21 @@ def teaching_make_chair_summary(scan, selected_years, *, charts=None, _batch=Non
                 add_effort_table(group["named_preceptors"], total_title="Named preceptors subtotal",
                                  work_type=group["work_type"], academic_year=item["academic_year"])
             if group["unresolved_labels"]:
-                pending_note = note("Assignments awaiting an individual preceptor name", warning=True)
+                pending_note = note(rt('chair.text_18'), warning=True)
                 pending_note.paragraph_format.keep_with_next = True
                 add_effort_table(group["unresolved_labels"], pending=True,
                                  work_type=group["work_type"], academic_year=item["academic_year"])
                 p = doc.add_paragraph()
                 p.paragraph_format.space_before = Pt(5)
-                p.add_run("Work-type total: ").bold = True
+                p.add_run(rt('chair.text_19')).bold = True
                 p.add_run(f"{group['recorded_clinical_hours']:,} scheduled hours | {group['hours_with_students']:,} educational hours")
         source = note("Each named preceptor is counted once overall. Educational hours are not multiplied by the number of students. "
                       f"Source: current saved OPDs, retrieved {scan['generated_at']}. "
                       "Student names omitted; file-level source details are in the ZIP.")
         source.paragraph_format.space_before = Pt(2)
 
+    add_report_message(doc, 'chair.closing')
+    apply_report_appearance(doc, 'chair')
     output = BytesIO()
     doc.save(output)
     return output.getvalue()

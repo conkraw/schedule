@@ -3,6 +3,8 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 import io
@@ -14,7 +16,7 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
     import xlsxwriter
 
     output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True, 'strings_to_formulas': False, 'strings_to_urls': False})
 
     # ─── Formats ─────────────────────────────────────────────────────────────────
     format1     = workbook.add_format({'font_size':18,'bold':1,'align':'center','valign':'vcenter','font_color':'black','bg_color':'#FEFFCC','border':1})
@@ -152,10 +154,7 @@ def generate_opd_workbook(full_df: pd.DataFrame) -> bytes:
 
         # merge CRTS message on every sheet
         text1 = (
-            'Students are to alert their preceptors when they have a Clinical '
-            'Reasoning Teaching Session (CRTS).  Please allow the students to '
-            'leave approximately 15 minutes prior to the start of their session '
-            'so they can be prepared to actively participate.  - Thank you!'
+            rt('opd_workbook.crts')
         )
         ws.merge_range('C1:F1', text1, merge_format)
         ws.write('G1', '', merge_format)

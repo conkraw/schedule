@@ -3,6 +3,8 @@
 Extracted from the supplied app; this module performs no page rendering on import.
 """
 
+from schedule_app.services.report_wording import report_text as rt, with_report_wording
+
 from schedule_app.services.teaching_priority import (
     OUTPATIENT_PRIORITY_NOTE, PRIORITY_AUDIT_COLUMNS, outpatient_priority_audit_rows,
     selected_priority_adjustments,
@@ -61,6 +63,7 @@ def teaching_csv_bytes(rows, columns=TIME_CSV_COLUMNS):
     return stream.getvalue().encode("utf-8-sig")
 
 
+@with_report_wording
 def teaching_build_zip(scan, selected_years, *, oasis_feedback=None, progress=None):
     """Return a ZIP and annual preview. Does not call GitHub or write plaintext there."""
     if progress:
@@ -260,6 +263,8 @@ def teaching_build_zip(scan, selected_years, *, oasis_feedback=None, progress=No
                       "Repeated rows may be included in this source-listing count; it is not a unique-student count.",
                       "Ignored labels/names are omitted from this ZIP. Clinical availability is retained; ignored entries do not earn educational hours or enter assessment eligibility.",
                       "Restore entries in PTS to include them again. Source OPDs and OASIS records were not changed."]
+    if rt("pts_shared.zip_instructions"):
+        notes += ["", "REPORT INSTRUCTIONS", rt("pts_shared.zip_instructions")]
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
         if priority_rows:
             zf.writestr("Outpatient_Priority_Adjustments.csv", teaching_csv_bytes(priority_rows, PRIORITY_AUDIT_COLUMNS))

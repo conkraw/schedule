@@ -17,8 +17,10 @@ import hashlib
 import pandas as pd
 import re
 import streamlit as st
+from schedule_app.sections.report_wording_controls import with_saved_report_wording
 
 
+@with_saved_report_wording
 def render():
     """Render the Create Individual Schedules sidebar section."""
     st.subheader("Individual Schedule Creator")

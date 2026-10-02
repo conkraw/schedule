@@ -6,7 +6,6 @@ Editable mappings are in schedule_app/settings.py.
 
 from importlib import import_module
 import streamlit as st
-
 st.set_page_config(page_title="PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR", layout="wide")
 st.title("PSUCOM PEDIATRIC CLERKSHIP SCHEDULE CREATOR")
 
@@ -22,6 +21,7 @@ SECTIONS = {
     "OPD MD PA Conflict Detector": "opd_md_pa_conflict_detector",
     "Shift Availability Tracker": "shift_availability_tracker",
     "PTS Matching": "pts_matching",
+    "Admin": "admin",
     "OER": "oasis_workflow",
     "PTS": "preceptor_teaching_summary",
 }
